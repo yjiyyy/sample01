@@ -1,19 +1,18 @@
 # ========== Unity 기본 ==========
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-[Ll]ogs/
-[Mm]emoryCaptures/
-[Uu]serSettings/
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Mm]emoryCaptures/
+/[Uu]serSettings/
 
 # ========== Unity Cache ==========
-# Asset Store, Package 캐시 등
-[Aa]sset[Ss]tore/
-[Aa]sset[Ss]toreTools/
+/[Aa]sset[Ss]tore/
+/[Aa]sset[Ss]toreTools/
 .Packages/
-.PackagesCache/
+/.PackagesCache/
 sysinfo.txt
 
 # ========== 빌드 산출물 ==========
@@ -23,9 +22,9 @@ sysinfo.txt
 *.app
 *.exe
 *.xcodeproj/
-*.xcworkspace/
-*.vs/
-.vscode/
+/*.xcworkspace/
+/.vs/
+/.vscode/
 *.csproj
 *.sln
 *.tmp
@@ -39,7 +38,7 @@ sysinfo.txt
 .DS_Store
 Thumbs.db
 .idea/
-.vs/
+/.vs/
 *.swp
 *.swo
 
@@ -61,7 +60,11 @@ sysinfo.txt
 # ========== Unity Cloud Build ==========
 /[Uu]serSettings/EditorUserSettings.asset
 
-# ======= 중요: 아래는 절대 제외하면 안 됨 =======
-# *.meta → 반드시 포함해야 GUID 유지됨 (제외하지 마세요!)
-# /Assets/ → 절대 제외하면 안 됨, Prefab/Script 다 사라집니다.
-# /ProjectSettings/ → 이거 있어야 프로젝트 세팅 유지됨
+# ======= 강제 포함 규칙 =======
+# Unity 에셋/세팅은 반드시 포함
+!Assets/**
+!ProjectSettings/**
+!Packages/**
+
+# ======= 주의 =======
+# *.meta → 절대 무시하지 말 것
