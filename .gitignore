@@ -1,6 +1,67 @@
-/Library/
-/Temp/
-/Obj/
-/Build/
-/Logs/
-/UserSettings/
+# ========== Unity 기본 ==========
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Uu]serSettings/
+
+# ========== Unity Cache ==========
+# Asset Store, Package 캐시 등
+[Aa]sset[Ss]tore/
+[Aa]sset[Ss]toreTools/
+.Packages/
+.PackagesCache/
+sysinfo.txt
+
+# ========== 빌드 산출물 ==========
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.exe
+*.xcodeproj/
+*.xcworkspace/
+*.vs/
+.vscode/
+*.csproj
+*.sln
+*.tmp
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+
+# ========== OS/IDE 특화 ==========
+.DS_Store
+Thumbs.db
+.idea/
+.vs/
+*.swp
+*.swo
+
+# ========== Rider/VS Code ==========
+*.user
+*.userprefs
+*.csproj
+*.sln
+*.unityproj
+*.pidb
+*.booproj
+
+# ========== PlasticSCM (옵션) ==========
+/PlasticSCM/
+
+# ========== Crash Reports ==========
+sysinfo.txt
+
+# ========== Unity Cloud Build ==========
+/[Uu]serSettings/EditorUserSettings.asset
+
+# ======= 중요: 아래는 절대 제외하면 안 됨 =======
+# *.meta → 반드시 포함해야 GUID 유지됨 (제외하지 마세요!)
+# /Assets/ → 절대 제외하면 안 됨, Prefab/Script 다 사라집니다.
+# /ProjectSettings/ → 이거 있어야 프로젝트 세팅 유지됨
