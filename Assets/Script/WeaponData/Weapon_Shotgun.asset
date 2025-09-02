@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bf06ad5ad766ce4698b6ffb54d63f4b, type: 3}
+  m_Name: Weapon_Shotgun
+  m_EditorClassIdentifier: 
+  weaponName: Shotgun
+  attackTriggerName: Attack_Shotgun
+  cooldown: 3
+  damage: 110
+  range: 2.5
+  projectileCount: 1
+  isMelee: 0
+  AutoAttackDelay: 0.3
+  hitBoxLifetime: 0.2
+  criticalChance: 0
+  aoeRadius: 0
+  knockbackDuration: 0.3
+  knockbackPower: 20
+  jerkIntensity: 3
+  jerkDuration: 0.2
+  projectileLifetime: 0
+  projectileSpeed: 0
+  pierceCount: 0
+  viewAngle: 30
+  viewDistance: 10
+  ragdollImpulse: 10
+  upwardImpulse: 10
+  torqueImpulse: 50
+  sliceForce: 8
+  deathType: 2
+  possibleSliceParts: 01000000020000000300000000000000
+  weaponCategory: 2
+  shotgunRadius: 10
+  shotgunAngle: 60
+  shotgunUseDistanceFalloff: 1
+  shotgunFalloffMin: 0.1
+  shotgunDebugVisualize: 1
+  shotgunDebugColor: {r: 0, g: 1, b: 0.8071916, a: 0.25}
+  shotgunDebugActualColor: {r: 0.8301887, g: 0, b: 0.013035432, a: 0.25}
