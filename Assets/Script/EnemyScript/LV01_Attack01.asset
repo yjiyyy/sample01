@@ -19,5 +19,5 @@ MonoBehaviour:
   cooldown: 15
   knockbackPower: 10
   knockbackDuration: 1
-  stunDuration: 2
+  stunDuration: 3
   hitBoxLifetime: 0.2

@@ -136,26 +136,25 @@ public class PlayerMovement : MonoBehaviour
 
         agent.speed = isPushing ? baseSpeed * slowMultiplier : baseSpeed;
 
-        // ✅ 테스트 입력 (데미지 / 회복)
-        if (InputManager.Instance.GetDamageTestInput())
+        // ✅ 테스트 입력 (기존 InputManager 메서드 사용)
+        if (InputManager.Instance.GetDamageTestInput())  // -키
         {
             if (TryGetComponent(out Health health))
             {
                 health.ApplyDamage(10f);
-                Debug.Log("[테스트] 플레이어에게 10 데미지 적용");
+                Debug.Log("[테스트] 플레이어에게 10 데미지 적용 (-키)");
             }
         }
 
-        if (InputManager.Instance.GetHealTestInput())
+        if (InputManager.Instance.GetHealTestInput())    // =키
         {
             if (TryGetComponent(out Health health))
             {
                 health.Heal(20f);
-                Debug.Log("[테스트] 플레이어 체력 20 회복");
+                Debug.Log("[테스트] 플레이어 체력 20 회복 (=키)");
             }
         }
     }
-
 
     void LateUpdate()
     {
@@ -269,9 +268,6 @@ public class PlayerMovement : MonoBehaviour
                 transform.rotation = Quaternion.LookRotation(lookDir);
         }
     }
-
-
-
 
     public bool IsCurrentlyKnockbacked()
     {

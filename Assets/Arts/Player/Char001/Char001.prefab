@@ -221,6 +221,8 @@ MonoBehaviour:
   animationController: {fileID: 7043935488017820867}
   enemyDetector: {fileID: -4843304285669349870}
   defaultWeaponPrefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
+  evadeData: {fileID: 11400000, guid: eb54fb9932698344bb40ac36fb164e65, type: 2}
+  debugMode: 1
 --- !u!33 &-1541331493322818118
 MeshFilter:
   m_ObjectHideFlags: 0

@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class InputManager : MonoBehaviour
 {
@@ -13,10 +13,11 @@ public class InputManager : MonoBehaviour
         else
         {
             Instance = this;
+            DontDestroyOnLoad(gameObject); // ì”¬ ì „í™˜ ì‹œì—ë„ ìœ ì§€
         }
     }
 
-    /* ¦¡¦¡¦¡¦¡¦¡ ÀÌµ¿ ÀÔ·Â ¦¡¦¡¦¡¦¡¦¡ */
+    /* â”€â”€â”€â”€â”€ ì´ë™ ìž…ë ¥ â”€â”€â”€â”€â”€ */
     public Vector2 GetMoveInput()
     {
         float h = Input.GetAxisRaw("Horizontal");
@@ -24,10 +25,10 @@ public class InputManager : MonoBehaviour
         return new Vector2(h, v);
     }
 
-    /* ¦¡¦¡¦¡¦¡¦¡ ¹«±â ±³Ã¼ ÀÔ·Â ¦¡¦¡¦¡¦¡¦¡ */
+    /* â”€â”€â”€â”€â”€ ë¬´ê¸° êµì²´ ìž…ë ¥ â”€â”€â”€â”€â”€ */
     public int GetWeaponSwapInput()
     {
-        // 1~9¹ø Å° ¡æ ¹«±â ½½·Ô ¹øÈ£ ¹ÝÈ¯
+        // 1~9ë²ˆ í‚¤ â†’ ë¬´ê¸° ìŠ¬ë¡¯ ë²ˆí˜¸ ë°˜í™˜
         if (Input.GetKeyDown(KeyCode.Alpha1)) return 1;
         if (Input.GetKeyDown(KeyCode.Alpha2)) return 2;
         if (Input.GetKeyDown(KeyCode.Alpha3)) return 3;
@@ -38,17 +39,23 @@ public class InputManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Alpha8)) return 8;
         if (Input.GetKeyDown(KeyCode.Alpha9)) return 9;
 
-        return -1; // ÀÔ·Â ¾øÀ½
+        return -1; // ìž…ë ¥ ì—†ìŒ
     }
 
-    /* ¦¡¦¡¦¡¦¡¦¡ °ø°Ý ÀÔ·Â ¦¡¦¡¦¡¦¡¦¡ */
+    /* â”€â”€â”€â”€â”€ ê³µê²© ìž…ë ¥ â”€â”€â”€â”€â”€ */
     public bool GetAttackInput()
     {
-        // ¿ÀÁ÷ 0¹ø Å°·Î¸¸ °ø°Ý
+        // ì˜¤ì§ 0ë²ˆ í‚¤ë¡œë§Œ ê³µê²©
         return Input.GetKeyDown(KeyCode.Alpha0);
     }
 
-    /* ¦¡¦¡¦¡¦¡¦¡ Å×½ºÆ® ÀÔ·Â ¦¡¦¡¦¡¦¡¦¡ */
-    public bool GetDamageTestInput() => Input.GetKeyDown(KeyCode.Minus);
-    public bool GetHealTestInput() => Input.GetKeyDown(KeyCode.Equals); // =/+ Å°
+    /* â”€â”€â”€â”€â”€ âœ… íšŒí”¼ ìž…ë ¥ (ìƒˆë¡œ ì¶”ê°€) â”€â”€â”€â”€â”€ */
+    public bool GetEvadeInput()
+    {
+        return Input.GetKeyDown(KeyCode.Space);
+    }
+
+    /* â”€â”€â”€â”€â”€ í…ŒìŠ¤íŠ¸ ìž…ë ¥ â”€â”€â”€â”€â”€ */
+    public bool GetDamageTestInput() => Input.GetKeyDown(KeyCode.Minus);      // - í‚¤
+    public bool GetHealTestInput() => Input.GetKeyDown(KeyCode.Equals);       // = í‚¤ (+ í‚¤)
 }

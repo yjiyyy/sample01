@@ -26,12 +26,22 @@ public class HitBox_Enemy : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
+            // ✅ 무적 상태 체크 (회피 중 무적)
+            if (other.TryGetComponent(out PlayerWeaponController weaponController))
+            {
+                if (weaponController.IsInvincible())
+                {
+                    Debug.Log("[HitBox_Enemy] 플레이어 무적 상태 - 공격 무시됨");
+                    return;
+                }
+            }
+
             // ✅ 데미지 적용
             if (other.TryGetComponent(out Health hp))
                 hp.ApplyDamage(damage);
 
             // 🔧 PlayerWeaponController에서 넉백+스턴 처리 (최우선)
-            if (other.TryGetComponent(out PlayerWeaponController weaponController))
+            if (weaponController != null)
             {
                 // 몬스터 → 플레이어 방향
                 Vector3 hitDir = (other.transform.position - transform.position).normalized;

@@ -15,8 +15,9 @@ public class PlayerAnimationController : MonoBehaviour
     private readonly int hashIsAttacking = Animator.StringToHash("IsAttacking");
     private readonly int hashIsDead = Animator.StringToHash("IsDead");
     private readonly int hashKnockback = Animator.StringToHash("Knockback");
-    private readonly int hashKnockbackIndex = Animator.StringToHash("KnockbackIndex"); // 🆕 추가
+    private readonly int hashKnockbackIndex = Animator.StringToHash("KnockbackIndex");
     private readonly int hashStun = Animator.StringToHash("Stun");
+    private readonly int hashIsEvading = Animator.StringToHash("IsEvading"); // ✅ 회피 파라미터 추가
 
     void Awake()
     {
@@ -77,6 +78,12 @@ public class PlayerAnimationController : MonoBehaviour
                 Debug.Log("[PlayerAnim] 강제 전환 → Stun");
                 break;
 
+            case PlayerState.Evade: // ✅ 회피 상태 추가
+                animator.SetBool(hashIsEvading, true);
+                animator.Play("Evade", 0, 0f);
+                Debug.Log("[PlayerAnim] 강제 전환 → Evade");
+                break;
+
             case PlayerState.Dead:
                 animator.SetBool(hashIsDead, true);
                 animator.Play("Death", 0, 0f);
@@ -97,10 +104,11 @@ public class PlayerAnimationController : MonoBehaviour
         // Bool 리셋
         animator.SetBool(hashIsAttacking, false);
         animator.SetBool(hashIsDead, false);
+        animator.SetBool(hashIsEvading, false); // ✅ 회피 Bool 리셋 추가
 
         // Float 리셋
         animator.SetFloat(hashAttackIndex, 0f);
-        animator.SetFloat(hashKnockbackIndex, 0f); // 🆕 추가
+        animator.SetFloat(hashKnockbackIndex, 0f);
 
         Debug.Log("[PlayerAnim] 모든 애니메이터 파라미터 리셋 완료");
     }
