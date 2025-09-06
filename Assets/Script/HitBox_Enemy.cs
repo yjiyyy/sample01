@@ -1,9 +1,5 @@
 ﻿using UnityEngine;
 
-/// <summary>
-/// 적의 공격 히트박스 (플레이어 전용)
-/// EnemyAttackData에서 데미지/넉백/스턴 데이터를 받아 Initialize()로 세팅된다.
-/// </summary>
 public class HitBox_Enemy : MonoBehaviour
 {
     private float damage;
@@ -36,31 +32,32 @@ public class HitBox_Enemy : MonoBehaviour
                 }
             }
 
-            // ✅ 데미지 적용
-            if (other.TryGetComponent(out Health hp))
+            // 🔧 Health → PlayerHealth로 변경
+            if (other.TryGetComponent(out PlayerHealth hp))
+            {
                 hp.ApplyDamage(damage);
+                Debug.Log($"✅ [HitBox_Enemy] PlayerHealth에 {damage} 데미지 적용!");
+            }
+            else
+            {
+                Debug.LogWarning($"❌ [HitBox_Enemy] {other.name}에서 PlayerHealth를 찾을 수 없습니다!");
+            }
 
             // 🔧 PlayerWeaponController에서 넉백+스턴 처리 (최우선)
             if (weaponController != null)
             {
-                // 몬스터 → 플레이어 방향
                 Vector3 hitDir = (other.transform.position - transform.position).normalized;
-                hitDir.y = 0f; // Y축 제거
+                hitDir.y = 0f;
 
                 Debug.Log($"[HitBox_Enemy] 플레이어 공격! 넉백: {knockbackPower}, 스턴: {stunDuration}");
-
-                // 🔧 기존 넉백/스턴을 강제 중단하고 새로운 넉백 적용
                 weaponController.ForceApplyKnockback(hitDir, knockbackPower, knockbackDuration, stunDuration);
             }
-            else
+            else if (other.TryGetComponent(out PlayerMovement playerMove))
             {
-                // ✅ PlayerMovement 넉백 (백업용 - PlayerWeaponController가 없을 때만)
-                if (other.TryGetComponent(out PlayerMovement playerMove))
-                {
-                    Vector3 hitDir = (other.transform.position - transform.position).normalized;
-                    playerMove.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
-                    Debug.Log("[HitBox_Enemy] PlayerMovement 백업 넉백 실행");
-                }
+                // ✅ PlayerMovement 넉백 (백업용)
+                Vector3 hitDir = (other.transform.position - transform.position).normalized;
+                playerMove.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
+                Debug.Log("[HitBox_Enemy] PlayerMovement 백업 넉백 실행");
             }
         }
     }

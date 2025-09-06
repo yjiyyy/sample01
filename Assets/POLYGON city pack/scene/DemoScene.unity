@@ -26156,7 +26156,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerTransform: {fileID: 0}
-  playerHpUIPrefab: {fileID: 5425390646291263780, guid: 7317160bab13a6f4594530daa0ccc33e, type: 3}
+  playerHPUIPrefab: {fileID: 5425390646291263780, guid: 7317160bab13a6f4594530daa0ccc33e, type: 3}
 --- !u!4 &136183793
 Transform:
   m_ObjectHideFlags: 0

@@ -148,19 +148,29 @@ public class PlayerMovement : MonoBehaviour
         // ✅ 테스트 입력 (기존 InputManager 메서드 사용)
         if (InputManager.Instance.GetDamageTestInput())  // -키
         {
-            if (TryGetComponent(out Health health))
+            // 🔧 Health → PlayerHealth로 변경
+            if (TryGetComponent(out PlayerHealth health))
             {
                 health.ApplyDamage(10f);
                 Debug.Log("[테스트] 플레이어에게 10 데미지 적용 (-키)");
+            }
+            else
+            {
+                Debug.LogWarning("❌ PlayerHealth 컴포넌트를 찾을 수 없습니다!");
             }
         }
 
         if (InputManager.Instance.GetHealTestInput())    // =키
         {
-            if (TryGetComponent(out Health health))
+            // 🔧 Health → PlayerHealth로 변경
+            if (TryGetComponent(out PlayerHealth health))
             {
                 health.Heal(20f);
                 Debug.Log("[테스트] 플레이어 체력 20 회복 (=키)");
+            }
+            else
+            {
+                Debug.LogWarning("❌ PlayerHealth 컴포넌트를 찾을 수 없습니다!");
             }
         }
     }

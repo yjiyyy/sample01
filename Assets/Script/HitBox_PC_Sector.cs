@@ -83,15 +83,16 @@ public class HitBox_PC_Sector : MonoBehaviour
                 enemy.ApplyKnockback(knockDir * finalKb, weapon);
             }
 
-            if (col.GetComponentInParent<Health>() is Health hp)
+            // 🔧 Health → EnemyHealth로 변경
+            if (col.GetComponentInParent<EnemyHealth>() is EnemyHealth hp)
             {
                 Vector3 hitDir = dir;
-                // 기존
-                // hp.ApplyDamage(finalDmg, hitDir, weapon);
-
-                // 변경
-                hp.ApplyDamage(finalDmg, hitDir, weapon, weight);   // ← 거리감쇠(weight) 전달
-
+                hp.ApplyDamage(finalDmg, hitDir, weapon, weight);
+                Debug.Log($"✅ [Shotgun] EnemyHealth에 {finalDmg} 데미지 적용!");
+            }
+            else
+            {
+                Debug.LogWarning($"❌ [Shotgun] {col.name}에서 EnemyHealth를 찾을 수 없습니다!");
             }
         }
 

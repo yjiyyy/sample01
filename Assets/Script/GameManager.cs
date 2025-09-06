@@ -1,62 +1,41 @@
-using UnityEngine;
-using UnityEngine.UI;
+ï»¿using UnityEngine;
+using UnityEngine.UI; // âœ… ì´ ì¤„ì„ ì¶”ê°€!
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [Header("ÇÃ·¹ÀÌ¾î ¼³Á¤")]
+    [Header("í”Œë ˆì´ì–´ ê´€ë ¨")]
     public Transform playerTransform;
+    public GameObject playerHPUIPrefab; // âœ… ëˆ„ë½ëœ í•„ë“œë„ ì¶”ê°€
 
-    [Header("HP UI ÇÁ¸®ÆÕ")]
-    public GameObject playerHpUIPrefab;
-
-    private GameObject playerHpUIInstance;
-
-    private void Awake()
+    void Awake()
     {
         if (Instance == null)
+        {
             Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
         else
         {
             Destroy(gameObject);
-            return;
         }
     }
 
-    private void Start()
+    // âœ… í”Œë ˆì´ì–´ HP UI ìƒì„± ë©”ì„œë“œ
+    public void SpawnPlayerHPUI(Transform playerTransform)
     {
-        if (playerTransform != null && playerHpUIPrefab != null)
+        if (playerHPUIPrefab != null)
         {
-            // Ã¼·Â¹Ù »ı¼º
-            playerHpUIInstance = Instantiate(playerHpUIPrefab);
-
-            // ¿¬°á
-            HPUIController controller = playerHpUIInstance.GetComponent<HPUIController>();
+            GameObject hpui = Instantiate(playerHPUIPrefab);
+            HPUIController controller = hpui.GetComponent<HPUIController>();
             controller.target = playerTransform;
-            controller.health = playerTransform.GetComponent<Health>();
-            controller.hpSlider = playerHpUIInstance.GetComponentInChildren<Slider>();
+            controller.health = playerTransform.GetComponent<PlayerHealth>();
+            controller.hpSlider = hpui.GetComponentInChildren<Slider>();
         }
         else
         {
-            Debug.LogWarning("[GameManager] playerTransform ¶Ç´Â playerHpUIPrefabÀÌ ¼³Á¤µÇÁö ¾Ê¾Ò½À´Ï´Ù.");
+            Debug.LogError("âŒ playerHPUIPrefabì´ GameManagerì— ì—°ê²°ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤!");
         }
     }
-    public void SpawnPlayerHPUI(Transform player)
-    {
-        if (playerHpUIPrefab == null)
-        {
-            Debug.LogWarning("[GameManager] playerHpUIPrefabÀÌ ¼³Á¤µÇÁö ¾Ê¾Ò½À´Ï´Ù.");
-            return;
-        }
-
-        playerTransform = player;
-
-        GameObject hpui = Instantiate(playerHpUIPrefab);
-        var controller = hpui.GetComponent<HPUIController>();
-        controller.target = player;
-        controller.health = player.GetComponent<Health>();
-        controller.hpSlider = hpui.GetComponentInChildren<Slider>();
-    }
-
 }

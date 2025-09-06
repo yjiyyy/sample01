@@ -13,11 +13,11 @@ GameObject:
   - component: {fileID: 6477108829187293228}
   - component: {fileID: 3287521263448462925}
   - component: {fileID: 631336349894415364}
-  - component: {fileID: 7244078825847259245}
   - component: {fileID: 3724050177357962091}
   - component: {fileID: 4290812851907980175}
   - component: {fileID: -7897923584532349555}
-  - component: {fileID: 3465111746055827271}
+  - component: {fileID: -6019980081282909286}
+  - component: {fileID: 74586916155458257}
   m_Layer: 7
   m_Name: E_LV01
   m_TagString: Enemy
@@ -75,11 +75,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2017f08e959c0b418515c98c9787966, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jiggleActivator: {fileID: 0}
-  moveSpeed: 5
-  knockbackDuration: 0.3
-  weight: 1
+  jerkController: {fileID: -6019980081282909286}
   animator: {fileID: 0}
+  moveSpeed: 5
+  weight: 1
+  debugMode: 1
 --- !u!195 &3287521263448462925
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -114,19 +114,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4b6313ab66cfd74792d4be1d5360624, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &7244078825847259245
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4758100800114042528}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d543dcfb1ca5b5b4784c1f731c9e78a9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  maxHP: 100
 --- !u!65 &3724050177357962091
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -189,19 +176,35 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackPatterns:
   - {fileID: 11400000, guid: 4b203a2b38263dd4294224c2d5d56871, type: 2}
---- !u!114 &3465111746055827271
+--- !u!114 &-6019980081282909286
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4758100800114042528}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 514320fe1fa2a084eb81b16afb5b5a9e, type: 3}
+  m_Script: {fileID: 11500000, guid: 8a6b8aaa6899c534a9832671c552e52f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interval: 1
+  jerkBones:
+  - bone: {fileID: 2642304933287456033}
+    jerkEulerAngles: {x: -50, y: -10, z: 30}
+--- !u!114 &74586916155458257
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4758100800114042528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90f57cf5d1527454180d348f1dd64aad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHP: 100
+  weight: 1
 --- !u!1001 &8862513175375928873
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -573,6 +576,11 @@ CharacterJoint:
   m_EnablePreprocessing: 0
   m_MassScale: 1
   m_ConnectedMassScale: 1
+--- !u!4 &2642304933287456033 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6797799432749069064, guid: 6b65cd28f5af9aa43a80ca14e1316eff, type: 3}
+  m_PrefabInstance: {fileID: 8862513175375928873}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &3712453258833141849 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5294175248784948848, guid: 6b65cd28f5af9aa43a80ca14e1316eff, type: 3}

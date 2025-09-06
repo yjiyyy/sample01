@@ -10,7 +10,7 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
 
     [Header("디버그")]
     [SerializeField] private bool debugDrawGizmos = false;
-    [SerializeField] private bool debugLog = false;
+    //[SerializeField] private bool debugLog = false;
 
     [Header("피해 대상 레이어 (Enemy 전용 권장)")]
     [SerializeField] private LayerMask damageLayers = ~0;
@@ -116,15 +116,19 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
             float t = Mathf.Clamp01(distance / cachedRadius);
             float finalDamage = Mathf.Lerp(cachedDamage * cachedEdgeMul, cachedDamage, 1f - t);
 
-            if (target.TryGetComponent(out Health health))
+            if (target.TryGetComponent(out PlayerHealth playerHP))
             {
                 Vector3 hitDir = (target.transform.position - transform.position).normalized;
                 float impactScale = 1f;
-
-                health.ApplyDamage(finalDamage, hitDir, weaponData, impactScale);
-
-                if (debugLog)
-                    Debug.Log($"[Explosion] {target.name} hit by {weaponData.weaponName}, Damage={finalDamage}, Dir={hitDir}");
+                playerHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale);
+                Debug.Log($"✅ [Explosion] PlayerHealth에 {finalDamage} 데미지!");
+            }
+            else if (target.TryGetComponent(out EnemyHealth enemyHP))
+            {
+                Vector3 hitDir = (target.transform.position - transform.position).normalized;
+                float impactScale = 1f;
+                enemyHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale);
+                Debug.Log($"✅ [Explosion] EnemyHealth에 {finalDamage} 데미지!");
             }
         }
 
