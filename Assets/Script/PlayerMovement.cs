@@ -82,14 +82,23 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        // ✅ 무기 컨트롤러 상태 확인 (수정됨)
         var weaponCtrl = GetComponent<PlayerWeaponController>();
         if (weaponCtrl != null)
         {
+            if (weaponCtrl.CurrentState == PlayerState.Evade)
+            {
+                // 회피 중에는 NavMeshAgent를 절대 켜지 않음
+                if (agent.enabled)
+                {
+                    agent.enabled = false;
+                    Debug.Log("🛑 [PlayerMovement] 회피 중 NavMeshAgent 꺼짐");
+                }
+                return;
+            }
             if (weaponCtrl.CurrentState == PlayerState.Attack ||
                 weaponCtrl.CurrentState == PlayerState.Knockback ||
                 weaponCtrl.CurrentState == PlayerState.Stun ||
-                weaponCtrl.CurrentState == PlayerState.Dead)  // ← Dead 상태 추가
+                weaponCtrl.CurrentState == PlayerState.Dead)
             {
                 if (CanUseAgent())
                 {
@@ -278,12 +287,10 @@ public class PlayerMovement : MonoBehaviour
     {
         return agent != null ? agent.velocity.magnitude : 0f;
     }
-
     private bool CanUseAgent()
     {
         return agent.enabled && agent.isOnNavMesh;
     }
-
     Vector3 CameraRelative(Vector3 input)
     {
         Vector3 camForward = mainCam.transform.forward;
