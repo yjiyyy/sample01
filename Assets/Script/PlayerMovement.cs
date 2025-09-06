@@ -68,35 +68,28 @@ public class PlayerMovement : MonoBehaviour
         if (isKnockbacked)
         {
             knockbackTimer += Time.deltaTime;
-
-            // 남은 시간 비율 (0 → 시작, 1 → 끝)
             float t = knockbackTimer / knockbackDuration;
             t = Mathf.Clamp01(t);
-
-            // 선형 감속 (처음엔 full speed, 끝나갈수록 0)
             float currentSpeed = knockbackSpeed * (1f - t);
-
             Vector3 displacement = knockbackDirection * currentSpeed * Time.deltaTime;
             transform.position += displacement;
-
-            Debug.Log($"[Knockback] speed={currentSpeed:F2}, disp={displacement}");
 
             if (knockbackTimer >= knockbackDuration)
             {
                 isKnockbacked = false;
-                Debug.Log("[Knockback] 끝");
+                Debug.Log("[PlayerMovement] 넉백 종료");
             }
-
-            return; // 넉백 중이면 입력/에이전트 무시
+            return;
         }
 
-        // ✅ 무기 컨트롤러 상태 확인
+        // ✅ 무기 컨트롤러 상태 확인 (수정됨)
         var weaponCtrl = GetComponent<PlayerWeaponController>();
         if (weaponCtrl != null)
         {
             if (weaponCtrl.CurrentState == PlayerState.Attack ||
                 weaponCtrl.CurrentState == PlayerState.Knockback ||
-                weaponCtrl.CurrentState == PlayerState.Stun)
+                weaponCtrl.CurrentState == PlayerState.Stun ||
+                weaponCtrl.CurrentState == PlayerState.Dead)  // ← Dead 상태 추가
             {
                 if (CanUseAgent())
                 {
@@ -104,7 +97,7 @@ public class PlayerMovement : MonoBehaviour
                     agent.isStopped = true;
                     agent.velocity = Vector3.zero;
                 }
-                return; // 이동 처리 완전히 차단
+                return;
             }
         }
 

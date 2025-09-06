@@ -26,17 +26,31 @@ public class HitBox_Enemy : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
+            // ✅ 데미지 적용
             if (other.TryGetComponent(out Health hp))
                 hp.ApplyDamage(damage);
 
-            // ✅ PlayerMovement에서 넉백 처리
-            if (other.TryGetComponent(out PlayerMovement playerMove))
+            // 🔧 PlayerWeaponController에서 넉백+스턴 처리 (최우선)
+            if (other.TryGetComponent(out PlayerWeaponController weaponController))
             {
                 // 몬스터 → 플레이어 방향
                 Vector3 hitDir = (other.transform.position - transform.position).normalized;
+                hitDir.y = 0f; // Y축 제거
 
-                // 넉백 적용 (PlayerMovement 안에서 weight, 회전 처리)
-                playerMove.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
+                Debug.Log($"[HitBox_Enemy] 플레이어 공격! 넉백: {knockbackPower}, 스턴: {stunDuration}");
+
+                // 🔧 기존 넉백/스턴을 강제 중단하고 새로운 넉백 적용
+                weaponController.ForceApplyKnockback(hitDir, knockbackPower, knockbackDuration, stunDuration);
+            }
+            else
+            {
+                // ✅ PlayerMovement 넉백 (백업용 - PlayerWeaponController가 없을 때만)
+                if (other.TryGetComponent(out PlayerMovement playerMove))
+                {
+                    Vector3 hitDir = (other.transform.position - transform.position).normalized;
+                    playerMove.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
+                    Debug.Log("[HitBox_Enemy] PlayerMovement 백업 넉백 실행");
+                }
             }
         }
     }

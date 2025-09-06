@@ -26,6 +26,9 @@ public class PlayerWeaponController : MonoBehaviour
     [Header("기본 무기 (Weapon_None 프리팹)")]
     [SerializeField] private GameObject defaultWeaponPrefab;
 
+    [Header("디버그 모드")]
+    [SerializeField] private bool debugMode = true;
+
     private GameObject currentWeapon;
     private WeaponBehavior weaponBehavior;
     private WeaponDataSO currentWeaponData;
@@ -33,6 +36,11 @@ public class PlayerWeaponController : MonoBehaviour
     private float lastAttackTime = -999f;
     private PlayerMovement movement;
     private PlayerState state = PlayerState.Idle;
+    private PlayerState previousState = PlayerState.Idle;
+
+    // 🆕 현재 실행 중인 코루틴들 추적
+    private Coroutine currentAttackCoroutine;
+    private Coroutine currentKnockbackCoroutine;
 
     private void Awake()
     {
@@ -42,6 +50,7 @@ public class PlayerWeaponController : MonoBehaviour
     private void Start()
     {
         EquipWeapon(null);
+        ChangeState(PlayerState.Idle);
     }
 
     private void Update()
@@ -66,11 +75,12 @@ public class PlayerWeaponController : MonoBehaviour
 
     private void HandleIdle()
     {
-        if (state == PlayerState.Attack) return;
+        if (state == PlayerState.Attack || state == PlayerState.Knockback || state == PlayerState.Stun)
+            return;
 
         if (movement.GetVelocityMagnitude() > 0.1f)
         {
-            state = PlayerState.Move;
+            ChangeState(PlayerState.Move);
             return;
         }
 
@@ -80,16 +90,39 @@ public class PlayerWeaponController : MonoBehaviour
 
     private void HandleMove()
     {
-        if (state == PlayerState.Attack) return;
+        if (state == PlayerState.Attack || state == PlayerState.Knockback || state == PlayerState.Stun)
+            return;
 
         if (movement.GetVelocityMagnitude() <= 0.1f)
         {
-            state = PlayerState.Idle;
+            ChangeState(PlayerState.Idle);
             return;
         }
 
         if (InputManager.Instance.GetAttackInput())
             PlayAttack();
+    }
+
+    /// <summary>
+    /// 🆕 상태 변경 시 애니메이션도 강제로 맞춤
+    /// </summary>
+    private void ChangeState(PlayerState newState)
+    {
+        if (state == newState) return;
+
+        previousState = state;
+        state = newState;
+
+        // 애니메이션 강제 전환
+        if (animationController != null)
+        {
+            animationController.ForceAnimationByState(newState);
+        }
+
+        if (debugMode)
+        {
+            Debug.Log($"[PlayerWeaponController] 상태 변경: {previousState} → {newState}");
+        }
     }
 
     public void EquipWeapon(GameObject weaponPrefab)
@@ -128,12 +161,20 @@ public class PlayerWeaponController : MonoBehaviour
         if (delta < currentWeaponData.cooldown) return;
 
         lastAttackTime = Time.time;
-        StartCoroutine(AttackRoutine());
+
+        // 기존 공격 코루틴이 있으면 중단
+        if (currentAttackCoroutine != null)
+        {
+            StopCoroutine(currentAttackCoroutine);
+            currentAttackCoroutine = null;
+        }
+
+        currentAttackCoroutine = StartCoroutine(AttackRoutine());
     }
 
     private IEnumerator AttackRoutine()
     {
-        state = PlayerState.Attack;
+        ChangeState(PlayerState.Attack);
         animationController?.PlayAttack(currentWeaponData);
 
         if (weaponBehavior != null)
@@ -141,35 +182,91 @@ public class PlayerWeaponController : MonoBehaviour
 
         yield return new WaitForSeconds(currentWeaponData.cooldown);
 
-        state = PlayerState.Idle;
+        ChangeState(PlayerState.Idle);
         animationController?.EndAttack();
+
+        currentAttackCoroutine = null;
     }
 
-    /* ───────── Knockback + Stun ───────── */
+    /* ───────── 🆕 강제 넉백 (모든 코루틴 중단 후 새로 시작) ───────── */
+
+    /// <summary>
+    /// 기존 모든 액션(공격, 넉백, 스턴)을 강제로 중단하고 새로운 넉백을 적용
+    /// </summary>
+    public void ForceApplyKnockback(Vector3 dir, float power, float duration, float stun)
+    {
+        // 🔹 1단계: 모든 기존 코루틴 강제 중단
+        if (currentAttackCoroutine != null)
+        {
+            StopCoroutine(currentAttackCoroutine);
+            currentAttackCoroutine = null;
+            Debug.Log("[PlayerWeaponController] 공격 코루틴 강제 중단");
+        }
+
+        if (currentKnockbackCoroutine != null)
+        {
+            StopCoroutine(currentKnockbackCoroutine);
+            currentKnockbackCoroutine = null;
+            Debug.Log("[PlayerWeaponController] 기존 넉백/스턴 코루틴 강제 중단");
+        }
+
+        // 🔹 2단계: 새로운 넉백 즉시 시작
+        currentKnockbackCoroutine = StartCoroutine(KnockbackRoutine(dir, power, duration, stun));
+    }
+
+    /// <summary>
+    /// 기존 넉백 메서드 (호환성 유지)
+    /// </summary>
     public void ApplyKnockback(Vector3 dir, float power, float duration, float stun)
     {
-        StartCoroutine(KnockbackRoutine(dir, power, duration, stun));
+        ForceApplyKnockback(dir, power, duration, stun);
     }
 
     private IEnumerator KnockbackRoutine(Vector3 dir, float power, float duration, float stun)
     {
+        // 🔹 1단계: 넉백 상태 + 강제 애니메이션
+        ChangeState(PlayerState.Knockback);
+
+        Debug.Log($"[PlayerWeaponController] 넉백 시작 - Power:{power}, Duration:{duration}");
+
+        // 체력 컴포넌트에서 weight 가져오기
+        float resistance = 1f;
+        if (TryGetComponent(out Health health))
+            resistance = Mathf.Max(health.GetWeight(), 0.01f);
+
         float elapsed = 0f;
+        Vector3 knockDir = dir.normalized;
+        knockDir.y = 0f;
 
         while (elapsed < duration)
         {
             float t = elapsed / duration;
-            float currentSpeed = Mathf.Lerp(power, 0f, t);
-            transform.position += dir * currentSpeed * Time.deltaTime;
+            float currentSpeed = Mathf.Lerp(power / resistance, 0f, t);
+            transform.position += knockDir * currentSpeed * Time.deltaTime;
 
             elapsed += Time.deltaTime;
             yield return null;
         }
 
+        Debug.Log("[PlayerWeaponController] 넉백 완료");
+
+        // 🔹 2단계: 스턴 처리 + 강제 애니메이션
         if (stun > 0f)
         {
-            // TODO: stun 시간 동안 입력 막기 / 애니메이션 재생
+            ChangeState(PlayerState.Stun);
+
+            Debug.Log($"[PlayerWeaponController] 스턴 시작 ({stun:F2}초)");
             yield return new WaitForSeconds(stun);
+            Debug.Log("[PlayerWeaponController] 스턴 완료");
         }
+
+        // 🔹 3단계: 상태 복구 + 강제 애니메이션
+        ChangeState(PlayerState.Idle);
+
+        Debug.Log("[PlayerWeaponController] 정상 상태 복구");
+
+        // 🔹 4단계: 코루틴 추적 해제
+        currentKnockbackCoroutine = null;
     }
 
     private IEnumerator KnockbackThenStunRoutine(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
@@ -180,8 +277,7 @@ public class PlayerWeaponController : MonoBehaviour
 
         if (weapon.knockbackDuration > 0f && weapon.knockbackPower > 0f)
         {
-            state = PlayerState.Knockback;
-            animationController?.PlayKnockback();
+            ChangeState(PlayerState.Knockback);
 
             float elapsed = 0f;
             Vector3 dir = hitDir.normalized;
@@ -199,13 +295,11 @@ public class PlayerWeaponController : MonoBehaviour
 
         if (weapon.stunDuration > 0f)
         {
-            state = PlayerState.Stun;
-            animationController?.PlayStun();
+            ChangeState(PlayerState.Stun);
             yield return new WaitForSeconds(weapon.stunDuration);
         }
 
-        state = PlayerState.Idle;
-        animationController?.GetAnimator().Play("Idle/Run", 0, 0f);
+        ChangeState(PlayerState.Idle);
     }
 
     /* ───────── EnemyDetector 프록시 ───────── */
@@ -214,7 +308,6 @@ public class PlayerWeaponController : MonoBehaviour
         if (enemyDetector == null)
             return new List<Transform>();
 
-        // EnemyDetector 기본 시야거리 활용
         return enemyDetector.GetEnemiesInRange(enemyDetector.viewDistance);
     }
 
