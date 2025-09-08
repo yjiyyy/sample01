@@ -68,3 +68,9 @@ sysinfo.txt
 
 # ======= 주의 =======
 # *.meta → 절대 무시하지 말 것
+Assets/DownloadedAssets/RPG Pack/Materials/Bottle_blue.mat
+Assets/DownloadedAssets/RPG Pack/Materials/Bottle_green.mat
+Assets/DownloadedAssets/RPG Pack/Materials/Bottle_red.mat
+Assets/DownloadedAssets/RPG Pack/Materials/Box_Of_Pandora.mat
+Assets/DownloadedAssets/RPG Pack/Materials/Coin.mat
+ProjectSettings/URPProjectSettings.asset

@@ -19,16 +19,12 @@ public class PlayerMovement : MonoBehaviour
     private NavMeshAgent agent;
     private Rigidbody rb;
     private Camera mainCam;
-    private float baseSpeed;
 
     private bool isKnockbacked = false;
     private Vector3 knockbackDirection;
     private float knockbackSpeed;
     private float knockbackDuration;
     private float knockbackTimer;
-
-    private bool isPushing = false;
-    private float slowMultiplier = 0.4f;
 
     private Vector3 lastInput = Vector3.zero;
     private Vector3 lastPosition;
@@ -48,15 +44,25 @@ public class PlayerMovement : MonoBehaviour
         agent.stoppingDistance = stoppingDistance;
         agent.autoBraking = autoBraking;
 
+        // ✅ 물리 충돌을 위한 설정 복구
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
+
+        // ✅ Rigidbody 설정 (물리 충돌용)
+        rb.isKinematic = false;
+        rb.useGravity = false;
+        rb.mass = 1f;
+        rb.linearDamping = 5f;
+        rb.angularDamping = 5f;
+        rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+
         GameManager.Instance.playerTransform = this.transform;
-        baseSpeed = agent.speed;
         lastPosition = transform.position;
 
-        // ✅ NavMesh에 맞춘 Y좌표 초기 보정
+        // NavMesh에 맞춘 Y좌표 초기 보정
         if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
         {
             Vector3 fixedPos = transform.position;
-            fixedPos.y = hit.position.y + 0.05f; // 살짝 띄워 안정성 확보
+            fixedPos.y = hit.position.y + 0.05f;
             transform.position = fixedPos;
             rb.position = fixedPos;
         }
@@ -64,7 +70,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        // ✅ 넉백 처리 먼저 실행
+        // 넉백 처리 먼저 실행
         if (isKnockbacked)
         {
             knockbackTimer += Time.deltaTime;
@@ -82,23 +88,15 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
+        // 무기 컨트롤러 상태 확인
         var weaponCtrl = GetComponent<PlayerWeaponController>();
         if (weaponCtrl != null)
         {
-            if (weaponCtrl.CurrentState == PlayerState.Evade)
-            {
-                // 회피 중에는 NavMeshAgent를 절대 켜지 않음
-                if (agent.enabled)
-                {
-                    agent.enabled = false;
-                    Debug.Log("🛑 [PlayerMovement] 회피 중 NavMeshAgent 꺼짐");
-                }
-                return;
-            }
             if (weaponCtrl.CurrentState == PlayerState.Attack ||
                 weaponCtrl.CurrentState == PlayerState.Knockback ||
                 weaponCtrl.CurrentState == PlayerState.Stun ||
-                weaponCtrl.CurrentState == PlayerState.Dead)
+                weaponCtrl.CurrentState == PlayerState.Dead ||
+                weaponCtrl.CurrentState == PlayerState.Evade)
             {
                 if (CanUseAgent())
                 {
@@ -110,7 +108,7 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // ✅ 일반 이동 처리
+        // 일반 이동 처리
         Vector2 moveInput = InputManager.Instance.GetMoveInput();
         lastInput = new Vector3(moveInput.x, 0, moveInput.y);
 
@@ -143,44 +141,29 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        agent.speed = isPushing ? baseSpeed * slowMultiplier : baseSpeed;
-
-        // ✅ 테스트 입력 (기존 InputManager 메서드 사용)
-        if (InputManager.Instance.GetDamageTestInput())  // -키
+        // 테스트 입력
+        if (InputManager.Instance.GetDamageTestInput())
         {
-            // 🔧 Health → PlayerHealth로 변경
-            if (TryGetComponent(out PlayerHealth health))
+            if (TryGetComponent(out Health health))
             {
                 health.ApplyDamage(10f);
                 Debug.Log("[테스트] 플레이어에게 10 데미지 적용 (-키)");
             }
-            else
-            {
-                Debug.LogWarning("❌ PlayerHealth 컴포넌트를 찾을 수 없습니다!");
-            }
         }
 
-        if (InputManager.Instance.GetHealTestInput())    // =키
+        if (InputManager.Instance.GetHealTestInput())
         {
-            // 🔧 Health → PlayerHealth로 변경
-            if (TryGetComponent(out PlayerHealth health))
+            if (TryGetComponent(out Health health))
             {
                 health.Heal(20f);
                 Debug.Log("[테스트] 플레이어 체력 20 회복 (=키)");
-            }
-            else
-            {
-                Debug.LogWarning("❌ PlayerHealth 컴포넌트를 찾을 수 없습니다!");
             }
         }
     }
 
     void LateUpdate()
     {
-        bool shouldStop =
-            !isKnockbacked &&
-            !isPushing &&
-            lastInput.magnitude < 0.01f;
+        bool shouldStop = !isKnockbacked && lastInput.magnitude < 0.01f;
 
         if (shouldStop)
         {
@@ -195,80 +178,22 @@ public class PlayerMovement : MonoBehaviour
             rb.angularVelocity = Vector3.zero;
         }
 
-        if (isPushing)
-        {
-            Collider[] hits = Physics.OverlapSphere(transform.position, 0.6f, LayerMask.GetMask("Enemy"));
-            if (hits.Length == 0)
-            {
-                isPushing = false;
-                Debug.Log("🧯 밀기 상태 강제 해제 (적 없음)");
-            }
-        }
-
         lastPosition = transform.position;
     }
 
-    void OnCollisionStay(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Enemy"))
-        {
-            Vector3 moveDir = agent.desiredVelocity.normalized;
-            bool pushing = false;
+    // ✅ 모든 몬스터 밀기 관련 코드 제거 (OnCollisionStay, OnCollisionExit 등)
 
-            foreach (ContactPoint contact in collision.contacts)
-            {
-                Vector3 normal = contact.normal;
-                float dot = Vector3.Dot(moveDir, -normal);
-                if (dot > 0.5f)
-                {
-                    pushing = true;
-                    break;
-                }
-            }
-
-            isPushing = pushing;
-        }
-    }
-
-    void OnCollisionExit(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Enemy"))
-        {
-            isPushing = false;
-        }
-    }
-
-    // 기존
-    public void ApplyKnockback(Vector3 direction, float force, float duration)
-    {
-        isKnockbacked = true;
-        knockbackDirection = direction.normalized;
-        knockbackSpeed = force;
-        knockbackDuration = duration;
-        knockbackTimer = 0f;
-
-        if (CanUseAgent())
-        {
-            agent.ResetPath();
-            agent.isStopped = true;
-        }
-    }
-
-    // 수정 후
     public void ApplyKnockback(Vector3 direction, float force, float duration, Transform attacker = null)
     {
         isKnockbacked = true;
-
         knockbackDirection = direction.normalized;
 
-        // ✅ weight 반영
         float finalForce = force;
         if (TryGetComponent(out Health health))
         {
             finalForce /= Mathf.Max(0.01f, health.GetWeight());
         }
         knockbackSpeed = finalForce;
-
         knockbackDuration = duration;
         knockbackTimer = 0f;
 
@@ -278,7 +203,6 @@ public class PlayerMovement : MonoBehaviour
             agent.isStopped = true;
         }
 
-        // ✅ 바라보는 방향은 공격자 쪽
         if (attacker != null)
         {
             Vector3 lookDir = (attacker.position - transform.position).normalized;
@@ -288,19 +212,10 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    public bool IsCurrentlyKnockbacked()
-    {
-        return isKnockbacked;
-    }
+    public bool IsCurrentlyKnockbacked() => isKnockbacked;
+    public float GetVelocityMagnitude() => agent != null ? agent.velocity.magnitude : 0f;
+    private bool CanUseAgent() => agent.enabled && agent.isOnNavMesh;
 
-    public float GetVelocityMagnitude()
-    {
-        return agent != null ? agent.velocity.magnitude : 0f;
-    }
-    private bool CanUseAgent()
-    {
-        return agent.enabled && agent.isOnNavMesh;
-    }
     Vector3 CameraRelative(Vector3 input)
     {
         Vector3 camForward = mainCam.transform.forward;

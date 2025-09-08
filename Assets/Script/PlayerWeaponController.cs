@@ -70,7 +70,11 @@ public class PlayerWeaponController : MonoBehaviour
     {
         if (state == PlayerState.Dead) return;
 
-        UpdateEvadeGauge();
+        // ✅ 게이지가 최대치가 아닐 때만 업데이트
+        if (evadeData != null && currentEvadeGauge < evadeData.maxGauge)
+        {
+            UpdateEvadeGauge();
+        }
 
         if (InputManager.Instance.GetEvadeInput() && CanEvade() && state != PlayerState.Evade)
         {
@@ -283,6 +287,13 @@ public class PlayerWeaponController : MonoBehaviour
         isInvincible = false;
         Debug.Log("[PlayerWeaponController] 회피 완료");
 
+        // ✅ 회피 애니메이션 파라미터 정리
+        if (animationController != null)
+        {
+            animationController.EndEvade();  // 이 라인 추가
+        }
+
+        // 상태 복구 (이동 중이면 Move, 아니면 Idle)
         if (movement.GetVelocityMagnitude() > 0.1f)
         {
             ChangeState(PlayerState.Move);
@@ -291,8 +302,12 @@ public class PlayerWeaponController : MonoBehaviour
         {
             ChangeState(PlayerState.Idle);
         }
+
+        // 코루틴 추적 해제
         currentEvadeCoroutine = null;
     }
+
+
 
     private void HandleIdle()
     {

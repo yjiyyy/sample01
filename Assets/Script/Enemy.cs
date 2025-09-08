@@ -10,7 +10,11 @@ public class Enemy : MonoBehaviour
     private Transform player;
     private EnemyAnimationController anim;
     private EnemyAttackController attackController;
-    private bool isAttacking;
+
+    // ✅ 공격 상태 관리 개선
+    private bool isInAttackAnimation;  // 애니메이션 재생 중 여부
+    private bool isInAttackCooldown;   // 쿨다운 중 여부
+    private float lastAttackTime = -999f;
 
     [Header("넉백 시 머리 팍 튕기기")]
     [SerializeField] private MultiBoneJerkController jerkController;
@@ -49,7 +53,6 @@ public class Enemy : MonoBehaviour
     };
 
     private float debugTimer = 0f;
-    private float attackTimer;
 
     void Start()
     {
@@ -70,34 +73,6 @@ public class Enemy : MonoBehaviour
     void Update()
     {
         if (currentState == EnemyState.Dead || player == null) return;
-        /*
-        if (debugMode)
-        {
-            debugTimer += Time.deltaTime;
-            if (debugTimer >= 0.1f)
-            {
-                AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-
-                string animName = "Unknown";
-                if (stateInfo.IsName("Attack")) animName = "Attack";
-                else if (stateInfo.IsName("Run")) animName = "Move";
-                else if (stateInfo.IsName("Stun")) animName = "Stun";
-                else if (stateInfo.IsName("Dead")) animName = "Dead";
-                else if (stateInfo.IsName("Knockback01")) animName = "Knockback01";
-                else if (stateInfo.IsName("Knockback02")) animName = "Knockback02";
-                else if (stateInfo.IsName("Knockback03")) animName = "Knockback03";
-
-                string stateLog =
-                    $"{gameObject.name} ▶ " +
-                    $"State={currentState} | " +
-                    $"Anim={animName} | " +
-                    $"Normalized={stateInfo.normalizedTime:F2} | " +
-                    $"Animator.speed={animator.speed:F2}";
-
-                Debug.Log(stateLog);
-                debugTimer = 0f;
-            }
-        }*/
 
         switch (currentState)
         {
@@ -138,11 +113,19 @@ public class Enemy : MonoBehaviour
                 break;
 
             case EnemyState.Attack:
+                // ✅ 공격 시작 시에만 애니메이션 재생
                 animator.Play("Attack", 0, 0f);
-                animator.Update(0f);              // ✅ Attack 즉시 반영
-                attackController.NotifyAttack(0); // 현재 공격 데이터 캐싱
+                animator.Update(0f);
+                attackController.NotifyAttack(0);
                 if (agent != null && agent.isOnNavMesh) agent.isStopped = true;
-                attackTimer = 0f;                 // Attack 진입 시 쿨타임 초기화
+
+                // ✅ 공격 상태 플래그 설정
+                isInAttackAnimation = true;
+                isInAttackCooldown = true;
+                lastAttackTime = Time.time;
+
+                // ✅ 애니메이션 완료 체크 코루틴 시작
+                StartCoroutine(CheckAttackAnimationComplete());
                 break;
 
             case EnemyState.Dead:
@@ -163,7 +146,10 @@ public class Enemy : MonoBehaviour
             ? attackController.GetAttackRange(0)
             : 2f;
 
-        if (distance < attackRange)
+        // ✅ 쿨다운 체크 추가
+        bool canAttack = !isInAttackCooldown && (Time.time >= lastAttackTime + GetAttackCooldown());
+
+        if (distance < attackRange && canAttack)
         {
             SetState(EnemyState.Attack);
             return;
@@ -188,42 +174,82 @@ public class Enemy : MonoBehaviour
         if (dir != Vector3.zero)
             transform.rotation = Quaternion.LookRotation(dir);
 
-        // 🔹 공격 상태 잠금 중이면 → 쿨타임 끝날 때까지 유지
-        attackTimer += Time.deltaTime;
-        if (isAttacking)
+        // ✅ 애니메이션이 끝났으면 추적 상태로 복귀
+        if (!isInAttackAnimation)
         {
-            if (attackTimer >= attackController.GetAttackCooldown(0))
+            // 사거리 내에 있으면 계속 추적, 밖에 있으면 Chase로 전환
+            float attackRange = attackController != null && attackController.AttackCount > 0
+                ? attackController.GetAttackRange(0)
+                : 2f;
+
+            if (Vector3.Distance(transform.position, player.position) >= attackRange)
             {
-                // 공격 종료 → 다시 사거리 체크
-                isAttacking = false;
+                SetState(EnemyState.Chase);
             }
-            return; // 쿨타임 전에는 무조건 Attack 상태 유지
+            else
+            {
+                // ✅ 사거리 내에 있지만 쿨다운 중이라면 추적만 (공격은 X)
+                SetState(EnemyState.Chase);
+            }
         }
-
-        // 🔹 공격 쿨타임이 끝난 이후 → 사거리 판정
-        float attackRange = attackController != null && attackController.AttackCount > 0
-            ? attackController.GetAttackRange(0)
-            : 2f;
-
-        if (Vector3.Distance(transform.position, player.position) >= attackRange)
-        {
-            SetState(EnemyState.Chase);
-            return;
-        }
-
-        // 🔹 새로운 공격 시작
-        animator.Play("Attack", 0, 0f);
-        animator.Update(0f);
-        attackController.NotifyAttack(0);
-        isAttacking = true;
-        attackTimer = 0f;
     }
 
+    // ✅ 애니메이션 완료 체크 코루틴
+    private IEnumerator CheckAttackAnimationComplete()
+    {
+        yield return null; // 한 프레임 대기
+
+        while (isInAttackAnimation)
+        {
+            AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+
+            // Attack 애니메이션이 거의 끝났는지 체크 (95% 완료)
+            if (stateInfo.IsName("Attack") && stateInfo.normalizedTime >= 0.95f)
+            {
+                isInAttackAnimation = false;
+                Debug.Log($"[Enemy] {gameObject.name} 공격 애니메이션 완료");
+                break;
+            }
+
+            yield return null;
+        }
+
+        // ✅ 쿨다운 완료 체크 코루틴 시작
+        StartCoroutine(CheckAttackCooldownComplete());
+    }
+
+    // ✅ 쿨다운 완료 체크 코루틴
+    private IEnumerator CheckAttackCooldownComplete()
+    {
+        float cooldown = GetAttackCooldown();
+        float elapsed = Time.time - lastAttackTime;
+
+        while (elapsed < cooldown)
+        {
+            elapsed = Time.time - lastAttackTime;
+            yield return null;
+        }
+
+        isInAttackCooldown = false;
+        Debug.Log($"[Enemy] {gameObject.name} 공격 쿨다운 완료");
+    }
+
+    // ✅ 공격 쿨다운 가져오기 헬퍼 메서드
+    private float GetAttackCooldown()
+    {
+        return attackController != null && attackController.AttackCount > 0
+            ? attackController.GetAttackCooldown(0)
+            : 1f;
+    }
 
     /* ───────── 데미지 처리 ───────── */
     public void OnDamage(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (currentState == EnemyState.Dead) return;
+
+        // ✅ 공격 상태 초기화
+        isInAttackAnimation = false;
+        isInAttackCooldown = false;
 
         if (stunRoutine != null)
         {
@@ -302,7 +328,9 @@ public class Enemy : MonoBehaviour
             ? attackController.GetAttackRange(0)
             : 2f;
 
-        if (player != null && Vector3.Distance(transform.position, player.position) < attackRange)
+        bool canAttack = !isInAttackCooldown && (Time.time >= lastAttackTime + GetAttackCooldown());
+
+        if (player != null && Vector3.Distance(transform.position, player.position) < attackRange && canAttack)
         {
             SetState(EnemyState.Attack);
         }
@@ -317,7 +345,7 @@ public class Enemy : MonoBehaviour
         stunRoutine = null;
     }
 
-    /* ───────── 사망 처리 ───────── */
+    /* ───────── 사망 처리 (기존 코드 유지) ───────── */
     public void Die(Vector3 hitDir, WeaponDataSO weapon) => Die(hitDir, weapon, 1f);
 
     public void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
@@ -351,6 +379,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    // ... 나머지 사망 처리 메서드들은 기존과 동일 ...
     private void ScheduleDestroyGibs(Transform root, float delay)
     {
         foreach (var rb in root.GetComponentsInChildren<Rigidbody>())
