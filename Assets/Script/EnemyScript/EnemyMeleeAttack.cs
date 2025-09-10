@@ -18,7 +18,7 @@ public class EnemyMeleeAttack : MonoBehaviour
         animator = GetComponent<Animator>();
     }
 
-    // ÀÌ ÇÔ¼ö´Â ¾Ö´Ï¸ÞÀÌ¼Ç ÀÌº¥Æ®¿¡¼­ È£ÃâµÊ
+    // ï¿½ï¿½ ï¿½Ô¼ï¿½ï¿½ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½Ìºï¿½Æ®ï¿½ï¿½ï¿½ï¿½ È£ï¿½ï¿½ï¿½
     public void AttackHit()
     {
         Vector3 center = transform.position + transform.TransformDirection(hitOffset);
@@ -35,7 +35,7 @@ public class EnemyMeleeAttack : MonoBehaviour
         }
     }
 
-    // ¿¡µðÅÍ¿¡¼­ °ø°Ý ¹üÀ§ ½Ã°¢È­
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½È­
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;

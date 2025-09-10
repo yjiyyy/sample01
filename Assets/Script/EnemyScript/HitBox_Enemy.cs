@@ -32,15 +32,15 @@ public class HitBox_Enemy : MonoBehaviour
                 }
             }
 
-            // 🔧 Health → PlayerHealth로 변경
-            if (other.TryGetComponent(out PlayerHealth hp))
+            // 🔧 Health 컴포넌트 사용 (PlayerHealth는 Health를 상속하므로 호환됨)
+            if (other.TryGetComponent(out Health hp))
             {
                 hp.ApplyDamage(damage);
-                Debug.Log($"✅ [HitBox_Enemy] PlayerHealth에 {damage} 데미지 적용!");
+                Debug.Log($"✅ [HitBox_Enemy] Health에 {damage} 데미지 적용!");
             }
             else
             {
-                Debug.LogWarning($"❌ [HitBox_Enemy] {other.name}에서 PlayerHealth를 찾을 수 없습니다!");
+                Debug.LogWarning($"❌ [HitBox_Enemy] {other.name}에서 Health를 찾을 수 없습니다!");
             }
 
             // 🔧 PlayerWeaponController에서 넉백+스턴 처리 (최우선)

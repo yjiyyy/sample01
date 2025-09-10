@@ -4,10 +4,10 @@ using UnityEngine;
 [RequireComponent(typeof(Enemy))]
 public class EnemyRushAttack : MonoBehaviour
 {
-    [Header("µ¹Áø °ø°İ µ¥ÀÌÅÍ")]
+    [Header("ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
     public RushAttackData rushData;
 
-    [Header("¾Ö´Ï¸ŞÀÌ¼Ç ÀÌ¸§")]
+    [Header("ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½Ì¸ï¿½")]
     public string prepareAnimName = "Rush_Prepare";
     public string rushAnimName = "Rush_Attack";
 
@@ -25,7 +25,7 @@ public class EnemyRushAttack : MonoBehaviour
 
         if (player == null)
         {
-            Debug.LogError("[EnemyRushAttack] Player¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù.");
+            Debug.LogError("[EnemyRushAttack] Playerï¿½ï¿½ Ã£ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.");
         }
     }
 
@@ -47,7 +47,7 @@ public class EnemyRushAttack : MonoBehaviour
     {
         if (player == null) return false;
 
-        // °Å¸® ±â¹İ °ø°İ ÆÇ´Ü (Áß°Å¸®ÀÏ ¶§¸¸)
+        // ï¿½Å¸ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ç´ï¿½ (ï¿½ß°Å¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         return distanceToPlayer < 15f && distanceToPlayer > 5f;
     }
@@ -56,29 +56,29 @@ public class EnemyRushAttack : MonoBehaviour
     {
         if (rushData == null)
         {
-            Debug.LogError("[EnemyRushAttack] rushData°¡ ¼³Á¤µÇÁö ¾Ê¾Ò½À´Ï´Ù.");
+            Debug.LogError("[EnemyRushAttack] rushDataï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¾Ò½ï¿½ï¿½Ï´ï¿½.");
             yield break;
         }
 
         isAttacking = true;
         cooldownTimer = rushData.cooldown;
 
-        // ÇöÀç »óÅÂ ÀúÀå
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         enemy.SetState(EnemyState.Attack);
 
-        // 1. ÁØºñ ´Ü°è - ÇÃ·¹ÀÌ¾î Á¶ÁØ
+        // 1. ï¿½Øºï¿½ ï¿½Ü°ï¿½ - ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½ï¿½
         animator.Play(prepareAnimName);
 
         Vector3 targetPosition = player.position;
         Vector3 rushDirection = (targetPosition - transform.position).normalized;
         rushDirection.y = 0f;
 
-        // ÇÃ·¹ÀÌ¾î¸¦ ¹Ù¶óº¸°Ô È¸Àü
+        // ï¿½Ã·ï¿½ï¿½Ì¾î¸¦ ï¿½Ù¶óº¸°ï¿½ È¸ï¿½ï¿½
         transform.rotation = Quaternion.LookRotation(rushDirection);
 
         yield return new WaitForSeconds(rushData.prepareTime);
 
-        // 2. µ¹Áø ´Ü°è
+        // 2. ï¿½ï¿½ï¿½ï¿½ ï¿½Ü°ï¿½
         animator.Play(rushAnimName);
 
         float rushElapsed = 0f;
@@ -88,19 +88,19 @@ public class EnemyRushAttack : MonoBehaviour
         {
             rushElapsed += Time.deltaTime;
 
-            // µ¹Áø ÀÌµ¿
+            // ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
             transform.position += rushDirection * rushData.rushSpeed * Time.deltaTime;
 
-            // ÇÃ·¹ÀÌ¾î¿Í Ãæµ¹ Ã¼Å©
+            // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ï¿½ ï¿½æµ¹ Ã¼Å©
             if (!hasHitPlayer && player != null)
             {
                 float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-                if (distanceToPlayer < 2.0f) // Ãæµ¹ ¹İ°æ
+                if (distanceToPlayer < 2.0f) // ï¿½æµ¹ ï¿½İ°ï¿½
                 {
                     hasHitPlayer = true;
 
-                    // ÇÃ·¹ÀÌ¾î µ¥¹ÌÁö ¹× ³Ë¹é Àû¿ë
-                    if (player.TryGetComponent<PlayerHealth>(out var playerHealth))
+                    // í”Œë ˆì´ì–´ ë°ë¯¸ì§€ ë° ë„‰ë°± ì²˜ë¦¬
+                    if (player.TryGetComponent<Health>(out var playerHealth))
                     {
                         playerHealth.ApplyDamage(rushData.damage);
                     }
@@ -117,10 +117,10 @@ public class EnemyRushAttack : MonoBehaviour
             yield return null;
         }
 
-        // 3. ¸¶¹«¸® ¹× Äğ´Ù¿î
+        // 3. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½Ù¿ï¿½
         isAttacking = false;
 
-        // ¿ø·¡ »óÅÂ·Î µ¹¾Æ°¡±â
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â·ï¿½ ï¿½ï¿½ï¿½Æ°ï¿½ï¿½ï¿½
         enemy.SetState(EnemyState.Chase);
     }
 }

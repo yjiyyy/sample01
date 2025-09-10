@@ -10,7 +10,7 @@ public class Health : MonoBehaviour
     [Tooltip("값이 클수록 넉백에 덜 밀림. PC/몬스터 공용 스탯")]
     public float weight = 1f;   // 1 = 기본, 2 = 절반만 밀림, 0.5 = 두 배로 밀림
 
-    void Awake()
+    protected virtual void Awake()
     {
         currentHP = maxHP;
     }
@@ -34,8 +34,8 @@ public class Health : MonoBehaviour
         ApplyDamage(amount, hitDir, weapon, 1f);
     }
 
-    // ✅ 최종 버전 (모든 인자 전달)
-    public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon, float impactScale)
+    // ✅ 최종 버전 (모든 인자 전달) - virtual로 만들어 오버라이드 가능
+    public virtual void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon, float impactScale)
     {
         currentHP -= amount;
         Debug.Log($"{gameObject.name}이(가) {amount:F1} 피해! scale:{impactScale:F2} | HP: {currentHP:F1}");
@@ -47,7 +47,7 @@ public class Health : MonoBehaviour
     }
 
     /* ───────── 회복 처리 ───────── */
-    public void Heal(float amount)
+    public virtual void Heal(float amount)
     {
         if (amount <= 0f) return;
 
@@ -58,7 +58,7 @@ public class Health : MonoBehaviour
     }
 
     /* ───────── 사망 처리 ───────── */
-    private void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
+    protected virtual void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         Debug.Log($"{gameObject.name} 사망");
 
