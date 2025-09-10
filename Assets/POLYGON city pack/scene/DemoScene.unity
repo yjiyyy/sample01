@@ -436006,7 +436006,7 @@ MonoBehaviour:
   enemyPrefabsByLevel:
   - {fileID: 4758100800114042528, guid: ab4ebce5cf2e84c40b7a4a65a7744c78, type: 3}
   hpuiPrefab: {fileID: 5425390646291263780, guid: c221514702d57b44bac940471d983478, type: 3}
-  spawnInterval: 3
+  spawnInterval: 4
   spawnRadius: 10
 --- !u!4 &2011634754
 Transform:
