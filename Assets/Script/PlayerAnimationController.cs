@@ -40,8 +40,9 @@ public class PlayerAnimationController : MonoBehaviour
     {
         if (animator == null) return;
 
-        // 🔹 1단계: 모든 애니메이터 파라미터 리셋
-        ResetAllAnimatorParams();
+        // ✅ 타겟 상태를 전달하여 조건부 리셋
+        ResetAllAnimatorParams(newState);
+
 
         // 🔹 2단계: 상태에 맞는 애니메이션 강제 재생
         switch (newState)
@@ -78,8 +79,9 @@ public class PlayerAnimationController : MonoBehaviour
                 Debug.Log("[PlayerAnim] 강제 전환 → Stun");
                 break;
 
-            case PlayerState.Evade: // ✅ 회피 상태 추가
+            case PlayerState.Evade:
                 animator.SetBool(hashIsEvading, true);
+                animator.Update(0f);  // 즉시 반영
                 animator.Play("Evade", 0, 0f);
                 Debug.Log("[PlayerAnim] 강제 전환 → Evade");
                 break;
@@ -95,7 +97,7 @@ public class PlayerAnimationController : MonoBehaviour
     /// <summary>
     /// 모든 애니메이터 파라미터를 안전한 상태로 리셋
     /// </summary>
-    private void ResetAllAnimatorParams()
+    private void ResetAllAnimatorParams(PlayerState targetState = PlayerState.Idle)
     {
         // 트리거 리셋
         animator.ResetTrigger(hashKnockback);
@@ -104,13 +106,28 @@ public class PlayerAnimationController : MonoBehaviour
         // Bool 리셋
         animator.SetBool(hashIsAttacking, false);
         animator.SetBool(hashIsDead, false);
-        animator.SetBool(hashIsEvading, false); // ✅ 회피 Bool 리셋 추가
+
+        // ✅ 회피 상태로 전환하는 경우가 아니라면 회피 Bool 리셋
+        if (targetState != PlayerState.Evade)
+        {
+            animator.SetBool(hashIsEvading, false);
+        }
 
         // Float 리셋
         animator.SetFloat(hashAttackIndex, 0f);
         animator.SetFloat(hashKnockbackIndex, 0f);
 
         Debug.Log("[PlayerAnim] 모든 애니메이터 파라미터 리셋 완료");
+    }
+
+
+    /// <summary>
+    /// ✅ 회피 애니메이션 종료 처리 - 새로 추가된 메서드
+    /// </summary>
+    public void EndEvade()
+    {
+        animator.SetBool(hashIsEvading, false);
+        Debug.Log("[PlayerAnim] 회피 애니메이션 종료");
     }
 
     /* ───────── 공격 실행 (기존 유지) ───────── */

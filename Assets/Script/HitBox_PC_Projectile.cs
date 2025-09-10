@@ -1,10 +1,5 @@
 ﻿using UnityEngine;
 
-/// <summary>
-/// 투사체 힛박스
-/// WeaponBehavior → SetWeapon() 으로 WeaponDataSO 주입
-/// InitializeTowards() 로 탄속·수명 설정
-/// </summary>
 public class HitBox_PC_Projectile : MonoBehaviour
 {
     private float speed;
@@ -16,19 +11,15 @@ public class HitBox_PC_Projectile : MonoBehaviour
     private WeaponDataSO weapon;
     public void SetWeapon(WeaponDataSO w) => weapon = w;
 
-    /// <summary>
-    /// 발사 방향을 직접 받아서 초기화
-    /// </summary>
     public void InitializeTowards(Vector3 direction, float dmg, float spd, float life)
     {
         damage = dmg;
         speed = spd;
         lifetime = life;
-
         moveDir = direction.normalized;
 
         Destroy(gameObject, lifetime);
-        Debug.Log($"🚀 Projectile Init │ dmg:{damage}, spd:{speed}, life:{lifetime}, moveDir:{moveDir}, impulse:{weapon?.ragdollImpulse}");
+        Debug.Log($"🚀 Projectile Init │ dmg:{damage}, spd:{speed}, life:{lifetime}, moveDir:{moveDir}");
     }
 
     void Update()
@@ -57,13 +48,19 @@ public class HitBox_PC_Projectile : MonoBehaviour
             enemy.ApplyKnockback(knockbackDir * weapon.knockbackPower, weapon);
         }
 
-        if (other.GetComponentInParent<Health>() is Health hp)
+        // 🔧 Health → EnemyHealth로 변경
+        if (other.GetComponentInParent<EnemyHealth>() is EnemyHealth hp)
         {
             Vector3 damageDir = moveDir;
             damageDir.y = 0f;
             damageDir = damageDir == Vector3.zero ? Vector3.back : damageDir.normalized;
 
             hp.ApplyDamage(damage, damageDir, weapon);
+            Debug.Log($"✅ [Projectile] EnemyHealth에 {damage} 데미지 적용!");
+        }
+        else
+        {
+            Debug.LogWarning($"❌ [Projectile] {other.name}에서 EnemyHealth를 찾을 수 없습니다!");
         }
 
         Destroy(gameObject);
