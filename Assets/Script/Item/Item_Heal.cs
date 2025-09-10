@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class Item_Heal : MonoBehaviour
 {
-    [Header("È¸º¹·®")]
+    [Header("È¸ï¿½ï¿½ï¿½ï¿½")]
     public int healAmount = 20;
 
     private void OnTriggerEnter(Collider other)
@@ -13,7 +13,7 @@ public class Item_Heal : MonoBehaviour
             if (playerHealth != null)
             {
                 playerHealth.Heal(healAmount);
-                Debug.Log($"Èú ¾ÆÀÌÅÛ »ç¿ë ¡æ HP {healAmount} È¸º¹!");
+                Debug.Log($"í ì•„ì´í…œ ì‚¬ìš© â†’ HP {healAmount} íšŒë³µ!");
             }
 
             Destroy(gameObject);
