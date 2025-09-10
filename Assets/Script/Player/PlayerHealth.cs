@@ -130,6 +130,20 @@ public class PlayerHealth : MonoBehaviour
         currentHP = Mathf.Min(currentHP, FinalMaxHP);
     }
 
+    /* ───────── 넉백 처리 ───────── */
+    public void ApplyKnockback(Vector3 direction, float force, float duration, Transform attacker = null)
+    {
+        // PlayerMovement 컴포넌트에 위임
+        if (TryGetComponent(out PlayerMovement movement))
+        {
+            movement.ApplyKnockback(direction, force, duration, attacker);
+        }
+        else
+        {
+            Debug.LogWarning("[PlayerHealth] PlayerMovement 컴포넌트를 찾을 수 없어 넉백을 적용할 수 없습니다.");
+        }
+    }
+
     /* ───────── 유틸 ───────── */
     public void SetHealth(float value) => currentHP = Mathf.Clamp(value, 0f, FinalMaxHP);
     public float GetCurrentHP() => currentHP;
