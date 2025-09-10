@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class EnemyAttack : MonoBehaviour
+public class EnemyMeleeAttack : MonoBehaviour
 {
     [Header("Attack Settings")]
     public float damage = 10f;
