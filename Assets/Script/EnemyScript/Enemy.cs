@@ -38,6 +38,10 @@ public class Enemy : MonoBehaviour
     private enum EnemyState { Chase, Attack, Knockback, Stunned, Dead }
     private EnemyState currentState;
 
+    // Public access to enemy state for external scripts
+    public enum PublicEnemyState { Chase, Attack, Knockback, Stunned, Dead }
+    public PublicEnemyState GetCurrentState() => (PublicEnemyState)currentState;
+
     private readonly Dictionary<BodySliceType, string[]> sliceBones = new()
     {
         { BodySliceType.Head,       new[] { "Bip001 Head" } },
@@ -85,6 +89,65 @@ public class Enemy : MonoBehaviour
             case EnemyState.Stunned:
                 break;
         }
+    }
+
+    // Public method to set state from external scripts
+    public void SetState(PublicEnemyState newState)
+    {
+        SetState((EnemyState)newState);
+    }
+
+    /* ───────── 🆕 Coroutine-based State Transitions ───────── */
+    private Coroutine currentStateCoroutine;
+
+    // Enhanced state management with coroutines
+    public void SetStateWithCoroutine(PublicEnemyState newState, float duration = 0f)
+    {
+        if (currentStateCoroutine != null)
+        {
+            StopCoroutine(currentStateCoroutine);
+        }
+
+        SetState((EnemyState)newState);
+
+        if (duration > 0f)
+        {
+            currentStateCoroutine = StartCoroutine(StateTransitionCoroutine(newState, duration));
+        }
+    }
+
+    private IEnumerator StateTransitionCoroutine(PublicEnemyState state, float duration)
+    {
+        yield return new WaitForSeconds(duration);
+
+        // After duration, transition back to appropriate state
+        if (currentState != EnemyState.Dead)
+        {
+            if (player != null && attackController != null)
+            {
+                float distance = Vector3.Distance(transform.position, player.position);
+                float attackRange = attackController.AttackCount > 0 
+                    ? attackController.GetAttackRange(0) 
+                    : 2f;
+
+                bool canAttack = !isInAttackCooldown && (Time.time >= lastAttackTime + GetAttackCooldown());
+
+                if (distance < attackRange && canAttack)
+                {
+                    SetState(EnemyState.Attack);
+                }
+                else
+                {
+                    SetState(EnemyState.Chase);
+                }
+            }
+            else
+            {
+                SetState(EnemyState.Chase);
+            }
+        }
+
+        currentStateCoroutine = null;
     }
 
     private void SetState(EnemyState newState)
@@ -155,9 +218,20 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        agent.isStopped = false;
-        agent.SetDestination(player.position);
-        anim.UpdateMovement(agent.velocity.magnitude);
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.isStopped = false;
+            // Double check player is still valid before using position
+            if (player != null)
+            {
+                agent.SetDestination(player.position);
+            }
+        }
+
+        if (anim != null && agent != null)
+        {
+            anim.UpdateMovement(agent.velocity.magnitude);
+        }
 
         dir.y = 0f;
         if (dir != Vector3.zero)
