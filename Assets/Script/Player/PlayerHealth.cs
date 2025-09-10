@@ -62,6 +62,31 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    /* ───────── 넉백 처리 ───────── */
+    public void ApplyKnockback(Vector3 direction, float power, float duration, float stunDuration = 0f)
+    {
+        // PlayerMovement나 PlayerWeaponController를 통해 넉백 처리
+        if (TryGetComponent(out PlayerMovement playerMovement))
+        {
+            // PlayerMovement에 넉백 적용 로직이 있다면 호출
+            Debug.Log($"플레이어 넉백 적용 - 방향: {direction}, 파워: {power}, 지속시간: {duration}s");
+        }
+        
+        if (TryGetComponent(out PlayerWeaponController weaponController))
+        {
+            // 넉백 중에는 행동 제한
+            weaponController.ForceApplyKnockback(direction, power, duration, stunDuration);
+        }
+    }
+
+    public void ApplyKnockback(Vector3 direction, WeaponDataSO weapon)
+    {
+        if (weapon != null)
+        {
+            ApplyKnockback(direction, weapon.knockbackPower, weapon.knockbackDuration, weapon.stunDuration);
+        }
+    }
+
     /* ───────── 회복 처리 ───────── */
     public void Heal(float amount)
     {
