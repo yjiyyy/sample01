@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 [CreateAssetMenu(menuName = "Enemy/AttackData")]
-public class EnemyAttackData : ScriptableObject
+public class MeleeAttackData : ScriptableObject
 {
     [Header("기본 정보")]
     public string attackName = "NewAttack";

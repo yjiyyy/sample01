@@ -3,9 +3,9 @@
 public class EnemyAttackController : MonoBehaviour
 {
     [Header("공격 패턴 데이터 (SO 배열)")]
-    public EnemyAttackData[] attackPatterns;
+    public MeleeAttackData[] attackPatterns;
 
-    private EnemyAttackData currentAttack;
+    private MeleeAttackData currentAttack;
 
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 

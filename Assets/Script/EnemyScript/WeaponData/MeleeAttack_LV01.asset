@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c55a14bd6d57f04c9dcd658e386f567, type: 3}
-  m_Name: LV01_Attack01
+  m_Name: MeleeAttack_LV01
   m_EditorClassIdentifier: 
-  attackName: NewAttack
+  attackName: Melee_Attack_LV01
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   damage: 1
   range: 1
-  cooldown: 10
+  cooldown: 1
   knockbackPower: 1
   knockbackDuration: 0.2
   stunDuration: 0
