@@ -1,18 +1,18 @@
 # ========== Unity 기본 ==========
-/[Ll]ibrary/
-/[Tt]emp/
-/[Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
-/[Ll]ogs/
-/[Mm]emoryCaptures/
-/[Uu]serSettings/
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Uu]serSettings/
 
 # ========== Unity Cache ==========
-/[Aa]sset[Ss]tore/
-/[Aa]sset[Ss]toreTools/
+[Aa]sset[Ss]tore/
+[Aa]sset[Ss]toreTools/
 .Packages/
-/.PackagesCache/
+.PackagesCache/
 sysinfo.txt
 
 # ========== 빌드 산출물 ==========
@@ -21,10 +21,10 @@ sysinfo.txt
 *.unitypackage
 *.app
 *.exe
-*.xcodeproj/
-/*.xcworkspace/
-/.vs/
-/.vscode/
+*.xcodeproj
+*.xcworkspace
+.vs/
+.vscode/
 *.csproj
 *.sln
 *.tmp
@@ -38,38 +38,27 @@ sysinfo.txt
 .DS_Store
 Thumbs.db
 .idea/
-/.vs/
+.vs/
 *.swp
 *.swo
 
 # ========== Rider/VS Code ==========
 *.user
 *.userprefs
-*.csproj
-*.sln
-*.unityproj
-*.pidb
-*.booproj
 
 # ========== PlasticSCM (옵션) ==========
-/PlasticSCM/
+PlasticSCM/
 
 # ========== Crash Reports ==========
 sysinfo.txt
 
 # ========== Unity Cloud Build ==========
-/[Uu]serSettings/EditorUserSettings.asset
+[Uu]serSettings/EditorUserSettings.asset
 
-# ======= 강제 포함 규칙 =======
-# Unity 에셋/세팅은 반드시 포함
+# ========== Collaborate (옵션) ==========
+Collab/
+
+# ========== 강제 포함 규칙 ==========
 !Assets/**
 !ProjectSettings/**
 !Packages/**
-
-# ======= 주의 =======
-Assets/DownloadedAssets/RPG Pack/Materials/Bottle_blue.mat
-Assets/DownloadedAssets/RPG Pack/Materials/Bottle_green.mat
-Assets/DownloadedAssets/RPG Pack/Materials/Bottle_red.mat
-Assets/DownloadedAssets/RPG Pack/Materials/Box_Of_Pandora.mat
-Assets/DownloadedAssets/RPG Pack/Materials/Coin.mat
-ProjectSettings/URPProjectSettings.asset
