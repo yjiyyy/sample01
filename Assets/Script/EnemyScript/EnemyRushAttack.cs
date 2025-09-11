@@ -63,20 +63,42 @@ public class EnemyRushAttack : MonoBehaviour
         isAttacking = true;
         cooldownTimer = rushData.cooldown;
 
-        // 현재 상태 저장
-        enemy.SetState(EnemyState.Attack);
-
         // 1. 준비 단계 - 플레이어 조준
+        // Enemy 클래스를 통해 상태 변경 - 직접 열거형 사용 대신
+        enemy.SetAttackState();
+
         animator.Play(prepareAnimName);
 
         Vector3 targetPosition = player.position;
         Vector3 rushDirection = (targetPosition - transform.position).normalized;
         rushDirection.y = 0f;
 
+        // 방향 편차 적용 (옵션)
+        if (rushData.allowDirectionDeviation)
+        {
+            Vector3 deviation = new Vector3(
+                Random.Range(-rushData.directionDeviationAmount, rushData.directionDeviationAmount),
+                0,
+                Random.Range(-rushData.directionDeviationAmount, rushData.directionDeviationAmount)
+            );
+            rushDirection += deviation;
+            rushDirection.Normalize();
+        }
+
         // 플레이어를 바라보게 회전
         transform.rotation = Quaternion.LookRotation(rushDirection);
 
-        yield return new WaitForSeconds(rushData.prepareTime);
+        // 준비 시간동안 대기
+        float prepareElapsed = 0.0f;
+        while (prepareElapsed < rushData.prepareTime)
+        {
+            prepareElapsed += Time.deltaTime;
+
+            // 준비 단계에서 천천히 이동 (선택 사항)
+            transform.position += rushDirection * rushData.prepareSpeed * Time.deltaTime;
+
+            yield return null;
+        }
 
         // 2. 돌진 단계
         animator.Play(rushAnimName);
@@ -109,7 +131,7 @@ public class EnemyRushAttack : MonoBehaviour
                     {
                         Vector3 knockbackDir = rushDirection;
                         weaponController.ForceApplyKnockback(knockbackDir, rushData.knockbackPower,
-                            rushData.knockbackDuration, rushData.stunDuration);
+                            0.5f, 0.2f);
                     }
                 }
             }
@@ -120,7 +142,7 @@ public class EnemyRushAttack : MonoBehaviour
         // 3. 마무리 및 쿨다운
         isAttacking = false;
 
-        // 원래 상태로 돌아가기
-        enemy.SetState(EnemyState.Chase);
+        // Enemy 컴포넌트에 Chase 상태로 복귀
+        enemy.SetChaseState();
     }
 }

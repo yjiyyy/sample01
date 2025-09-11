@@ -497,4 +497,14 @@ public class Enemy : MonoBehaviour
             return BodySliceType.None;
         return weapon.possibleSliceParts[Random.Range(0, weapon.possibleSliceParts.Count)];
     }
+
+    public void SetAttackState()
+    {
+        SetState(EnemyState.Attack);
+    }
+
+    public void SetChaseState()
+    {
+        SetState(EnemyState.Chase);
+    }
 }
