@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 
 public class EnemyAttackController : MonoBehaviour
 {
@@ -6,28 +7,28 @@ public class EnemyAttackController : MonoBehaviour
     public ScriptableObject[] attackPatterns;
 
     private ScriptableObject currentAttack;
-
-    // 쿨다운 타이머(공격 인덱스별)
     private float[] lastUsedTimes;
-
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
+
+    private bool isCooldown = false;
+    private Coroutine cooldownRoutine;
+    private Enemy enemy;
 
     private void Awake()
     {
+        enemy = GetComponent<Enemy>();
         int n = AttackCount;
         lastUsedTimes = n > 0 ? new float[n] : System.Array.Empty<float>();
         for (int i = 0; i < lastUsedTimes.Length; i++)
             lastUsedTimes[i] = -Mathf.Infinity;
     }
 
-    // 이번 공격에 어떤 패턴을 쓸지 캐싱
     public void NotifyAttack(int index)
     {
         if (index < 0 || index >= AttackCount) return;
         currentAttack = attackPatterns[index];
     }
 
-    // 애니메이션 이벤트에서 호출
     public void AttackHit()
     {
         if (currentAttack == null) return;
@@ -48,15 +49,8 @@ public class EnemyAttackController : MonoBehaviour
 
         GameObject go = Instantiate(meleeData.hitBoxPrefab, transform);
 
-        if (go.TryGetComponent<HitBox_PC>(out var pcHitBox))
+        if (go.TryGetComponent<HitBox_Enemy>(out var enemyHitBox))
         {
-            // 플레이어용 히트박스와 호환
-            pcHitBox.SetWeapon(null);
-            pcHitBox.Initialize(meleeData.damage, meleeData.range, meleeData.knockbackPower, meleeData.hitBoxLifetime);
-        }
-        else if (go.TryGetComponent<HitBox_Enemy>(out var enemyHitBox))
-        {
-            // 플레이어를 때리는 적 히트박스
             enemyHitBox.Initialize(
                 meleeData.damage,
                 meleeData.range,
@@ -68,12 +62,9 @@ public class EnemyAttackController : MonoBehaviour
         }
     }
 
-    /* ───────── 쿨다운/사거리 ───────── */
-
     public float GetAttackCooldown(int index)
     {
         if (index < 0 || index >= AttackCount) return 1f;
-
         if (attackPatterns[index] is MeleeAttackData melee) return melee.cooldown;
         if (attackPatterns[index] is RushAttackData rush) return rush.cooldown;
         return 1f;
@@ -82,9 +73,8 @@ public class EnemyAttackController : MonoBehaviour
     public float GetAttackRange(int index)
     {
         if (index < 0 || index >= AttackCount) return 2f;
-
         if (attackPatterns[index] is MeleeAttackData melee) return melee.range;
-        if (attackPatterns[index] is RushAttackData) return 5f; // 정책값
+        if (attackPatterns[index] is RushAttackData) return 5f;
         return 2f;
     }
 
@@ -98,6 +88,11 @@ public class EnemyAttackController : MonoBehaviour
     {
         if (index < 0 || index >= AttackCount) return;
         lastUsedTimes[index] = Time.time;
+
+        if (cooldownRoutine != null)
+            StopCoroutine(cooldownRoutine);
+        float cd = GetAttackCooldown(index);
+        cooldownRoutine = StartCoroutine(CooldownRoutine(cd));
     }
 
     public float CooldownRemaining(int index)
@@ -107,16 +102,67 @@ public class EnemyAttackController : MonoBehaviour
         return Mathf.Max(0f, nextReady - Time.time);
     }
 
-    // 거리/쿨다운 조건을 모두 만족하는 공격 선택
+    public bool IsCooldownActive() => isCooldown;
+
+    public void InterruptCooldown()
+    {
+        if (isCooldown)
+        {
+            isCooldown = false;
+            if (cooldownRoutine != null)
+            {
+                StopCoroutine(cooldownRoutine);
+                cooldownRoutine = null;
+            }
+            if (enemy != null)
+                enemy.SetState(Enemy.EnemyState.Chase);
+        }
+    }
+
+    private IEnumerator CooldownRoutine(float duration)
+    {
+        isCooldown = true;
+
+        float timer = 0f;
+        while (timer < duration)
+        {
+            // 이동은 NavMeshAgent에 맡기고, Speed를 0으로 고정 (애니메이션만 Idle)
+            if (enemy != null && enemy.animCtrl != null)
+                enemy.animCtrl.UpdateMovement(0f);
+
+            // 플레이어 바라보기 (쿨다운 중에도)
+            if (enemy != null && enemy.agent != null && enemy.agent.isOnNavMesh)
+            {
+                enemy.agent.isStopped = false;
+                Transform player = GameObject.FindWithTag("Player")?.transform;
+                if (player != null)
+                {
+                    Vector3 dir = player.position - enemy.transform.position;
+                    dir.y = 0f;
+                    if (dir != Vector3.zero)
+                        enemy.transform.rotation = Quaternion.LookRotation(dir);
+                }
+            }
+
+            timer += Time.deltaTime;
+            yield return null;
+
+            // 만약 쿨다운이 중간에 강제 종료되면 코루틴 즉시 종료
+            if (!isCooldown) yield break;
+        }
+
+        isCooldown = false;
+        if (enemy != null)
+            enemy.SetState(Enemy.EnemyState.Chase);
+    }
+
     public int SelectAttackIndex(float distance)
     {
         int best = -1;
         float bestDelta = float.PositiveInfinity;
-
         for (int i = 0; i < AttackCount; i++)
         {
             if (!IsOffCooldown(i)) continue;
-
             float range = GetAttackRange(i);
             float delta = Mathf.Abs(distance - range);
             if (delta < bestDelta)

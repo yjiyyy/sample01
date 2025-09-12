@@ -85,8 +85,12 @@ public class Enemy : MonoBehaviour
 
             case EnemyState.Attack:
                 if (animator) animator.Play("Attack", 0, 0f);
-                if (agent.isOnNavMesh) agent.isStopped = true;
-                // 공격 인덱스 선택/쿨다운 시작은 EnemyAI에서 수행
+                if (agent.isOnNavMesh)
+                {
+                    agent.isStopped = true;
+                    agent.velocity = Vector3.zero; // ⭐ 이동속도까지 강제로 0
+                    agent.ResetPath();             // ⭐ 목적지도 초기화
+                }
                 ai?.OnAttackStarted(this);
                 break;
 
@@ -109,12 +113,16 @@ public class Enemy : MonoBehaviour
     public void OnDamage(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (CurrentState == EnemyState.Dead) return;
+        attackCtrl?.InterruptCooldown();
+        ai?.InterruptAttack();
         impact?.OnDamage(this, hitDir, weapon, impactScale);
     }
 
     public void ApplyKnockback(Vector3 dir, WeaponDataSO weapon)
     {
         if (CurrentState == EnemyState.Dead) return;
+        attackCtrl?.InterruptCooldown();
+        ai?.InterruptAttack();
         impact?.ApplyKnockback(this, dir, weapon);
     }
 

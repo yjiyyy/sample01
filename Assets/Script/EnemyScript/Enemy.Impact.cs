@@ -9,11 +9,22 @@ public class EnemyImpact : MonoBehaviour
 
     public void OnDamage(Enemy ctx, Vector3 hitDir, WeaponDataSO weapon, float scale)
     {
-        if (stunRoutine != null) { ctx.StopCoroutine(stunRoutine); stunRoutine = null; }
-        if (knockbackRoutine != null) { ctx.StopCoroutine(knockbackRoutine); }
+        // 기존 루틴 중단 및 초기화
+        if (knockbackRoutine != null)
+        {
+            ctx.StopCoroutine(knockbackRoutine);
+            knockbackRoutine = null;
+        }
+        if (stunRoutine != null)
+        {
+            ctx.StopCoroutine(stunRoutine);
+            stunRoutine = null;
+        }
 
+        // 새로운 넉백 + 스턴 루틴 시작
         knockbackRoutine = ctx.StartCoroutine(KnockbackThenStunRoutine(ctx, hitDir, weapon, scale));
 
+        // 저크 효과 (옵션)
         if (weapon != null && weapon.jerkIntensity > 0f)
         {
             if (ctx.TryGetComponent(out MultiBoneJerkController jerk))
@@ -21,15 +32,12 @@ public class EnemyImpact : MonoBehaviour
         }
     }
 
-    public void ApplyKnockback(Enemy ctx, Vector3 dir, WeaponDataSO weapon)
-    {
-        OnDamage(ctx, dir, weapon, 1f);
-    }
-
     private IEnumerator KnockbackThenStunRoutine(Enemy ctx, Vector3 direction, WeaponDataSO weapon, float scale)
     {
+        // 넉백 루틴 실행
         yield return ctx.StartCoroutine(KnockbackRoutine(ctx, direction, weapon, scale));
 
+        // 스턴 루틴 실행
         if (weapon != null && weapon.stunDuration > 0f)
         {
             stunRoutine = ctx.StartCoroutine(StunRoutine(ctx, weapon.stunDuration));
@@ -52,6 +60,15 @@ public class EnemyImpact : MonoBehaviour
         if (dir == Vector3.zero) dir = Vector3.back;
         dir = dir.normalized;
 
+        // 애니메이션 재생
+        if (ctx.animator != null)
+        {
+            int randomKnockbackIndex = Random.Range(1, 4); // Knockback01, Knockback02, Knockback03 중 랜덤
+            string animationName = $"Knockback0{randomKnockbackIndex}";
+            ctx.animator.Play(animationName, 0, 0f);
+            Debug.Log($"[KnockbackRoutine] 애니메이션 재생: {animationName}");
+        }
+
         while (timer < duration && ctx.CurrentState != Enemy.EnemyState.Dead)
         {
             float t = timer / duration;
@@ -66,9 +83,19 @@ public class EnemyImpact : MonoBehaviour
     private IEnumerator StunRoutine(Enemy ctx, float duration)
     {
         ctx.SetState(Enemy.EnemyState.Stunned);
+
+        // 애니메이션 재생
+        if (ctx.animator != null)
+        {
+            ctx.animator.Play("Stun", 0, 0f);
+            Debug.Log("[StunRoutine] 스턴 애니메이션 재생");
+        }
+
         yield return new WaitForSeconds(duration);
+
         if (ctx.CurrentState != Enemy.EnemyState.Dead)
             ctx.SetState(Enemy.EnemyState.Chase);
+
         stunRoutine = null;
     }
 }

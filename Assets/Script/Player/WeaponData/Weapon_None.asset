@@ -25,7 +25,7 @@ MonoBehaviour:
   aoeRadius: 0
   hitboxSpawnDelay: 0.25
   knockbackDuration: 0.5
-  knockbackPower: 5
+  knockbackPower: 1
   jerkIntensity: 0
   jerkDuration: 0
   stunDuration: 0

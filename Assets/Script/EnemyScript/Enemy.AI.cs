@@ -1,9 +1,9 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 [DisallowMultipleComponent]
 public class EnemyAI : MonoBehaviour
 {
-    [Header("Fallback »ç°Å¸®(ÆÐÅÏ ¾øÀ» ¶§¸¸ »ç¿ë)")]
+    [Header("Fallback ì‚¬ê±°ë¦¬(íŒ¨í„´ ì—†ì„ ë•Œë§Œ ì‚¬ìš©)")]
     public float fallbackEngageRange = 2f;
 
     private bool inAttackAnim;
@@ -11,6 +11,13 @@ public class EnemyAI : MonoBehaviour
     public void Tick(Enemy ctx, Transform player)
     {
         if (ctx == null || player == null || ctx.agent == null || !ctx.agent.isOnNavMesh) return;
+
+        // ì¿¨ë‹¤ìš´ ì¤‘ì—” ì´ë™/ì¶”ì /ê³µê²© ëª¨ë‘ ê¸ˆì§€
+        if (ctx.attackCtrl != null && ctx.attackCtrl.IsCooldownActive())
+        {
+            // ì¿¨ë‹¤ìš´ ì¤‘ì´ë¯€ë¡œ ì•„ë¬´ê²ƒë„ ì•ˆ í•¨ (Idle ìœ ì§€)
+            return;
+        }
 
         switch (ctx.CurrentState)
         {
@@ -38,11 +45,10 @@ public class EnemyAI : MonoBehaviour
             ? ctx.attackCtrl.GetAttackRange(attackIdx)
             : fallbackEngageRange;
 
-        bool canAttack = (attackIdx >= 0); // SelectAttackIndex°¡ Äð´Ù¿î±îÁö °í·Á
+        bool canAttack = (attackIdx >= 0);
 
         if (distance < engageRange && canAttack)
         {
-            // ¾î¶² ÆÐÅÏÀ¸·Î Ä¥Áö È®Á¤ÇÏ°í Äð´Ù¿î ½ÃÀÛ
             ctx.attackCtrl.NotifyAttack(attackIdx);
             ctx.attackCtrl.BeginCooldown(attackIdx);
 
@@ -51,7 +57,6 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // ÃßÀû ÀÌµ¿
         ctx.agent.isStopped = false;
         ctx.agent.SetDestination(player.position);
         ctx.animCtrl.UpdateMovement(ctx.agent.velocity.magnitude);
@@ -76,12 +81,18 @@ public class EnemyAI : MonoBehaviour
 
         if (!inAttackAnim)
         {
-            ctx.SetState(Enemy.EnemyState.Chase);
+            // Attack ëª¨ì…˜ ëë‚˜ë©´ ë°”ë¡œ Chaseë¡œ ì „í™˜í•˜ì§€ ì•Šê³ ,
+            // ì¿¨ë‹¤ìš´ ì½”ë£¨í‹´ì—ì„œ ìžë™ ì „í™˜í•˜ê²Œ ë§¡ê¸´ë‹¤ (ì—¬ê¸°ì„  ì•„ë¬´ê²ƒë„ í•˜ì§€ ì•ŠìŒ)
+            // ctx.SetState(Enemy.EnemyState.Chase); // ì œê±°
         }
     }
 
     public void OnAttackStarted(Enemy ctx)
     {
         inAttackAnim = true;
+    }
+    public void InterruptAttack()
+    {
+        inAttackAnim = false;
     }
 }

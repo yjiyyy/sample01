@@ -30,11 +30,9 @@ public class EnemyAnimationController : MonoBehaviour
         return Animator.GetBool("IsDead");
     }
 
-    // 🆕 스턴 전환 + 디버그 로그
     public void PlayStun(bool isStunned)
     {
         Animator.SetBool("IsStun", isStunned);
-
         if (isStunned)
         {
             Debug.Log($"{name} ▶ Animator 파라미터 IsStun=true (스턴 시작)");
@@ -45,8 +43,13 @@ public class EnemyAnimationController : MonoBehaviour
         }
     }
 
-    private void Update()
+    public void PlayKnockback()
     {
-       
+        if (Animator != null)
+        {
+            int randomKnockback = Random.Range(1, 4);
+            Animator.Play($"Knockback0{randomKnockback}", 0, 0f);
+            Debug.Log($"Knockback 애니메이션 재생: Knockback0{randomKnockback}");
+        }
     }
 }
