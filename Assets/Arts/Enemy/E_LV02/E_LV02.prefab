@@ -174,7 +174,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackPatterns:
-  - {fileID: 0}
+  - {fileID: 11400000, guid: bc52024f2e566dd40b2b55ddabfb562a, type: 2}
 --- !u!114 &-1364490009899419753
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -44,21 +44,19 @@ public class PlayerMovement : MonoBehaviour
         agent.stoppingDistance = stoppingDistance;
         agent.autoBraking = autoBraking;
 
-        // ✅ 물리 충돌을 위한 설정 복구
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
 
-        // ✅ Rigidbody 설정 (물리 충돌용)
+        // Rigidbody 설정 (Unity 표준 API)
         rb.isKinematic = false;
         rb.useGravity = false;
         rb.mass = 1f;
-        rb.linearDamping = 5f;
-        rb.angularDamping = 5f;
+        rb.linearDamping = 5f;          // was: linearDamping
+        rb.angularDamping = 5f;   // was: angularDamping
         rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
 
         GameManager.Instance.playerTransform = this.transform;
         lastPosition = transform.position;
 
-        // NavMesh에 맞춘 Y좌표 초기 보정
         if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 2f, NavMesh.AllAreas))
         {
             Vector3 fixedPos = transform.position;
@@ -70,7 +68,6 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        // 넉백 처리 먼저 실행
         if (isKnockbacked)
         {
             knockbackTimer += Time.deltaTime;
@@ -88,7 +85,6 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        // 무기 컨트롤러 상태 확인
         var weaponCtrl = GetComponent<PlayerWeaponController>();
         if (weaponCtrl != null)
         {
@@ -108,7 +104,6 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // 일반 이동 처리
         Vector2 moveInput = InputManager.Instance.GetMoveInput();
         lastInput = new Vector3(moveInput.x, 0, moveInput.y);
 
@@ -141,7 +136,6 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // 테스트 입력
         if (InputManager.Instance.GetDamageTestInput())
         {
             if (TryGetComponent(out Health health))
@@ -174,14 +168,12 @@ public class PlayerMovement : MonoBehaviour
             }
 
             transform.rotation = Quaternion.Euler(0f, transform.rotation.eulerAngles.y, 0f);
-            rb.linearVelocity = Vector3.zero;
+            rb.linearVelocity = Vector3.zero;        // was: linearVelocity
             rb.angularVelocity = Vector3.zero;
         }
 
         lastPosition = transform.position;
     }
-
-    // ✅ 모든 몬스터 밀기 관련 코드 제거 (OnCollisionStay, OnCollisionExit 등)
 
     public void ApplyKnockback(Vector3 direction, float force, float duration, Transform attacker = null)
     {

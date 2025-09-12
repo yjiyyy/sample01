@@ -7,29 +7,38 @@ public class EnemyAttackController : MonoBehaviour
 
     private ScriptableObject currentAttack;
 
+    // 쿨다운 타이머(공격 인덱스별)
+    private float[] lastUsedTimes;
+
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
-    /// <summary> Enemy.cs에서 호출: 이번 공격에 어떤 데이터를 쓸지 캐싱 </summary>
+    private void Awake()
+    {
+        int n = AttackCount;
+        lastUsedTimes = n > 0 ? new float[n] : System.Array.Empty<float>();
+        for (int i = 0; i < lastUsedTimes.Length; i++)
+            lastUsedTimes[i] = -Mathf.Infinity;
+    }
+
+    // 이번 공격에 어떤 패턴을 쓸지 캐싱
     public void NotifyAttack(int index)
     {
         if (index < 0 || index >= AttackCount) return;
         currentAttack = attackPatterns[index];
     }
 
-    /// <summary> 애니메이션 이벤트 AttackHit에서 호출됨 </summary>
+    // 애니메이션 이벤트에서 호출
     public void AttackHit()
     {
         if (currentAttack == null) return;
 
-        // 각 공격 유형에 맞게 처리
         if (currentAttack is MeleeAttackData meleeData)
         {
             HandleMeleeAttack(meleeData);
         }
         else if (currentAttack is RushAttackData rushData)
         {
-            // 돌진 공격은 별도 로직에서 처리됨
-            Debug.Log($"[EnemyAttackController] RushAttack 실행 중: {rushData.name}");
+            Debug.Log($"[EnemyAttackController] RushAttack 실행: {rushData.name}");
         }
     }
 
@@ -41,37 +50,32 @@ public class EnemyAttackController : MonoBehaviour
 
         if (go.TryGetComponent<HitBox_PC>(out var pcHitBox))
         {
-            // Player 무기 힛박스 (Enemy 타격용)
-            pcHitBox.Initialize(
-                meleeData.damage,
-                meleeData.range,
-                meleeData.knockbackPower,
-                meleeData.hitBoxLifetime
-            );
+            // 플레이어용 히트박스와 호환
+            pcHitBox.SetWeapon(null);
+            pcHitBox.Initialize(meleeData.damage, meleeData.range, meleeData.knockbackPower, meleeData.hitBoxLifetime);
         }
         else if (go.TryGetComponent<HitBox_Enemy>(out var enemyHitBox))
         {
-            // Enemy 공격 힛박스 (Player 타격용)
+            // 플레이어를 때리는 적 히트박스
             enemyHitBox.Initialize(
                 meleeData.damage,
                 meleeData.range,
-                meleeData.knockbackPower,     // 힘
-                meleeData.knockbackDuration,  // 시간
+                meleeData.knockbackPower,
+                meleeData.knockbackDuration,
                 meleeData.hitBoxLifetime,
-                meleeData.stunDuration        // 스턴
+                meleeData.stunDuration
             );
         }
     }
+
+    /* ───────── 쿨다운/사거리 ───────── */
 
     public float GetAttackCooldown(int index)
     {
         if (index < 0 || index >= AttackCount) return 1f;
 
-        if (attackPatterns[index] is MeleeAttackData meleeData)
-            return meleeData.cooldown;
-        else if (attackPatterns[index] is RushAttackData rushData)
-            return rushData.cooldown;
-
+        if (attackPatterns[index] is MeleeAttackData melee) return melee.cooldown;
+        if (attackPatterns[index] is RushAttackData rush) return rush.cooldown;
         return 1f;
     }
 
@@ -79,11 +83,48 @@ public class EnemyAttackController : MonoBehaviour
     {
         if (index < 0 || index >= AttackCount) return 2f;
 
-        if (attackPatterns[index] is MeleeAttackData meleeData)
-            return meleeData.range;
-        else if (attackPatterns[index] is RushAttackData rushData)
-            return 5f; // 러시 공격의 기본 사거리 설정
-
+        if (attackPatterns[index] is MeleeAttackData melee) return melee.range;
+        if (attackPatterns[index] is RushAttackData) return 5f; // 정책값
         return 2f;
+    }
+
+    public bool IsOffCooldown(int index)
+    {
+        if (index < 0 || index >= AttackCount) return false;
+        return Time.time >= lastUsedTimes[index] + GetAttackCooldown(index);
+    }
+
+    public void BeginCooldown(int index)
+    {
+        if (index < 0 || index >= AttackCount) return;
+        lastUsedTimes[index] = Time.time;
+    }
+
+    public float CooldownRemaining(int index)
+    {
+        if (index < 0 || index >= AttackCount) return 0f;
+        float nextReady = lastUsedTimes[index] + GetAttackCooldown(index);
+        return Mathf.Max(0f, nextReady - Time.time);
+    }
+
+    // 거리/쿨다운 조건을 모두 만족하는 공격 선택
+    public int SelectAttackIndex(float distance)
+    {
+        int best = -1;
+        float bestDelta = float.PositiveInfinity;
+
+        for (int i = 0; i < AttackCount; i++)
+        {
+            if (!IsOffCooldown(i)) continue;
+
+            float range = GetAttackRange(i);
+            float delta = Mathf.Abs(distance - range);
+            if (delta < bestDelta)
+            {
+                bestDelta = delta;
+                best = i;
+            }
+        }
+        return best;
     }
 }
