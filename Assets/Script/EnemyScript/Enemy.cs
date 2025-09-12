@@ -109,21 +109,13 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // 외부 공개 API (기존 호환)
-    public void OnDamage(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
+    // 외부 공개 API (넉백+데미지+임팩트 통합)
+    public void ApplyKnockback(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (CurrentState == EnemyState.Dead) return;
         attackCtrl?.InterruptCooldown();
         ai?.InterruptAttack();
-        impact?.OnDamage(this, hitDir, weapon, impactScale);
-    }
-
-    public void ApplyKnockback(Vector3 dir, WeaponDataSO weapon)
-    {
-        if (CurrentState == EnemyState.Dead) return;
-        attackCtrl?.InterruptCooldown();
-        ai?.InterruptAttack();
-        impact?.ApplyKnockback(this, dir, weapon);
+        impact?.ApplyKnockback(this, hitDir, weapon, impactScale);
     }
 
     public void Die(Vector3 hitDir, WeaponDataSO weapon) => Die(hitDir, weapon, 1f);

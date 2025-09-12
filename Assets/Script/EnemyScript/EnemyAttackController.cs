@@ -106,17 +106,22 @@ public class EnemyAttackController : MonoBehaviour
 
     public void InterruptCooldown()
     {
-        if (isCooldown)
+        isCooldown = false;
+        if (cooldownRoutine != null)
         {
-            isCooldown = false;
-            if (cooldownRoutine != null)
-            {
-                StopCoroutine(cooldownRoutine);
-                cooldownRoutine = null;
-            }
-            if (enemy != null)
-                enemy.SetState(Enemy.EnemyState.Chase);
+            StopCoroutine(cooldownRoutine);
+            cooldownRoutine = null;
         }
+
+        // ⭐ 모든 공격 패턴 쿨타임 즉시 0 처리
+        for (int i = 0; i < lastUsedTimes.Length; i++)
+        {
+            lastUsedTimes[i] = -Mathf.Infinity; // 즉시 공격 가능
+        }
+
+        if (enemy != null)
+            enemy.SetState(Enemy.EnemyState.Chase);
+        Debug.Log("[EnemyAttackController] 쿨다운 강제 종료 및 즉시 공격 가능!");
     }
 
     private IEnumerator CooldownRoutine(float duration)

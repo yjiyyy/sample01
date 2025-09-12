@@ -12,8 +12,11 @@ public class EnemyAI : MonoBehaviour
     {
         if (ctx == null || player == null || ctx.agent == null || !ctx.agent.isOnNavMesh) return;
 
-        // 쿨다운 중엔 이동/추적/공격 모두 금지
-        if (ctx.attackCtrl != null && ctx.attackCtrl.IsCooldownActive())
+        // 쿨다운 체크를 Chase/Attack 상태에서만!
+        if (
+            (ctx.CurrentState == Enemy.EnemyState.Chase || ctx.CurrentState == Enemy.EnemyState.Attack) &&
+            ctx.attackCtrl != null && ctx.attackCtrl.IsCooldownActive()
+        )
         {
             // 쿨다운 중이므로 아무것도 안 함 (Idle 유지)
             return;
@@ -27,6 +30,7 @@ public class EnemyAI : MonoBehaviour
             case Enemy.EnemyState.Attack:
                 HandleAttack(ctx, player);
                 break;
+                // Knockback, Stunned 등에서는 아무것도 안 함
         }
     }
 
@@ -81,9 +85,7 @@ public class EnemyAI : MonoBehaviour
 
         if (!inAttackAnim)
         {
-            // Attack 모션 끝나면 바로 Chase로 전환하지 않고,
-            // 쿨다운 코루틴에서 자동 전환하게 맡긴다 (여기선 아무것도 하지 않음)
-            // ctx.SetState(Enemy.EnemyState.Chase); // 제거
+            // 쿨다운 코루틴에서 자동 전환하게 맡김
         }
     }
 
