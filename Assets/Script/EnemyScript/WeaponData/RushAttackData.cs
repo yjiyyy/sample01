@@ -3,22 +3,22 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "RushAttack", menuName = "Enemy/Attack/RushAttackData")]
 public class RushAttackData : ScriptableObject
 {
-    [Header("준비(바람) 단계")]
-    public float prepareTime = 0.5f;
-    public float prepareSpeed = 0f;
+    [Header("준비 단계 설정")]
+    public float prepareTime = 1f;     // 돌진 전 준비 시간
+    public float prepareSpeed = 0f;    // 준비 중 이동 속도
 
-    [Header("돌진 단계")]
-    public float rushTime = 1.5f;
-    public float rushSpeed = 10f;
+    [Header("돌진 설정")]
+    public float rushTime = 2f;        // 돌진 지속 시간
+    public float rushSpeed = 10f;      // 돌진 속도
 
-    [Header("전투 스탯")]
-    public float damage = 10f;
-    public float knockbackPower = 5f;
+    [Header("공격력")]
+    public float damage = 20f;         // 충돌 시 데미지
+    public float knockbackPower = 5f;  // 넉백 힘
 
     [Header("쿨다운")]
-    public float cooldown = 3f;
+    public float cooldown = 3f;        // 재사용 대기시간
 
-    [Header("조준 보정")]
-    public bool allowDirectionDeviation = false;
-    [Range(0f, 1f)] public float directionDeviationAmount = 0.1f;
+    [Header("방향 변경 설정")]
+    public bool allowDirectionDeviation = false;  // 돌진 중 방향 변경 허용 여부
+    public float directionDeviationAmount = 0.1f; // 변경 가능한 최대 각도 (0~1)
 }

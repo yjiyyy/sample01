@@ -475,7 +475,7 @@ public class PlayerWeaponController : MonoBehaviour
 
         // 체력 컴포넌트에서 weight 가져오기
         float resistance = 1f;
-        if (TryGetComponent(out Health health))
+        if (TryGetComponent(out PlayerHealth health))
             resistance = Mathf.Max(health.GetWeight(), 0.01f);
 
         float elapsed = 0f;
@@ -520,7 +520,7 @@ public class PlayerWeaponController : MonoBehaviour
     private IEnumerator KnockbackThenStunRoutine(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
     {
         float resistance = 1f;
-        if (TryGetComponent(out Health health))
+        if (TryGetComponent(out PlayerHealth health))
             resistance = Mathf.Max(health.GetWeight(), 0.01f);
 
         if (weapon.knockbackDuration > 0f && weapon.knockbackPower > 0f)

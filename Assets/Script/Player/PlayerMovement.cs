@@ -138,7 +138,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (InputManager.Instance.GetDamageTestInput())
         {
-            if (TryGetComponent(out Health health))
+            if (TryGetComponent(out PlayerHealth health))
             {
                 health.ApplyDamage(10f);
                 Debug.Log("[테스트] 플레이어에게 10 데미지 적용 (-키)");
@@ -147,7 +147,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (InputManager.Instance.GetHealTestInput())
         {
-            if (TryGetComponent(out Health health))
+            if (TryGetComponent(out PlayerHealth health))
             {
                 health.Heal(20f);
                 Debug.Log("[테스트] 플레이어 체력 20 회복 (=키)");
@@ -181,7 +181,7 @@ public class PlayerMovement : MonoBehaviour
         knockbackDirection = direction.normalized;
 
         float finalForce = force;
-        if (TryGetComponent(out Health health))
+        if (TryGetComponent(out PlayerHealth health))
         {
             finalForce /= Mathf.Max(0.01f, health.GetWeight());
         }

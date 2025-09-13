@@ -79,31 +79,34 @@ public class Enemy : MonoBehaviour
         switch (newState)
         {
             case EnemyState.Chase:
-                if (animator) animator.Play("Run", 0, 0f);
+                if (animator) animator.Play("Run", 0, 0f); // Run으로 수정
                 if (agent.isOnNavMesh) agent.isStopped = false;
                 break;
 
             case EnemyState.Attack:
-                if (animator) animator.Play("Attack", 0, 0f);
+                // 러시 공격은 별도로 처리하므로 여기서는 Attack 미처리
+                // RushAttack.cs에서 직접 "RushPrepare"와 "Rush" 처리함
                 if (agent.isOnNavMesh)
                 {
                     agent.isStopped = true;
-                    agent.velocity = Vector3.zero; // ⭐ 이동속도까지 강제로 0
-                    agent.ResetPath();             // ⭐ 목적지도 초기화
+                    agent.velocity = Vector3.zero;
+                    agent.ResetPath();
                 }
                 ai?.OnAttackStarted(this);
                 break;
 
             case EnemyState.Knockback:
                 if (agent.isOnNavMesh) agent.isStopped = true;
+                if (animator) animator.Play("Knockback01", 0, 0f); // 넉백01로 수정
                 break;
 
             case EnemyState.Stunned:
-                if (animator) animator.Play("Stun", 0, 0f);
+                if (animator) animator.Play("Stun", 0, 0f); // Stun으로 수정
                 if (agent.isOnNavMesh) agent.isStopped = true;
                 break;
 
             case EnemyState.Dead:
+                if (animator) animator.Play("Dead", 0, 0f); // Dead로 수정
                 if (agent) agent.enabled = false;
                 break;
         }

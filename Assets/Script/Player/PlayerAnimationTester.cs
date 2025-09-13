@@ -7,12 +7,12 @@ public class PlayerAnimationTester : MonoBehaviour
     [SerializeField] private GameObject[] testWeaponPrefabs;
 
     private PlayerWeaponController weaponController;
-    private Health health;
+    private PlayerHealth health; // Health → PlayerHealth로 변경
 
     void Awake()
     {
         weaponController = GetComponent<PlayerWeaponController>();
-        health = GetComponent<Health>();
+        health = GetComponent<PlayerHealth>(); // Health → PlayerHealth로 변경
     }
 
     void Update()

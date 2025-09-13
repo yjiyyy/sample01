@@ -9,14 +9,12 @@ public class Item_Heal : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            Health playerHealth = other.GetComponent<Health>();
-            if (playerHealth != null)
+            PlayerHealth hp = other.GetComponent<PlayerHealth>();
+            if (hp != null)
             {
-                playerHealth.Heal(healAmount);
-                Debug.Log($"힐 아이템 사용 → HP {healAmount} 회복!");
+                hp.Heal(healAmount);
+                Destroy(gameObject);
             }
-
-            Destroy(gameObject);
         }
     }
 }

@@ -39,7 +39,30 @@ public class EnemyAttackController : MonoBehaviour
         }
         else if (currentAttack is RushAttackData rushData)
         {
+            HandleRushAttack(rushData);
             Debug.Log($"[EnemyAttackController] RushAttack 실행: {rushData.name}");
+        }
+    }
+
+    // RushAttack 처리 추가
+    private void HandleRushAttack(RushAttackData rushData)
+    {
+        // 러쉬어택 컴포넌트 가져오기
+        if (TryGetComponent<EnemyRushAttack>(out var rushAttack))
+        {
+            Transform player = GameObject.FindWithTag("Player")?.transform;
+            if (player != null)
+            {
+                rushAttack.StartRushAttack(rushData, player);
+            }
+            else
+            {
+                Debug.LogWarning("[EnemyAttackController] 플레이어를 찾을 수 없습니다!");
+            }
+        }
+        else
+        {
+            Debug.LogError("[EnemyAttackController] EnemyRushAttack 컴포넌트가 없습니다!");
         }
     }
 

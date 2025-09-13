@@ -26,7 +26,7 @@ public class EnemyMeleeAttack : MonoBehaviour
 
         foreach (var hit in hits)
         {
-            Health hp = hit.GetComponent<Health>();
+            PlayerHealth hp = hit.GetComponent<PlayerHealth>();
             if (hp != null)
             {
                 hp.ApplyDamage(damage);
