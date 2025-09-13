@@ -127,6 +127,7 @@ public class EnemyAttackController : MonoBehaviour
     private IEnumerator CooldownRoutine(float duration)
     {
         isCooldown = true;
+        Debug.Log($"[EnemyAttackController] Cooldown started for {duration:F1}s");
 
         float timer = 0f;
         while (timer < duration)
@@ -153,29 +154,58 @@ public class EnemyAttackController : MonoBehaviour
             yield return null;
 
             // 만약 쿨다운이 중간에 강제 종료되면 코루틴 즉시 종료
-            if (!isCooldown) yield break;
+            if (!isCooldown) 
+            {
+                Debug.Log("[EnemyAttackController] Cooldown interrupted");
+                yield break;
+            }
         }
 
         isCooldown = false;
+        Debug.Log("[EnemyAttackController] Cooldown completed, transitioning to Chase state");
+        
         if (enemy != null)
             enemy.SetState(Enemy.EnemyState.Chase);
     }
 
     public int SelectAttackIndex(float distance)
     {
+        if (AttackCount == 0)
+        {
+            Debug.Log("[EnemyAttackController] No attack patterns available");
+            return -1;
+        }
+
         int best = -1;
         float bestDelta = float.PositiveInfinity;
+        int availableCount = 0;
+        
         for (int i = 0; i < AttackCount; i++)
         {
-            if (!IsOffCooldown(i)) continue;
+            if (!IsOffCooldown(i)) 
+            {
+                Debug.Log($"[EnemyAttackController] Attack {i} on cooldown (remaining: {CooldownRemaining(i):F1}s)");
+                continue;
+            }
+            
+            availableCount++;
             float range = GetAttackRange(i);
             float delta = Mathf.Abs(distance - range);
+            
+            Debug.Log($"[EnemyAttackController] Attack {i} available - range:{range:F1} distance:{distance:F1} delta:{delta:F1}");
+            
             if (delta < bestDelta)
             {
                 bestDelta = delta;
                 best = i;
             }
         }
+        
+        if (best >= 0)
+            Debug.Log($"[EnemyAttackController] Selected attack {best} (available:{availableCount}/{AttackCount})");
+        else
+            Debug.Log($"[EnemyAttackController] No suitable attack found (available:{availableCount}/{AttackCount})");
+            
         return best;
     }
 }

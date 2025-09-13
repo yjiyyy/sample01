@@ -12,16 +12,6 @@ public class EnemyAI : MonoBehaviour
     {
         if (ctx == null || player == null || ctx.agent == null || !ctx.agent.isOnNavMesh) return;
 
-        // 쿨다운 체크를 Chase/Attack 상태에서만!
-        if (
-            (ctx.CurrentState == Enemy.EnemyState.Chase || ctx.CurrentState == Enemy.EnemyState.Attack) &&
-            ctx.attackCtrl != null && ctx.attackCtrl.IsCooldownActive()
-        )
-        {
-            // 쿨다운 중이므로 아무것도 안 함 (Idle 유지)
-            return;
-        }
-
         switch (ctx.CurrentState)
         {
             case Enemy.EnemyState.Chase:
@@ -39,20 +29,32 @@ public class EnemyAI : MonoBehaviour
         Vector3 dir = player.position - ctx.transform.position;
         float distance = dir.magnitude;
 
+        // 쿨다운 중이 아닐 때만 공격 시도
         int attackIdx = -1;
-        if (ctx.attackCtrl != null && ctx.attackCtrl.AttackCount > 0)
+        bool canAttack = false;
+        
+        if (ctx.attackCtrl != null && ctx.attackCtrl.AttackCount > 0 && !ctx.attackCtrl.IsCooldownActive())
         {
             attackIdx = ctx.attackCtrl.SelectAttackIndex(distance);
+            canAttack = (attackIdx >= 0);
+            
+            if (ctx.debugMode && attackIdx < 0)
+                Debug.Log($"[EnemyAI] No available attacks at distance {distance:F2}");
+        }
+        else if (ctx.debugMode && ctx.attackCtrl.IsCooldownActive())
+        {
+            Debug.Log("[EnemyAI] Attack blocked - cooldown active");
         }
 
         float engageRange = (attackIdx >= 0)
             ? ctx.attackCtrl.GetAttackRange(attackIdx)
             : fallbackEngageRange;
 
-        bool canAttack = (attackIdx >= 0);
-
         if (distance < engageRange && canAttack)
         {
+            if (ctx.debugMode)
+                Debug.Log($"[EnemyAI] Starting attack {attackIdx} at distance {distance:F2}");
+                
             ctx.attackCtrl.NotifyAttack(attackIdx);
             ctx.attackCtrl.BeginCooldown(attackIdx);
 
@@ -61,6 +63,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        // 항상 플레이어를 추적 (쿨다운 중에도)
         ctx.agent.isStopped = false;
         ctx.agent.SetDestination(player.position);
         ctx.animCtrl.UpdateMovement(ctx.agent.velocity.magnitude);
