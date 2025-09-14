@@ -164,7 +164,7 @@ public class PlayerMovement : MonoBehaviour
             if (agent.enabled && agent.isOnNavMesh)
             {
                 agent.enabled = false;
-                Debug.Log("🛑 NavMeshAgent 꺼짐 + 회전 고정");
+                //Debug.Log("🛑 NavMeshAgent 꺼짐 + 회전 고정");
             }
 
             transform.rotation = Quaternion.Euler(0f, transform.rotation.eulerAngles.y, 0f);

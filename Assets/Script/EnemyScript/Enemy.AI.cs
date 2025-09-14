@@ -12,12 +12,13 @@ public class EnemyAI : MonoBehaviour
     {
         if (ctx == null || player == null || ctx.agent == null || !ctx.agent.isOnNavMesh) return;
 
-        // 쿨다운 중이면 아무것도 안 함
+        // 쿨다운 체크를 Chase/Attack 상태에서만!
         if (
             (ctx.CurrentState == Enemy.EnemyState.Chase || ctx.CurrentState == Enemy.EnemyState.Attack) &&
             ctx.attackCtrl != null && ctx.attackCtrl.IsCooldownActive()
         )
         {
+            // 쿨다운 중이므로 아무것도 안 함 (Idle 유지)
             return;
         }
 
@@ -29,6 +30,7 @@ public class EnemyAI : MonoBehaviour
             case Enemy.EnemyState.Attack:
                 HandleAttack(ctx, player);
                 break;
+                // Knockback, Stunned 등에서는 아무것도 안 함
         }
     }
 
@@ -51,11 +53,8 @@ public class EnemyAI : MonoBehaviour
 
         if (distance < engageRange && canAttack)
         {
-            // 공격 선택만! 쿨다운은 AttackController가 패턴별 타이밍에 시작
             ctx.attackCtrl.NotifyAttack(attackIdx);
-
-            // ⛔ 기존: 여기서 BeginCooldown 호출하던 코드 삭제
-            // ctx.attackCtrl.BeginCooldown(attackIdx);
+            ctx.attackCtrl.BeginCooldown(attackIdx);
 
             ctx.SetState(Enemy.EnemyState.Attack);
             inAttackAnim = true;
@@ -83,8 +82,19 @@ public class EnemyAI : MonoBehaviour
         {
             inAttackAnim = false;
         }
+
+        if (!inAttackAnim)
+        {
+            // 쿨다운 코루틴에서 자동 전환하게 맡김
+        }
     }
 
-    public void OnAttackStarted(Enemy ctx) { inAttackAnim = true; }
-    public void InterruptAttack() { inAttackAnim = false; }
+    public void OnAttackStarted(Enemy ctx)
+    {
+        inAttackAnim = true;
+    }
+    public void InterruptAttack()
+    {
+        inAttackAnim = false;
+    }
 }

@@ -7,6 +7,7 @@ public class EnemyAttackController : MonoBehaviour
     public ScriptableObject[] attackPatterns;
 
     private ScriptableObject currentAttack;
+    private int currentAttackIndex = -1;
     private float[] lastUsedTimes;
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
@@ -25,43 +26,21 @@ public class EnemyAttackController : MonoBehaviour
 
     public void NotifyAttack(int index)
     {
-        if (index < 0 || index >= AttackCount) return;
+        if (index < 0 || index >= AttackCount) { currentAttack = null; currentAttackIndex = -1; return; }
         currentAttack = attackPatterns[index];
+        currentAttackIndex = index;
     }
 
     public void AttackHit()
     {
-        if (currentAttack == null) return;
+        if (currentAttack == null || currentAttackIndex < 0) return;
 
         if (currentAttack is MeleeAttackData meleeData)
         {
             HandleMeleeAttack(meleeData);
+            BeginCooldown(currentAttackIndex); // 밀리어택 쿨다운
         }
-        else if (currentAttack is RushAttackData rushData)
-        {
-            HandleRushAttack(rushData);
-            Debug.Log($"[EnemyAttackController] RushAttack 실행: {rushData.name}");
-        }
-    }
-
-    // RushAttack 처리: 없으면 자동으로 컴포넌트 추가
-    private void HandleRushAttack(RushAttackData rushData)
-    {
-        if (!TryGetComponent<EnemyRushAttack>(out var rushAttack))
-        {
-            rushAttack = gameObject.AddComponent<EnemyRushAttack>();
-            Debug.LogWarning("[EnemyAttackController] EnemyRushAttack가 없어 자동으로 추가했습니다.");
-        }
-
-        Transform player = GameObject.FindWithTag("Player")?.transform;
-        if (player != null)
-        {
-            rushAttack.StartRushAttack(rushData, player);
-        }
-        else
-        {
-            Debug.LogWarning("[EnemyAttackController] 플레이어를 찾을 수 없습니다!");
-        }
+        // RushAttack 등은 별도 관리
     }
 
     private void HandleMeleeAttack(MeleeAttackData meleeData)
@@ -87,7 +66,6 @@ public class EnemyAttackController : MonoBehaviour
     {
         if (index < 0 || index >= AttackCount) return 1f;
         if (attackPatterns[index] is MeleeAttackData melee) return melee.cooldown;
-        if (attackPatterns[index] is RushAttackData rush) return rush.cooldown;
         return 1f;
     }
 
@@ -95,7 +73,6 @@ public class EnemyAttackController : MonoBehaviour
     {
         if (index < 0 || index >= AttackCount) return 2f;
         if (attackPatterns[index] is MeleeAttackData melee) return melee.range;
-        if (attackPatterns[index] is RushAttackData) return 5f;
         return 2f;
     }
 
@@ -116,13 +93,6 @@ public class EnemyAttackController : MonoBehaviour
         cooldownRoutine = StartCoroutine(CooldownRoutine(cd));
     }
 
-    public float CooldownRemaining(int index)
-    {
-        if (index < 0 || index >= AttackCount) return 0f;
-        float nextReady = lastUsedTimes[index] + GetAttackCooldown(index);
-        return Mathf.Max(0f, nextReady - Time.time);
-    }
-
     public bool IsCooldownActive() => isCooldown;
 
     public void InterruptCooldown()
@@ -138,44 +108,24 @@ public class EnemyAttackController : MonoBehaviour
         {
             lastUsedTimes[i] = -Mathf.Infinity;
         }
-
         if (enemy != null)
             enemy.SetState(Enemy.EnemyState.Chase);
-        Debug.Log("[EnemyAttackController] 쿨다운 강제 종료 및 즉시 공격 가능!");
     }
 
     private IEnumerator CooldownRoutine(float duration)
     {
         isCooldown = true;
-
         float timer = 0f;
         while (timer < duration)
         {
-            if (enemy != null && enemy.animCtrl != null)
-                enemy.animCtrl.UpdateMovement(0f);
-
-            if (enemy != null && enemy.agent != null && enemy.agent.isOnNavMesh)
-            {
-                enemy.agent.isStopped = false;
-                Transform player = GameObject.FindWithTag("Player")?.transform;
-                if (player != null)
-                {
-                    Vector3 dir = player.position - enemy.transform.position;
-                    dir.y = 0f;
-                    if (dir != Vector3.zero)
-                        enemy.transform.rotation = Quaternion.LookRotation(dir);
-                }
-            }
-
             timer += Time.deltaTime;
             yield return null;
-
             if (!isCooldown) yield break;
         }
-
         isCooldown = false;
         if (enemy != null)
             enemy.SetState(Enemy.EnemyState.Chase);
+        cooldownRoutine = null;
     }
 
     public int SelectAttackIndex(float distance)

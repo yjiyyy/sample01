@@ -7,37 +7,41 @@ public class EnemyRushAttack : MonoBehaviour
     [Header("러쉬 공격 디버깅")]
     public bool debugMode = true;
 
-    // 컴포넌트 캐싱
     private Enemy enemy;
     private EnemyAttackController attackController;
-    private EnemyAnimationController animController;
 
-    // 공격 데이터 캐싱
     private RushAttackData rushData;
     private Vector3 rushDirection;
     private Transform targetTransform;
     private bool isRushing = false;
 
-    // 코루틴 참조 관리
     private Coroutine rushPrepareCoroutine;
     private Coroutine rushCoroutine;
 
-    // 러시 동안 붙일 히트박스
     private GameObject spawnedRushHitbox;
+
+    // 러시 공격 인덱스 저장
+    private int rushAttackIndex = -1;
 
     private void Awake()
     {
         enemy = GetComponent<Enemy>();
         attackController = GetComponent<EnemyAttackController>();
-        animController = GetComponent<EnemyAnimationController>();
     }
 
-    public void StartRushAttack(RushAttackData data, Transform target)
+    public void StartRushAttack(RushAttackData data, Transform target, int attackIndex)
     {
+        if (attackController.IsCooldownActive())
+        {
+            Debug.Log("[EnemyRushAttack] 쿨다운 중입니다. 러시 공격을 중단합니다.");
+            return;
+        }
+
         StopAllRushCoroutines();
 
         rushData = data;
         targetTransform = target;
+        rushAttackIndex = attackIndex;
 
         if (rushData == null || targetTransform == null)
         {
@@ -62,7 +66,6 @@ public class EnemyRushAttack : MonoBehaviour
             if (debugMode) Debug.Log("[EnemyRushAttack] RushPrepare 애니메이션 재생");
         }
 
-        // 타겟 방향 계속 바라보기
         if (targetTransform != null)
         {
             rushDirection = (targetTransform.position - transform.position).normalized;
@@ -73,6 +76,13 @@ public class EnemyRushAttack : MonoBehaviour
         float elapsed = 0;
         while (elapsed < rushData.prepareTime)
         {
+            if (attackController.IsCooldownActive())
+            {
+                Debug.Log("[EnemyRushAttack] 쿨다운 중 준비 동작을 중단합니다.");
+                StopAllRushCoroutines();
+                yield break;
+            }
+
             if (targetTransform != null)
             {
                 rushDirection = (targetTransform.position - transform.position).normalized;
@@ -107,7 +117,6 @@ public class EnemyRushAttack : MonoBehaviour
             if (debugMode) Debug.Log("[EnemyRushAttack] Rush 애니메이션 재생");
         }
 
-        // 시작 시점 최종 방향 고정
         if (targetTransform != null)
         {
             rushDirection = (targetTransform.position - transform.position).normalized;
@@ -118,7 +127,6 @@ public class EnemyRushAttack : MonoBehaviour
         if (debugMode)
             Debug.Log($"[EnemyRushAttack] 러쉬 시작 - 방향: {rushDirection}, 속도: {rushData.rushSpeed}, 시간: {rushData.rushTime}초");
 
-        // NavMesh 에이전트 정지
         if (enemy.agent != null && enemy.agent.isOnNavMesh)
         {
             enemy.agent.isStopped = true;
@@ -126,18 +134,12 @@ public class EnemyRushAttack : MonoBehaviour
             enemy.agent.ResetPath();
         }
 
-        // SO 지정 히트박스 스폰
         SpawnRushHitbox();
 
         float elapsed = 0;
         while (elapsed < rushData.rushTime)
         {
-            // 이동
-            Vector3 movement = rushDirection * rushData.rushSpeed * Time.deltaTime;
-            transform.position += movement;
-
-            if (debugMode && Time.frameCount % 10 == 0)
-                Debug.Log($"[EnemyRushAttack] 러쉬 중... elapsed: {elapsed:F2}/{rushData.rushTime}, pos: {transform.position}");
+            transform.position += rushDirection * rushData.rushSpeed * Time.deltaTime;
 
             elapsed += Time.deltaTime;
             yield return null;
@@ -161,17 +163,24 @@ public class EnemyRushAttack : MonoBehaviour
             enemy.animator.SetBool("IsRushPrepare", false);
         }
 
-        // 히트박스 제거
         DespawnRushHitbox();
-
         isRushing = false;
         rushCoroutine = null;
 
-        // 상태 복구
+        if (rushAttackIndex >= 0)
+        {
+            attackController.BeginCooldown(rushAttackIndex); // 본동작 완료 시 쿨다운 시작
+        }
         enemy.SetState(Enemy.EnemyState.Chase);
 
         if (debugMode)
             Debug.Log("[EnemyRushAttack] 러쉬 완료. 추격 상태로 전환.");
+    }
+
+    public void InterruptCooldown()
+    {
+        attackController.InterruptCooldown();
+        Debug.Log("[EnemyRushAttack] 공격받아 쿨다운 강제 해제.");
     }
 
     private void StopAllRushCoroutines()
@@ -188,21 +197,8 @@ public class EnemyRushAttack : MonoBehaviour
             rushCoroutine = null;
         }
 
-        if (enemy.animator != null)
-        {
-            enemy.animator.SetBool("IsRush", false);
-            enemy.animator.SetBool("IsRushPrepare", false);
-        }
-
-        // 히트박스 제거
         DespawnRushHitbox();
-
         isRushing = false;
-    }
-
-    public void CancelRushAttack()
-    {
-        StopAllRushCoroutines();
     }
 
     private void SpawnRushHitbox()
@@ -211,30 +207,13 @@ public class EnemyRushAttack : MonoBehaviour
 
         if (rushData.hitBoxPrefab == null)
         {
-            Debug.LogWarning("[EnemyRushAttack] rushData.hitBoxPrefab이 비었습니다. 러시 동안 히트박스가 생성되지 않습니다.");
+            Debug.LogWarning("[EnemyRushAttack] rushData.hitBoxPrefab이 비었습니다.");
             return;
         }
 
         spawnedRushHitbox = Instantiate(rushData.hitBoxPrefab, transform);
         spawnedRushHitbox.transform.localPosition = Vector3.zero;
         spawnedRushHitbox.transform.localRotation = Quaternion.identity;
-
-        if (spawnedRushHitbox.TryGetComponent<HitBox_Enemy>(out var hb))
-        {
-            float lifetime = rushData.hitBoxLifetime > 0f ? rushData.hitBoxLifetime : rushData.rushTime;
-            hb.Initialize(
-                rushData.damage,
-                1f, // rush는 range 미사용
-                rushData.knockbackPower,
-                rushData.knockbackDuration,
-                lifetime,
-                rushData.stunDuration
-            );
-        }
-        else
-        {
-            Debug.LogWarning("[EnemyRushAttack] 히트박스 프리팹에 HitBox_Enemy가 없습니다. 프리팹 자체에서 판정해야 합니다.");
-        }
     }
 
     private void DespawnRushHitbox()
@@ -245,7 +224,4 @@ public class EnemyRushAttack : MonoBehaviour
             spawnedRushHitbox = null;
         }
     }
-
-    // 본체 충돌 데미지는 제거(히트박스 일원화)
-    // private void OnTriggerEnter(Collider other) { }
 }
