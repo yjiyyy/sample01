@@ -15,7 +15,7 @@ MonoBehaviour:
   maxGauge: 100
   evadeCost: 1
   rechargeRate: 5
-  evadeSpeed: 3
+  evadeSpeed: 10
   evadeDuration: 1
   invincibilityDuration: 0.5
   speedCurve:
@@ -42,6 +42,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  allowDirectionChangeWhileEvading: 0
-  directionChangeSensitivity: 2
-  minInputMagnitude: 0.3
+  allowDirectionChangeWhileEvading: 1
+  directionChangeSensitivity: 5
+  minInputMagnitude: 0.9

@@ -44,25 +44,23 @@ public class EnemyAttackController : MonoBehaviour
         }
     }
 
-    // RushAttack 처리 추가
+    // RushAttack 처리: 없으면 자동으로 컴포넌트 추가
     private void HandleRushAttack(RushAttackData rushData)
     {
-        // 러쉬어택 컴포넌트 가져오기
-        if (TryGetComponent<EnemyRushAttack>(out var rushAttack))
+        if (!TryGetComponent<EnemyRushAttack>(out var rushAttack))
         {
-            Transform player = GameObject.FindWithTag("Player")?.transform;
-            if (player != null)
-            {
-                rushAttack.StartRushAttack(rushData, player);
-            }
-            else
-            {
-                Debug.LogWarning("[EnemyAttackController] 플레이어를 찾을 수 없습니다!");
-            }
+            rushAttack = gameObject.AddComponent<EnemyRushAttack>();
+            Debug.LogWarning("[EnemyAttackController] EnemyRushAttack가 없어 자동으로 추가했습니다.");
+        }
+
+        Transform player = GameObject.FindWithTag("Player")?.transform;
+        if (player != null)
+        {
+            rushAttack.StartRushAttack(rushData, player);
         }
         else
         {
-            Debug.LogError("[EnemyAttackController] EnemyRushAttack 컴포넌트가 없습니다!");
+            Debug.LogWarning("[EnemyAttackController] 플레이어를 찾을 수 없습니다!");
         }
     }
 
@@ -136,10 +134,9 @@ public class EnemyAttackController : MonoBehaviour
             cooldownRoutine = null;
         }
 
-        // ⭐ 모든 공격 패턴 쿨타임 즉시 0 처리
         for (int i = 0; i < lastUsedTimes.Length; i++)
         {
-            lastUsedTimes[i] = -Mathf.Infinity; // 즉시 공격 가능
+            lastUsedTimes[i] = -Mathf.Infinity;
         }
 
         if (enemy != null)
@@ -154,11 +151,9 @@ public class EnemyAttackController : MonoBehaviour
         float timer = 0f;
         while (timer < duration)
         {
-            // 이동은 NavMeshAgent에 맡기고, Speed를 0으로 고정 (애니메이션만 Idle)
             if (enemy != null && enemy.animCtrl != null)
                 enemy.animCtrl.UpdateMovement(0f);
 
-            // 플레이어 바라보기 (쿨다운 중에도)
             if (enemy != null && enemy.agent != null && enemy.agent.isOnNavMesh)
             {
                 enemy.agent.isStopped = false;
@@ -175,7 +170,6 @@ public class EnemyAttackController : MonoBehaviour
             timer += Time.deltaTime;
             yield return null;
 
-            // 만약 쿨다운이 중간에 강제 종료되면 코루틴 즉시 종료
             if (!isCooldown) yield break;
         }
 

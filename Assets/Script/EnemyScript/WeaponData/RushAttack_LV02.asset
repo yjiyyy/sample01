@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c884c043edb57f4ba2bd7fe85366355, type: 3}
   m_Name: RushAttack_LV02
   m_EditorClassIdentifier: 
-  prepareTime: 1
+  prepareTime: 5
   prepareSpeed: 0
-  rushTime: 2
-  rushSpeed: 10
+  rushTime: 5
+  rushSpeed: 3
   damage: 20
   knockbackPower: 5
   cooldown: 3

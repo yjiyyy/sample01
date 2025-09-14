@@ -93,6 +93,9 @@ public class Enemy : MonoBehaviour
                     agent.ResetPath();
                 }
                 ai?.OnAttackStarted(this);
+
+                // ⭐ 실제 공격 실행 트리거 (애니메이션 이벤트가 없어도 동작 보장)
+                attackCtrl?.AttackHit();
                 break;
 
             case EnemyState.Knockback:

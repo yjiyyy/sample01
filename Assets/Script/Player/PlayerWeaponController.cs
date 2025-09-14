@@ -357,7 +357,7 @@ public class PlayerWeaponController : MonoBehaviour
 
         if (debugMode)
         {
-            Debug.Log($"[PlayerWeaponController] 상태 변경: {previousState} → {newState}");
+            //Debug.Log($"[PlayerWeaponController] 상태 변경: {previousState} → {newState}");
         }
     }
 
