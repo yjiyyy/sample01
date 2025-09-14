@@ -4,9 +4,9 @@ using UnityEngine;
 public class RushAttackData : ScriptableObject
 {
     [Header("준비 단계")]
-    public float prepareTime = 1f;
-    public float prepareSpeed = 0f; // 호환 유지용
+    public float range = 2f;
 
+    public float prepareTime = 1f;
     [Header("러시 본동작")]
     public float rushTime = 2f;
     public float rushSpeed = 10f;
@@ -14,6 +14,8 @@ public class RushAttackData : ScriptableObject
     [Header("전투 스탯")]
     public float damage = 20f;
     public float knockbackPower = 5f;
+    public float knockbackDuration = 0.3f;
+    public float stunDuration = 0f;
     public float cooldown = 3f;
 
     [Header("방향 보정(선택)")]
@@ -27,7 +29,4 @@ public class RushAttackData : ScriptableObject
     [Tooltip("히트박스 유지 시간 (0 이하이면 rushTime 동안 유지)")]
     public float hitBoxLifetime = 0f;
 
-    [Header("상태 이상(선택)")]
-    public float knockbackDuration = 0.3f;
-    public float stunDuration = 0f;
 }

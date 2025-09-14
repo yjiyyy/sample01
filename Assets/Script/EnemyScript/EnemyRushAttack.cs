@@ -214,6 +214,19 @@ public class EnemyRushAttack : MonoBehaviour
         spawnedRushHitbox = Instantiate(rushData.hitBoxPrefab, transform);
         spawnedRushHitbox.transform.localPosition = Vector3.zero;
         spawnedRushHitbox.transform.localRotation = Quaternion.identity;
+
+        if (spawnedRushHitbox.TryGetComponent<HitBox_Enemy>(out var hb))
+        {
+            float life = rushData.hitBoxLifetime > 0f ? rushData.hitBoxLifetime : rushData.rushTime;
+            hb.Initialize(
+                rushData.damage,
+                0f, // range는 현재 HitBox_Enemy에서 사용하지 않음
+                rushData.knockbackPower,
+                rushData.knockbackDuration,
+                life,
+                rushData.stunDuration
+            );
+        }
     }
 
     private void DespawnRushHitbox()
