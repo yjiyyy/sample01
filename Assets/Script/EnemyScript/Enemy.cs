@@ -79,7 +79,7 @@ public class Enemy : MonoBehaviour
         switch (newState)
         {
             case EnemyState.Chase:
-                if (animator) animator.Play("Run", 0, 0f);
+                // 🔥 애니메이션 강제 Play 삭제!
                 if (agent.isOnNavMesh) agent.isStopped = false;
                 break;
 
@@ -88,8 +88,8 @@ public class Enemy : MonoBehaviour
                 if (agent.isOnNavMesh)
                 {
                     agent.isStopped = true;
-                    agent.velocity = Vector3.zero; // ⭐ 이동속도까지 강제로 0
-                    agent.ResetPath();             // ⭐ 목적지도 초기화
+                    agent.velocity = Vector3.zero;
+                    agent.ResetPath();
                 }
                 ai?.OnAttackStarted(this);
                 break;

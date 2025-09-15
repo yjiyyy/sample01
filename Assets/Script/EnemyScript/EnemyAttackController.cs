@@ -11,6 +11,8 @@ public class EnemyAttackController : MonoBehaviour
     private float[] lastUsedTimes;
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
+    public bool IsRushing { get; private set; } = false;
+
     private bool isCooldown = false;
     private Coroutine cooldownRoutine;
     private Enemy enemy;
@@ -115,8 +117,7 @@ public class EnemyAttackController : MonoBehaviour
         if (index < 0 || index >= AttackCount) return 2f;
         var so = attackPatterns[index];
         if (so is MeleeAttackData melee) return melee.range;
-        // RushAttackData에는 engageRange가 아직 없음 → 임시 2m
-        if (so is RushAttackData) return 2f;
+        if (so is RushAttackData rush) return rush.range; // ← RushAttackData의 range 필드 사용
         return 2f;
     }
 
@@ -252,6 +253,8 @@ public class EnemyAttackController : MonoBehaviour
 
     private IEnumerator RushAttackRoutine(RushAttackData data)
     {
+        IsRushing = true;
+
         // 애니메이터 전환
         if (enemy.animator != null)
         {
@@ -271,14 +274,29 @@ public class EnemyAttackController : MonoBehaviour
         // 히트박스 생성 및 초기화
         SpawnRushHitbox(data);
 
-        // 최종 돌진 방향 고정(초기 1회)
+        float elapsed = 0f;
+
+        // ⭐ 돌진 방향: allowDirectionDeviation 체크
         Vector3 rushDir = transform.forward;
         rushDir.y = 0f;
         if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
 
-        float elapsed = 0f;
         while (elapsed < data.rushTime)
         {
+            if (data.allowDirectionDeviation && rushTarget != null)
+            {
+                Vector3 toPlayer = rushTarget.position - transform.position;
+                toPlayer.y = 0f;
+                if (toPlayer.sqrMagnitude > 0.0001f)
+                {
+                    Vector3 desiredDir = toPlayer.normalized;
+                    float lerpT = data.directionDeviationAmount * Time.deltaTime;
+                    rushDir = Vector3.Lerp(rushDir, desiredDir, lerpT);
+                    transform.rotation = Quaternion.LookRotation(rushDir);
+                }
+            }
+            // 체크 해제 시 rushDir은 최초 방향 고정!
+
             transform.position += rushDir.normalized * data.rushSpeed * Time.deltaTime;
 
             elapsed += Time.deltaTime;
@@ -287,10 +305,12 @@ public class EnemyAttackController : MonoBehaviour
             if (enemy.CurrentState != Enemy.EnemyState.Attack)
             {
                 StopRushCoroutines();
+                IsRushing = false;
                 yield break;
             }
         }
 
+        IsRushing = false;
         FinishRushAttack();
     }
 

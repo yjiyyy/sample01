@@ -20,7 +20,7 @@ public class RushAttackData : ScriptableObject
 
     [Header("방향 보정(선택)")]
     public bool allowDirectionDeviation = false;
-    [Range(0f, 5f)] public float directionDeviationAmount = 0.1f;
+    [Range(0f, 1f)] public float directionDeviationAmount = 0.1f;
 
     [Header("히트박스 (SO에서 지정)")]
     [Tooltip("러시 동안 붙일 히트박스 프리팹 (Trigger Collider + HitBox_Enemy 권장)")]

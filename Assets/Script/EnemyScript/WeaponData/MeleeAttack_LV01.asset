@@ -16,7 +16,7 @@ MonoBehaviour:
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   damage: 1
   range: 1
-  cooldown: 0.5
+  cooldown: 5
   knockbackPower: 0.5
   knockbackDuration: 0.5
   stunDuration: 0

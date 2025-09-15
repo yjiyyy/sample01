@@ -12,12 +12,21 @@ public class EnemyAI : MonoBehaviour
     {
         if (ctx == null || player == null || ctx.agent == null || !ctx.agent.isOnNavMesh) return;
 
-        // 쿨다운 중이면 아무 것도 안 함
+        // 쿨다운 중이면 이동/공격 안함, 플레이어 바라보기 + Idle 애니메이션 보장
         if (
             (ctx.CurrentState == Enemy.EnemyState.Chase || ctx.CurrentState == Enemy.EnemyState.Attack) &&
             ctx.attackCtrl != null && ctx.attackCtrl.IsCooldownActive()
         )
         {
+            // 바라보기
+            Vector3 dir = player.position - ctx.transform.position;
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.01f)
+                ctx.transform.rotation = Quaternion.LookRotation(dir);
+
+            // Speed=0 보장 (Idle)
+            ctx.animCtrl.UpdateMovement(0f);
+
             return;
         }
 
@@ -71,6 +80,10 @@ public class EnemyAI : MonoBehaviour
 
     private void HandleAttack(Enemy ctx, Transform player)
     {
+        // ⭐ Rush 중엔 회전 금지
+        if (ctx.attackCtrl != null && ctx.attackCtrl.IsRushing)
+            return;
+
         Vector3 dir = player.position - ctx.transform.position;
         dir.y = 0f;
         if (dir != Vector3.zero)

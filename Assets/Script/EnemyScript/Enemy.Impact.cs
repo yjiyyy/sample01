@@ -1,106 +1,88 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections;
 
-/// <summary>
-/// ÀûÀÇ ³Ë¹é/µ¥¹ÌÁö/½ºÅÏ/ÀÓÆÑÆ® ÅëÇÕ Ã³¸® ÄÄÆ÷³ÍÆ®
-/// - Enemy.cs¿¡¼­ ApplyKnockback¸¸ È£ÃâÇÏ¸é ¸ğµç È¿°ú°¡ Ã³¸®µÊ
-/// </summary>
 [DisallowMultipleComponent]
 public class EnemyImpact : MonoBehaviour
 {
-    /// <summary>
-    /// ÀûÀÇ ³Ë¹é + µ¥¹ÌÁö + ½ºÅÏ + ÀÓÆÑÆ® ¿¬ÃâÀ» ÇÑ ¹ø¿¡ Ã³¸®
-    /// °ø°İ µµÁß ÇÇ°İ ½Ã °ø°İ »óÅÂ/Äğ´Ù¿î/AI °ø°İ ÇÃ·¡±×/¾Ö´Ï¸ŞÀÌ¼Ç±îÁö ¸ğµÎ °­Á¦ Áß´Ü ÈÄ ³Ë¹é »óÅÂ·Î ÀüÈ¯
-    /// </summary>
-    /// <param name="ctx">Àû º»Ã¼(Enemy)</param>
-    /// <param name="hitDir">ÇÇ°İ ¹æÇâ</param>
-    /// <param name="weapon">¹«±â µ¥ÀÌÅÍ</param>
-    /// <param name="impactScale">ÀÓÆÑÆ® °­µµ(°Å¸®°¨¼è, Æ¯¼öÈ¿°ú µî)</param>
+    private Coroutine impactRoutine;
+
     public void ApplyKnockback(Enemy ctx, Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
-        // 1. °ø°İ »óÅÂ¡¤Äğ´Ù¿î¡¤AI °ø°İ ÇÃ·¡±×¡¤¾Ö´Ï¸ŞÀÌ¼Ç ¸ğµÎ °­Á¦ Áß´Ü
-        ctx.attackCtrl?.InterruptCooldown();   // Äğ´Ù¿î/°ø°İ ÄÚ·çÆ¾ Áß´Ü
-        ctx.ai?.InterruptAttack();             // AI °ø°İ ÇÃ·¡±× Áß´Ü
+        // ê¸°ì¡´ ì½”ë£¨í‹´ ê°•ì œ ì¤‘ë‹¨
+        if (impactRoutine != null)
+        {
+            StopCoroutine(impactRoutine);
+            impactRoutine = null;
+        }
 
-        // 2. ³Ë¹é »óÅÂ·Î °­Á¦ ÀüÈ¯ (force=true)
-        ctx.SetState(Enemy.EnemyState.Knockback, true);
+        ctx.attackCtrl?.InterruptCooldown();
+        ctx.ai?.InterruptAttack();
 
-        // 3. Knockback ¾Ö´Ï¸ŞÀÌ¼Ç °­Á¦ Àç»ı
-        ctx.animCtrl?.PlayKnockback();
-
-        // 4. µ¥¹ÌÁö Ã³¸® (EnemyHealth¿¡ Àü´Ş)
+        float damage = weapon != null ? weapon.damage : 0f;
         if (ctx.TryGetComponent(out EnemyHealth health))
         {
-            float damage = weapon != null ? weapon.damage : 0f;
             health.ApplyDamage(damage, hitDir, weapon, impactScale);
         }
 
-        // 5. ³Ë¹é Ã³¸® (NavMeshAgent ÀÌµ¿)
         float knockbackPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
         float knockbackDuration = weapon != null ? weapon.knockbackDuration : 0.1f;
-        if (knockbackPower > 0f && ctx.agent != null && ctx.agent.isOnNavMesh)
-        {
-            // ÄÚ·çÆ¾À¸·Î ³Ë¹é Àû¿ë
-            StartCoroutine(KnockbackRoutine(ctx, hitDir, knockbackPower, knockbackDuration));
-        }
-
-        // 6. ½ºÅÏ Ã³¸® (³Ë¹é ÈÄ, stunDurationÀÌ ÀÖ´Ù¸é ½ºÅÏ »óÅÂ·Î ÀüÈ¯)
         float stunDuration = weapon != null ? weapon.stunDuration : 0f;
-        if (stunDuration > 0f)
-        {
-            StartCoroutine(StunRoutine(ctx, stunDuration));
-        }
+
+        impactRoutine = StartCoroutine(KnockbackThenStunRoutine(ctx, hitDir, knockbackPower, knockbackDuration, stunDuration));
     }
 
-    /// <summary>
-    /// ³Ë¹é ÄÚ·çÆ¾ (NavMeshAgent¸¦ °­Á¦·Î ÀÌµ¿)
-    /// </summary>
-    private IEnumerator KnockbackRoutine(Enemy ctx, Vector3 hitDir, float power, float duration)
+    private IEnumerator KnockbackThenStunRoutine(Enemy ctx, Vector3 hitDir, float power, float knockDuration, float stunDuration)
     {
+        // ë„‰ë°± ì‹œì‘
+        ctx.SetState(Enemy.EnemyState.Knockback, true);
+        ctx.animCtrl?.PlayKnockback();
+
         float timer = 0f;
         Vector3 knockDir = hitDir.normalized;
         knockDir.y = 0f;
 
-        // ³Ë¹é ¹æÇâÀ¸·Î ÀÏÁ¤ ½Ã°£ ÀÌµ¿
-        while (timer < duration)
+        while (timer < knockDuration)
         {
             if (ctx.agent != null && ctx.agent.isOnNavMesh)
             {
                 ctx.agent.isStopped = true;
-                ctx.agent.velocity = knockDir * power * (1f - timer / duration);
+                ctx.agent.velocity = knockDir * power * (1f - timer / Mathf.Max(knockDuration, 0.01f));
             }
             timer += Time.deltaTime;
             yield return null;
         }
 
-        // ³Ë¹é Á¾·á: »óÅÂ Chase·Î º¹±¸ (½ºÅÏÀÌ ¾øÀ» °æ¿ì)
-        if (ctx.CurrentState == Enemy.EnemyState.Knockback)
+        // ë„‰ë°± ëë‚œ í›„
+        if (stunDuration > 0f)
         {
-            ctx.SetState(Enemy.EnemyState.Chase);
-            ctx.animCtrl?.PlayStun(false);
+            // ìŠ¤í„´ ì‹œì‘
+            ctx.SetState(Enemy.EnemyState.Stunned, true);
+            ctx.animCtrl?.PlayStun(true);
             if (ctx.agent != null && ctx.agent.isOnNavMesh)
             {
-                ctx.agent.isStopped = false;
+                ctx.agent.isStopped = true;
                 ctx.agent.velocity = Vector3.zero;
             }
-        }
-    }
-
-    /// <summary>
-    /// ½ºÅÏ ÄÚ·çÆ¾
-    /// </summary>
-    private IEnumerator StunRoutine(Enemy ctx, float duration)
-    {
-        ctx.SetState(Enemy.EnemyState.Stunned, true);
-        ctx.animCtrl?.PlayStun(true);
-
-        yield return new WaitForSeconds(duration);
-
-        // ½ºÅÏ Á¾·á: »óÅÂ Chase·Î º¹±¸
-        if (ctx.CurrentState == Enemy.EnemyState.Stunned)
-        {
-            ctx.SetState(Enemy.EnemyState.Chase);
+            yield return new WaitForSeconds(stunDuration);
             ctx.animCtrl?.PlayStun(false);
+
+            // â­ ìŠ¤í„´ ëì— íŠ¸ë¦¬ê±° ë°œë™ (Any State â†’ Runìœ¼ë¡œ ë³µê·€)
+            ctx.animCtrl?.Animator.SetTrigger("ResetToM");
         }
+        else
+        {
+            // â­ ìŠ¤í„´ì´ ì—†ìœ¼ë©´ ë„‰ë°± ëì— íŠ¸ë¦¬ê±° ë°œë™
+            ctx.animCtrl?.Animator.SetTrigger("ResetToM");
+        }
+
+        // ì •ìƒ ìƒíƒœ ë³µê·€
+        ctx.SetState(Enemy.EnemyState.Chase);
+        if (ctx.agent != null && ctx.agent.isOnNavMesh)
+        {
+            ctx.agent.isStopped = false;
+            ctx.agent.velocity = Vector3.zero;
+        }
+
+        impactRoutine = null;
     }
 }
