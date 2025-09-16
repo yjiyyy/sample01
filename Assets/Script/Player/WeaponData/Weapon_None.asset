@@ -15,7 +15,7 @@ MonoBehaviour:
   weaponName: None
   overrideController: {fileID: 0}
   cooldown: 0.5
-  damage: 10
+  damage: 1
   range: 2.5
   projectileCount: 1
   isMelee: 1

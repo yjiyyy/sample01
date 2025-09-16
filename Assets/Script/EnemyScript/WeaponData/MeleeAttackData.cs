@@ -19,4 +19,8 @@ public class MeleeAttackData : ScriptableObject
 
     [Header("히트박스 설정")]
     public float hitBoxLifetime = 0.1f;
+
+    [Header("중복 데미지 옵션")]
+    public bool allowDuplicateHit = false;
+    public float duplicateHitInterval = 0.1f;
 }

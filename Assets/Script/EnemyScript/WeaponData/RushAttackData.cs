@@ -3,30 +3,26 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "RushAttack", menuName = "Enemy/Attack/RushAttackData")]
 public class RushAttackData : ScriptableObject
 {
-    [Header("준비 단계")]
-    public float range = 2f;
-
-    public float prepareTime = 1f;
-    [Header("러시 본동작")]
+    [Header("기본")]
+    public float range = 5f;
+    public float prepareTime = 0f;
     public float rushTime = 2f;
-    public float rushSpeed = 10f;
-
-    [Header("전투 스탯")]
+    public float rushSpeed = 8f;
     public float damage = 20f;
     public float knockbackPower = 5f;
     public float knockbackDuration = 0.3f;
-    public float stunDuration = 0f;
+    public float stunDuration = 1f;
     public float cooldown = 3f;
 
-    [Header("방향 보정(선택)")]
+    [Header("방향 조절")]
     public bool allowDirectionDeviation = false;
-    [Range(0f, 1f)] public float directionDeviationAmount = 0.1f;
+    public float directionDeviationAmount = 0.5f;
 
-    [Header("히트박스 (SO에서 지정)")]
-    [Tooltip("러시 동안 붙일 히트박스 프리팹 (Trigger Collider + HitBox_Enemy 권장)")]
+    [Header("히트박스")]
     public GameObject hitBoxPrefab;
+    public float hitBoxLifetime = 1f;
 
-    [Tooltip("히트박스 유지 시간 (0 이하이면 rushTime 동안 유지)")]
-    public float hitBoxLifetime = 0f;
-
+    [Header("중복 데미지 옵션")]
+    public bool allowDuplicateHit = false;
+    public float duplicateHitInterval = 0.1f;
 }

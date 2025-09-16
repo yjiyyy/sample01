@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class EnemyAttackController : MonoBehaviour
 {
@@ -24,6 +25,9 @@ public class EnemyAttackController : MonoBehaviour
     private int runningRushIndex = -1;
     private Transform rushTarget;
 
+    // 🔒 공격 인덱스 고정용 상태
+    private int lockedAttackIndex = -1;
+
     private void Awake()
     {
         enemy = GetComponent<Enemy>();
@@ -43,12 +47,13 @@ public class EnemyAttackController : MonoBehaviour
         if (so == null) return false;
         if (!IsOffCooldown(index)) return false;
 
+        // 공격 시작 시 공격 인덱스 Lock
+        lockedAttackIndex = index;
+
         // Melee: 기존 애니 이벤트 흐름 유지
         if (so is MeleeAttackData)
         {
             NotifyAttack(index);
-            // 공격 상태로 전환하면 애니메이터 "Attack"이 재생되고
-            // 애니메이션 이벤트 AttackHit()가 호출되어 아래 AttackHit() 메서드가 실행됨
             enemy.SetState(Enemy.EnemyState.Attack);
             return true;
         }
@@ -98,7 +103,9 @@ public class EnemyAttackController : MonoBehaviour
                 meleeData.knockbackPower,
                 meleeData.knockbackDuration,
                 meleeData.hitBoxLifetime,
-                meleeData.stunDuration
+                meleeData.stunDuration,
+                meleeData.allowDuplicateHit,
+                meleeData.duplicateHitInterval
             );
         }
     }
@@ -136,6 +143,9 @@ public class EnemyAttackController : MonoBehaviour
             StopCoroutine(cooldownRoutine);
         float cd = GetAttackCooldown(index);
         cooldownRoutine = StartCoroutine(CooldownRoutine(cd));
+
+        // 쿨다운 시작시 lock 해제!
+        lockedAttackIndex = -1;
     }
 
     public bool IsCooldownActive() => isCooldown;
@@ -155,6 +165,9 @@ public class EnemyAttackController : MonoBehaviour
         }
         if (enemy != null)
             enemy.SetState(Enemy.EnemyState.Chase);
+
+        // 강제 lock 해제
+        lockedAttackIndex = -1;
     }
 
     private IEnumerator CooldownRoutine(float duration)
@@ -173,25 +186,29 @@ public class EnemyAttackController : MonoBehaviour
         cooldownRoutine = null;
     }
 
+    // ------ 핵심: 랜덤 공격 선택 (거리 무시!) ------
     public int SelectAttackIndex(float distance)
     {
-        int best = -1;
-        float bestDelta = float.PositiveInfinity;
+        // lock이 걸려 있으면 그 인덱스만 반환
+        if (lockedAttackIndex >= 0 && IsOffCooldown(lockedAttackIndex))
+            return lockedAttackIndex;
+
+        // 쿨타임이 끝난 공격 패턴만 후보로 수집
+        List<int> available = new();
         for (int i = 0; i < AttackCount; i++)
         {
             if (attackPatterns == null || i >= attackPatterns.Length) break;
-            if (attackPatterns[i] == null) continue;      // null 슬롯 무시
+            if (attackPatterns[i] == null) continue;
             if (!IsOffCooldown(i)) continue;
-
-            float range = GetAttackRange(i);
-            float delta = Mathf.Abs(distance - range);
-            if (delta < bestDelta)
-            {
-                bestDelta = delta;
-                best = i;
-            }
+            available.Add(i);
         }
-        return best;
+        if (available.Count == 0)
+            return -1;
+
+        // 랜덤으로 1개 선택!
+        int chosen = available[Random.Range(0, available.Count)];
+        lockedAttackIndex = chosen;
+        return chosen;
     }
 
     // ───────────────── Rush 내부 로직 ─────────────────
@@ -276,7 +293,7 @@ public class EnemyAttackController : MonoBehaviour
 
         float elapsed = 0f;
 
-        // ⭐ 돌진 방향: allowDirectionDeviation 체크
+        // 돌진 방향: allowDirectionDeviation 체크
         Vector3 rushDir = transform.forward;
         rushDir.y = 0f;
         if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
@@ -320,6 +337,7 @@ public class EnemyAttackController : MonoBehaviour
         {
             enemy.animator.SetBool("IsRush", false);
             enemy.animator.SetBool("IsRushPrepare", false);
+            enemy.animator.SetTrigger("ResetToM"); // ⭐️ 러시 종료 후 즉시 AnyState→Run 트리거!
         }
 
         DespawnRushHitbox();
@@ -375,7 +393,9 @@ public class EnemyAttackController : MonoBehaviour
                 data.knockbackPower,
                 data.knockbackDuration,
                 life,
-                data.stunDuration
+                data.stunDuration,
+                data.allowDuplicateHit,
+                data.duplicateHitInterval
             );
         }
     }

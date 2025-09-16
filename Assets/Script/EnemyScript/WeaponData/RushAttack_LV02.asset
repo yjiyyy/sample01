@@ -13,15 +13,17 @@ MonoBehaviour:
   m_Name: RushAttack_LV02
   m_EditorClassIdentifier: 
   range: 5
-  prepareTime: 0
+  prepareTime: 1
   rushTime: 5
-  rushSpeed: 5
-  damage: 20
+  rushSpeed: 2
+  damage: 1
   knockbackPower: 5
   knockbackDuration: 0.3
   stunDuration: 1
-  cooldown: 3
-  allowDirectionDeviation: 1
+  cooldown: 1
+  allowDirectionDeviation: 0
   directionDeviationAmount: 0.565
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   hitBoxLifetime: 5
+  allowDuplicateHit: 0
+  duplicateHitInterval: 0.1
