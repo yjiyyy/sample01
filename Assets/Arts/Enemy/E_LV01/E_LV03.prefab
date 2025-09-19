@@ -88,6 +88,7 @@ MonoBehaviour:
   death: {fileID: 6950063031955005865}
   moveSpeed: 3
   debugMode: 0
+  superArmorMask: 0
 --- !u!195 &3287521263448462925
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -214,6 +215,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHP: 110
+  useShield: 1
+  maxShield: 150
+  shieldBreakDuration: 5
+  shieldRechargeDelay: 10
+  showShieldLogs: 1
 --- !u!114 &8923165420331746604
 MonoBehaviour:
   m_ObjectHideFlags: 0

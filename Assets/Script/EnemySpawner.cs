@@ -62,7 +62,6 @@ public class EnemySpawner : MonoBehaviour
 
     void SpawnEnemy()
     {
-        // ✅ 추가 안전 검사
         if (GameManager.Instance?.playerTransform == null)
         {
             Debug.LogError("[EnemySpawner] playerTransform이 null입니다. 스폰을 건너뜁니다.");
@@ -80,16 +79,21 @@ public class EnemySpawner : MonoBehaviour
             GameObject enemyPrefab = enemyPrefabsByLevel[currentLevel];
             GameObject enemy = Instantiate(enemyPrefab, hit.position, Quaternion.identity);
 
-            // ✅ HP UI 자동 생성 및 연결 (EnemyHealth로 수정)
             if (hpuiPrefab != null)
             {
                 GameObject hpui = Instantiate(hpuiPrefab);
                 HPUIController controller = hpui.GetComponent<HPUIController>();
                 controller.target = enemy.transform;
-                controller.health = enemy.GetComponent<EnemyHealth>(); // ✅ EnemyHealth로 수정
-                controller.hpSlider = hpui.GetComponentInChildren<Slider>();
+                controller.health = enemy.GetComponent<EnemyHealth>();
 
-                Debug.Log($"[EnemySpawner] 적 + HP UI 생성 완료: {enemy.name}");
+                Slider[] sliders = hpui.GetComponentsInChildren<Slider>(true);
+                foreach (Slider s in sliders)
+                {
+                    if (s.name.ToLower().Contains("shield"))
+                        controller.shieldSlider = s;
+                    else if (s.name.ToLower().Contains("hp"))
+                        controller.hpSlider = s;
+                }
             }
             else
             {

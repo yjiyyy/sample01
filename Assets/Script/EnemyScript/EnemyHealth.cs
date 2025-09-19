@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿﻿using UnityEngine;
 using System.Collections;
 
 /// <summary>
@@ -123,9 +123,10 @@ public class EnemyHealth : MonoBehaviour
         // 상태 전환
         enemy?.SetState(Enemy.EnemyState.ShieldBreak, true);
 
+        // 🚩 애니메이션 강제 재생 (트랜지션 없이)
         if (animator != null)
         {
-            animator.SetBool(hashIsShieldBreak, true);
+            animator.Play("ShieldBreak", 0, 0f);
         }
 
         if (showShieldLogs)
@@ -140,28 +141,12 @@ public class EnemyHealth : MonoBehaviour
         shieldBreakRoutine = StartCoroutine(ShieldBreakFlow());
     }
 
-    private IEnumerator ShieldBreakFlow()
-    {
-        // 그로기 (공격/AI 정지)
-        yield return new WaitForSeconds(shieldBreakDuration);
-
-        ExitShieldBreak(); // Chase 복귀
-
-        // 재충전 지연
-        if (shieldRechargeDelay > 0f)
-            yield return new WaitForSeconds(shieldRechargeDelay);
-
-        FullyRechargeShield();
-        shieldBreakRoutine = null;
-    }
-
     private void ExitShieldBreak()
     {
         if (!isShieldBreak) return;
         isShieldBreak = false;
 
-        if (animator != null) animator.SetBool(hashIsShieldBreak, false);
-
+        // 복귀 시 별도 파라미터 필요 없음, 상태만 변경
         if (enemy != null && enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
         {
             enemy.SetState(Enemy.EnemyState.Chase);
@@ -171,6 +156,21 @@ public class EnemyHealth : MonoBehaviour
         {
             Debug.Log($"[ShieldBreak] Exit (→ Chase, wait recharge {shieldRechargeDelay:F2}s)");
         }
+    }
+
+    private IEnumerator ShieldBreakFlow()
+    {
+        // 그로기 (공격/AI 정지)
+        yield return new WaitForSeconds(shieldBreakDuration);
+
+        ExitShieldBreak(); // 파라미터만 꺼주면 자동 복귀
+
+        // 재충전 지연
+        if (shieldRechargeDelay > 0f)
+            yield return new WaitForSeconds(shieldRechargeDelay);
+
+        FullyRechargeShield();
+        shieldBreakRoutine = null;
     }
 
     private void FullyRechargeShield()

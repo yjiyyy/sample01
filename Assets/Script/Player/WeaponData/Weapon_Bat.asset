@@ -15,12 +15,12 @@ MonoBehaviour:
   weaponName: Bat
   overrideController: {fileID: 22100000, guid: 099b929ec6ee5be4a86e28139553bee6, type: 2}
   cooldown: 0.5
-  damage: 150
+  damage: 50
   range: 2.5
   projectileCount: 1
   isMelee: 1
   AutoAttackDelay: 0.3
-  hitBoxLifetime: 0.5
+  hitBoxLifetime: 0.1
   criticalChance: 0
   aoeRadius: 0
   hitboxSpawnDelay: 0.2

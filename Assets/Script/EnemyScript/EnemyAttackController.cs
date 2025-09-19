@@ -49,8 +49,14 @@ public class EnemyAttackController : MonoBehaviour
 
         lockedAttackIndex = index;
 
-        if (so is MeleeAttackData)
+        if (so is MeleeAttackData meleeData)
         {
+            // grantSuperArmor 옵션 적용
+            if (meleeData.grantSuperArmor)
+                enemy.AddSuperArmor(SuperArmorSource.Attack);
+            else
+                enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+
             NotifyAttack(index);
             enemy.SetState(Enemy.EnemyState.Attack);
             return true;
@@ -82,6 +88,9 @@ public class EnemyAttackController : MonoBehaviour
         {
             HandleMeleeAttack(meleeData);
             BeginCooldown(currentAttackIndex);
+
+            // 공격이 끝났으므로 슈퍼아머 해제 (밀리의 경우)
+            enemy.RemoveSuperArmor(SuperArmorSource.Attack);
         }
     }
 
@@ -161,6 +170,9 @@ public class EnemyAttackController : MonoBehaviour
             enemy.SetState(Enemy.EnemyState.Chase);
 
         lockedAttackIndex = -1;
+
+        // 슈퍼아머 강제 해제 (모든 공격 중단 시)
+        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
     }
 
     private IEnumerator CooldownRoutine(float duration)
@@ -211,8 +223,11 @@ public class EnemyAttackController : MonoBehaviour
 
         enemy.SetState(Enemy.EnemyState.Attack);
 
-        // Rush SuperArmor 부여
-        enemy.AddSuperArmor(SuperArmorSource.Rush);
+        // grantSuperArmor 옵션에 따라 슈퍼아머 부여
+        if (data.grantSuperArmor)
+            enemy.AddSuperArmor(SuperArmorSource.Attack);
+        else
+            enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
         rushPrepareCoroutine = StartCoroutine(RushPrepareRoutine(data));
     }
@@ -331,7 +346,8 @@ public class EnemyAttackController : MonoBehaviour
             BeginCooldown(runningRushIndex); // Rush 완료 시 쿨다운
         }
 
-        enemy.RemoveSuperArmor(SuperArmorSource.Rush);
+        // Rush가 끝나면 슈퍼아머 해제
+        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
         if (enemy.CurrentState != Enemy.EnemyState.ShieldBreak &&
             enemy.CurrentState != Enemy.EnemyState.Dead)
@@ -394,8 +410,8 @@ public class EnemyAttackController : MonoBehaviour
         DespawnRushHitbox();
         IsRushing = false;
 
-        // Rush SuperArmor 제거
-        enemy.RemoveSuperArmor(SuperArmorSource.Rush);
+        // Rush 슈퍼아머 해제
+        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
         runningRushIndex = -1;
         rushTarget = null;

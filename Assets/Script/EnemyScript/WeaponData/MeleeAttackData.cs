@@ -8,6 +8,7 @@ public class MeleeAttackData : ScriptableObject
     public GameObject hitBoxPrefab;
 
     [Header("전투 스탯")]
+    public bool grantSuperArmor = false;
     public float damage = 10f;
     public float range = 2f;
     public float cooldown = 1f;

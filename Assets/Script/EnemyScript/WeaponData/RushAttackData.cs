@@ -4,6 +4,7 @@ using UnityEngine;
 public class RushAttackData : ScriptableObject
 {
     [Header("±âº»")]
+    public bool grantSuperArmor = false;
     public float range = 5f;
     public float prepareTime = 0f;
     public float rushTime = 2f;

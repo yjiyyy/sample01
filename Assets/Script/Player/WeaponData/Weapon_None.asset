@@ -28,7 +28,7 @@ MonoBehaviour:
   knockbackPower: 1
   jerkIntensity: 0
   jerkDuration: 0
-  stunDuration: 0
+  stunDuration: 3
   projectileLifetime: 5
   projectileSpeed: 0
   pierceCount: 0
