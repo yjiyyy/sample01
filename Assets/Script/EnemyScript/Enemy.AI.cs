@@ -11,8 +11,10 @@ public class EnemyAI : MonoBehaviour
     public void Tick(Enemy ctx, Transform player)
     {
         if (ctx == null || player == null || ctx.agent == null || !ctx.agent.isOnNavMesh) return;
+        if (ctx.CurrentState == Enemy.EnemyState.ShieldBreak) return; // 그로기 중 AI 중지
+        if (ctx.CurrentState == Enemy.EnemyState.Dead) return;
 
-        // 쿨다운 중이면 이동/공격 안함, 플레이어 바라보기 + Idle 애니메이션 보장
+        // 쿨다운 중이면 이동/공격 안함
         if (
             (ctx.CurrentState == Enemy.EnemyState.Chase || ctx.CurrentState == Enemy.EnemyState.Attack) &&
             ctx.attackCtrl != null && ctx.attackCtrl.IsCooldownActive()
@@ -24,9 +26,7 @@ public class EnemyAI : MonoBehaviour
             if (dir.sqrMagnitude > 0.01f)
                 ctx.transform.rotation = Quaternion.LookRotation(dir);
 
-            // Speed=0 보장 (Idle)
             ctx.animCtrl.UpdateMovement(0f);
-
             return;
         }
 
@@ -48,9 +48,7 @@ public class EnemyAI : MonoBehaviour
 
         int attackIdx = -1;
         if (ctx.attackCtrl != null && ctx.attackCtrl.AttackCount > 0)
-        {
             attackIdx = ctx.attackCtrl.SelectAttackIndex(distance);
-        }
 
         float engageRange = (attackIdx >= 0)
             ? ctx.attackCtrl.GetAttackRange(attackIdx)
@@ -60,7 +58,6 @@ public class EnemyAI : MonoBehaviour
 
         if (distance < engageRange && canAttack)
         {
-            // AttackController가 내부에서 Melee/Rush 모두 처리 (쿨다운 시점 포함)
             bool started = ctx.attackCtrl.TryStartAttack(attackIdx, player);
             if (started)
             {
@@ -80,7 +77,6 @@ public class EnemyAI : MonoBehaviour
 
     private void HandleAttack(Enemy ctx, Transform player)
     {
-        // ⭐ Rush 중엔 회전 금지
         if (ctx.attackCtrl != null && ctx.attackCtrl.IsRushing)
             return;
 
@@ -93,11 +89,6 @@ public class EnemyAI : MonoBehaviour
         if (ctx.animator != null && info.IsName("Attack") && info.normalizedTime >= 0.95f)
         {
             inAttackAnim = false;
-        }
-
-        if (!inAttackAnim)
-        {
-            // 쿨다운 루틴이 상태 전환 담당
         }
     }
 

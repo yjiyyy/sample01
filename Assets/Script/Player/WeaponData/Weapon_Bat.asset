@@ -15,12 +15,12 @@ MonoBehaviour:
   weaponName: Bat
   overrideController: {fileID: 22100000, guid: 099b929ec6ee5be4a86e28139553bee6, type: 2}
   cooldown: 0.5
-  damage: 50
+  damage: 150
   range: 2.5
   projectileCount: 1
   isMelee: 1
   AutoAttackDelay: 0.3
-  hitBoxLifetime: 0.1
+  hitBoxLifetime: 0.5
   criticalChance: 0
   aoeRadius: 0
   hitboxSpawnDelay: 0.2
@@ -37,12 +37,12 @@ MonoBehaviour:
   explosiveEdgeMul: 0.2
   viewAngle: 45
   viewDistance: 10
-  ragdollImpulse: 10
-  upwardImpulse: 2
+  ragdollImpulse: 5
+  upwardImpulse: 5
   torqueImpulse: 50
   sliceForce: 8
-  deathType: 1
-  possibleSliceParts: 
+  deathType: 2
+  possibleSliceParts: 06000000
   weaponCategory: 1
   shotgunRadius: 5
   shotgunAngle: 30

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.AI;
 
 [RequireComponent(typeof(NavMeshAgent))]
@@ -10,7 +11,8 @@ using UnityEngine.AI;
 [DisallowMultipleComponent]
 public class Enemy : MonoBehaviour
 {
-    public enum EnemyState { Chase, Attack, Knockback, Stunned, Dead }
+    // ShieldBreak 상태 추가
+    public enum EnemyState { Chase, Attack, Knockback, Stunned, ShieldBreak, Dead }
     public EnemyState CurrentState { get; private set; } = EnemyState.Chase;
 
     [Header("Core refs")]
@@ -29,6 +31,29 @@ public class Enemy : MonoBehaviour
     public bool debugMode = true;
 
     private Transform player;
+
+    // ───────── SuperArmor 관리 ─────────
+    [SerializeField, Tooltip("디버그 확인용")] private SuperArmorSource superArmorMask = SuperArmorSource.None;
+    public bool HasSuperArmor => superArmorMask != SuperArmorSource.None;
+    public bool HasSuperArmorSource(SuperArmorSource src) => (superArmorMask & src) != 0;
+
+    public void AddSuperArmor(SuperArmorSource src)
+    {
+        if (src == SuperArmorSource.None) return;
+        superArmorMask |= src;
+        if (debugMode) Debug.Log($"[Enemy] AddSuperArmor: {src} => {superArmorMask}");
+    }
+    public void RemoveSuperArmor(SuperArmorSource src)
+    {
+        if (src == SuperArmorSource.None) return;
+        superArmorMask &= ~src;
+        if (debugMode) Debug.Log($"[Enemy] RemoveSuperArmor: {src} => {superArmorMask}");
+    }
+    public void ClearAllSuperArmor()
+    {
+        superArmorMask = SuperArmorSource.None;
+        if (debugMode) Debug.Log("[Enemy] ClearAllSuperArmor");
+    }
 
     private void Awake()
     {
@@ -67,25 +92,26 @@ public class Enemy : MonoBehaviour
             player = GameObject.FindWithTag("Player")?.transform;
 
         if (CurrentState == EnemyState.Dead || player == null) return;
+        if (CurrentState == EnemyState.ShieldBreak) return; // 그로기 동안 AI 비활성
         ai?.Tick(this, player);
     }
 
     public void SetState(EnemyState newState, bool force = false)
     {
         if (!force && CurrentState == newState) return;
+
         if (debugMode) Debug.Log($"[Enemy] State {CurrentState} → {newState}");
         CurrentState = newState;
 
         switch (newState)
         {
             case EnemyState.Chase:
-                // 🔥 애니메이션 강제 Play 삭제!
-                if (agent.isOnNavMesh) agent.isStopped = false;
+                if (agent && agent.isOnNavMesh) agent.isStopped = false;
                 break;
 
             case EnemyState.Attack:
                 if (animator) animator.Play("Attack", 0, 0f);
-                if (agent.isOnNavMesh)
+                if (agent && agent.isOnNavMesh)
                 {
                     agent.isStopped = true;
                     agent.velocity = Vector3.zero;
@@ -95,26 +121,43 @@ public class Enemy : MonoBehaviour
                 break;
 
             case EnemyState.Knockback:
-                if (agent.isOnNavMesh) agent.isStopped = true;
+                if (agent && agent.isOnNavMesh) agent.isStopped = true;
                 break;
 
             case EnemyState.Stunned:
                 if (animator) animator.Play("Stun", 0, 0f);
-                if (agent.isOnNavMesh) agent.isStopped = true;
+                if (agent && agent.isOnNavMesh) agent.isStopped = true;
+                break;
+
+            case EnemyState.ShieldBreak:
+                if (agent && agent.isOnNavMesh)
+                {
+                    agent.isStopped = true;
+                    agent.velocity = Vector3.zero;
+                    agent.ResetPath();
+                }
+                // 애니메이션은 EnemyHealth에서 IsShieldBreak bool 세팅
                 break;
 
             case EnemyState.Dead:
                 if (agent) agent.enabled = false;
+                ClearAllSuperArmor();
                 break;
         }
     }
 
-    // 외부 공개 API (넉백+데미지+임팩트 통합)
+    // 외부 공개 API (넉백 + 데미지 + 임팩트)
     public void ApplyKnockback(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (CurrentState == EnemyState.Dead) return;
-        attackCtrl?.InterruptCooldown();
-        ai?.InterruptAttack();
+
+        bool allowInterrupt = !HasSuperArmor && CurrentState != EnemyState.ShieldBreak;
+        if (allowInterrupt)
+        {
+            attackCtrl?.InterruptCooldown();
+            ai?.InterruptAttack();
+        }
+
         impact?.ApplyKnockback(this, hitDir, weapon, impactScale);
     }
 
@@ -129,4 +172,11 @@ public class Enemy : MonoBehaviour
     // 기존 호환 메서드
     public void SetAttackState() => SetState(EnemyState.Attack);
     public void SetChaseState() => SetState(EnemyState.Chase);
+
+    // ShieldBreak 여부 외부에서(필요 시)
+    public bool IsShieldBreaking()
+    {
+        if (TryGetComponent(out EnemyHealth h)) return h.IsShieldBreak();
+        return false;
+    }
 }

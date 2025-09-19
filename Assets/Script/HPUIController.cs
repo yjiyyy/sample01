@@ -5,13 +5,13 @@ public class HPUIController : MonoBehaviour
 {
     [Header("대상 설정")]
     public Transform target;
-    public MonoBehaviour health; // 🔧 Health → MonoBehaviour로 변경
+    public MonoBehaviour health; // PlayerHealth 또는 EnemyHealth
 
     [Header("UI 요소")]
     public Slider hpSlider;
+    [Tooltip("실드 (선택) - Enemy 전용")] public Slider shieldSlider;
     public Vector3 offset = new Vector3(0, 2f, 0);
 
-    // 런타임에서 실제 타입 확인
     private bool isPlayerHealth = false;
     private bool isEnemyHealth = false;
     private PlayerHealth playerHP;
@@ -19,22 +19,25 @@ public class HPUIController : MonoBehaviour
 
     void Start()
     {
-        // 실제 타입 확인 및 캐싱
         if (health is PlayerHealth ph)
         {
             playerHP = ph;
             isPlayerHealth = true;
-            Debug.Log("[HPUIController] PlayerHealth 감지됨");
         }
         else if (health is EnemyHealth eh)
         {
             enemyHP = eh;
             isEnemyHealth = true;
-            Debug.Log("[HPUIController] EnemyHealth 감지됨");
         }
         else
         {
             Debug.LogError($"❌ {health?.name}은 지원하지 않는 Health 타입입니다!");
+        }
+
+        if (shieldSlider != null)
+        {
+            // 플레이어는 현재 실드 미지원이므로 숨김
+            shieldSlider.gameObject.SetActive(isEnemyHealth && enemyHP != null && enemyHP.UseShield());
         }
     }
 
@@ -46,7 +49,6 @@ public class HPUIController : MonoBehaviour
             return;
         }
 
-        // 타입별로 메서드 호출
         float currentHP = 0f;
         float maxHP = 1f;
 
@@ -66,11 +68,23 @@ public class HPUIController : MonoBehaviour
             return;
         }
 
-        float ratio = currentHP / maxHP;
-        hpSlider.value = ratio;
+        hpSlider.value = maxHP > 0f ? currentHP / maxHP : 0f;
+
+        if (shieldSlider != null && isEnemyHealth && enemyHP != null && enemyHP.UseShield())
+        {
+            shieldSlider.gameObject.SetActive(true);
+            float shMax = enemyHP.GetMaxShield();
+            float shCur = enemyHP.GetCurrentShield();
+            shieldSlider.value = shMax > 0f ? shCur / shMax : 0f;
+        }
+        else if (shieldSlider != null)
+        {
+            shieldSlider.gameObject.SetActive(false);
+        }
 
         transform.position = target.position + offset;
-        transform.forward = Camera.main.transform.forward;
+        if (Camera.main != null)
+            transform.forward = Camera.main.transform.forward;
 
         if (currentHP <= 0)
         {
