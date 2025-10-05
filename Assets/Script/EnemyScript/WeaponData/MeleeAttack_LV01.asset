@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackName: Melee_Attack_LV01
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
+  grantSuperArmor: 0
   damage: 1
   range: 1
-  cooldown: 0.5
+  cooldown: 20
+  attackTime: 0.5
   knockbackPower: 0.5
   knockbackDuration: 0.5
   stunDuration: 0

@@ -3,226 +3,301 @@ using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// 확정 설계 반영:
-/// - 전역 GCD(global 1s) : 어떤 공격이든 baseCooldown > 0 이면 공격 종료 시 1초간 모든 공격 차단
-/// - baseCooldown < 1 → 실제 per-attack 쿨다운 1초로 상향 (전역 1초와 동일 시점에 풀림)
-/// - baseCooldown == 0 → 전역 GCD 미발동, per-attack 쿨다운 없음
-/// - AttackTime: 공격 시작 시 attackStartTime 기록, attackEndTime 도달 시 '공격 종료 처리' + 위 쿨다운 로직 적용
-/// - 기존 isCooldown + CooldownRoutine 제거. (전역/개별 타이머 계산만)
-/// - Interrupt 시: per-attack & global 모두 리셋(현행 동작 유지), 다음 프레임부터 즉시 다른 공격 가능
-/// - AttackHit(): 히트박스 생성만 담당 (쿨다운 시작 X)
-/// - Rush: 완료 시 동일 규칙(전역 GCD + per-attack 쿨) 적용
-/// 
-/// 추후 확장 예정 Scaffold:
-/// - CooldownMicroState (Idle / Backstep / Move) : 아직 미사용, 나중에 전역 GCD 시간 동안 동작 다양화 가능
+/// 최소 사양 버전 (Decision Delay + Per-Attack Cooldown)
+/// + 실패(pending 타임아웃) 시 해당 공격 full 쿨다운 소모 패치.
+///
+/// 동작 개요:
+/// 1. 공격 성공(실행) 후: nextDecisionTime = Time.time + (baseCooldown) + decisionDelay
+/// 2. 공격 선택(pending) 후 decisionDelay 안에 사거리 진입 못해서 실행 실패(타임아웃):
+///      - 이제 full 쿨다운을 소비 (readyTimes 갱신)
+///      - nextDecisionTime = Time.time + (baseCooldown) + decisionDelay
+/// 3. 선택이 없고(nextDecisionTime 지나고) 쿨다운이 끝난 공격들 중 랜덤 1개 pick → pendingAttackIndex
+///    (거리 상관 없이 pick; 사거리 밖이면 대기/시도)
+///
+/// 주의:
+/// - baseCooldown == 0 인 공격은 실패/성공 모두 즉시 재사용 가능(설정값 그대로).
+/// - 실패 시에도 쿨을 소모하기 때문에 근접이 계속 사거리 밖일 경우 한동안 그 패턴이 후보에서 사라지고
+///   다른 패턴(예: Rush)이 나올 확률이 크게 증가.
 /// </summary>
 public class EnemyAttackController : MonoBehaviour
 {
     [Header("공격 패턴 데이터 (SO 배열)")]
     public ScriptableObject[] attackPatterns;
+    public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
+    /* ===== 진행 상태 ===== */
     private ScriptableObject currentAttack;
     private int currentAttackIndex = -1;
 
-    private float[] lastUsedTimes;        // 개별 공격 시작(쿨다운) 기준 시간
-    public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
-
-    // Rush 상태
-    public bool IsRushing { get; private set; } = false;
-
-    private Enemy enemy;
-
-    // ─── AttackTime 관리 ───
+    // Melee
     private bool attackInProgress = false;
     private float attackStartTime;
     private float attackEndTime;
     private float effectiveAttackDuration;
 
-    // 전역 GCD
-    private float globalAvailableTime = -Mathf.Infinity;  // Time.time < globalAvailableTime 이면 전역 쿨다운 중
-
-    // 공격 인덱스 고정
-    private int lockedAttackIndex = -1;
-
-    // Rush 전용 코루틴 & 상태
+    // Rush
+    public bool IsRushing { get; private set; } = false;
     private Coroutine rushPrepareCoroutine;
     private Coroutine rushCoroutine;
     private GameObject spawnedRushHitbox;
     private int runningRushIndex = -1;
     private Transform rushTarget;
 
-    // ─── 향후 확장용 Scaffold (현재 미사용) ───
-    private enum CooldownMicroState { None, Idle, Backstep, Move }
-    private CooldownMicroState microState = CooldownMicroState.None;
+    private Enemy enemy;
 
+    /* ===== Per Attack Cooldown =====
+     * readyTimes[i] = i번 공격이 다시 '선택 가능'해지는 시각
+     */
+    private float[] readyTimes;
+
+    /* ===== Decision Delay ===== */
+    [Header("결정 딜레이")]
+    [Tooltip("공격 종료/실패 후 다음 공격 선택 전에 추가로 기다릴 시간")]
+    public float decisionDelay = 0.35f;
+
+    private float nextDecisionTime = 0f;
+
+    // 선택되었지만 아직 실행되지 못한 공격
+    private int pendingAttackIndex = -1;
+    private float pendingSelectTime = 0f;
+
+    /* ===== 디버그 ===== */
+    [Header("디버그")]
+    public bool debugDecisionLogs = true;
+
+    public float DecisionDelayRemaining => Mathf.Max(0f, nextDecisionTime - Time.time);
+    public bool IsMeleeExecuting => attackInProgress && !IsRushing;
+    public float MeleeElapsed => attackInProgress ? Mathf.Clamp(Time.time - attackStartTime, 0f, effectiveAttackDuration) : 0f;
+    public float MeleeDuration => attackInProgress ? effectiveAttackDuration : 0f;
+    public string CurrentAttackName
+    {
+        get
+        {
+            if (currentAttack is MeleeAttackData m) return m.attackName;
+            if (IsRushing && runningRushIndex >= 0 &&
+                attackPatterns != null &&
+                runningRushIndex < attackPatterns.Length &&
+                attackPatterns[runningRushIndex] is RushAttackData) return "Rush";
+            return null;
+        }
+    }
+    public float GetPerAttackCooldownRemaining(int index)
+    {
+        if (index < 0 || index >= AttackCount) return 0f;
+        return Mathf.Max(0f, readyTimes[index] - Time.time);
+    }
+
+    /* ===== Unity ===== */
     private void Awake()
     {
         enemy = GetComponent<Enemy>();
         int n = AttackCount;
-        lastUsedTimes = n > 0 ? new float[n] : System.Array.Empty<float>();
-        for (int i = 0; i < lastUsedTimes.Length; i++)
-            lastUsedTimes[i] = -Mathf.Infinity;
+        readyTimes = n > 0 ? new float[n] : System.Array.Empty<float>();
+        for (int i = 0; i < n; i++) readyTimes[i] = -Mathf.Infinity;
+
+        nextDecisionTime = Time.time; // 시작 즉시 선택 가능
+        Log("[INIT] nextDecisionTime=now");
     }
 
     private void Update()
     {
-        // AttackTime 종료 체크 (Melee / Rush 준비 아님)
         if (attackInProgress && !IsRushing)
         {
             if (Time.time >= attackEndTime)
             {
-                FinishMeleeAttackAndStartCooldown();
+                FinishMeleeAttackAndSchedule();
             }
             else
             {
-                // 애니 길이보다 AttackTime이 길 경우 프레임 Freeze (단순 구현: stateInfo 끝나면 speed=0)
                 if (currentAttack is MeleeAttackData mData && mData.attackTime > 0f)
                 {
-                    var info = enemy.animator != null ? enemy.animator.GetCurrentAnimatorStateInfo(0) : default;
-                    if (info.IsName("Attack"))
+                    var info = enemy?.animator != null ? enemy.animator.GetCurrentAnimatorStateInfo(0) : default;
+                    if (info.IsName("Attack") &&
+                        info.normalizedTime >= 0.99f &&
+                        Time.time < attackEndTime)
                     {
-                        if (info.normalizedTime >= 0.99f && Time.time < attackEndTime)
-                        {
-                            enemy.animator.speed = 0f; // TODO: 나중에 전용 AfterFrame / TailClip 활용 개선
-                        }
+                        if (enemy?.animator) enemy.animator.speed = 1f;
                     }
                 }
             }
         }
     }
 
-    // ───────────────── 전역 / 개별 쿨다운 공개 API ─────────────────
-    public bool IsGlobalCooling() => Time.time < globalAvailableTime;
+    /* ===== Public / Cooldown ===== */
+    public bool IsGlobalCooling() => false; // 전역 GCD 없음
     public bool IsOffCooldown(int index)
     {
         if (index < 0 || index >= AttackCount) return false;
-        float appliedCd = GetAppliedPerAttackCooldown(index);
-        return Time.time >= lastUsedTimes[index] + appliedCd;
+        return Time.time >= readyTimes[index];
     }
 
-    private void StartGlobalCooldown(float duration)
+    private void ApplyPerAttackCooldown(int index, float baseCooldown)
     {
-        globalAvailableTime = Time.time + duration;
+        if (index < 0 || index >= AttackCount) return;
+        readyTimes[index] = Time.time + Mathf.Max(0f, baseCooldown);
     }
 
-    private float GetAppliedPerAttackCooldown(int index)
+    public float GetAttackCooldown(int index)
     {
-        float baseCd = GetAttackCooldown(index);
-        if (baseCd <= 0f) return 0f;
-        if (baseCd < 1f) return 1f;
-        return baseCd;
+        if (index < 0 || index >= AttackCount) return 0f;
+        var so = attackPatterns[index];
+        if (so is MeleeAttackData melee) return melee.cooldown;
+        if (so is RushAttackData rush) return rush.cooldown;
+        return 0f;
     }
 
-    // ───────────────── 공격 선택/시작 ─────────────────
+    public float GetAttackRange(int index)
+    {
+        if (index < 0 || index >= AttackCount) return 0f;
+        var so = attackPatterns[index];
+        if (so is MeleeAttackData melee) return melee.range;
+        if (so is RushAttackData rush) return rush.range;
+        return 0f;
+    }
+
+    /* ===== 선택 로직 =====
+     * 반환: 즉시 TryStartAttack 가능한 인덱스 (사거리 OK) 또는 -1
+     */
     public int SelectAttackIndex(float distance)
     {
-        // 전역 GCD 중이면 어떤 공격도 시작 불가
-        if (IsGlobalCooling()) return -1;
+        // 진행 중 공격 있으면 새 선택 X
+        if (attackInProgress || IsRushing) return -1;
 
-        if (lockedAttackIndex >= 0 && IsOffCooldown(lockedAttackIndex))
-            return lockedAttackIndex;
+        // 1) Pending 상태
+        if (pendingAttackIndex >= 0)
+        {
+            float range = GetAttackRange(pendingAttackIndex);
+            if (distance <= range && IsOffCooldown(pendingAttackIndex))
+            {
+                // 사거리 들어왔으니 AI가 바로 TryStartAttack 호출
+                return pendingAttackIndex;
+            }
 
-        List<int> available = new();
+            // 타임아웃 체크 → 실패 시 full 쿨다운 소비
+            float waited = Time.time - pendingSelectTime;
+            if (waited >= decisionDelay)
+            {
+                int failIdx = pendingAttackIndex;
+                float baseCd = GetAttackCooldown(failIdx);
+                ApplyPerAttackCooldown(failIdx, baseCd); // 실패도 full 소모
+                pendingAttackIndex = -1;
+                nextDecisionTime = Time.time + baseCd + decisionDelay;
+                LogPendingTimeout(failIdx, waited, baseCd);
+            }
+            return -1;
+        }
+
+        // 2) DecisionDelay 대기
+        if (Time.time < nextDecisionTime) return -1;
+
+        // 3) 후보 수집 (쿨다운만)
+        List<int> candidates = new();
         for (int i = 0; i < AttackCount; i++)
         {
-            if (attackPatterns == null || i >= attackPatterns.Length) break;
+            if (attackPatterns == null || i >= AttackCount) break;
             if (attackPatterns[i] == null) continue;
             if (!IsOffCooldown(i)) continue;
-            available.Add(i);
+            candidates.Add(i);
         }
-        if (available.Count == 0) return -1;
 
-        int chosen = available[Random.Range(0, available.Count)];
-        lockedAttackIndex = chosen;
-        return chosen;
+        LogDecisionAttempt(candidates);
+
+        if (candidates.Count == 0)
+        {
+            // 아무 것도 준비 안 됨 → 다음 시도 시간만 미뤄둠
+            nextDecisionTime = Time.time + decisionDelay;
+            return -1;
+        }
+
+        // 4) 랜덤 pick
+        int pick = candidates[Random.Range(0, candidates.Count)];
+        pendingAttackIndex = pick;
+        pendingSelectTime = Time.time;
+
+        float pickRange = GetAttackRange(pick);
+        bool immediate = distance <= pickRange;
+
+        LogDecisionPick(pick, distance, immediate, immediate ? "immediate" : "wait-range");
+        return immediate ? pick : -1;
     }
 
+    /* ===== TryStartAttack ===== */
     public bool TryStartAttack(int index, Transform target)
     {
-        if (IsGlobalCooling()) return false;        // 전역 GCD
         if (index < 0 || index >= AttackCount) return false;
         if (!IsOffCooldown(index)) return false;
         if (enemy != null && enemy.CurrentState == Enemy.EnemyState.ShieldBreak) return false;
-
         var so = attackPatterns[index];
         if (so == null) return false;
 
-        lockedAttackIndex = index;
-
-        // Melee
-        if (so is MeleeAttackData meleeData)
+        // pending 보호 (외부 호출 경로 대비)
+        if (pendingAttackIndex == -1)
         {
-            PrepareMeleeAttack(index, meleeData);
+            pendingAttackIndex = index;
+            pendingSelectTime = Time.time;
+        }
+
+        if (so is MeleeAttackData melee)
+        {
+            StartMeleeAttack(index, melee);
+            return true;
+        }
+        if (so is RushAttackData rush)
+        {
+            StartRushAttack(rush, target, index);
             return true;
         }
 
-        // Rush
-        if (so is RushAttackData rushData)
-        {
-            StartRushAttack(rushData, target, index);
-            return true;
-        }
-
-        Debug.LogWarning($"[EnemyAttackController] 알 수 없는 SO 타입: {so.GetType().Name}");
+        Debug.LogWarning($"[EnemyAttackController] 미지원 SO 타입: {so.GetType().Name}");
         return false;
     }
 
-    private void PrepareMeleeAttack(int index, MeleeAttackData meleeData)
+    private void StartMeleeAttack(int index, MeleeAttackData data)
     {
         currentAttackIndex = index;
-        currentAttack = meleeData;
+        currentAttack = data;
 
-        // SuperArmor
-        if (meleeData.grantSuperArmor)
-            enemy.AddSuperArmor(SuperArmorSource.Attack);
-        else
-            enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack);
+        else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
-        // 상태 전환 (애니메이션 'Attack' 재생)
         enemy.SetState(Enemy.EnemyState.Attack);
 
-        // AttackTime 계산
-        float raw = meleeData.attackTime;
-        float clipLen = EstimateAttackClipLength(); // 간단 추정 (정확도 높이려면 개선)
-        if (raw <= 0f) raw = clipLen;               // 0 이하 → 클립 길이 사용
+        float raw = data.attackTime;
+        float clipLen = EstimateAttackClipLength();
+        if (raw <= 0f) raw = clipLen;
         effectiveAttackDuration = raw;
 
         attackStartTime = Time.time;
         attackEndTime = attackStartTime + effectiveAttackDuration;
         attackInProgress = true;
 
-        // 혹시 이전에 animator.speed=0 되어 있었으면 복구
         if (enemy.animator) enemy.animator.speed = 1f;
+
+        pendingAttackIndex = -1; // 실행 성공
+        Log($"start melee idx={index} name={data.attackName} time={Time.time:F2}");
     }
 
     private float EstimateAttackClipLength()
     {
         if (enemy == null || enemy.animator == null) return 0.5f;
         var clips = enemy.animator.GetCurrentAnimatorClipInfo(0);
-        if (clips.Length > 0 && clips[0].clip != null)
-            return clips[0].clip.length;
+        if (clips.Length > 0 && clips[0].clip != null) return clips[0].clip.length;
         return 0.5f;
     }
 
-    // ───────────────── 공격 종료 처리 (Melee) ─────────────────
-    private void FinishMeleeAttackAndStartCooldown()
+    private void FinishMeleeAttackAndSchedule()
     {
-        // 애니 속도 복구
         if (enemy.animator) enemy.animator.speed = 1f;
 
+        float cd = 0f;
         if (currentAttackIndex >= 0)
         {
-            float baseCd = GetAttackCooldown(currentAttackIndex);
-            ApplyPerAttackCooldown(currentAttackIndex, baseCd);
-
-            if (baseCd > 0f)   // baseCooldown == 0 이면 전역 GCD 없음
-                StartGlobalCooldown(1f);
+            cd = GetAttackCooldown(currentAttackIndex);
+            ApplyPerAttackCooldown(currentAttackIndex, cd);
         }
 
-        // SuperArmor 제거
         enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
-        // 상태 Chase로 복귀 (Rush 제외)
         if (enemy.CurrentState != Enemy.EnemyState.Dead &&
             enemy.CurrentState != Enemy.EnemyState.ShieldBreak)
         {
@@ -232,42 +307,37 @@ public class EnemyAttackController : MonoBehaviour
         attackInProgress = false;
         currentAttack = null;
         currentAttackIndex = -1;
-        lockedAttackIndex = -1;
+
+        nextDecisionTime = Time.time + cd + decisionDelay;
+        LogAfterFinish("Melee", cd, nextDecisionTime);
     }
 
-    // ───────────────── 히트 처리 (애니 이벤트) ─────────────────
     public void AttackHit()
     {
         if (!attackInProgress) return;
-        if (currentAttack is MeleeAttackData meleeData)
-        {
-            SpawnMeleeHitBox(meleeData);
-            // 쿨다운은 AttackTime 종료 시점에 시작 (여기서 제거)
-        }
+        if (currentAttack is MeleeAttackData melee) SpawnMeleeHitBox(melee);
     }
 
-    private void SpawnMeleeHitBox(MeleeAttackData meleeData)
+    private void SpawnMeleeHitBox(MeleeAttackData data)
     {
-        if (meleeData.hitBoxPrefab == null) return;
-
-        GameObject go = Instantiate(meleeData.hitBoxPrefab, transform);
-
-        if (go.TryGetComponent<HitBox_Enemy>(out var enemyHitBox))
+        if (data.hitBoxPrefab == null) return;
+        GameObject go = Instantiate(data.hitBoxPrefab, transform);
+        if (go.TryGetComponent<HitBox_Enemy>(out var hb))
         {
-            enemyHitBox.Initialize(
-                meleeData.damage,
-                meleeData.range,
-                meleeData.knockbackPower,
-                meleeData.knockbackDuration,
-                meleeData.hitBoxLifetime,
-                meleeData.stunDuration,
-                meleeData.allowDuplicateHit,
-                meleeData.duplicateHitInterval
+            hb.Initialize(
+                data.damage,
+                data.range,
+                data.knockbackPower,
+                data.knockbackDuration,
+                data.hitBoxLifetime,
+                data.stunDuration,
+                data.allowDuplicateHit,
+                data.duplicateHitInterval
             );
         }
     }
 
-    // ───────────────── Rush 로직 (전역/개별 쿨 반영) ─────────────────
+    /* ===== Rush ===== */
     private void StartRushAttack(RushAttackData data, Transform target, int index)
     {
         StopRushCoroutines();
@@ -277,12 +347,12 @@ public class EnemyAttackController : MonoBehaviour
 
         enemy.SetState(Enemy.EnemyState.Attack);
 
-        if (data.grantSuperArmor)
-            enemy.AddSuperArmor(SuperArmorSource.Attack);
-        else
-            enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack);
+        else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
         rushPrepareCoroutine = StartCoroutine(RushPrepareRoutine(data));
+        pendingAttackIndex = -1;
+        Log($"start rush idx={index} time={Time.time:F2}");
     }
 
     private IEnumerator RushPrepareRoutine(RushAttackData data)
@@ -302,12 +372,9 @@ public class EnemyAttackController : MonoBehaviour
                 Vector3 dir = rushTarget.position - transform.position;
                 dir.y = 0f;
                 if (dir.sqrMagnitude > 0.0001f)
-                {
                     transform.rotation = Quaternion.LookRotation(dir.normalized);
-                }
             }
 
-            // 인터럽트 등으로 상태 벗어났는지
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
@@ -350,23 +417,8 @@ public class EnemyAttackController : MonoBehaviour
 
         while (elapsed < data.rushTime)
         {
-            // 방향 보정 옵션
-            if (data.allowDirectionDeviation && rushTarget != null)
-            {
-                Vector3 toPlayer = rushTarget.position - transform.position;
-                toPlayer.y = 0f;
-                if (toPlayer.sqrMagnitude > 0.0001f)
-                {
-                    Vector3 desiredDir = toPlayer.normalized;
-                    float lerpT = data.directionDeviationAmount * Time.deltaTime;
-                    rushDir = Vector3.Lerp(rushDir, desiredDir, lerpT);
-                    transform.rotation = Quaternion.LookRotation(rushDir);
-                }
-            }
-
             transform.position += rushDir.normalized * data.rushSpeed * Time.deltaTime;
 
-            // 상태 이탈 체크
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
@@ -395,12 +447,11 @@ public class EnemyAttackController : MonoBehaviour
         DespawnRushHitbox();
         rushCoroutine = null;
 
+        float cd = 0f;
         if (runningRushIndex >= 0)
         {
-            float baseCd = data.cooldown;
-            ApplyPerAttackCooldown(runningRushIndex, baseCd);
-            if (baseCd > 0f)
-                StartGlobalCooldown(1f);
+            cd = data.cooldown;
+            ApplyPerAttackCooldown(runningRushIndex, cd);
         }
 
         enemy.RemoveSuperArmor(SuperArmorSource.Attack);
@@ -411,6 +462,9 @@ public class EnemyAttackController : MonoBehaviour
 
         runningRushIndex = -1;
         rushTarget = null;
+
+        nextDecisionTime = Time.time + cd + decisionDelay;
+        LogAfterFinish("Rush", cd, nextDecisionTime);
     }
 
     private void SpawnRushHitbox(RushAttackData data)
@@ -467,9 +521,10 @@ public class EnemyAttackController : MonoBehaviour
         IsRushing = false;
 
         enemy.RemoveSuperArmor(SuperArmorSource.Attack);
-
         runningRushIndex = -1;
         rushTarget = null;
+
+        Log("[Rush] Forced stop");
     }
 
     public void StopRushExternally(bool noCooldown)
@@ -478,68 +533,36 @@ public class EnemyAttackController : MonoBehaviour
         {
             if (!noCooldown && runningRushIndex >= 0)
             {
-                float baseCd = GetAttackCooldown(runningRushIndex);
-                ApplyPerAttackCooldown(runningRushIndex, baseCd);
-                if (baseCd > 0f)
-                    StartGlobalCooldown(1f);
+                float cd = GetAttackCooldown(runningRushIndex);
+                ApplyPerAttackCooldown(runningRushIndex, cd);
+                nextDecisionTime = Time.time + cd + decisionDelay;
+                Log($"[Rush] External stop with cooldown cd={cd:F2}, nextDecision={nextDecisionTime:F2}");
+            }
+            else
+            {
+                Log("[Rush] External stop (noCooldown)");
             }
             StopRushCoroutines();
         }
     }
 
-    // ───────────────── 유틸 ─────────────────
-    public float GetAttackCooldown(int index)
-    {
-        if (index < 0 || index >= AttackCount) return 1f;
-        var so = attackPatterns[index];
-        if (so is MeleeAttackData melee) return melee.cooldown;
-        if (so is RushAttackData rush) return rush.cooldown;
-        return 1f;
-    }
-
-    public float GetAttackRange(int index)
-    {
-        if (index < 0 || index >= AttackCount) return 2f;
-        var so = attackPatterns[index];
-        if (so is MeleeAttackData melee) return melee.range;
-        if (so is RushAttackData rush) return rush.range;
-        return 2f;
-    }
-
-    private void ApplyPerAttackCooldown(int index, float baseCooldown)
-    {
-        if (index < 0 || index >= AttackCount) return;
-
-        float applied = 0f;
-        if (baseCooldown > 0f)
-        {
-            applied = baseCooldown < 1f ? 1f : baseCooldown;
-        }
-        // baseCooldown == 0 → applied 0 (재사용 즉시 가능)
-        lastUsedTimes[index] = Time.time; // 판단 시 applied 더해서 비교
-
-        // NOTE: per-attack 재사용 판정은 IsOffCooldown에서 applied 재계산
-    }
-
-    // 기존 외부에서 쓰던 쿨다운 인터페이스 유지(호환용) - 이제 전역 GCD만 의미
-    public bool IsCooldownActive() => IsGlobalCooling();
-
-    // 인터럽트: 모든 공격 쿨다운 리셋 (현행 유지)
+    /* ===== Interrupt ===== */
     public void InterruptCooldown()
     {
         attackInProgress = false;
-        if (enemy != null && enemy.animator != null)
-            enemy.animator.speed = 1f;
+        if (enemy?.animator) enemy.animator.speed = 1f;
 
-        for (int i = 0; i < lastUsedTimes.Length; i++)
-            lastUsedTimes[i] = -Mathf.Infinity;
-
-        // 전역 GCD 해제
-        globalAvailableTime = -Mathf.Infinity;
+        if (IsRushing || rushPrepareCoroutine != null || rushCoroutine != null)
+        {
+            StopRushCoroutines();
+            IsRushing = false;
+        }
 
         currentAttackIndex = -1;
         currentAttack = null;
-        lockedAttackIndex = -1;
+        pendingAttackIndex = -1;
+
+        enemy?.RemoveSuperArmor(SuperArmorSource.Attack);
 
         if (enemy != null &&
             enemy.CurrentState != Enemy.EnemyState.Dead &&
@@ -548,6 +571,50 @@ public class EnemyAttackController : MonoBehaviour
             enemy.SetState(Enemy.EnemyState.Chase);
         }
 
-        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        // 쿨다운들은 유지 (소비한 것 유지)
+        nextDecisionTime = Time.time; // 즉시 재선택 가능
+        Log("[Interrupt] all reset, nextDecision=now (cooldowns kept)");
+    }
+
+    /* ===== 로그 유틸 ===== */
+    private string AttackName(int idx)
+    {
+        if (idx < 0 || idx >= AttackCount) return "None";
+        var so = attackPatterns[idx];
+        if (so is MeleeAttackData m) return m.attackName;
+        if (so is RushAttackData) return "Rush";
+        return so ? so.name : "NullSO";
+    }
+
+    private void Log(string msg)
+    {
+        if (!debugDecisionLogs) return;
+        Debug.Log($"[AttackDecision] {msg}", this);
+    }
+
+    private void LogDecisionAttempt(List<int> candidates)
+    {
+        if (!debugDecisionLogs) return;
+        var listStr = candidates.Count == 0 ? "-" : string.Join(",", candidates);
+        Log($"attempt t={Time.time:F2} (candidates={listStr})");
+    }
+
+    private void LogDecisionPick(int pick, float distance, bool immediate, string mode)
+    {
+        if (!debugDecisionLogs) return;
+        float range = GetAttackRange(pick);
+        Log($"pick t={Time.time:F2} idx={pick} name={AttackName(pick)} dist={distance:F2} range={range:F2} mode={mode} immediateStart={immediate}");
+    }
+
+    private void LogPendingTimeout(int idx, float waited, float baseCd)
+    {
+        if (!debugDecisionLogs) return;
+        Log($"pending-timeout t={Time.time:F2} idx={idx} name={AttackName(idx)} waited={waited:F2}s decisionDelay={decisionDelay:F2}s -> FULL CD consume {baseCd:F2}s, nextDecision={nextDecisionTime:F2}");
+    }
+
+    private void LogAfterFinish(string type, float cd, float next)
+    {
+        if (!debugDecisionLogs) return;
+        Log($"finished {type} t={Time.time:F2} usedCd={cd:F2} nextDecision={next:F2}");
     }
 }

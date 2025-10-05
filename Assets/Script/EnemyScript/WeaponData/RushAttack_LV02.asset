@@ -12,18 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c884c043edb57f4ba2bd7fe85366355, type: 3}
   m_Name: RushAttack_LV02
   m_EditorClassIdentifier: 
+  attackName: Rush_Attack
+  grantSuperArmor: 1
   range: 5
+  cooldown: 1
   prepareTime: 1
-  rushTime: 5
-  rushSpeed: 2
+  rushTime: 1
+  rushSpeed: 5
+  allowDirectionDeviation: 0
+  directionDeviationAmount: 0.709
   damage: 1
   knockbackPower: 5
   knockbackDuration: 0.3
   stunDuration: 1
-  cooldown: 1
-  allowDirectionDeviation: 0
-  directionDeviationAmount: 0.565
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   hitBoxLifetime: 5
-  allowDuplicateHit: 0
+  allowDuplicateHit: 1
   duplicateHitInterval: 0.1
