@@ -11,22 +11,24 @@ public class EnemyAI : MonoBehaviour
     public void Tick(Enemy ctx, Transform player)
     {
         if (ctx == null || player == null || ctx.agent == null || !ctx.agent.isOnNavMesh) return;
-        if (ctx.CurrentState == Enemy.EnemyState.ShieldBreak) return; // 그로기 중 AI 중지
+        if (ctx.CurrentState == Enemy.EnemyState.ShieldBreak) return;
         if (ctx.CurrentState == Enemy.EnemyState.Dead) return;
 
-        // 쿨다운 중이면 이동/공격 안함
-        if (
-            (ctx.CurrentState == Enemy.EnemyState.Chase || ctx.CurrentState == Enemy.EnemyState.Attack) &&
-            ctx.attackCtrl != null && ctx.attackCtrl.IsCooldownActive()
-        )
+        // 전역 GCD(또는 호환용 IsCooldownActive) 동안: 이동/공격 정지 (현재 정책 유지)
+        if ((ctx.CurrentState == Enemy.EnemyState.Chase || ctx.CurrentState == Enemy.EnemyState.Attack) &&
+            ctx.attackCtrl != null && ctx.attackCtrl.IsGlobalCooling())
         {
-            // 바라보기
             Vector3 dir = player.position - ctx.transform.position;
             dir.y = 0f;
             if (dir.sqrMagnitude > 0.01f)
                 ctx.transform.rotation = Quaternion.LookRotation(dir);
 
             ctx.animCtrl.UpdateMovement(0f);
+            if (ctx.agent && ctx.agent.isOnNavMesh)
+            {
+                ctx.agent.isStopped = true;
+                ctx.agent.velocity = Vector3.zero;
+            }
             return;
         }
 
@@ -66,9 +68,12 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
-        ctx.agent.isStopped = false;
-        ctx.agent.SetDestination(player.position);
-        ctx.animCtrl.UpdateMovement(ctx.agent.velocity.magnitude);
+        if (ctx.agent != null && ctx.agent.isOnNavMesh)
+        {
+            ctx.agent.isStopped = false;
+            ctx.agent.SetDestination(player.position);
+        }
+        ctx.animCtrl.UpdateMovement(ctx.agent != null ? ctx.agent.velocity.magnitude : 0f);
 
         dir.y = 0f;
         if (dir != Vector3.zero)
