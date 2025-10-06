@@ -6,6 +6,9 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
     private readonly RushAttackData data;
     private Transform cachedTarget;
     private IEnemyAttackCallbacks runtimeCallbacks;
+    private Enemy enemy;
+    private bool superArmorGranted = false;
+    private bool executingRush = false;
 
     public RushAttackBehavior(int id, RushAttackData d) : base(id)
     {
@@ -16,21 +19,37 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
     public override float Range => data.range;
     public override float BaseCooldown => data.cooldown;
     public override bool GrantsSuperArmor => data.grantSuperArmor;
-    public override float AttackTime => data.prepareTime + data.rushTime; // 합산
+    public override float AttackTime => data.prepareTime + data.rushTime;
 
     public override bool CanExecute(Enemy enemy, Transform target, float distance)
     {
-        return distance <= Range; // 필요 시 최소거리 조건 추가 가능
+        return distance <= Range;
     }
 
     public override IEnumerator Execute(Enemy enemy, Transform target, IEnemyAttackCallbacks callbacks)
     {
         executing = true;
-        runtimeCallbacks = callbacks;
+        this.enemy = enemy;
         cachedTarget = target;
+        runtimeCallbacks = callbacks;
 
         callbacks.OnBehaviorStarted(this);
-        // 준비 애니
+
+        if (GrantsSuperArmor && enemy != null)
+        {
+            enemy.AddSuperArmor(SuperArmorSource.Attack);
+            superArmorGranted = true;
+        }
+
+        var agent = enemy != null ? enemy.agent : null;
+        if (agent && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+            agent.ResetPath();
+        }
+
+        // Prepare
         callbacks.SetAnimatorBool("IsRushPrepare", true);
         callbacks.SetAnimatorBool("IsRush", false);
         callbacks.PlayAnimation("RushPrepare", useTrigger: false);
@@ -41,7 +60,7 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
             if (cachedTarget != null)
             {
                 Vector3 dir = cachedTarget.position - enemy.transform.position;
-                dir.y = 0;
+                dir.y = 0f;
                 if (dir.sqrMagnitude > 0.0001f)
                     enemy.transform.rotation = Quaternion.LookRotation(dir.normalized);
             }
@@ -50,29 +69,30 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
 
         if (!executing)
         {
-            runtimeCallbacks = null;
+            CancelNoCooldown(callbacks);
             yield break;
         }
 
-        // Rush 시작
+        // Rush 본동작
+        executingRush = true;
         callbacks.SetAnimatorBool("IsRushPrepare", false);
         callbacks.SetAnimatorBool("IsRush", true);
         callbacks.PlayAnimation("Rush", useTrigger: false);
 
-        // Rush 히트박스 (지속형)
-        if (data.hitBoxPrefab != null)
+        if (data.hitboxPrefab != null)
         {
-            runtimeCallbacks.SpawnHitbox(
-                data.hitBoxPrefab,
-                data.hitBoxLifetime > 0 ? data.hitBoxLifetime : data.rushTime,
+            float life = (data.hitBoxLifetime > 0 ? data.hitBoxLifetime : data.rushTime);
+            callbacks.SpawnHitbox(
+                data.hitboxPrefab,
+                life,
                 hb =>
                 {
                     hb.Initialize(
                         data.damage,
-                        0f,
+                        data.range,
                         data.knockbackPower,
                         data.knockbackDuration,
-                        data.hitBoxLifetime > 0 ? data.hitBoxLifetime : data.rushTime,
+                        life,
                         data.stunDuration,
                         data.allowDuplicateHit,
                         data.duplicateHitInterval
@@ -82,18 +102,18 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
 
         float rushElapsed = 0f;
         Vector3 rushDir = enemy.transform.forward;
-        rushDir.y = 0;
+        rushDir.y = 0f;
 
         while (rushElapsed < data.rushTime && executing)
         {
             if (data.allowDirectionDeviation && cachedTarget != null)
             {
-                Vector3 toPlayer = cachedTarget.position - enemy.transform.position;
-                toPlayer.y = 0;
-                if (toPlayer.sqrMagnitude > 0.0001f)
+                Vector3 toTarget = cachedTarget.position - enemy.transform.position;
+                toTarget.y = 0f;
+                if (toTarget.sqrMagnitude > 0.0001f)
                 {
-                    Vector3 desiredDir = toPlayer.normalized;
-                    rushDir = Vector3.Lerp(rushDir, desiredDir, data.directionDeviationAmount * Time.deltaTime);
+                    Vector3 desired = toTarget.normalized;
+                    rushDir = Vector3.Lerp(rushDir, desired, data.directionDeviationAmount * Time.deltaTime);
                     enemy.transform.rotation = Quaternion.LookRotation(rushDir);
                 }
             }
@@ -103,15 +123,58 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
             yield return null;
         }
 
-        callbacks.SetAnimatorBool("IsRush", false);
         executing = false;
-        runtimeCallbacks = null;
-        callbacks.RequestFinish(this);
+        executingRush = false;
+
+        callbacks.SetAnimatorBool("IsRush", false);
+        FinishSuccess(callbacks);
     }
 
     public override void Interrupt(bool hard)
     {
+        if (!executing) return;
+
         base.Interrupt(hard);
-        // hard 인터럽트 시 추가 패널티 도입 가능 (현재 정책: 쿨다운 리셋 → Controller가 전역 GCD도 해제)
+        executing = false;
+
+        if (runtimeCallbacks != null)
+        {
+            runtimeCallbacks.SetAnimatorBool("IsRushPrepare", false);
+            runtimeCallbacks.SetAnimatorBool("IsRush", false);
+            runtimeCallbacks.PlayAnimation("ResetToM", useTrigger: true);
+            CancelNoCooldown(runtimeCallbacks);
+        }
+    }
+
+    private void FinishSuccess(IEnemyAttackCallbacks callbacks)
+    {
+        if (superArmorGranted && enemy != null)
+        {
+            enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+            superArmorGranted = false;
+        }
+
+        if (enemy != null && enemy.agent && enemy.agent.isOnNavMesh)
+            enemy.agent.isStopped = false;
+
+        callbacks.RequestFinish(this); // 성공 → 쿨다운 / 글로벌쿨타임 적용
+        runtimeCallbacks = null;
+        enemy = null;
+    }
+
+    private void CancelNoCooldown(IEnemyAttackCallbacks callbacks)
+    {
+        if (superArmorGranted && enemy != null)
+        {
+            enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+            superArmorGranted = false;
+        }
+
+        if (enemy != null && enemy.agent && enemy.agent.isOnNavMesh)
+            enemy.agent.isStopped = false;
+
+        callbacks.RequestCancel(this); // 취소 → 노쿨
+        runtimeCallbacks = null;
+        enemy = null;
     }
 }
