@@ -43,15 +43,14 @@ public class PlayerMovement : MonoBehaviour
         agent.angularSpeed = angularSpeed;
         agent.stoppingDistance = stoppingDistance;
         agent.autoBraking = autoBraking;
-
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
 
-        // Rigidbody 설정 (Unity 표준 API)
+        // Rigidbody 표준 설정
         rb.isKinematic = false;
         rb.useGravity = false;
         rb.mass = 1f;
-        rb.linearDamping = 5f;          // was: linearDamping
-        rb.angularDamping = 5f;   // was: angularDamping
+        rb.linearDamping = 5f;
+        rb.angularDamping = 5f;
         rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
 
         GameManager.Instance.playerTransform = this.transform;
@@ -71,11 +70,9 @@ public class PlayerMovement : MonoBehaviour
         if (isKnockbacked)
         {
             knockbackTimer += Time.deltaTime;
-            float t = knockbackTimer / knockbackDuration;
-            t = Mathf.Clamp01(t);
+            float t = Mathf.Clamp01(knockbackTimer / knockbackDuration);
             float currentSpeed = knockbackSpeed * (1f - t);
-            Vector3 displacement = knockbackDirection * currentSpeed * Time.deltaTime;
-            transform.position += displacement;
+            transform.position += knockbackDirection * currentSpeed * Time.deltaTime;
 
             if (knockbackTimer >= knockbackDuration)
             {
@@ -108,9 +105,7 @@ public class PlayerMovement : MonoBehaviour
         lastInput = new Vector3(moveInput.x, 0, moveInput.y);
 
         if (lastInput.magnitude > 0.1f && !agent.enabled)
-        {
             agent.enabled = true;
-        }
 
         if (lastInput.magnitude > 0.1f)
         {
@@ -119,7 +114,6 @@ public class PlayerMovement : MonoBehaviour
                 agent.isStopped = false;
                 Vector3 moveDir = CameraRelative(lastInput);
                 Vector3 destination = transform.position + moveDir;
-
                 agent.SetDestination(destination);
 
                 Quaternion rot = Quaternion.LookRotation(moveDir);
@@ -164,11 +158,9 @@ public class PlayerMovement : MonoBehaviour
             if (agent.enabled && agent.isOnNavMesh)
             {
                 agent.enabled = false;
-                //Debug.Log("🛑 NavMeshAgent 꺼짐 + 회전 고정");
             }
-
             transform.rotation = Quaternion.Euler(0f, transform.rotation.eulerAngles.y, 0f);
-            rb.linearVelocity = Vector3.zero;        // was: linearVelocity
+            rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
 
@@ -182,9 +174,8 @@ public class PlayerMovement : MonoBehaviour
 
         float finalForce = force;
         if (TryGetComponent(out PlayerHealth health))
-        {
             finalForce /= Mathf.Max(0.01f, health.GetWeight());
-        }
+
         knockbackSpeed = finalForce;
         knockbackDuration = duration;
         knockbackTimer = 0f;
@@ -208,7 +199,7 @@ public class PlayerMovement : MonoBehaviour
     public float GetVelocityMagnitude() => agent != null ? agent.velocity.magnitude : 0f;
     private bool CanUseAgent() => agent.enabled && agent.isOnNavMesh;
 
-    Vector3 CameraRelative(Vector3 input)
+    private Vector3 CameraRelative(Vector3 input)
     {
         Vector3 camForward = mainCam.transform.forward;
         Vector3 camRight = mainCam.transform.right;

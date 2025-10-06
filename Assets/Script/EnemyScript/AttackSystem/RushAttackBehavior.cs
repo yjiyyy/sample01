@@ -1,12 +1,16 @@
 using UnityEngine;
 using System.Collections;
 
+/// <summary>
+/// 개별 러시 패턴 비헤이비어 (스테이트머신/테이블 기반 시스템에서 new 로 생성해 사용하는 형태로 추정)
+/// </summary>
 public class RushAttackBehavior : EnemyAttackBehaviorBase
 {
     private readonly RushAttackData data;
     private Transform cachedTarget;
     private IEnemyAttackCallbacks runtimeCallbacks;
     private Enemy enemy;
+
     private bool superArmorGranted = false;
     private bool executingRush = false;
 
@@ -23,11 +27,17 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
 
     public override bool CanExecute(Enemy enemy, Transform target, float distance)
     {
+        if (data == null) return false;
         return distance <= Range;
     }
 
     public override IEnumerator Execute(Enemy enemy, Transform target, IEnemyAttackCallbacks callbacks)
     {
+        if (data == null)
+        {
+            yield break;
+        }
+
         executing = true;
         this.enemy = enemy;
         cachedTarget = target;
@@ -49,7 +59,7 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
             agent.ResetPath();
         }
 
-        // Prepare
+        // 준비 단계
         callbacks.SetAnimatorBool("IsRushPrepare", true);
         callbacks.SetAnimatorBool("IsRush", false);
         callbacks.PlayAnimation("RushPrepare", useTrigger: false);
@@ -57,7 +67,7 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
         float prepEnd = Time.time + data.prepareTime;
         while (Time.time < prepEnd && executing)
         {
-            if (cachedTarget != null)
+            if (cachedTarget != null && enemy != null)
             {
                 Vector3 dir = cachedTarget.position - enemy.transform.position;
                 dir.y = 0f;
@@ -73,17 +83,18 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
             yield break;
         }
 
-        // Rush 본동작
+        // 러시 본 실행
         executingRush = true;
         callbacks.SetAnimatorBool("IsRushPrepare", false);
         callbacks.SetAnimatorBool("IsRush", true);
         callbacks.PlayAnimation("Rush", useTrigger: false);
 
-        if (data.hitboxPrefab != null)
+        // 히트박스 스폰 (필드명: hitBoxPrefab)
+        if (data.hitBoxPrefab != null)
         {
             float life = (data.hitBoxLifetime > 0 ? data.hitBoxLifetime : data.rushTime);
             callbacks.SpawnHitbox(
-                data.hitboxPrefab,
+                data.hitBoxPrefab,
                 life,
                 hb =>
                 {
@@ -101,11 +112,15 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
         }
 
         float rushElapsed = 0f;
-        Vector3 rushDir = enemy.transform.forward;
+        Vector3 rushDir = (enemy != null ? enemy.transform.forward : Vector3.forward);
         rushDir.y = 0f;
+        if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
 
         while (rushElapsed < data.rushTime && executing)
         {
+            if (enemy == null) break;
+
+            // 선택적 방향 보정 (allowDirectionDeviation 활용: 여기서는 타겟 추적 보간)
             if (data.allowDirectionDeviation && cachedTarget != null)
             {
                 Vector3 toTarget = cachedTarget.position - enemy.transform.position;
@@ -113,7 +128,8 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
                 if (toTarget.sqrMagnitude > 0.0001f)
                 {
                     Vector3 desired = toTarget.normalized;
-                    rushDir = Vector3.Lerp(rushDir, desired, data.directionDeviationAmount * Time.deltaTime);
+                    // directionDeviationAmount 를 '보간 속도'처럼 사용
+                    rushDir = Vector3.Lerp(rushDir, desired, Mathf.Clamp01(data.directionDeviationAmount * Time.deltaTime));
                     enemy.transform.rotation = Quaternion.LookRotation(rushDir);
                 }
             }
@@ -123,8 +139,8 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
             yield return null;
         }
 
-        executing = false;
         executingRush = false;
+        executing = false;
 
         callbacks.SetAnimatorBool("IsRush", false);
         FinishSuccess(callbacks);
@@ -136,6 +152,7 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
 
         base.Interrupt(hard);
         executing = false;
+        executingRush = false;
 
         if (runtimeCallbacks != null)
         {
@@ -157,7 +174,7 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
         if (enemy != null && enemy.agent && enemy.agent.isOnNavMesh)
             enemy.agent.isStopped = false;
 
-        callbacks.RequestFinish(this); // 성공 → 쿨다운 / 글로벌쿨타임 적용
+        callbacks.RequestFinish(this);
         runtimeCallbacks = null;
         enemy = null;
     }
@@ -173,7 +190,7 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
         if (enemy != null && enemy.agent && enemy.agent.isOnNavMesh)
             enemy.agent.isStopped = false;
 
-        callbacks.RequestCancel(this); // 취소 → 노쿨
+        callbacks.RequestCancel(this);
         runtimeCallbacks = null;
         enemy = null;
     }

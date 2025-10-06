@@ -20,7 +20,6 @@ public class EnemyDeath : MonoBehaviour
 
     public void PlayDeath(Enemy ctx, Vector3 hitDir, WeaponDataSO weapon, float scale)
     {
-        // 공통 비활성
         if (ctx.agent) ctx.agent.enabled = false;
         if (ctx.TryGetComponent(out Collider rootCol)) rootCol.enabled = false;
         if (ctx.TryGetComponent(out Rigidbody rootRb)) rootRb.isKinematic = true;
@@ -36,7 +35,7 @@ public class EnemyDeath : MonoBehaviour
                 break;
             default:
                 if (ctx.animator) ctx.animator.SetTrigger("Die");
-                Object.Destroy(ctx.gameObject, 3f);
+                Destroy(ctx.gameObject, 3f);
                 break;
         }
     }
@@ -52,12 +51,15 @@ public class EnemyDeath : MonoBehaviour
         float up = upwardBase * rand / Mathf.Max(weight, 0.01f);
         float torque = torqueBase * rand;
 
-        Vector3 force = hitDir.normalized * horiz; force.y += up;
+        Vector3 force = hitDir.normalized * horiz;
+        force.y += up;
 
-        Rigidbody pelvisRB = ctx.GetComponentsInChildren<Rigidbody>()
-                                .OrderByDescending(rb => rb.mass).FirstOrDefault();
+        var rigidbodies = ctx.GetComponentsInChildren<Rigidbody>();
+        Rigidbody pelvisRB = rigidbodies.Where(rb => rb.transform != ctx.transform)
+                                        .OrderByDescending(rb => rb.mass)
+                                        .FirstOrDefault();
 
-        foreach (var rb in ctx.GetComponentsInChildren<Rigidbody>())
+        foreach (var rb in rigidbodies)
         {
             if (rb.transform == ctx.transform) continue;
             rb.isKinematic = false;
@@ -76,7 +78,7 @@ public class EnemyDeath : MonoBehaviour
             t.gameObject.layer = LayerMask.NameToLayer("Ragdoll");
         }
 
-        Object.Destroy(ctx.gameObject, 5f);
+        Destroy(ctx.gameObject, 5f);
     }
 
     private void SliceBody(BodySliceType sliceType, Vector3 hitDir, WeaponDataSO weapon, float impactScale, Enemy ctx)
@@ -92,11 +94,13 @@ public class EnemyDeath : MonoBehaviour
         float up = upwardBase * rand / Mathf.Max(weight, 0.01f);
         float torque = torqueBase * rand;
 
-        Vector3 force = hitDir.normalized * horiz; force.y += up;
+        Vector3 force = hitDir.normalized * horiz;
+        force.y += up;
 
         var excluded = new HashSet<Transform>(GetSliceTransforms(ctx, sliceType));
+        var rigidbodies = ctx.GetComponentsInChildren<Rigidbody>();
 
-        foreach (var rb in ctx.GetComponentsInChildren<Rigidbody>())
+        foreach (var rb in rigidbodies)
         {
             if (rb.transform == ctx.transform) continue;
             if (excluded.Contains(rb.transform)) continue;
@@ -117,27 +121,28 @@ public class EnemyDeath : MonoBehaviour
 
         foreach (Transform bone in excluded)
         {
-            if (bone == null) continue;
+            if (!bone) continue;
             if (bone.TryGetComponent(out Rigidbody rb))
             {
-                if (bone.TryGetComponent(out CharacterJoint joint)) Object.Destroy(joint);
+                if (bone.TryGetComponent(out CharacterJoint joint)) Destroy(joint);
                 rb.isKinematic = false;
-                rb.AddForce((hitDir + Random.insideUnitSphere).normalized * (weapon ? weapon.sliceForce : 8f), ForceMode.Impulse);
+                rb.AddForce((hitDir + Random.insideUnitSphere).normalized *
+                            (weapon ? weapon.sliceForce : 8f), ForceMode.Impulse);
             }
             bone.SetParent(null);
-            Object.Destroy(bone.gameObject, 5f);
+            Destroy(bone.gameObject, 5f);
         }
 
-        Object.Destroy(ctx.gameObject, 5f);
+        Destroy(ctx.gameObject, 5f);
     }
 
-    private System.Collections.Generic.IEnumerable<Transform> GetSliceTransforms(Enemy ctx, BodySliceType type)
+    private IEnumerable<Transform> GetSliceTransforms(Enemy ctx, BodySliceType type)
     {
         if (!sliceBones.TryGetValue(type, out var names)) yield break;
-        var all = ctx.GetComponentsInChildren<Transform>();
+        var all = ctx.GetComponentsInChildren<Transform>(true);
         foreach (var n in names)
         {
-            var t = all.FirstOrDefault(x => x.name == n);
+            var t = System.Array.Find(all, x => x.name == n);
             if (t != null) yield return t;
         }
     }
