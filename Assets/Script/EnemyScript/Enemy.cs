@@ -11,8 +11,8 @@ using UnityEngine.AI;
 [DisallowMultipleComponent]
 public class Enemy : MonoBehaviour
 {
-    // ShieldBreak 상태 추가
-    public enum EnemyState { Chase, Attack, Knockback, Stunned, ShieldBreak, Dead }
+    // Backstep 상태 추가
+    public enum EnemyState { Chase, Attack, Backstep, Knockback, Stunned, ShieldBreak, Dead }
     public EnemyState CurrentState { get; private set; } = EnemyState.Chase;
 
     [Header("Core refs")]
@@ -32,7 +32,7 @@ public class Enemy : MonoBehaviour
 
     private Transform player;
 
-    // ───────── SuperArmor 관리 ─────────
+    // SuperArmor 마스크
     [SerializeField, Tooltip("디버그 확인용")] private SuperArmorSource superArmorMask = SuperArmorSource.None;
     public bool HasSuperArmor => superArmorMask != SuperArmorSource.None;
     public bool HasSuperArmorSource(SuperArmorSource src) => (superArmorMask & src) != 0;
@@ -110,7 +110,6 @@ public class Enemy : MonoBehaviour
                 break;
 
             case EnemyState.Attack:
-                if (animator) animator.Play("Attack", 0, 0f);
                 if (agent && agent.isOnNavMesh)
                 {
                     agent.isStopped = true;
@@ -118,6 +117,16 @@ public class Enemy : MonoBehaviour
                     agent.ResetPath();
                 }
                 ai?.OnAttackStarted(this);
+                break;
+
+            case EnemyState.Backstep:
+                if (agent && agent.isOnNavMesh)
+                {
+                    agent.isStopped = true;
+                    agent.velocity = Vector3.zero;
+                    agent.ResetPath();
+                }
+                // 애니는 EnemyAI에서 직접 Play("Backstep")
                 break;
 
             case EnemyState.Knockback:
@@ -136,7 +145,6 @@ public class Enemy : MonoBehaviour
                     agent.velocity = Vector3.zero;
                     agent.ResetPath();
                 }
-                // 애니메이션은 EnemyHealth에서 IsShieldBreak bool 세팅
                 break;
 
             case EnemyState.Dead:
@@ -146,7 +154,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // 외부 공개 API (넉백 + 데미지 + 임팩트)
+    // 넉백 적용
     public void ApplyKnockback(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (CurrentState == EnemyState.Dead) return;
@@ -155,7 +163,7 @@ public class Enemy : MonoBehaviour
         if (allowInterrupt)
         {
             attackCtrl?.InterruptCooldown();
-            ai?.InterruptAttack();
+            ai?.InterruptAttack(); // Backstep/Attack 모두 중단
         }
 
         impact?.ApplyKnockback(this, hitDir, weapon, impactScale);
@@ -169,11 +177,10 @@ public class Enemy : MonoBehaviour
         death?.PlayDeath(this, hitDir, weapon, impactScale);
     }
 
-    // 기존 호환 메서드
+    // 편의 (기존 호출부 있을 수 있음)
     public void SetAttackState() => SetState(EnemyState.Attack);
     public void SetChaseState() => SetState(EnemyState.Chase);
 
-    // ShieldBreak 여부 외부에서(필요 시)
     public bool IsShieldBreaking()
     {
         if (TryGetComponent(out EnemyHealth h)) return h.IsShieldBreak();

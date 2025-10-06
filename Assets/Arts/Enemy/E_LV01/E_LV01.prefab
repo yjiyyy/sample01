@@ -186,7 +186,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4b203a2b38263dd4294224c2d5d56871, type: 2}
   - {fileID: 0}
   - {fileID: 0}
-  "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0
+  "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 5
   defaultPatternHoldDuration: 1
   enablePerPatternHoldOverride: 0
   debugDecisionLogs: 1
@@ -235,7 +235,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be2821b1ccca2dc47a504fc08cf3e42e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fallbackEngageRange: 2
+  fallbackEngageRange: 5
 --- !u!114 &4454959871274099026
 MonoBehaviour:
   m_ObjectHideFlags: 0
