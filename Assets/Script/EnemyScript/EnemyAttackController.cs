@@ -2,18 +2,18 @@
 using UnityEngine;
 
 /// <summary>
-/// EnemyAttackController (통합 개선 버전)
+/// EnemyAttackController (통합 개선 버전 + Stun 호환 강화)
 /// - 글로벌쿨타임
 /// - 패턴 홀드
 /// - Rush prepare = 실행 간주
 /// - Interrupt / ShieldBreak 시 노쿨 취소
-/// - AnimationEvent 'AttackHit'로 Melee 힛박스 스폰
+/// - AnimationEvent 'AttackHit'로 Melee 힛박스 스폰 (1회 제한)
+/// - Stun/ShieldBreak 중엔 ResetToM 및 Chase 상태 복귀 차단 (상태 안정성)
 /// - 호환 메서드: IsGlobalCooling, StopRushExternally, InterruptCooldown
 /// </summary>
 public class EnemyAttackController : MonoBehaviour
 {
-    [Header("패턴 배열 (MeleeAttackData / RushAttackData)")]
-    public ScriptableObject[] attackPatterns;
+    [Header("패턴 배열 (MeleeAttackData / RushAttackData)")] public ScriptableObject[] attackPatterns;
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
     /* ====== 공통 진행 상태 ====== */
@@ -25,7 +25,7 @@ public class EnemyAttackController : MonoBehaviour
     private float attackStartTime;
     private float attackEndTime;
     private float effectiveAttackDuration;
-    private bool meleeHitboxSpawned = false;   // AnimationEvent 기반 1회 스폰 제어
+    private bool meleeHitboxSpawned = false; // AnimationEvent 기반 1회 스폰 제어
 
     /* ====== Rush 진행 ====== */
     public bool IsRushing { get; private set; } = false;
@@ -42,13 +42,11 @@ public class EnemyAttackController : MonoBehaviour
     private float[] readyTimes;
 
     /* ====== 글로벌 쿨타임 ====== */
-    [Header("글로벌쿨타임 (성공 종료 후)")]
-    public float 글로벌쿨타임 = 0.35f;
+    [Header("글로벌쿨타임 (성공 종료 후)")] public float 글로벌쿨타임 = 0.35f;
     private float globalReadyTime = 0f;
 
     /* ====== 패턴 홀드 ====== */
-    [Header("패턴 홀드")]
-    public float defaultPatternHoldDuration = 1.0f;
+    [Header("패턴 홀드")] public float defaultPatternHoldDuration = 1.0f;
     public bool enablePerPatternHoldOverride = true;
 
     private bool holdActive = false;
@@ -57,8 +55,7 @@ public class EnemyAttackController : MonoBehaviour
     private float pendingSelectTime = 0f;
 
     /* ====== 디버그 ====== */
-    [Header("디버그")]
-    public bool debugDecisionLogs = true;
+    [Header("디버그")] public bool debugDecisionLogs = true;
 
     public bool IsMeleeExecuting => attackInProgress && !IsRushing;
     public bool IsAttackExecuting => IsMeleeExecuting || IsRushing || rushPrepareCoroutine != null;
@@ -83,8 +80,7 @@ public class EnemyAttackController : MonoBehaviour
 
         int n = AttackCount;
         readyTimes = n > 0 ? new float[n] : System.Array.Empty<float>();
-        for (int i = 0; i < n; i++)
-            readyTimes[i] = -Mathf.Infinity;
+        for (int i = 0; i < n; i++) readyTimes[i] = -Mathf.Infinity;
 
         globalReadyTime = Time.time;
         Log("[INIT]");
@@ -92,6 +88,7 @@ public class EnemyAttackController : MonoBehaviour
 
     private void Update()
     {
+        // Melee 진행 완료 검사
         if (attackInProgress && !IsRushing)
         {
             if (Time.time >= attackEndTime)
@@ -100,9 +97,10 @@ public class EnemyAttackController : MonoBehaviour
             }
         }
 
+        // 패턴 홀드 만료 검사
         if (holdActive && !IsAttackExecuting && Time.time >= holdExpireTime)
         {
-            Log($"[HOLD TIMEOUT] idx={pendingAttackIndex} -> cancel (no cooldown)");
+            Log($"[HOLD TIMEOUT] idx={{pendingAttackIndex}} -> cancel (no cooldown)");
             CancelPendingHold();
         }
     }
@@ -113,7 +111,6 @@ public class EnemyAttackController : MonoBehaviour
         if (!attackInProgress) return;
         if (!(currentAttack is MeleeAttackData data)) return;
         if (meleeHitboxSpawned) return;
-
         SpawnMeleeHitbox(data);
     }
 
@@ -189,8 +186,7 @@ public class EnemyAttackController : MonoBehaviour
         {
             if (!holdActive) return -1;
             float range = GetAttackRange(pendingAttackIndex);
-            if (distance <= range && IsOffCooldown(pendingAttackIndex))
-                return pendingAttackIndex;
+            if (distance <= range && IsOffCooldown(pendingAttackIndex)) return pendingAttackIndex;
             return -1;
         }
 
@@ -198,7 +194,6 @@ public class EnemyAttackController : MonoBehaviour
         {
             if (!IsOffCooldown(i)) continue;
             float range = GetAttackRange(i);
-
             if (distance <= range)
             {
                 PreparePending(i);
@@ -206,7 +201,7 @@ public class EnemyAttackController : MonoBehaviour
             }
             else
             {
-                PreparePending(i);
+                PreparePending(i); // 사거리 밖 → 접근 대기
                 break;
             }
         }
@@ -219,11 +214,8 @@ public class EnemyAttackController : MonoBehaviour
         if (IsGlobalCooling()) return false;
         if (!IsOffCooldown(index)) return false;
 
-        if (pendingAttackIndex != index)
-            PreparePending(index);
-
-        if (attackPatterns == null || index < 0 || index >= attackPatterns.Length)
-            return false;
+        if (pendingAttackIndex != index) PreparePending(index);
+        if (attackPatterns == null || index < 0 || index >= attackPatterns.Length) return false;
 
         var so = attackPatterns[index];
         if (so is MeleeAttackData m)
@@ -248,7 +240,7 @@ public class EnemyAttackController : MonoBehaviour
         float hold = ComputeHoldDuration(index);
         holdActive = true;
         holdExpireTime = Time.time + hold;
-        Log($"[SELECT] idx={index} hold={hold:F2}s");
+        Log($"[SELECT] idx={{index}} hold={{hold:F2}}s");
     }
 
     private float ComputeHoldDuration(int index)
@@ -285,7 +277,6 @@ public class EnemyAttackController : MonoBehaviour
     private void StartMelee(MeleeAttackData data, int index)
     {
         ClearHold();
-
         attackInProgress = true;
         meleeHitboxSpawned = false;
 
@@ -296,38 +287,37 @@ public class EnemyAttackController : MonoBehaviour
         attackEndTime = attackStartTime + effectiveAttackDuration;
 
         enemy.SetState(Enemy.EnemyState.Attack);
-
-        if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack);
-        else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack); else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
         if (enemy.animator)
         {
-            enemy.animator.SetBool("IsRush", false);
-            enemy.animator.SetBool("IsRushPrepare", false);
+            SafeSetBool("IsRush", false);
+            SafeSetBool("IsRushPrepare", false);
             enemy.animator.Play(data.attackName);
         }
-
-        Log($"[MELEE START] idx={index}");
+        Log($"[MELEE START] idx={{index}});
     }
 
     private void FinishMelee(bool success)
     {
         attackInProgress = false;
-
         if (currentAttack is MeleeAttackData data)
         {
-            if (enemy.animator) enemy.animator.SetTrigger("ResetToM");
             enemy.RemoveSuperArmor(SuperArmorSource.Attack);
-
             if (success)
             {
                 ApplyPerAttackCooldown(currentAttackIndex, data.cooldown);
                 ApplyGlobalCooldown();
-                Log($"[MELEE END SUCCESS] idx={currentAttackIndex}");
+                Log($"[MELEE END SUCCESS] idx={{currentAttackIndex}});
             }
             else
             {
-                Log($"[MELEE END CANCEL] idx={currentAttackIndex} (no cooldown)");
+                Log($"[MELEE END CANCEL] idx={{currentAttackIndex}} (no cooldown)");
+            }
+
+            if (enemy.animator && !IsHardCrowdControlled())
+            {
+                enemy.animator.SetTrigger("ResetToM");
             }
         }
 
@@ -335,7 +325,7 @@ public class EnemyAttackController : MonoBehaviour
         currentAttackIndex = -1;
         meleeHitboxSpawned = false;
 
-        if (enemy.CurrentState == Enemy.EnemyState.Attack)
+        if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
             enemy.SetState(Enemy.EnemyState.Chase);
     }
     #endregion
@@ -345,27 +335,22 @@ public class EnemyAttackController : MonoBehaviour
     {
         ClearHold();
         StopRushCoroutines();
-
         runningRushIndex = index;
         rushTarget = target;
         enemy.SetState(Enemy.EnemyState.Attack);
-
-        if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack);
-        else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
-
+        if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack); else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
         rushPrepareCoroutine = StartCoroutine(RushPrepareRoutine(data));
-        Log($"[RUSH PREPARE START] idx={index} prep={data.prepareTime:F2}");
+        Log($"[RUSH PREPARE START] idx={{index}} prep={{data.prepareTime:F2}});
     }
 
     private IEnumerator RushPrepareRoutine(RushAttackData data)
     {
         if (enemy.animator)
         {
-            enemy.animator.SetBool("IsRushPrepare", true);
-            enemy.animator.SetBool("IsRush", false);
+            SafeSetBool("IsRushPrepare", true);
+            SafeSetBool("IsRush", false);
             enemy.animator.Play("RushPrepare");
         }
-
         float elapsed = 0f;
         while (elapsed < data.prepareTime)
         {
@@ -373,22 +358,17 @@ public class EnemyAttackController : MonoBehaviour
             {
                 Vector3 dir = rushTarget.position - transform.position;
                 dir.y = 0f;
-                if (dir.sqrMagnitude > 0.0001f)
-                    transform.rotation = Quaternion.LookRotation(dir.normalized);
+                if (dir.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
             }
-
-            if (enemy.CurrentState != Enemy.EnemyState.Attack ||
-                enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
+            if (enemy.CurrentState != Enemy.EnemyState.Attack || enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
                 Log("[RUSH PREPARE INTERRUPT] cancel(no cooldown)");
                 CancelRushNoCooldown();
                 yield break;
             }
-
             elapsed += Time.deltaTime;
             yield return null;
         }
-
         rushPrepareCoroutine = null;
         rushCoroutine = StartCoroutine(RushAttackRoutine(data));
     }
@@ -396,34 +376,25 @@ public class EnemyAttackController : MonoBehaviour
     private IEnumerator RushAttackRoutine(RushAttackData data)
     {
         IsRushing = true;
-
         if (enemy.animator)
         {
-            enemy.animator.SetBool("IsRushPrepare", false);
-            enemy.animator.SetBool("IsRush", true);
+            SafeSetBool("IsRushPrepare", false);
+            SafeSetBool("IsRush", true);
             enemy.animator.Play("Rush");
         }
-
         if (enemy.agent && enemy.agent.isOnNavMesh)
         {
             enemy.agent.isStopped = true;
             enemy.agent.velocity = Vector3.zero;
             enemy.agent.ResetPath();
         }
-
         SpawnRushHitbox(data);
-
         float elapsed = 0f;
-        Vector3 rushDir = transform.forward;
-        rushDir.y = 0f;
-        if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
-
+        Vector3 rushDir = transform.forward; rushDir.y = 0f; if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
         while (elapsed < data.rushTime)
         {
             transform.position += rushDir.normalized * data.rushSpeed * Time.deltaTime;
-
-            if (enemy.CurrentState != Enemy.EnemyState.Attack ||
-                enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
+            if (enemy.CurrentState != Enemy.EnemyState.Attack || enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
                 Log("[RUSH INTERRUPT] cancel(no cooldown)");
                 StopRushCoroutines();
@@ -431,56 +402,51 @@ public class EnemyAttackController : MonoBehaviour
                 CancelRushNoCooldown();
                 yield break;
             }
-
             elapsed += Time.deltaTime;
             yield return null;
         }
-
         IsRushing = false;
         FinishRush(data, success: true);
     }
 
     private void FinishRush(RushAttackData data, bool success)
     {
-        if (enemy.animator)
-        {
-            enemy.animator.SetBool("IsRush", false);
-            enemy.animator.SetBool("IsRushPrepare", false);
-            enemy.animator.SetTrigger("ResetToM");
-        }
-
-        DespawnRushHitbox();
-
         if (success)
         {
             ApplyPerAttackCooldown(runningRushIndex, data.cooldown);
             ApplyGlobalCooldown();
-            Log($"[RUSH END SUCCESS] idx={runningRushIndex}");
+            Log($"[RUSH END SUCCESS] idx={{runningRushIndex}});
         }
         else
         {
-            Log($"[RUSH END CANCEL] idx={runningRushIndex}");
+            Log($"[RUSH END CANCEL] idx={{runningRushIndex}});
         }
 
         enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        if (enemy.animator && !IsHardCrowdControlled())
+        {
+            SafeSetBool("IsRush", false);
+            SafeSetBool("IsRushPrepare", false);
+            enemy.animator.SetTrigger("ResetToM");
+        }
         runningRushIndex = -1;
-
-        if (enemy.CurrentState == Enemy.EnemyState.Attack)
+        DespawnRushHitbox();
+        if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
             enemy.SetState(Enemy.EnemyState.Chase);
     }
 
     private void CancelRushNoCooldown()
     {
-        if (enemy.animator)
+        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        if (enemy.animator && !IsHardCrowdControlled())
         {
-            enemy.animator.SetBool("IsRush", false);
-            enemy.animator.SetBool("IsRushPrepare", false);
+            SafeSetBool("IsRush", false);
+            SafeSetBool("IsRushPrepare", false);
             enemy.animator.SetTrigger("ResetToM");
         }
         DespawnRushHitbox();
-        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
         runningRushIndex = -1;
-        if (enemy.CurrentState == Enemy.EnemyState.Attack)
+        if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
             enemy.SetState(Enemy.EnemyState.Chase);
     }
 
@@ -496,7 +462,6 @@ public class EnemyAttackController : MonoBehaviour
     {
         if (data.hitboxPrefab == null) return;
         if (spawnedRushHitbox != null) return;
-
         spawnedRushHitbox = Instantiate(data.hitboxPrefab, transform.position, transform.rotation, transform);
         if (spawnedRushHitbox.TryGetComponent<HitBox_Enemy>(out var hb))
         {
@@ -530,11 +495,7 @@ public class EnemyAttackController : MonoBehaviour
         if (index < 0 || index >= AttackCount) return;
         readyTimes[index] = Time.time + Mathf.Max(0f, baseCooldown);
     }
-
-    private void ApplyGlobalCooldown()
-    {
-        globalReadyTime = Time.time + 글로벌쿨타임;
-    }
+    private void ApplyGlobalCooldown() => globalReadyTime = Time.time + 글로벌쿨타임;
     #endregion
 
     #region Interrupt / 외부 중단
@@ -545,7 +506,6 @@ public class EnemyAttackController : MonoBehaviour
             Log("[INTERRUPT] melee -> cancel(no cooldown)");
             FinishMelee(success: false);
         }
-
         if (rushPrepareCoroutine != null || IsRushing)
         {
             Log("[INTERRUPT] rush -> cancel(no cooldown)");
@@ -553,65 +513,73 @@ public class EnemyAttackController : MonoBehaviour
             IsRushing = false;
             CancelRushNoCooldown();
         }
-
         if (pendingAttackIndex >= 0)
         {
             Log("[INTERRUPT] pending cleared");
             CancelPendingHold();
         }
     }
-
     public void InterruptCooldown() => OnInterrupted();
 
     public void StopRushExternally(bool noCooldown)
     {
         if (!(IsRushing || rushPrepareCoroutine != null)) return;
-
         RushAttackData data = null;
-        if (runningRushIndex >= 0 &&
-            attackPatterns != null &&
-            runningRushIndex < attackPatterns.Length)
-        {
+        if (runningRushIndex >= 0 && attackPatterns != null && runningRushIndex < attackPatterns.Length)
             data = attackPatterns[runningRushIndex] as RushAttackData;
-        }
-
         Log(noCooldown ? "[Rush] External stop (noCooldown)" : "[Rush] External stop (apply cooldown)");
-
         StopRushCoroutines();
         IsRushing = false;
-
         if (noCooldown)
         {
             CancelRushNoCooldown();
         }
         else
         {
-            if (enemy.animator)
-            {
-                enemy.animator.SetBool("IsRush", false);
-                enemy.animator.SetBool("IsRushPrepare", false);
-                enemy.animator.SetTrigger("ResetToM");
-            }
-
             if (data != null)
             {
                 ApplyPerAttackCooldown(runningRushIndex, data.cooldown);
                 ApplyGlobalCooldown();
             }
-
             enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+            if (enemy.animator && !IsHardCrowdControlled())
+            {
+                SafeSetBool("IsRush", false);
+                SafeSetBool("IsRushPrepare", false);
+                enemy.animator.SetTrigger("ResetToM");
+            }
             runningRushIndex = -1;
-            if (enemy.CurrentState == Enemy.EnemyState.Attack)
+            if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
                 enemy.SetState(Enemy.EnemyState.Chase);
         }
+    }
+    #endregion
+
+    #region 유틸 / 보호 로직
+    private bool IsHardCrowdControlled()
+    {
+        if (enemy == null) return false;
+        return enemy.CurrentState == Enemy.EnemyState.Stunned || enemy.CurrentState == Enemy.EnemyState.ShieldBreak;
+    }
+
+    private bool HasParam(string param)
+    {
+        if (enemy?.animator == null) return false;
+        foreach (var p in enemy.animator.parameters)
+            if (p.name == param) return true;
+        return false;
+    }
+
+    private void SafeSetBool(string param, bool value)
+    {
+        if (HasParam(param)) enemy.animator.SetBool(param, value);
     }
     #endregion
 
     #region 로깅
     private void Log(string msg)
     {
-        if (debugDecisionLogs)
-            Debug.Log($"[EnemyAttackController] {msg}");
+        if (debugDecisionLogs) Debug.Log($"[EnemyAttackController] {{msg}});
     }
     #endregion
 }
