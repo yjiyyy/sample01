@@ -8,6 +8,7 @@ using UnityEngine;
 /// - Rush 준비/실행/인터럽트
 /// - Melee AttackHit 애니메이션 이벤트로 히트박스 1회 스폰
 /// - ShieldBreak / Stun 중 상태 복구 가드
+/// - Melee: attackTime < 클립 -> 지정 시간까지만 재생 후 즉시 종료 (애니 그대로 '잘림') / attackTime > 클립 -> 클립 끝나면 마지막 프레임 동결 후 남은 시간 기다렸다 종료
 /// </summary>
 public class EnemyAttackController : MonoBehaviour
 {
@@ -23,6 +24,13 @@ public class EnemyAttackController : MonoBehaviour
     private bool attackInProgress = false;
     private float attackEndTime;
     private bool meleeHitboxSpawned = false;
+
+    // ── 추가: Melee 타이밍 제어 변수 ──
+    private float meleeRequestedDuration;
+    private float meleeClipLength;
+    private float meleeFreezeStartTime;
+    private bool meleeWillFreeze;      // 클립보다 길어서 프리즈 예정인지
+    private bool meleeFrozenApplied;   // speed=0 적용 여부
 
     /* Rush */
     public bool IsRushing { get; private set; } = false;
@@ -85,9 +93,25 @@ public class EnemyAttackController : MonoBehaviour
 
     private void Update()
     {
-        // Melee 종료 체크
-        if (attackInProgress && !IsRushing && Time.time >= attackEndTime)
-            FinishMelee(true);
+        // ───────── Melee 진행/프리즈 처리 ─────────
+        if (attackInProgress && !IsRushing)
+        {
+            // 프리즈 조건: (요청시간 > 클립길이) && 아직 프리즈 안 했고 && 클립 재생 구간 지나감
+            if (meleeWillFreeze && !meleeFrozenApplied && Time.time >= meleeFreezeStartTime)
+            {
+                if (enemy?.animator != null)
+                {
+                    enemy.animator.speed = 0f; // 마지막 프레임 고정
+                }
+                meleeFrozenApplied = true;
+            }
+
+            // 요청 시간이 다 되면 종료
+            if (Time.time >= attackEndTime)
+            {
+                FinishMelee(true);
+            }
+        }
 
         // 패턴 홀드 만료
         if (holdActive && !IsAttackExecuting && Time.time >= holdExpireTime)
@@ -253,8 +277,27 @@ public class EnemyAttackController : MonoBehaviour
         currentAttack = data;
         currentAttackIndex = index;
 
-        float effective = data.attackTime > 0f ? data.attackTime : 0.8f;
-        attackEndTime = Time.time + effective;
+        // 요청 시간
+        meleeRequestedDuration = data.attackTime > 0f ? data.attackTime : 0.8f;
+
+        // 실제 클립 길이
+        meleeClipLength = GetMeleeClipLength(data);
+
+        // 분기 설정
+        if (meleeRequestedDuration > meleeClipLength)
+        {
+            // 클립 재생 후 남은 시간 프리즈
+            meleeWillFreeze = true;
+            meleeFreezeStartTime = Time.time + meleeClipLength;
+            attackEndTime = Time.time + meleeRequestedDuration;
+        }
+        else
+        {
+            // 요청 시간이 더 짧음: 그 시점에서 바로 종료 (클립은 잘리게 됨)
+            meleeWillFreeze = false;
+            attackEndTime = Time.time + meleeRequestedDuration;
+        }
+        meleeFrozenApplied = false;
 
         enemy.SetState(Enemy.EnemyState.Attack);
         if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack);
@@ -264,17 +307,41 @@ public class EnemyAttackController : MonoBehaviour
         {
             SafeSetBool("IsRush", false);
             SafeSetBool("IsRushPrepare", false);
-            enemy.animator.Play(data.attackName);
+            // 속도는 항상 1 (요구사항: 속도 조절 X)
+            enemy.animator.speed = 1f;
+            enemy.animator.Play(data.attackName, 0, 0f);
         }
-        Log($"MELEE START idx={index}");
+
+        Log($"MELEE START idx={index} req={meleeRequestedDuration:F3}s clip={meleeClipLength:F3}s freeze={(meleeWillFreeze ? "Y" : "N")}");
+    }
+
+    private float GetMeleeClipLength(MeleeAttackData data)
+    {
+        if (data.clip != null) return data.clip.length;
+        if (enemy?.animator?.runtimeAnimatorController != null)
+        {
+            var clips = enemy.animator.runtimeAnimatorController.animationClips;
+            foreach (var c in clips)
+            {
+                if (c.name == data.attackName)
+                    return c.length;
+            }
+        }
+        // 찾지 못하면 요청 시간 사용 (혹은 기본값)
+        return data.attackTime > 0f ? data.attackTime : 0.8f;
     }
 
     private void FinishMelee(bool success)
     {
+        // 항상 speed 복구 (프리즈 상태에서 종료 가능)
+        if (enemy?.animator != null)
+            enemy.animator.speed = 1f;
+
         attackInProgress = false;
         if (currentAttack is MeleeAttackData data)
         {
             enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+
             if (success)
             {
                 ApplyPerAttackCooldown(currentAttackIndex, data.cooldown);
@@ -293,6 +360,8 @@ public class EnemyAttackController : MonoBehaviour
         currentAttack = null;
         currentAttackIndex = -1;
         meleeHitboxSpawned = false;
+        meleeWillFreeze = false;
+        meleeFrozenApplied = false;
 
         if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
             enemy.SetState(Enemy.EnemyState.Chase);

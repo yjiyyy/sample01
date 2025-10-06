@@ -17,6 +17,10 @@ public class MeleeAttackData : ScriptableObject
     [Tooltip("공격 모션 시간. 0 이하이면 컨트롤러 fallback 사용.")]
     public float attackTime = 0f;
 
+    [Header("애니메이션 클립 (선택)")]
+    [Tooltip("여기에 지정하면 실제 클립 길이를 정확히 사용할 수 있습니다. 비워두면 Animator에서 attackName과 같은 이름의 클립을 탐색합니다.")]
+    public AnimationClip clip;
+
     [Header("넉백")]
     public float knockbackPower = 5f;
     public float knockbackDuration = 0.2f;
