@@ -1,20 +1,17 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// EnemyAttackController
-/// (설명 생략 – 기존 주석 유지)
-/// B안 적용:
-///  - ResetToM 트리거/AnyState 전역 복귀 제거
-///  - 공격/러시 종료 시 상태가 Attack이면 SetState(Chase)만 호출 (Run 애니는 Enemy.SetState가 PlayRun 처리)
-///  - 넉백/인터럽트 중 Run으로 뛰어가는 레이스 컨디션 제거
-///
-/// 2025-10-07 업데이트:
-///  - RushAttackRoutine 에 러시 도중 목표(플레이어) 추적 보간 로직 추가
-///
-/// 2025-10-07 추가 수정:
-///  - attackPatterns 배열에서 null / 지원하지 않는 SO 제거(CleanPatterns)
-///  - 옵션1: Clean 후 패턴이 0개면 경고 로그 출력
+/// 실행(Executed) 개념 추가:
+///  - 패턴이 선택(SELECT)되면 holdActive = true, holdExpireTime = now + holdDuration
+///  - StartMelee / StartRush 진입 순간 MarkExecuted() → pendingExecuted = true (Hold 성공)
+///  - pendingExecuted == false 상태에서 holdExpireTime 초과 시 HOLD TIMEOUT → 재선택 준비
+/// 랜덤 선택:
+///  - (기존) 첫 Ready 패턴만 선택 → (신규) 모든 Ready 후보 수집 후 균등 랜덤
+/// 쿨다운:
+///  - 기존 로직 그대로 (FinishMelee/FinishRush success 시점에서만 개별+글로벌 적용)
 /// </summary>
 public class EnemyAttackController : MonoBehaviour
 {
@@ -59,6 +56,7 @@ public class EnemyAttackController : MonoBehaviour
     private bool holdActive = false;
     private float holdExpireTime;
     private int pendingAttackIndex = -1;
+    private bool pendingExecuted = false;   // ⭐ 실행 성공 여부(시도만 해도 true)
 
     [Header("디버그")]
     public bool debugDecisionLogs = true;
@@ -82,47 +80,33 @@ public class EnemyAttackController : MonoBehaviour
 
     private void Awake()
     {
-        // 1) 패턴 클린
         CleanPatterns();
 
-        // 2) 기본 초기화
         enemy = GetComponent<Enemy>();
         int n = AttackCount;
         readyTimes = n > 0 ? new float[n] : System.Array.Empty<float>();
         for (int i = 0; i < n; i++) readyTimes[i] = -Mathf.Infinity;
         globalReadyTime = Time.time;
 
-        // 3) 로그
         if (n == 0)
-        {
             Debug.LogWarning("[EnemyAttackController] 등록된 유효 공격 패턴이 0개입니다. (공격 비활성 상태)");
-        }
+
         Log($"INIT (validPatterns={n})");
     }
 
-    /// <summary>
-    /// null 또는 지원하지 않는 타입의 슬롯 제거
-    /// </summary>
+    /// <summary> null / 미지원 타입 제거 </summary>
     private void CleanPatterns()
     {
         if (attackPatterns == null || attackPatterns.Length == 0) return;
 
-        var list = new System.Collections.Generic.List<ScriptableObject>(attackPatterns.Length);
+        var list = new List<ScriptableObject>(attackPatterns.Length);
         int removedNull = 0;
         int removedUnsupported = 0;
 
         foreach (var p in attackPatterns)
         {
-            if (p == null)
-            {
-                removedNull++;
-                continue;
-            }
-
-            if (p is MeleeAttackData || p is RushAttackData)
-            {
-                list.Add(p);
-            }
+            if (p == null) { removedNull++; continue; }
+            if (p is MeleeAttackData || p is RushAttackData) list.Add(p);
             else
             {
                 removedUnsupported++;
@@ -131,15 +115,14 @@ public class EnemyAttackController : MonoBehaviour
         }
 
         if (removedNull > 0 || removedUnsupported > 0)
-        {
             Debug.LogWarning($"[EnemyAttackController] 패턴 정리: null {removedNull}개, 미지원 {removedUnsupported}개 제거 → 최종 {list.Count}개");
-        }
 
         attackPatterns = list.ToArray();
     }
 
     private void Update()
     {
+        // Melee 진행 & 프리즈 처리
         if (attackInProgress && !IsRushing)
         {
             if (meleeWillFreeze && !meleeFrozenApplied && Time.time >= meleeFreezeStartTime)
@@ -155,9 +138,10 @@ public class EnemyAttackController : MonoBehaviour
             }
         }
 
-        if (holdActive && !IsAttackExecuting && Time.time >= holdExpireTime)
+        // Hold 만료 (실행 안됐고, 공격 수행 중 아님)
+        if (holdActive && !IsAttackExecuting && !pendingExecuted && Time.time >= holdExpireTime)
         {
-            Log($"HOLD TIMEOUT idx={pendingAttackIndex} -> cancel (no cooldown)");
+            Log($"[AttackFlow] HOLD TIMEOUT idx={pendingAttackIndex}");
             CancelPendingHold();
         }
     }
@@ -223,27 +207,44 @@ public class EnemyAttackController : MonoBehaviour
     }
     #endregion
 
-    #region 선택 & 시작
+    #region 선택 & 시작 (랜덤 + 실행 플래그)
+    /// <summary>
+    /// 공격 선택 로직:
+    /// 1) 실행 중이거나 글로벌 쿨 → -1
+    /// 2) pending 이 아직 있고 실행 전이면: 사거리 안 & 쿨다운 OK 시 index 반환
+    /// 3) 아니면 모든 Ready 후보 수집 후 랜덤 선택 → hold 부여 → 사거리 안이면 실행 반환
+    /// </summary>
     public int SelectAttackIndex(float distance)
     {
         if (IsAttackExecuting || IsGlobalCooling()) return -1;
 
-        if (pendingAttackIndex >= 0)
+        // 기존 hold 유지 중 (아직 실행 안됨)
+        if (pendingAttackIndex >= 0 && holdActive && !pendingExecuted)
         {
-            if (!holdActive) return -1;
             float pr = GetAttackRange(pendingAttackIndex);
-            if (distance <= pr && IsOffCooldown(pendingAttackIndex)) return pendingAttackIndex;
-            return -1;
+            if (distance <= pr && IsOffCooldown(pendingAttackIndex))
+                return pendingAttackIndex;
+            return -1; // 사거리 밖 → 계속 추격
         }
 
+        // 새로운 선택 (Ready 후보 수집)
+        List<int> candidates = null;
         for (int i = 0; i < AttackCount; i++)
         {
             if (!IsOffCooldown(i)) continue;
-            float r = GetAttackRange(i);
-            PreparePending(i);
-            if (distance <= r) return i;
-            break;
+            (candidates ??= new List<int>()).Add(i);
         }
+
+        if (candidates == null || candidates.Count == 0)
+            return -1;
+
+        int chosen = candidates[Random.Range(0, candidates.Count)];
+        PreparePending(chosen);
+
+        float range = GetAttackRange(chosen);
+        if (distance <= range)
+            return chosen;
+
         return -1;
     }
 
@@ -252,7 +253,9 @@ public class EnemyAttackController : MonoBehaviour
         if (IsAttackExecuting || IsGlobalCooling() || !IsOffCooldown(index)) return false;
         if (attackPatterns == null || index < 0 || index >= attackPatterns.Length) return false;
 
-        if (pendingAttackIndex != index) PreparePending(index);
+        // 다른 패턴이 갑자기 사거리 안에서 직접 호출될 수 있으므로 pending 동기화
+        if (pendingAttackIndex != index)
+            PreparePending(index);
 
         var so = attackPatterns[index];
         if (so is MeleeAttackData m)
@@ -269,14 +272,16 @@ public class EnemyAttackController : MonoBehaviour
     }
     #endregion
 
-    #region 패턴 홀드
+    #region 패턴 홀드 / 실행 플래그
     private void PreparePending(int index)
     {
         pendingAttackIndex = index;
         holdActive = true;
+        pendingExecuted = false;
+
         float hold = ComputeHoldDuration(index);
         holdExpireTime = Time.time + hold;
-        Log($"SELECT idx={index} hold={hold:F2}s");
+        Log($"[AttackFlow] SELECT idx={index} hold={hold:F2}s");
     }
 
     private float ComputeHoldDuration(int index)
@@ -294,24 +299,37 @@ public class EnemyAttackController : MonoBehaviour
         return defaultPatternHoldDuration;
     }
 
+    private void MarkExecuted()
+    {
+        if (pendingExecuted) return;
+        pendingExecuted = true;
+        Log($"[AttackFlow] EXECUTE idx={pendingAttackIndex}");
+    }
+
     private void ClearHold()
     {
-        if (holdActive) Log("HOLD CLEARED");
+        if (holdActive)
+            Log("HOLD CLEARED");
         holdActive = false;
         pendingAttackIndex = -1;
+        pendingExecuted = false; // 다음 사이클 초기화
     }
 
     private void CancelPendingHold()
     {
         holdActive = false;
         pendingAttackIndex = -1;
+        pendingExecuted = false;
     }
     #endregion
 
     #region Melee
     private void StartMelee(MeleeAttackData data, int index)
     {
+        // 실행 순간 표시 (Hold 성공 판정)
+        MarkExecuted();
         ClearHold();
+
         attackInProgress = true;
         meleeHitboxSpawned = false;
 
@@ -356,10 +374,7 @@ public class EnemyAttackController : MonoBehaviour
         {
             var clips = enemy.animator.runtimeAnimatorController.animationClips;
             foreach (var c in clips)
-            {
-                if (c.name == data.attackName)
-                    return c.length;
-            }
+                if (c.name == data.attackName) return c.length;
         }
         return data.attackTime > 0f ? data.attackTime : 0.8f;
     }
@@ -373,7 +388,6 @@ public class EnemyAttackController : MonoBehaviour
         if (currentAttack is MeleeAttackData data)
         {
             enemy.RemoveSuperArmor(SuperArmorSource.Attack);
-
             if (success)
             {
                 ApplyPerAttackCooldown(currentAttackIndex, data.cooldown);
@@ -400,7 +414,10 @@ public class EnemyAttackController : MonoBehaviour
     #region Rush
     private void StartRush(RushAttackData data, Transform target, int index)
     {
+        // 실행 표시
+        MarkExecuted();
         ClearHold();
+
         StopRushCoroutines();
         runningRushIndex = index;
         rushTarget = target;
@@ -618,7 +635,7 @@ public class EnemyAttackController : MonoBehaviour
             IsRushing = false;
             CancelRushNoCooldown();
         }
-        if (pendingAttackIndex >= 0)
+        if (pendingAttackIndex >= 0 && !pendingExecuted)
         {
             Log("INTERRUPT pending cleared");
             CancelPendingHold();

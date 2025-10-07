@@ -15,7 +15,7 @@ MonoBehaviour:
   attackName: Rush_Attack
   grantSuperArmor: 0
   range: 5
-  cooldown: 0
+  cooldown: 1
   damage: 1
   prepareTime: 1
   rushTime: 1
