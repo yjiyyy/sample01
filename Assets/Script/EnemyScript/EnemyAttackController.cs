@@ -8,6 +8,11 @@ using UnityEngine;
 ///  - ResetToM 트리거/AnyState 전역 복귀 제거
 ///  - 공격/러시 종료 시 상태가 Attack이면 SetState(Chase)만 호출 (Run 애니는 Enemy.SetState가 PlayRun 처리)
 ///  - 넉백/인터럽트 중 Run으로 뛰어가는 레이스 컨디션 제거
+///
+/// 2025-10-07 업데이트:
+///  - RushAttackRoutine 에 러시 도중 목표(플레이어) 추적 보간 로직 추가
+///    RushAttackData.allowDirectionDeviation == true 이고 target 존재 시
+///    directionDeviationAmount (0~1)을 프레임 독립 Slerp weight 로 변환하여 곡선 추적 지원
 /// </summary>
 public class EnemyAttackController : MonoBehaviour
 {
@@ -337,7 +342,6 @@ public class EnemyAttackController : MonoBehaviour
         meleeWillFreeze = false;
         meleeFrozenApplied = false;
 
-        // 상태가 아직 Attack이고 하드 CC 중이 아니면 Chase 복귀
         if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
             enemy.SetState(Enemy.EnemyState.Chase);
     }
@@ -416,10 +420,18 @@ public class EnemyAttackController : MonoBehaviour
         rushDir.y = 0f;
         if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
 
+        // 캐시: 방향 추적 사용 여부 (asset 설정)
+        bool useDeviation = false;
+        float baseWeight = 0f;
+        if (data != null)
+        {
+            useDeviation = data.allowDirectionDeviation;
+            baseWeight = Mathf.Clamp01(data.directionDeviationAmount); // 0~1
+        }
+
         while (elapsed < data.rushTime)
         {
-            transform.position += rushDir.normalized * data.rushSpeed * Time.deltaTime;
-
+            // 인터럽트 / 하드 CC / 실드브레이크 체크 (방향 보정 이전에 탈출)
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
@@ -429,6 +441,30 @@ public class EnemyAttackController : MonoBehaviour
                 CancelRushNoCooldown();
                 yield break;
             }
+
+            // 방향 추적 (곡선 러시)
+            if (useDeviation && baseWeight > 0f && rushTarget != null)
+            {
+                Vector3 desired = rushTarget.position - transform.position;
+                desired.y = 0f;
+                if (desired.sqrMagnitude > 0.0001f)
+                {
+                    desired.Normalize();
+
+                    // 프레임 독립 보간 가중치
+                    // dtWeight = 1 - (1 - w)^(Δt * 60)
+                    // w=0 → 0 (변화 없음), w=1 → 즉시 목표
+                    float dtWeight = 1f - Mathf.Pow(1f - baseWeight, Time.deltaTime * 60f);
+                    rushDir = Vector3.Slerp(rushDir, desired, dtWeight).normalized;
+
+                    // 실제 바라보는 방향도 러시 진행 방향으로 맞춤
+                    if (rushDir.sqrMagnitude > 0.0001f)
+                        transform.rotation = Quaternion.LookRotation(rushDir);
+                }
+            }
+
+            // 이동
+            transform.position += rushDir * data.rushSpeed * Time.deltaTime;
 
             elapsed += Time.deltaTime;
             yield return null;

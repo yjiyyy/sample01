@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: RushAttack_LV02
   m_EditorClassIdentifier: 
   attackName: Rush_Attack
-  grantSuperArmor: 1
+  grantSuperArmor: 0
   range: 5
-  cooldown: 1
+  cooldown: 0
+  damage: 1
   prepareTime: 1
   rushTime: 1
   rushSpeed: 5
-  allowDirectionDeviation: 0
-  directionDeviationAmount: 0.709
-  damage: 1
+  allowDirectionDeviation: 1
+  directionDeviationAmount: 1
   knockbackPower: 5
   knockbackDuration: 0.3
   stunDuration: 1
@@ -29,3 +29,4 @@ MonoBehaviour:
   hitBoxLifetime: 5
   allowDuplicateHit: 1
   duplicateHitInterval: 0.1
+  holdOverride: -1

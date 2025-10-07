@@ -17,8 +17,8 @@ MonoBehaviour:
   grantSuperArmor: 0
   damage: 1
   range: 1
-  cooldown: 0
-  attackTime: 1.5
+  cooldown: 10
+  attackTime: 1
   clip: {fileID: 0}
   knockbackPower: 0.5
   knockbackDuration: 0.5
