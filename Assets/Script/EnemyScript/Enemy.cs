@@ -11,12 +11,11 @@ using UnityEngine.AI;
 [DisallowMultipleComponent]
 public class Enemy : MonoBehaviour
 {
-    // Backstep 제거: 이동은 항상 Chase 상태(또는 Attack/CC) 안에서 SignedSpeed로만 표현
     public enum EnemyState { Chase, Attack, Knockback, Stunned, ShieldBreak, Dead }
     public EnemyState CurrentState { get; private set; } = EnemyState.Chase;
 
     [Header("Core refs")]
-    public Animator animator; // Inspector 연결 권장
+    public Animator animator;
     [HideInInspector] public NavMeshAgent agent;
     [HideInInspector] public EnemyAnimationController animCtrl;
     [HideInInspector] public EnemyAttackController attackCtrl;
@@ -32,7 +31,6 @@ public class Enemy : MonoBehaviour
 
     private Transform player;
 
-    // SuperArmor 마스크
     [SerializeField, Tooltip("디버그 확인용")] private SuperArmorSource superArmorMask = SuperArmorSource.None;
     public bool HasSuperArmor => superArmorMask != SuperArmorSource.None;
     public bool HasSuperArmorSource(SuperArmorSource src) => (superArmorMask & src) != 0;
@@ -92,7 +90,7 @@ public class Enemy : MonoBehaviour
             player = GameObject.FindWithTag("Player")?.transform;
 
         if (CurrentState == EnemyState.Dead || player == null) return;
-        if (CurrentState == EnemyState.ShieldBreak) return; // 그로기 동안 AI 비활성
+        if (CurrentState == EnemyState.ShieldBreak) return;
         ai?.Tick(this, player);
     }
 
@@ -109,11 +107,11 @@ public class Enemy : MonoBehaviour
         {
             case EnemyState.Chase:
                 if (agent && agent.isOnNavMesh) agent.isStopped = false;
-                animCtrl?.SetSignedSpeed(0f); // 재평가 프레임에서 갱신
+                animCtrl?.SetSignedSpeed(0f); // 다음 프레임 AI가 갱신
+                animCtrl?.PlayRun(crossFade: false, restart: false);
                 break;
 
             case EnemyState.Attack:
-                // 모든 이동 정지 + Backstep 강제 종료 (AI 내부 플래그 클리어)
                 ai?.ForceClearBackstep();
                 if (agent && agent.isOnNavMesh)
                 {
@@ -158,7 +156,6 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // 넉백 적용
     public void ApplyKnockback(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (CurrentState == EnemyState.Dead) return;
@@ -167,7 +164,7 @@ public class Enemy : MonoBehaviour
         if (allowInterrupt)
         {
             attackCtrl?.InterruptCooldown();
-            ai?.InterruptAttack(); // Backstep 포함 내부 정리
+            ai?.InterruptAttack();
         }
 
         impact?.ApplyKnockback(this, hitDir, weapon, impactScale);
@@ -181,7 +178,6 @@ public class Enemy : MonoBehaviour
         death?.PlayDeath(this, hitDir, weapon, impactScale);
     }
 
-    // 편의
     public void SetAttackState() => SetState(EnemyState.Attack);
     public void SetChaseState() => SetState(EnemyState.Chase);
 

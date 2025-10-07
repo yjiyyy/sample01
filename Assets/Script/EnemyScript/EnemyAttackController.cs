@@ -3,12 +3,11 @@ using UnityEngine;
 
 /// <summary>
 /// EnemyAttackController
-/// - 글로벌/개별 쿨타임
-/// - 패턴 홀드(사거리 외 접근 대기)
-/// - Rush 준비/실행/인터럽트
-/// - Melee AttackHit 애니메이션 이벤트로 히트박스 1회 스폰
-/// - ShieldBreak / Stun 중 상태 복구 가드
-/// - Melee: attackTime < 클립 -> 지정 시간까지만 재생 후 즉시 종료 (애니 그대로 '잘림') / attackTime > 클립 -> 클립 끝나면 마지막 프레임 동결 후 남은 시간 기다렸다 종료
+/// (설명 생략 – 기존 주석 유지)
+/// B안 적용:
+///  - ResetToM 트리거/AnyState 전역 복귀 제거
+///  - 공격/러시 종료 시 상태가 Attack이면 SetState(Chase)만 호출 (Run 애니는 Enemy.SetState가 PlayRun 처리)
+///  - 넉백/인터럽트 중 Run으로 뛰어가는 레이스 컨디션 제거
 /// </summary>
 public class EnemyAttackController : MonoBehaviour
 {
@@ -16,7 +15,6 @@ public class EnemyAttackController : MonoBehaviour
     public ScriptableObject[] attackPatterns;
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
-    /* 공통 상태 */
     private ScriptableObject currentAttack;
     private int currentAttackIndex = -1;
 
@@ -25,12 +23,11 @@ public class EnemyAttackController : MonoBehaviour
     private float attackEndTime;
     private bool meleeHitboxSpawned = false;
 
-    // ── 추가: Melee 타이밍 제어 변수 ──
     private float meleeRequestedDuration;
     private float meleeClipLength;
     private float meleeFreezeStartTime;
-    private bool meleeWillFreeze;      // 클립보다 길어서 프리즈 예정인지
-    private bool meleeFrozenApplied;   // speed=0 적용 여부
+    private bool meleeWillFreeze;
+    private bool meleeFrozenApplied;
 
     /* Rush */
     public bool IsRushing { get; private set; } = false;
@@ -40,18 +37,14 @@ public class EnemyAttackController : MonoBehaviour
     private int runningRushIndex = -1;
     private Transform rushTarget;
 
-    /* 참조 */
     private Enemy enemy;
 
-    /* 개별 쿨타임 */
     private float[] readyTimes;
 
-    /* 글로벌 쿨타임 */
     [Header("글로벌쿨타임 (성공 종료 후)")]
     public float 글로벌쿨타임 = 0.35f;
     private float globalReadyTime;
 
-    /* 패턴 홀드 */
     [Header("패턴 홀드")]
     public float defaultPatternHoldDuration = 1.0f;
     public bool enablePerPatternHoldOverride = true;
@@ -60,7 +53,6 @@ public class EnemyAttackController : MonoBehaviour
     private float holdExpireTime;
     private int pendingAttackIndex = -1;
 
-    /* 디버그 */
     [Header("디버그")]
     public bool debugDecisionLogs = true;
 
@@ -93,27 +85,21 @@ public class EnemyAttackController : MonoBehaviour
 
     private void Update()
     {
-        // ───────── Melee 진행/프리즈 처리 ─────────
         if (attackInProgress && !IsRushing)
         {
-            // 프리즈 조건: (요청시간 > 클립길이) && 아직 프리즈 안 했고 && 클립 재생 구간 지나감
             if (meleeWillFreeze && !meleeFrozenApplied && Time.time >= meleeFreezeStartTime)
             {
                 if (enemy?.animator != null)
-                {
-                    enemy.animator.speed = 0f; // 마지막 프레임 고정
-                }
+                    enemy.animator.speed = 0f;
                 meleeFrozenApplied = true;
             }
 
-            // 요청 시간이 다 되면 종료
             if (Time.time >= attackEndTime)
             {
                 FinishMelee(true);
             }
         }
 
-        // 패턴 홀드 만료
         if (holdActive && !IsAttackExecuting && Time.time >= holdExpireTime)
         {
             Log($"HOLD TIMEOUT idx={pendingAttackIndex} -> cancel (no cooldown)");
@@ -277,23 +263,17 @@ public class EnemyAttackController : MonoBehaviour
         currentAttack = data;
         currentAttackIndex = index;
 
-        // 요청 시간
         meleeRequestedDuration = data.attackTime > 0f ? data.attackTime : 0.8f;
-
-        // 실제 클립 길이
         meleeClipLength = GetMeleeClipLength(data);
 
-        // 분기 설정
         if (meleeRequestedDuration > meleeClipLength)
         {
-            // 클립 재생 후 남은 시간 프리즈
             meleeWillFreeze = true;
             meleeFreezeStartTime = Time.time + meleeClipLength;
             attackEndTime = Time.time + meleeRequestedDuration;
         }
         else
         {
-            // 요청 시간이 더 짧음: 그 시점에서 바로 종료 (클립은 잘리게 됨)
             meleeWillFreeze = false;
             attackEndTime = Time.time + meleeRequestedDuration;
         }
@@ -307,7 +287,6 @@ public class EnemyAttackController : MonoBehaviour
         {
             SafeSetBool("IsRush", false);
             SafeSetBool("IsRushPrepare", false);
-            // 속도는 항상 1 (요구사항: 속도 조절 X)
             enemy.animator.speed = 1f;
             enemy.animator.Play(data.attackName, 0, 0f);
         }
@@ -327,13 +306,11 @@ public class EnemyAttackController : MonoBehaviour
                     return c.length;
             }
         }
-        // 찾지 못하면 요청 시간 사용 (혹은 기본값)
         return data.attackTime > 0f ? data.attackTime : 0.8f;
     }
 
     private void FinishMelee(bool success)
     {
-        // 항상 speed 복구 (프리즈 상태에서 종료 가능)
         if (enemy?.animator != null)
             enemy.animator.speed = 1f;
 
@@ -352,9 +329,6 @@ public class EnemyAttackController : MonoBehaviour
             {
                 Log($"MELEE END CANCEL idx={currentAttackIndex} noCooldown");
             }
-
-            if (enemy.animator && !IsHardCrowdControlled())
-                enemy.animator.SetTrigger("ResetToM");
         }
 
         currentAttack = null;
@@ -363,6 +337,7 @@ public class EnemyAttackController : MonoBehaviour
         meleeWillFreeze = false;
         meleeFrozenApplied = false;
 
+        // 상태가 아직 Attack이고 하드 CC 중이 아니면 Chase 복귀
         if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
             enemy.SetState(Enemy.EnemyState.Chase);
     }
@@ -481,7 +456,6 @@ public class EnemyAttackController : MonoBehaviour
         {
             SafeSetBool("IsRush", false);
             SafeSetBool("IsRushPrepare", false);
-            enemy.animator.SetTrigger("ResetToM");
         }
 
         runningRushIndex = -1;
@@ -498,7 +472,6 @@ public class EnemyAttackController : MonoBehaviour
         {
             SafeSetBool("IsRush", false);
             SafeSetBool("IsRushPrepare", false);
-            enemy.animator.SetTrigger("ResetToM");
         }
         DespawnRushHitbox();
         runningRushIndex = -1;
@@ -606,7 +579,6 @@ public class EnemyAttackController : MonoBehaviour
             {
                 SafeSetBool("IsRush", false);
                 SafeSetBool("IsRushPrepare", false);
-                enemy.animator.SetTrigger("ResetToM");
             }
             runningRushIndex = -1;
             if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
