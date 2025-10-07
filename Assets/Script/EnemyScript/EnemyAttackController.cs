@@ -11,8 +11,10 @@ using UnityEngine;
 ///
 /// 2025-10-07 업데이트:
 ///  - RushAttackRoutine 에 러시 도중 목표(플레이어) 추적 보간 로직 추가
-///    RushAttackData.allowDirectionDeviation == true 이고 target 존재 시
-///    directionDeviationAmount (0~1)을 프레임 독립 Slerp weight 로 변환하여 곡선 추적 지원
+///
+/// 2025-10-07 추가 수정:
+///  - attackPatterns 배열에서 null / 지원하지 않는 SO 제거(CleanPatterns)
+///  - 옵션1: Clean 후 패턴이 0개면 경고 로그 출력
 /// </summary>
 public class EnemyAttackController : MonoBehaviour
 {
@@ -80,12 +82,60 @@ public class EnemyAttackController : MonoBehaviour
 
     private void Awake()
     {
+        // 1) 패턴 클린
+        CleanPatterns();
+
+        // 2) 기본 초기화
         enemy = GetComponent<Enemy>();
         int n = AttackCount;
         readyTimes = n > 0 ? new float[n] : System.Array.Empty<float>();
         for (int i = 0; i < n; i++) readyTimes[i] = -Mathf.Infinity;
         globalReadyTime = Time.time;
-        Log("INIT");
+
+        // 3) 로그
+        if (n == 0)
+        {
+            Debug.LogWarning("[EnemyAttackController] 등록된 유효 공격 패턴이 0개입니다. (공격 비활성 상태)");
+        }
+        Log($"INIT (validPatterns={n})");
+    }
+
+    /// <summary>
+    /// null 또는 지원하지 않는 타입의 슬롯 제거
+    /// </summary>
+    private void CleanPatterns()
+    {
+        if (attackPatterns == null || attackPatterns.Length == 0) return;
+
+        var list = new System.Collections.Generic.List<ScriptableObject>(attackPatterns.Length);
+        int removedNull = 0;
+        int removedUnsupported = 0;
+
+        foreach (var p in attackPatterns)
+        {
+            if (p == null)
+            {
+                removedNull++;
+                continue;
+            }
+
+            if (p is MeleeAttackData || p is RushAttackData)
+            {
+                list.Add(p);
+            }
+            else
+            {
+                removedUnsupported++;
+                Debug.LogWarning($"[EnemyAttackController] 지원하지 않는 패턴 타입 무시: {p.GetType().Name}");
+            }
+        }
+
+        if (removedNull > 0 || removedUnsupported > 0)
+        {
+            Debug.LogWarning($"[EnemyAttackController] 패턴 정리: null {removedNull}개, 미지원 {removedUnsupported}개 제거 → 최종 {list.Count}개");
+        }
+
+        attackPatterns = list.ToArray();
     }
 
     private void Update()
@@ -420,18 +470,16 @@ public class EnemyAttackController : MonoBehaviour
         rushDir.y = 0f;
         if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
 
-        // 캐시: 방향 추적 사용 여부 (asset 설정)
         bool useDeviation = false;
         float baseWeight = 0f;
         if (data != null)
         {
             useDeviation = data.allowDirectionDeviation;
-            baseWeight = Mathf.Clamp01(data.directionDeviationAmount); // 0~1
+            baseWeight = Mathf.Clamp01(data.directionDeviationAmount);
         }
 
         while (elapsed < data.rushTime)
         {
-            // 인터럽트 / 하드 CC / 실드브레이크 체크 (방향 보정 이전에 탈출)
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
@@ -442,7 +490,6 @@ public class EnemyAttackController : MonoBehaviour
                 yield break;
             }
 
-            // 방향 추적 (곡선 러시)
             if (useDeviation && baseWeight > 0f && rushTarget != null)
             {
                 Vector3 desired = rushTarget.position - transform.position;
@@ -450,20 +497,14 @@ public class EnemyAttackController : MonoBehaviour
                 if (desired.sqrMagnitude > 0.0001f)
                 {
                     desired.Normalize();
-
-                    // 프레임 독립 보간 가중치
-                    // dtWeight = 1 - (1 - w)^(Δt * 60)
-                    // w=0 → 0 (변화 없음), w=1 → 즉시 목표
                     float dtWeight = 1f - Mathf.Pow(1f - baseWeight, Time.deltaTime * 60f);
                     rushDir = Vector3.Slerp(rushDir, desired, dtWeight).normalized;
 
-                    // 실제 바라보는 방향도 러시 진행 방향으로 맞춤
                     if (rushDir.sqrMagnitude > 0.0001f)
                         transform.rotation = Quaternion.LookRotation(rushDir);
                 }
             }
 
-            // 이동
             transform.position += rushDir * data.rushSpeed * Time.deltaTime;
 
             elapsed += Time.deltaTime;

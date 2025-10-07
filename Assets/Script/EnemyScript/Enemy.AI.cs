@@ -5,6 +5,17 @@
 ///  - Forward(양수) / Idle(0) / Backstep(음수 -1) 전환
 ///  - Backstep은 EnemyState로 분리하지 않고 내부 플래그 backstepping 으로만 유지
 ///  - Animator: BlendTree (Speed -1 / 0 / +1)
+///
+/// 2025-10-07 개선:
+///  - 거리 유지(distanceMaintenance) 판정 로직 재설계
+///    요구사항: 글로벌 쿨다운 뿐 아니라 "개별 쿨다운이 모두 진행 중" 이면서 이미 전투 링( backstepDistance ±1 ) 안에 있으면 유지.
+///    또한 사거리 안에 들어왔지만 '그 사거리 커버 공격' 이 아직 준비되지 않았을 때도 유지.
+///  - 로직 개요:
+///      1) 글로벌 쿨다운이면 → 유지 (reason=GLOBAL)
+///      2) (글로벌 아님) 아직 어떤 공격도 Ready 아님 → 링 안( distance <= UpperBand )이면 유지 (reason=ALL_COOLDOWN_WAIT_RING)
+///      3) (글로벌 아님, 하나 이상 Ready) 현재 거리에서 커버 가능한 공격 사거리들 중 Ready 가 하나도 없으면 유지 (reason=IN_RANGE_WAIT)
+///      4) 그 외 → 유지 해제
+///  - 로그: ON/OFF 전환 시 한 번만 원인(reason) 포함 출력
 /// </summary>
 [DisallowMultipleComponent]
 public class EnemyAI : MonoBehaviour
@@ -24,11 +35,14 @@ public class EnemyAI : MonoBehaviour
 
     // Backstep 플래그
     private bool backstepping;
-    // 공격 중 여부 플래그
+    // 공격 중 여부 플래그 (향후 확장 대비)
     private bool inAttackAnim;
 
     private float signedForwardSpeed; // +0~+1 로 서서히 보간
     private float forwardSpeedLerpT;
+
+    // 유지모드 전환 감지용
+    private bool distanceMaintenanceModeLast = false;
 
     private float LowerBand => backstepDistance - 1f;
     private float UpperBand => backstepDistance + 1f;
@@ -43,7 +57,7 @@ public class EnemyAI : MonoBehaviour
     {
         if (ctx == null || player == null) return;
 
-        // 1. 하드 CC / 사망 / 그로기
+        // 1. 하드 CC / 사망 / 실드브레이크 / 넉백 / 스턴 상태에서는 이동/공격 결정 정지
         if (ctx.CurrentState == Enemy.EnemyState.Dead ||
             ctx.CurrentState == Enemy.EnemyState.ShieldBreak ||
             ctx.CurrentState == Enemy.EnemyState.Stunned ||
@@ -53,7 +67,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // 2. 공격 상태: 방향만 맞추고 Speed=0
+        // 2. 공격 상태: 방향만 맞추고 속도 0
         if (ctx.CurrentState == Enemy.EnemyState.Attack)
         {
             HandleAttackFacing(ctx, player);
@@ -61,14 +75,14 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // 3. Backstepping 중이면 우선 처리
+        // 3. Backstep 중일 때
         if (backstepping)
         {
             UpdateBackstep(ctx, player);
             return;
         }
 
-        // 4. 일반 Chase 로직
+        // 4. 일반 추적/의사결정
         DriveDecision(ctx, player);
     }
 
@@ -80,21 +94,15 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        Vector3 toPlayer = player.position - ctx.transform.position;
-        float distance = toPlayer.magnitude;
+        float distance = (player.position - ctx.transform.position).magnitude;
+        string reason;
+        bool distanceMaintenanceMode = ShouldDistanceMaintain(distance, out reason);
 
-        bool globalCooling = attackCtrl.IsGlobalCooling();
-        bool anyPatternOffCooldown = false;
-        for (int i = 0; i < attackCtrl.AttackCount; i++)
+        if (attackCtrl.debugDecisionLogs && distanceMaintenanceMode != distanceMaintenanceModeLast)
         {
-            if (attackCtrl.IsOffCooldown(i))
-            {
-                anyPatternOffCooldown = true;
-                break;
-            }
+            Debug.Log($"[AI] DistanceMaintenance {(distanceMaintenanceMode ? "ON" : "OFF")} (reason={reason}, dist={distance:F2})");
+            distanceMaintenanceModeLast = distanceMaintenanceMode;
         }
-
-        bool distanceMaintenanceMode = globalCooling || !anyPatternOffCooldown;
 
         if (distanceMaintenanceMode)
         {
@@ -114,8 +122,84 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
-        // 사거리 안 아님 → 추격
+        // 적절한 공격 없음 → 추격
         ForwardChase(ctx, player);
+    }
+
+    /// <summary>
+    /// 거리 유지 조건 계산
+    /// </summary>
+    /// <param name="distance">플레이어와 거리</param>
+    /// <param name="reason">디버그용 이유 문자열</param>
+    private bool ShouldDistanceMaintain(float distance, out string reason)
+    {
+        reason = "NONE";
+        if (attackCtrl == null) return false;
+
+        // (1) 글로벌 쿨다운이면 무조건 유지
+        if (attackCtrl.IsGlobalCooling())
+        {
+            reason = "GLOBAL";
+            return true;
+        }
+
+        // 공격 준비 여부 스캔
+        bool anyReadyOverall = false;
+        int count = attackCtrl.AttackCount;
+        for (int i = 0; i < count; i++)
+        {
+            if (attackCtrl.IsOffCooldown(i))
+            {
+                anyReadyOverall = true;
+                break;
+            }
+        }
+
+        // (2) 어떤 공격도 Ready 아님 → 링 내부면 유지
+        if (!anyReadyOverall)
+        {
+            if (distance <= UpperBand)
+            {
+                reason = "ALL_COOLDOWN_WAIT_RING";
+                return true;
+            }
+            // 링 밖이면 접근해서 링 안으로 진입 시까지 유지 모드 아님
+            reason = "APPROACH_RING";
+            return false;
+        }
+
+        // (3) 하나 이상 Ready overall → "현재 거리" 에서 커버되는 Ready 없음이면 유지
+        bool withinAnyAttackRange = false;
+        bool anyReadyWithinDistance = false;
+
+        for (int i = 0; i < count; i++)
+        {
+            float r = attackCtrl.GetAttackRange(i);
+            if (distance <= r)
+            {
+                withinAnyAttackRange = true;
+                if (attackCtrl.IsOffCooldown(i))
+                {
+                    anyReadyWithinDistance = true;
+                    break;
+                }
+            }
+        }
+
+        if (!withinAnyAttackRange)
+        {
+            reason = "NO_RANGE";
+            return false;
+        }
+
+        if (!anyReadyWithinDistance)
+        {
+            reason = "IN_RANGE_WAIT";
+            return true;
+        }
+
+        reason = "READY_IN_RANGE";
+        return false;
     }
 
     #region Distance Maintenance
@@ -129,7 +213,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // 너무 멀다 → Forward
+        // 너무 멀다 → Forward (링으로 접근)
         if (!backstepping && distance > UpperBand)
         {
             ForwardChase(ctx, player);
@@ -158,7 +242,6 @@ public class EnemyAI : MonoBehaviour
             ctx.agent.ResetPath();
         }
 
-        // 즉시 음수 속도
         ctx.animCtrl?.SetSignedSpeed(-1f);
 
         if (attackCtrl?.debugDecisionLogs == true)
@@ -167,32 +250,19 @@ public class EnemyAI : MonoBehaviour
 
     private void UpdateBackstep(Enemy ctx, Transform player)
     {
-        if (!backstepping)
-            return;
+        if (!backstepping) return;
 
-        // 공격 가능 상태로 전환되면 Backstep 중단 후 공격 재평가
-        bool globalCooling = attackCtrl != null && attackCtrl.IsGlobalCooling();
-        bool anyPatternOffCooldown = false;
-        if (attackCtrl != null)
-        {
-            for (int i = 0; i < attackCtrl.AttackCount; i++)
-            {
-                if (attackCtrl.IsOffCooldown(i))
-                {
-                    anyPatternOffCooldown = true;
-                    break;
-                }
-            }
-        }
-        bool distanceMaintenanceMode = globalCooling || !anyPatternOffCooldown;
+        float dist = Vector3.Distance(player.position, ctx.transform.position);
+        string reason;
+        bool distanceMaintenanceMode = ShouldDistanceMaintain(dist, out reason);
 
+        // 유지 종료 → Backstep 해제 후 재평가
         if (!distanceMaintenanceMode)
         {
             EndBackstep(ctx, true);
 
             if (attackCtrl != null)
             {
-                float dist = Vector3.Distance(ctx.transform.position, player.position);
                 int idx = attackCtrl.SelectAttackIndex(dist);
                 if (idx >= 0)
                 {
@@ -212,11 +282,11 @@ public class EnemyAI : MonoBehaviour
         if (face.sqrMagnitude > 0.0001f)
             ctx.transform.rotation = Quaternion.LookRotation(face.normalized);
 
-        // 수동 후퇴 (RootMotion 없음)
+        // 수동 후퇴
         float backSpeed = ctx.moveSpeed * backstepSpeedMultiplier;
-        ctx.transform.position += (-face.normalized) * backSpeed * Time.deltaTime;
+        if (face.sqrMagnitude > 0.0001f)
+            ctx.transform.position += (-face.normalized) * backSpeed * Time.deltaTime;
 
-        // 애니 파라미터 유지 (-1)
         ctx.animCtrl?.SetSignedSpeed(-1f);
 
         float distCurrent = face.magnitude;
@@ -238,7 +308,6 @@ public class EnemyAI : MonoBehaviour
             ctx.agent.isStopped = false;
         }
 
-        // Idle로 초기화 → 다음 프레임 재평가
         ctx.animCtrl?.SetSignedSpeed(0f);
 
         if (attackCtrl?.debugDecisionLogs == true)
@@ -279,7 +348,6 @@ public class EnemyAI : MonoBehaviour
             ctx.agent.SetDestination(player.position);
         }
 
-        // Forward 속도를 0→1로 부드럽게 (forwardSpeedNormalizeTime)
         forwardSpeedLerpT += Time.deltaTime / Mathf.Max(0.0001f, forwardSpeedNormalizeTime);
         signedForwardSpeed = Mathf.Lerp(signedForwardSpeed, 1f, forwardSpeedLerpT);
         signedForwardSpeed = Mathf.Clamp01(signedForwardSpeed);
@@ -308,7 +376,7 @@ public class EnemyAI : MonoBehaviour
     private void HandleAttackFacing(Enemy ctx, Transform player)
     {
         if (attackCtrl != null && attackCtrl.IsRushing)
-            return; // Rush는 별도 이동/방향 로직
+            return; // Rush 중엔 Rush 로직이 방향 결정
 
         Vector3 dir = player.position - ctx.transform.position;
         dir.y = 0f;
@@ -323,9 +391,7 @@ public class EnemyAI : MonoBehaviour
     public void OnAttackStarted(Enemy ctx)
     {
         inAttackAnim = true;
-        // 공격 시작 시 이동 정지
         ctx.animCtrl?.SetSignedSpeed(0f);
-        // Forward 보간 리셋
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
     }
