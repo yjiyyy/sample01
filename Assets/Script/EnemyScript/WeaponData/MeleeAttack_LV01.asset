@@ -12,16 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c55a14bd6d57f04c9dcd658e386f567, type: 3}
   m_Name: MeleeAttack_LV01
   m_EditorClassIdentifier: 
-  attackName: Melee_Attack_LV01
+  attackName: Attack
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   grantSuperArmor: 0
   damage: 1
   range: 1
-  cooldown: 20
-  attackTime: 0.5
+  cooldown: 10
+  attackTime: 1.5
+  clip: {fileID: 0}
   knockbackPower: 0.5
   knockbackDuration: 0.5
   stunDuration: 0
   hitBoxLifetime: 0.1
   allowDuplicateHit: 0
   duplicateHitInterval: 0.1
+  holdOverride: -1

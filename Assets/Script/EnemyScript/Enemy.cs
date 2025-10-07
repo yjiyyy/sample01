@@ -11,8 +11,8 @@ using UnityEngine.AI;
 [DisallowMultipleComponent]
 public class Enemy : MonoBehaviour
 {
-    // Backstep 상태 추가
-    public enum EnemyState { Chase, Attack, Backstep, Knockback, Stunned, ShieldBreak, Dead }
+    // Backstep 제거: 이동은 항상 Chase 상태(또는 Attack/CC) 안에서 SignedSpeed로만 표현
+    public enum EnemyState { Chase, Attack, Knockback, Stunned, ShieldBreak, Dead }
     public EnemyState CurrentState { get; private set; } = EnemyState.Chase;
 
     [Header("Core refs")]
@@ -100,56 +100,60 @@ public class Enemy : MonoBehaviour
     {
         if (!force && CurrentState == newState) return;
 
-        if (debugMode) Debug.Log($"[Enemy] State {CurrentState} → {newState}");
+        if (debugMode)
+            Debug.Log($"[Enemy] State {CurrentState} → {newState}");
+
         CurrentState = newState;
 
         switch (newState)
         {
             case EnemyState.Chase:
                 if (agent && agent.isOnNavMesh) agent.isStopped = false;
+                animCtrl?.SetSignedSpeed(0f); // 재평가 프레임에서 갱신
                 break;
 
             case EnemyState.Attack:
+                // 모든 이동 정지 + Backstep 강제 종료 (AI 내부 플래그 클리어)
+                ai?.ForceClearBackstep();
                 if (agent && agent.isOnNavMesh)
                 {
                     agent.isStopped = true;
                     agent.velocity = Vector3.zero;
                     agent.ResetPath();
                 }
+                animCtrl?.SetSignedSpeed(0f);
                 ai?.OnAttackStarted(this);
                 break;
 
-            case EnemyState.Backstep:
-                if (agent && agent.isOnNavMesh)
-                {
-                    agent.isStopped = true;
-                    agent.velocity = Vector3.zero;
-                    agent.ResetPath();
-                }
-                // 애니는 EnemyAI에서 직접 Play("Backstep")
-                break;
-
             case EnemyState.Knockback:
+                ai?.ForceClearBackstep();
                 if (agent && agent.isOnNavMesh) agent.isStopped = true;
+                animCtrl?.SetSignedSpeed(0f);
                 break;
 
             case EnemyState.Stunned:
+                ai?.ForceClearBackstep();
                 if (animator) animator.Play("Stun", 0, 0f);
                 if (agent && agent.isOnNavMesh) agent.isStopped = true;
+                animCtrl?.SetSignedSpeed(0f);
                 break;
 
             case EnemyState.ShieldBreak:
+                ai?.ForceClearBackstep();
                 if (agent && agent.isOnNavMesh)
                 {
                     agent.isStopped = true;
                     agent.velocity = Vector3.zero;
                     agent.ResetPath();
                 }
+                animCtrl?.SetSignedSpeed(0f);
                 break;
 
             case EnemyState.Dead:
+                ai?.ForceClearBackstep();
                 if (agent) agent.enabled = false;
                 ClearAllSuperArmor();
+                animCtrl?.SetSignedSpeed(0f);
                 break;
         }
     }
@@ -163,7 +167,7 @@ public class Enemy : MonoBehaviour
         if (allowInterrupt)
         {
             attackCtrl?.InterruptCooldown();
-            ai?.InterruptAttack(); // Backstep/Attack 모두 중단
+            ai?.InterruptAttack(); // Backstep 포함 내부 정리
         }
 
         impact?.ApplyKnockback(this, hitDir, weapon, impactScale);
@@ -177,7 +181,7 @@ public class Enemy : MonoBehaviour
         death?.PlayDeath(this, hitDir, weapon, impactScale);
     }
 
-    // 편의 (기존 호출부 있을 수 있음)
+    // 편의
     public void SetAttackState() => SetState(EnemyState.Attack);
     public void SetChaseState() => SetState(EnemyState.Chase);
 

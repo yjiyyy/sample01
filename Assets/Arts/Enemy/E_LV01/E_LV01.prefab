@@ -235,7 +235,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be2821b1ccca2dc47a504fc08cf3e42e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fallbackEngageRange: 5
+  backstepDistance: 5
+  backstepSpeedMultiplier: 1
+  forwardSpeedNormalizeTime: 0.25
 --- !u!114 &4454959871274099026
 MonoBehaviour:
   m_ObjectHideFlags: 0
