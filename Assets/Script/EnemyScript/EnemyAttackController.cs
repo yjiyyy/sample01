@@ -6,16 +6,15 @@ using UnityEngine;
 /// EnemyAttackController
 /// 실행(Executed) 개념 추가:
 ///  - 패턴이 선택(SELECT)되면 holdActive = true, holdExpireTime = now + holdDuration
-///  - StartMelee / StartRush 진입 순간 MarkExecuted() → pendingExecuted = true (Hold 성공)
-///  - pendingExecuted == false 상태에서 holdExpireTime 초과 시 HOLD TIMEOUT → 재선택 준비
+///  - StartMelee / StartRush / StartRanged 진입 순간 MarkExecuted() → pendingExecuted = true
 /// 랜덤 선택:
-///  - (기존) 첫 Ready 패턴만 선택 → (신규) 모든 Ready 후보 수집 후 균등 랜덤
+///  - 모든 Ready 후보 수집 후 균등 랜덤
 /// 쿨다운:
-///  - 기존 로직 그대로 (FinishMelee/FinishRush success 시점에서만 개별+글로벌 적용)
+///  - 성공 종료 시 개별+글로벌 적용
 /// </summary>
 public class EnemyAttackController : MonoBehaviour
 {
-    [Header("패턴 배열 (MeleeAttackData / RushAttackData)")]
+    [Header("패턴 배열 (MeleeAttackData / RushAttackData / RangedAttackData)")]
     public ScriptableObject[] attackPatterns;
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
@@ -41,6 +40,12 @@ public class EnemyAttackController : MonoBehaviour
     private int runningRushIndex = -1;
     private Transform rushTarget;
 
+    /* Ranged */
+    private Coroutine rangedRoutine;
+    private Transform rangedTarget;
+    private int runningRangedIndex = -1;
+    private bool rangedProjectileFired = false;
+
     private Enemy enemy;
 
     private float[] readyTimes;
@@ -56,13 +61,13 @@ public class EnemyAttackController : MonoBehaviour
     private bool holdActive = false;
     private float holdExpireTime;
     private int pendingAttackIndex = -1;
-    private bool pendingExecuted = false;   // ⭐ 실행 성공 여부(시도만 해도 true)
+    private bool pendingExecuted = false;
 
     [Header("디버그")]
     public bool debugDecisionLogs = true;
 
-    public bool IsMeleeExecuting => attackInProgress && !IsRushing;
-    public bool IsAttackExecuting => IsMeleeExecuting || IsRushing || rushPrepareCoroutine != null;
+    public bool IsMeleeExecuting => attackInProgress && !IsRushing && rangedRoutine == null;
+    public bool IsAttackExecuting => IsMeleeExecuting || IsRushing || rushPrepareCoroutine != null || rangedRoutine != null;
 
     public string CurrentAttackName
     {
@@ -74,6 +79,11 @@ public class EnemyAttackController : MonoBehaviour
                 attackPatterns != null &&
                 runningRushIndex < attackPatterns.Length &&
                 attackPatterns[runningRushIndex] is RushAttackData r) return r.attackName;
+            if (rangedRoutine != null &&
+                runningRangedIndex >= 0 &&
+                attackPatterns != null &&
+                runningRangedIndex < attackPatterns.Length &&
+                attackPatterns[runningRangedIndex] is RangedAttackData ra) return ra.attackName;
             return null;
         }
     }
@@ -106,7 +116,7 @@ public class EnemyAttackController : MonoBehaviour
         foreach (var p in attackPatterns)
         {
             if (p == null) { removedNull++; continue; }
-            if (p is MeleeAttackData || p is RushAttackData) list.Add(p);
+            if (p is MeleeAttackData || p is RushAttackData || p is RangedAttackData) list.Add(p);
             else
             {
                 removedUnsupported++;
@@ -123,7 +133,7 @@ public class EnemyAttackController : MonoBehaviour
     private void Update()
     {
         // Melee 진행 & 프리즈 처리
-        if (attackInProgress && !IsRushing)
+        if (attackInProgress && !IsRushing && rangedRoutine == null)
         {
             if (meleeWillFreeze && !meleeFrozenApplied && Time.time >= meleeFreezeStartTime)
             {
@@ -196,6 +206,7 @@ public class EnemyAttackController : MonoBehaviour
         if (index < 0 || index >= AttackCount) return 0f;
         if (attackPatterns[index] is MeleeAttackData m) return m.range;
         if (attackPatterns[index] is RushAttackData r) return r.range;
+        if (attackPatterns[index] is RangedAttackData rg) return rg.range;
         return 0f;
     }
     public float GetAttackCooldown(int index)
@@ -203,17 +214,12 @@ public class EnemyAttackController : MonoBehaviour
         if (index < 0 || index >= AttackCount) return 0f;
         if (attackPatterns[index] is MeleeAttackData m) return m.cooldown;
         if (attackPatterns[index] is RushAttackData r) return r.cooldown;
+        if (attackPatterns[index] is RangedAttackData rg) return rg.cooldown;
         return 0f;
     }
     #endregion
 
     #region 선택 & 시작 (랜덤 + 실행 플래그)
-    /// <summary>
-    /// 공격 선택 로직:
-    /// 1) 실행 중이거나 글로벌 쿨 → -1
-    /// 2) pending 이 아직 있고 실행 전이면: 사거리 안 & 쿨다운 OK 시 index 반환
-    /// 3) 아니면 모든 Ready 후보 수집 후 랜덤 선택 → hold 부여 → 사거리 안이면 실행 반환
-    /// </summary>
     public int SelectAttackIndex(float distance)
     {
         if (IsAttackExecuting || IsGlobalCooling()) return -1;
@@ -266,6 +272,11 @@ public class EnemyAttackController : MonoBehaviour
         if (so is RushAttackData r)
         {
             StartRush(r, target, index);
+            return true;
+        }
+        if (so is RangedAttackData rg)
+        {
+            StartRanged(rg, target, index);
             return true;
         }
         return false;
@@ -613,6 +624,253 @@ public class EnemyAttackController : MonoBehaviour
     }
     #endregion
 
+    #region Ranged
+    private void StartRanged(RangedAttackData data, Transform target, int index)
+    {
+        // 실행 표시
+        MarkExecuted();
+        ClearHold();
+
+        if (rangedRoutine != null)
+        {
+            StopCoroutine(rangedRoutine);
+            rangedRoutine = null;
+        }
+
+        runningRangedIndex = index;
+        rangedTarget = target;
+
+        enemy.SetState(Enemy.EnemyState.Attack);
+        if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack);
+        else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+
+        rangedRoutine = StartCoroutine(RangedRoutine(data));
+        Log($"RANGED START idx={index} prep={data.prepareTime:F2} atk={data.attackTime:F2} fireAt={data.fireAtTime:F2}");
+    }
+
+    private IEnumerator RangedRoutine(RangedAttackData data)
+    {
+        // PREPARE
+        if (data.prepareTime > 0f)
+        {
+            float prepClipLen = data.prepareClip != null ? data.prepareClip.length : 0f;
+            bool willFreeze = prepClipLen > 0f && data.prepareTime > prepClipLen;
+            float elapsed = 0f;
+            bool freezed = false;
+
+            if (enemy.animator && data.prepareClip != null)
+            {
+                enemy.animator.speed = 1f;
+                enemy.animator.Play(data.prepareClip.name, 0, 0f);
+            }
+
+            while (elapsed < data.prepareTime)
+            {
+                if (enemy.CurrentState != Enemy.EnemyState.Attack ||
+                    enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
+                {
+                    Log("RANGED PREPARE INTERRUPT noCooldown");
+                    CancelRangedNoCooldown();
+                    yield break;
+                }
+
+                FaceTarget(rangedTarget);
+
+                if (willFreeze && !freezed && enemy.animator != null && elapsed >= prepClipLen)
+                {
+                    enemy.animator.speed = 0f; // 마지막 프레임 고정
+                    freezed = true;
+                }
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            if (enemy.animator) enemy.animator.speed = 1f; // 복구
+        }
+
+        // ATTACK
+        rangedProjectileFired = false;
+
+        float atkReq = data.attackTime > 0f ? data.attackTime : 0.8f;
+        float atkClipLen = GetRangedAttackClipLength(data);
+        bool atkWillFreeze = atkClipLen > 0f && atkReq > atkClipLen;
+        float fireTime = Mathf.Clamp(data.fireAtTime, 0f, atkReq);
+
+        float atkElapsed = 0f;
+        bool atkFreezed = false;
+
+        if (enemy.animator)
+        {
+            enemy.animator.speed = 1f;
+            if (data.attackClip != null)
+                enemy.animator.Play(data.attackClip.name, 0, 0f);
+            else
+                enemy.animator.Play(data.attackName, 0, 0f);
+        }
+
+        while (atkElapsed < atkReq)
+        {
+            if (enemy.CurrentState != Enemy.EnemyState.Attack ||
+                enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
+            {
+                Log("RANGED ATTACK INTERRUPT noCooldown");
+                CancelRangedNoCooldown();
+                yield break;
+            }
+
+            FaceTarget(rangedTarget);
+
+            if (!rangedProjectileFired && atkElapsed >= fireTime)
+            {
+                FireProjectile(data);
+                rangedProjectileFired = true;
+            }
+
+            if (atkWillFreeze && !atkFreezed && enemy.animator != null && atkElapsed >= atkClipLen)
+            {
+                enemy.animator.speed = 0f; // 마지막 프레임 고정
+                atkFreezed = true;
+            }
+
+            atkElapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (enemy.animator) enemy.animator.speed = 1f;
+
+        FinishRanged(data, true);
+    }
+
+    private float GetRangedAttackClipLength(RangedAttackData data)
+    {
+        if (data.attackClip != null) return data.attackClip.length;
+        if (enemy?.animator?.runtimeAnimatorController != null)
+        {
+            var clips = enemy.animator.runtimeAnimatorController.animationClips;
+            foreach (var c in clips)
+                if (c.name == data.attackName) return c.length;
+        }
+        return data.attackTime > 0f ? data.attackTime : 0.8f;
+    }
+
+    private void FireProjectile(RangedAttackData data)
+    {
+        if (data.projectilePrefab == null)
+        {
+            Log("RANGED projectilePrefab null");
+            return;
+        }
+
+        // firePointName 사용 (없으면 자기 transform)
+        Transform firePoint = FindChildRecursive(transform, data.firePointName);
+        if (firePoint == null) firePoint = transform;
+
+        // 발사 순간 타겟 위치 스냅
+        Vector3 targetPos = rangedTarget != null ? rangedTarget.position : (firePoint.position + transform.forward * 5f);
+
+        // 직선 기준 방향(수평)
+        Vector3 shootDir = (targetPos - firePoint.position);
+        if (shootDir.sqrMagnitude < 0.0001f) shootDir = transform.forward;
+        shootDir.y = 0f;
+        shootDir.Normalize();
+
+        GameObject proj = Instantiate(
+            data.projectilePrefab,
+            firePoint.position,
+            Quaternion.LookRotation(shootDir)
+        );
+
+        if (proj.TryGetComponent<HitBox_Enemy_Projectile>(out var hb))
+        {
+            hb.Initialize(
+                data.damage,
+                data.projectileSpeed,
+                data.projectileLifetime,
+                data.knockbackPower,
+                data.knockbackDuration,
+                data.stunDuration,
+                data.allowDuplicateHit,
+                data.duplicateHitInterval,
+                data.movementType,
+                firePoint.position,
+                targetPos,
+                data.arcHeight,
+                data.faceToMovement,
+                data.spinWhileFlying,
+                data.spinAxis,
+                data.spinSpeed,
+                data.destroyOnObstacle,
+                data.obstacleLayers
+            );
+        }
+
+        Log($"RANGED FIRE proj@{firePoint.name} → target {targetPos} type={data.movementType}");
+    }
+
+    private void FinishRanged(RangedAttackData data, bool success)
+    {
+        if (success)
+        {
+            ApplyPerAttackCooldown(runningRangedIndex, data.cooldown);
+            ApplyGlobalCooldown();
+            Log($"RANGED END SUCCESS idx={runningRangedIndex}");
+        }
+        else
+        {
+            Log($"RANGED END CANCEL idx={runningRangedIndex}");
+        }
+
+        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        runningRangedIndex = -1;
+
+        if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
+            enemy.SetState(Enemy.EnemyState.Chase);
+
+        if (rangedRoutine != null)
+        {
+            StopCoroutine(rangedRoutine);
+            rangedRoutine = null;
+        }
+    }
+
+    private void CancelRangedNoCooldown()
+    {
+        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        runningRangedIndex = -1;
+
+        if (enemy.animator) enemy.animator.speed = 1f;
+
+        if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
+            enemy.SetState(Enemy.EnemyState.Chase);
+
+        if (rangedRoutine != null)
+        {
+            StopCoroutine(rangedRoutine);
+            rangedRoutine = null;
+        }
+    }
+
+    private void FaceTarget(Transform t)
+    {
+        if (t == null) return;
+        Vector3 dir = t.position - transform.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude > 0.0001f)
+            transform.rotation = Quaternion.LookRotation(dir.normalized);
+    }
+
+    private Transform FindChildRecursive(Transform root, string name)
+    {
+        if (root == null || string.IsNullOrEmpty(name)) return null;
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (t.name == name) return t;
+        }
+        return null;
+    }
+    #endregion
+
     #region 쿨타임 & 인터럽트
     private void ApplyPerAttackCooldown(int index, float baseCooldown)
     {
@@ -634,6 +892,11 @@ public class EnemyAttackController : MonoBehaviour
             StopRushCoroutines();
             IsRushing = false;
             CancelRushNoCooldown();
+        }
+        if (rangedRoutine != null)
+        {
+            Log("INTERRUPT ranged -> cancel");
+            CancelRangedNoCooldown();
         }
         if (pendingAttackIndex >= 0 && !pendingExecuted)
         {
