@@ -50,7 +50,7 @@ MonoBehaviour:
   meleeSpawnPoint: {fileID: 0}
   projectileSpawnPoint: {fileID: 1317014823105784321}
   meleeHitboxPrefab: {fileID: 0}
-  projectilePrefab: {fileID: 8033842031334091814, guid: fb314c565f8a5b9489e4b808ac864737, type: 3}
+  projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
   shotgunSectorPrefab: {fileID: 0}
 --- !u!1 &7743072092023857155
 GameObject:

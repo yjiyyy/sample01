@@ -15,7 +15,7 @@ MonoBehaviour:
   weaponName: None
   overrideController: {fileID: 0}
   cooldown: 0.5
-  damage: 10
+  damage: 30
   range: 2.5
   hitboxSpawnDelay: 0.2
   hitBoxLifetime: 0.1
@@ -24,8 +24,8 @@ MonoBehaviour:
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 2
-  ragdollImpulse: 1
-  upwardImpulse: 1
+  ragdollImpulse: 20
+  upwardImpulse: 10
   torqueImpulse: 1
   sliceForce: 1
   deathType: 1

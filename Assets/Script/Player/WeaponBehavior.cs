@@ -52,11 +52,13 @@ public class WeaponBehavior : MonoBehaviour
         if (sg != null && sg.shotgunDebugVisualize && projectileSpawnPoint != null)
         {
             if (previewLR == null) EnsurePreviewLine();
-            UpdatePreviewSector(projectileSpawnPoint.position,
-                                projectileSpawnPoint.forward,
-                                sg.shotgunRadius,
-                                sg.shotgunAngle,
-                                sg.shotgunDebugColor);
+
+            // 옵션 A: 미리보기 forward를 "플레이어 정면"으로 고정 (Fire_Point 축 영향 제거)
+            var owner = GetComponentInParent<PlayerWeaponController>();
+            Vector3 center = projectileSpawnPoint.position;
+            Vector3 forward = owner != null ? owner.transform.forward : transform.forward;
+
+            UpdatePreviewSector(center, forward, sg.shotgunRadius, sg.shotgunAngle, sg.shotgunDebugColor);
         }
         else
         {
@@ -218,10 +220,15 @@ public class WeaponBehavior : MonoBehaviour
 
         var sg = data as WeaponDataSO_Shotgun;
 
+        // 옵션 A: 실제 스폰 회전을 '플레이어 정면'으로 고정 (Fire_Point 축 영향 제거)
+        var owner = GetComponentInParent<PlayerWeaponController>();
+        Vector3 fwd = owner != null ? owner.transform.forward : transform.forward;
+        Quaternion rot = Quaternion.LookRotation(fwd, Vector3.up);
+
         GameObject sectorGO = Instantiate(
             shotgunSectorPrefab,
             spawnPoint.position,
-            spawnPoint.rotation
+            rot
         );
 
         if (sectorGO.TryGetComponent(out HitBox_PC_Sector sector))
@@ -237,9 +244,9 @@ public class WeaponBehavior : MonoBehaviour
         }
 
         if (sg != null)
-            Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ dmg:{data.damage}, radius:{sg.shotgunRadius}, angle:{sg.shotgunAngle}, life:{data.hitBoxLifetime}");
+            Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ pos@{spawnPoint.name}, forward=Player, dmg:{data.damage}, radius:{sg.shotgunRadius}, angle:{sg.shotgunAngle}, life:{data.hitBoxLifetime}");
         else
-            Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ dmg:{data.damage}, life:{data.hitBoxLifetime}");
+            Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ pos@{spawnPoint.name}, forward=Player, dmg:{data.damage}, life:{data.hitBoxLifetime}");
     }
 
     /* ─────────── LineRenderer 유틸 ─────────── */

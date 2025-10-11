@@ -1,14 +1,19 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 public class HitBox_PC_Projectile : MonoBehaviour
 {
     private float speed;
     private float lifetime;
     private float damage;
-    private float knockbackPower;
     private Vector3 moveDir;
 
     private WeaponDataSO weapon;
+
+    // 🆕 관통 관련
+    private int remainingPierce = 0;
+    private readonly HashSet<EnemyHealth> hitSet = new HashSet<EnemyHealth>();
+
     public void SetWeapon(WeaponDataSO w) => weapon = w;
 
     public void InitializeTowards(Vector3 direction, float dmg, float spd, float life)
@@ -22,6 +27,15 @@ public class HitBox_PC_Projectile : MonoBehaviour
         Debug.Log($"🚀 Projectile Init │ dmg:{damage}, spd:{speed}, life:{lifetime}, moveDir:{moveDir}");
     }
 
+    // 🆕 오버로드: 피어스 카운트까지 설정
+    public void InitializeTowards(Vector3 direction, float dmg, float spd, float life, int pierceCount)
+    {
+        InitializeTowards(direction, dmg, spd, life);
+        remainingPierce = Mathf.Max(0, pierceCount);
+        if (remainingPierce > 0)
+            Debug.Log($"🛡️ Pierce Enabled │ count:{remainingPierce}");
+    }
+
     void Update()
     {
         transform.position += moveDir * speed * Time.deltaTime;
@@ -31,38 +45,53 @@ public class HitBox_PC_Projectile : MonoBehaviour
     {
         if (!other.CompareTag("Enemy")) return;
 
+        // 대상 Health 찾기(중복 타격 방지용 키)
+        var hp = other.GetComponentInParent<EnemyHealth>();
+        if (hp == null)
+        {
+            Debug.LogWarning($"❌ [Projectile] {other.name}에서 EnemyHealth를 찾지 못했습니다.");
+            return;
+        }
+        if (hitSet.Contains(hp))
+            return; // 같은 적의 다른 콜라이더 중복 방지
+
+        // 넉백
         if (other.GetComponentInParent<Enemy>() is Enemy enemy)
         {
             Vector3 knockbackDir = moveDir;
             knockbackDir.y = 0f;
-
-            if (knockbackDir == Vector3.zero)
-            {
-                Debug.LogWarning("❗ moveDir이 0벡터입니다. fallback 적용");
-                knockbackDir = Vector3.back;
-            }
-
+            if (knockbackDir == Vector3.zero) knockbackDir = Vector3.back;
             knockbackDir = knockbackDir.normalized;
 
             Debug.Log($"💥 Projectile 충돌 │ 넉백 방향: {knockbackDir}");
-            enemy.ApplyKnockback(knockbackDir * weapon.knockbackPower, weapon);
+            // 방향만 전달(세기는 EnemyImpact에서 weapon 값 사용)
+            enemy.ApplyKnockback(knockbackDir, weapon);
         }
 
-        // 🔧 Health → EnemyHealth로 변경
-        if (other.GetComponentInParent<EnemyHealth>() is EnemyHealth hp)
+        // 데미지 1회 적용(Projectile 기준)
         {
             Vector3 damageDir = moveDir;
             damageDir.y = 0f;
-            damageDir = damageDir == Vector3.zero ? Vector3.back : damageDir.normalized;
+            if (damageDir == Vector3.zero) damageDir = Vector3.back;
+            damageDir = damageDir.normalized;
 
             hp.ApplyDamage(damage, damageDir, weapon);
             Debug.Log($"✅ [Projectile] EnemyHealth에 {damage} 데미지 적용!");
         }
-        else
+
+        // 관통 처리
+        hitSet.Add(hp);
+        if (remainingPierce <= 0)
         {
-            Debug.LogWarning($"❌ [Projectile] {other.name}에서 EnemyHealth를 찾을 수 없습니다!");
+            Destroy(gameObject);
+            return;
         }
 
-        Destroy(gameObject);
+        remainingPierce--;
+        if (remainingPierce <= 0)
+        {
+            Destroy(gameObject);
+        }
+        // remainingPierce > 0 이면 계속 진행
     }
 }

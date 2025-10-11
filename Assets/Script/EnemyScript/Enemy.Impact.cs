@@ -6,7 +6,7 @@ public class EnemyImpact : MonoBehaviour
 {
     private Coroutine impactRoutine;
 
-    // Soft Knock(슈퍼아머 중) 고정 짧은 시간
+    // Soft Knock(슈퍼아머 중) 기본 시간
     private const float SOFT_KNOCK_DURATION = 0.12f;
     private const float SOFT_KNOCK_POWER_RATIO = 0.5f;
 
@@ -27,27 +27,18 @@ public class EnemyImpact : MonoBehaviour
             impactRoutine = null;
         }
 
-        float damage = weapon != null ? weapon.damage : 0f;
-        if (ctx.TryGetComponent(out EnemyHealth health))
-        {
-            health.ApplyDamage(damage, hitDir, weapon, impactScale);
+        // ✅ 데미지는 여기서 적용하지 않음(중복 방지). 힛박스/프로젝타일에서 1회만 적용.
 
-            // 데미지로 인해 사망 또는 실드브레이크 진입했다면 추가 처리 불필요
-            if (ctx.CurrentState == Enemy.EnemyState.Dead ||
-                ctx.CurrentState == Enemy.EnemyState.ShieldBreak)
-            {
-                return;
-            }
-        }
-
+        // ✅ 거리 감쇠(weight) 적용: 파워/지속/스턴 모두
         float knockbackPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
-        float knockbackDuration = weapon != null ? weapon.knockbackDuration : 0.1f;
-        float stunDuration = weapon != null ? weapon.stunDuration : 0f;
+        float knockbackDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
+        float stunDuration = weapon != null ? weapon.stunDuration * impactScale : 0f;
 
-        // SuperArmor(SoftKnock) 처리: 회전 제외
+        // SuperArmor(SoftKnock) 처리: 회전 제외, 시간/파워도 감쇠 반영
         if (ctx.HasSuperArmor)
         {
-            impactRoutine = StartCoroutine(SoftKnockRoutine(ctx, hitDir, knockbackPower));
+            float softDuration = SOFT_KNOCK_DURATION * Mathf.Max(impactScale, 0f);
+            impactRoutine = StartCoroutine(SoftKnockRoutine(ctx, hitDir, knockbackPower, softDuration));
             return;
         }
 
@@ -89,17 +80,17 @@ public class EnemyImpact : MonoBehaviour
         ctx.transform.rotation = Quaternion.LookRotation(look, Vector3.up);
     }
 
-    private IEnumerator SoftKnockRoutine(Enemy ctx, Vector3 hitDir, float power)
+    private IEnumerator SoftKnockRoutine(Enemy ctx, Vector3 hitDir, float power, float duration)
     {
         Vector3 dir = hitDir.normalized;
         dir.y = 0f;
         float elapsed = 0f;
 
-        while (elapsed < SOFT_KNOCK_DURATION && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
+        while (elapsed < duration && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
         {
             if (ctx.agent != null && ctx.agent.isOnNavMesh)
             {
-                float t = elapsed / SOFT_KNOCK_DURATION;
+                float t = elapsed / Mathf.Max(duration, 0.0001f);
                 float current = Mathf.Lerp(power * SOFT_KNOCK_POWER_RATIO, 0f, t);
                 ctx.agent.isStopped = true;
                 ctx.agent.velocity = dir * current;

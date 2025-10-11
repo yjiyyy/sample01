@@ -33,6 +33,13 @@ public class EnemyDetector : MonoBehaviour
         var d = weaponBehavior != null ? weaponBehavior.data : null;
         bool showFOV = d is WeaponDataSO_Gun || d is WeaponDataSO_Launcher;
 
+        // 🆕 Gun SO와 시각화 동기화
+        if (d is WeaponDataSO_Gun g)
+        {
+            viewAngle = Mathf.Clamp(g.aimScanAngle * 0.5f, 0f, 180f);
+            viewDistance = Mathf.Max(0f, g.aimScanDistance);
+        }
+
         if (showFOV)
         {
             DrawFOV();
