@@ -47,8 +47,12 @@ public class WeaponBehavior : MonoBehaviour
 
     void LateUpdate()
     {
-        if (data != null
-            && data.weaponCategory == WeaponCategory.Shotgun
+        // ── 타입 우선(신규 SO) + 레거시(category) 병행 지원 ──
+        bool isShotgunType = data is WeaponDataSO_Shotgun;
+        bool isShotgunLegacy = data != null && data.weaponCategory == WeaponCategory.Shotgun;
+
+        if ((isShotgunType || isShotgunLegacy)
+            && data != null
             && data.shotgunDebugVisualize
             && projectileSpawnPoint != null)
         {
@@ -81,6 +85,29 @@ public class WeaponBehavior : MonoBehaviour
         if (data.hitboxSpawnDelay > 0f)
             yield return new WaitForSeconds(data.hitboxSpawnDelay);
 
+        // ── 타입 우선(신규 SO) ──
+        if (data is WeaponDataSO_Melee)
+        {
+            SpawnMeleeHitbox();
+            yield break;
+        }
+        if (data is WeaponDataSO_Gun)
+        {
+            SpawnProjectile();
+            yield break;
+        }
+        if (data is WeaponDataSO_Shotgun)
+        {
+            SpawnShotgunSector();
+            yield break;
+        }
+        if (data is WeaponDataSO_Launcher)
+        {
+            SpawnProjectile();
+            yield break;
+        }
+
+        // ── 레거시(카테고리) 호환 ──
         switch (data.weaponCategory)
         {
             case WeaponCategory.None:

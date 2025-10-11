@@ -45,11 +45,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 694f5e900f31199479729c357cd73c40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  data: {fileID: 11400000, guid: 40df4ec8a1dc3f349aecc4c813cd2c65, type: 2}
+  data: {fileID: 11400000, guid: 35acc212ed499b749806d3ec27951d41, type: 2}
   meleeSpawnPoint: {fileID: 0}
   projectileSpawnPoint: {fileID: 0}
   meleeHitboxPrefab: {fileID: 4874105736294604296, guid: 0d26afa0cfa1f7c448bd54a078bfae5a, type: 3}
   projectilePrefab: {fileID: 0}
+  shotgunSectorPrefab: {fileID: 0}
 --- !u!1001 &6179985960989466462
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -9,26 +9,26 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2bf06ad5ad766ce4698b6ffb54d63f4b, type: 3}
-  m_Name: Weapon_Gun
+  m_Script: {fileID: 11500000, guid: 7788451254e4c054eaa62791988c9e6e, type: 3}
+  m_Name: SO_P_Melee_Bat
   m_EditorClassIdentifier: 
-  weaponName: Gun
-  overrideController: {fileID: 0}
+  weaponName: Bat
+  overrideController: {fileID: 22100000, guid: 099b929ec6ee5be4a86e28139553bee6, type: 2}
   cooldown: 0.5
-  damage: 100
+  damage: 50
   range: 2.5
   projectileCount: 1
-  isMelee: 0
+  isMelee: 1
   AutoAttackDelay: 0.3
-  hitBoxLifetime: 5
+  hitBoxLifetime: 0.1
   criticalChance: 0
   aoeRadius: 0
-  hitboxSpawnDelay: 0
-  knockbackDuration: 0.1
-  knockbackPower: 5
-  jerkIntensity: 3
+  hitboxSpawnDelay: 0.2
+  knockbackDuration: 0.2
+  knockbackPower: 1
+  jerkIntensity: 1
   jerkDuration: 0.2
-  stunDuration: 0
+  stunDuration: 1
   projectileLifetime: 5
   projectileSpeed: 10
   pierceCount: 0
@@ -37,13 +37,13 @@ MonoBehaviour:
   explosiveEdgeMul: 0.2
   viewAngle: 45
   viewDistance: 10
-  ragdollImpulse: 2
-  upwardImpulse: 2
-  torqueImpulse: 1
-  sliceForce: 5
-  deathType: 2
-  possibleSliceParts: 010000000200000003000000040000000500000006000000
-  weaponCategory: 2
+  ragdollImpulse: 5
+  upwardImpulse: 3
+  torqueImpulse: 6
+  sliceForce: 8
+  deathType: 1
+  possibleSliceParts: 
+  weaponCategory: 1
   shotgunRadius: 5
   shotgunAngle: 30
   shotgunUseDistanceFalloff: 1

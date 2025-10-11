@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 694f5e900f31199479729c357cd73c40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  data: {fileID: 11400000, guid: 2fe9a51ee9b5d20459b2daf351a8b49e, type: 2}
+  data: {fileID: 11400000, guid: 4fea67bffc1b3aa418d2b0ff14aa7cbc, type: 2}
   meleeSpawnPoint: {fileID: 0}
   projectileSpawnPoint: {fileID: 0}
   meleeHitboxPrefab: {fileID: 1988047932026333537, guid: 4f98ed13c83d79348b3d04aa2cd0e190, type: 3}

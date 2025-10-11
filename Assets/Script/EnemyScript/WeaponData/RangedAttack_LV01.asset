@@ -24,7 +24,7 @@ MonoBehaviour:
   attackClip: {fileID: 6278773632897307500, guid: c20442864b0d51f48b8dd4db21b28a20, type: 3}
   projectilePrefab: {fileID: 6626674491948835119, guid: 5b4de342874f2ed4f9b50f9ec41e5d37, type: 3}
   firePointName: Fire_Point_Head
-  movementType: 1
+  movementType: 0
   projectileSpeed: 7
   projectileLifetime: 10
   arcHeight: 5
