@@ -13,23 +13,25 @@ MonoBehaviour:
   m_Name: SO_P_Gun_Base
   m_EditorClassIdentifier: 
   weaponName: Gun_Base
-  overrideController: {fileID: 0}
+  overrideController: {fileID: 22100000, guid: c4ecbdf1ac950334a81e5c66d1b9e96d, type: 2}
   cooldown: 0.5
   damage: 100
   range: 2.5
-  hitboxSpawnDelay: 0
+  hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.2
-  knockbackDuration: 0.2
+  knockbackDuration: 0.5
   knockbackPower: 2
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 2
-  ragdollImpulse: 5
+  ragdollImpulse: 20
   upwardImpulse: 3
   torqueImpulse: 6
   sliceForce: 8
   deathType: 1
   possibleSliceParts: 
   projectileLifetime: 5
-  projectileSpeed: 10
-  pierceCount: 0
+  projectileSpeed: 20
+  pierceCount: 3
+  aimScanAngle: 90
+  aimScanDistance: 10

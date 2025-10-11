@@ -5,21 +5,33 @@ using System.Collections.Generic;
 public class EnemyDetector : MonoBehaviour
 {
     [Header("시야 설정")]
-    public float viewAngle = 45f;
+    [Tooltip("반각(deg). 실제 시야각은 이 값의 두 배입니다.")]
+    public float viewAngle = 45f; // 반각
     public float viewDistance = 10f;
     public int segmentCount = 30;
 
     [Header("시각화 y 오프셋")]
-    public float height = 0.8f; // Inspector에서 바로 조정 가능
+    public float height = 0.8f;
 
-    [Header("무기 상태")]
-    public WeaponBehavior weaponBehavior; // 연결 필수
+    [Header("무기 상태(시각화 연동)")]
+    public WeaponBehavior weaponBehavior; // 자동 주입 권장
+
+    [Header("감지(물리 스캔)")]
+    [Tooltip("물리 스캔으로 적 감지 수행")]
+    public bool usePhysicsScan = true;
+    [Tooltip("감지 대상 레이어 (기본: 전부). Enemy 태그로도 최종 필터링합니다.")]
+    public LayerMask enemyLayers = ~0;
+    [Tooltip("정렬: 거리 우선, 다음으로 시야 중심과의 각도 우선")]
+    public bool sortByCenterBias = true;
 
     private Mesh viewMesh;
     private MeshFilter meshFilter;
 
-    // ✅ 현재 감지된 적 리스트
-    private List<Transform> detectedEnemies = new List<Transform>();
+    // 현재 감지된 적 리스트(최적 타겟이 0번)
+    private readonly List<Transform> detectedEnemies = new List<Transform>();
+
+    // NonAlloc 버퍼
+    private static readonly Collider[] OverlapBuffer = new Collider[256];
 
     void Awake()
     {
@@ -33,13 +45,20 @@ public class EnemyDetector : MonoBehaviour
         var d = weaponBehavior != null ? weaponBehavior.data : null;
         bool showFOV = d is WeaponDataSO_Gun || d is WeaponDataSO_Launcher;
 
-        // 🆕 Gun SO와 시각화 동기화
+        // Gun SO에 시야 파라미터가 있으면 동기화(없으면 인스펙터 값 사용)
         if (d is WeaponDataSO_Gun g)
         {
-            viewAngle = Mathf.Clamp(g.aimScanAngle * 0.5f, 0f, 180f);
-            viewDistance = Mathf.Max(0f, g.aimScanDistance);
+            // aimScanAngle: 전체각이라고 가정 → 반각으로 변환
+            float half = Mathf.Clamp(g.aimScanAngle * 0.5f, 0f, 180f);
+            if (half > 0f) viewAngle = half;
+            if (g.aimScanDistance > 0f) viewDistance = g.aimScanDistance;
         }
 
+        // 감지 갱신
+        if (usePhysicsScan)
+            RefreshDetection();
+
+        // FOV 시각화
         if (showFOV)
         {
             DrawFOV();
@@ -47,8 +66,81 @@ public class EnemyDetector : MonoBehaviour
         }
         else
         {
-            viewMesh.Clear(); // 총/런처가 아니면 안보이게
+            viewMesh.Clear();
         }
+    }
+
+    private void RefreshDetection()
+    {
+        detectedEnemies.Clear();
+
+        int count = Physics.OverlapSphereNonAlloc(transform.position, viewDistance, OverlapBuffer, enemyLayers, QueryTriggerInteraction.Ignore);
+        if (count <= 0) return;
+
+        Vector3 origin = transform.position;
+
+        // 수평 forward
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
+        forward.Normalize();
+
+        float halfAngle = Mathf.Clamp(viewAngle, 0f, 180f);
+
+        // 임시 후보와 메트릭 저장
+        var candidates = new List<(Transform t, float dist, float ang)>(count);
+        var seen = new HashSet<Transform>();
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider col = OverlapBuffer[i];
+            if (col == null) continue;
+
+            Transform root = col.transform;
+
+            // Enemy 태그 부모까지 탐색
+            if (!root.CompareTag("Enemy"))
+            {
+                var p = root.GetComponentInParent<Transform>();
+                if (p == null || !p.CompareTag("Enemy")) continue;
+                root = p;
+            }
+
+            if (!seen.Add(root)) continue;
+
+            Vector3 to = root.position - origin;
+            float dist = to.magnitude;
+            if (dist <= 0.0001f || dist > viewDistance) continue;
+
+            // 수평 각도
+            to.y = 0f;
+            if (to.sqrMagnitude < 0.0001f) continue;
+            to.Normalize();
+
+            float ang = Vector3.Angle(forward, to);
+            if (ang > halfAngle) continue;
+
+            candidates.Add((root, dist, ang));
+        }
+
+        if (candidates.Count == 0) return;
+
+        if (sortByCenterBias)
+        {
+            candidates.Sort((a, b) =>
+            {
+                int c = a.dist.CompareTo(b.dist);
+                if (c != 0) return c;
+                return a.ang.CompareTo(b.ang);
+            });
+        }
+        else
+        {
+            candidates.Sort((a, b) => a.dist.CompareTo(b.dist));
+        }
+
+        foreach (var c in candidates)
+            detectedEnemies.Add(c.t);
     }
 
     void DrawFOV()
@@ -56,10 +148,10 @@ public class EnemyDetector : MonoBehaviour
         Vector3[] vertices = new Vector3[segmentCount + 2];
         int[] triangles = new int[segmentCount * 3];
 
-        // y축 오프셋 적용
+        // 중심(로컬) + y오프셋
         vertices[0] = new Vector3(0, height, 0);
 
-        float angleStep = viewAngle * 2 / segmentCount;
+        float angleStep = viewAngle * 2f / Mathf.Max(1, segmentCount);
 
         for (int i = 0; i <= segmentCount; i++)
         {
@@ -71,7 +163,7 @@ public class EnemyDetector : MonoBehaviour
 
         for (int i = 0; i < segmentCount; i++)
         {
-            triangles[i * 3] = 0;
+            triangles[i * 3 + 0] = 0;
             triangles[i * 3 + 1] = i + 1;
             triangles[i * 3 + 2] = i + 2;
         }
@@ -81,42 +173,33 @@ public class EnemyDetector : MonoBehaviour
         viewMesh.triangles = triangles;
     }
 
-    /* ───────── 감지 기능 ───────── */
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Enemy"))
-        {
-            Transform enemy = other.transform;
-            if (!detectedEnemies.Contains(enemy))
-                detectedEnemies.Add(enemy);
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.CompareTag("Enemy"))
-        {
-            Transform enemy = other.transform;
-            if (detectedEnemies.Contains(enemy))
-                detectedEnemies.Remove(enemy);
-        }
-    }
-
+    // ───────── 감지 결과 제공 ─────────
     /// <summary>
-    /// 지정한 범위 내의 적들 반환
+    /// range 이내의 적 목록(최적 타겟이 0번). 내부에서 최신 스캔을 보장합니다.
     /// </summary>
     public List<Transform> GetEnemiesInRange(float range)
     {
+        if (usePhysicsScan)
+            RefreshDetection();
+
         List<Transform> result = new List<Transform>();
-
-        foreach (var enemy in detectedEnemies)
+        for (int i = 0; i < detectedEnemies.Count; i++)
         {
-            if (enemy == null) continue;
-            float dist = Vector3.Distance(transform.position, enemy.position);
-            if (dist <= range)
-                result.Add(enemy);
+            var t = detectedEnemies[i];
+            if (t == null) continue;
+            if (Vector3.Distance(transform.position, t.position) <= range)
+                result.Add(t);
         }
-
         return result;
+    }
+
+    // 기존 트리거 방식은 더 이상 필요 없지만, 혹시 사용할 수 있도록 남겨둠
+    private void OnTriggerEnter(Collider other)
+    {
+        // 미사용
+    }
+    private void OnTriggerExit(Collider other)
+    {
+        // 미사용
     }
 }

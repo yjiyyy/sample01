@@ -19,6 +19,28 @@ public class HitBox_PC_Sector : MonoBehaviour
     /// <summary>무기 SO 주입용</summary>
     private WeaponDataSO weapon;
 
+    // 🆕 forward 스냅샷 오버라이드
+    private bool hasForwardOverride = false;
+    private Vector3 forwardOverride;
+
+    /// <summary>
+    /// 샷건 판정에 사용할 forward를 "스냅샷"으로 고정.
+    /// transform.forward 대신 이 값만 사용해서 프리뷰-실제 판정 기준을 일치시킨다.
+    /// </summary>
+    public void SetForwardOverride(Vector3 fwd)
+    {
+        fwd.y = 0f;
+        if (fwd.sqrMagnitude > 0.0001f)
+        {
+            hasForwardOverride = true;
+            forwardOverride = fwd.normalized;
+        }
+        else
+        {
+            hasForwardOverride = false;
+        }
+    }
+
     public void Initialize(float dmg, float rad, float kbPower, float life)
     {
         damage = dmg;
@@ -26,7 +48,7 @@ public class HitBox_PC_Sector : MonoBehaviour
         knockbackPower = kbPower;
         lifetime = life;
 
-        Debug.Log($"[HitBox] Init(Shotgun Sector) │ dmg:{damage}, kb:{knockbackPower}, r:{radius}");
+        Debug.Log($"[HitBox] Init(Shotgun Sector) │ dmg:{damage}, kb:{knockbackPower}, r:{radius}, hasFwdOverride:{hasForwardOverride}");
         Destroy(gameObject, lifetime);
 
         // 근접과 동일하게 "스폰 즉시" 1회 판정
@@ -38,7 +60,13 @@ public class HitBox_PC_Sector : MonoBehaviour
     private void DoHit()
     {
         Vector3 origin = transform.position;
-        Vector3 forward = transform.forward;
+
+        Vector3 baseForward = hasForwardOverride && forwardOverride.sqrMagnitude > 0.0001f
+            ? forwardOverride
+            : transform.forward;
+
+        baseForward.y = 0f;
+        if (baseForward.sqrMagnitude < 0.0001f) baseForward = Vector3.forward;
 
         var sg = weapon as WeaponDataSO_Shotgun;
         float angle = sg != null ? sg.shotgunAngle : 90f;
@@ -49,14 +77,18 @@ public class HitBox_PC_Sector : MonoBehaviour
 
         foreach (var col in cols)
         {
-            if (!col.CompareTag("Enemy")) continue;
+            if (!col || !col.CompareTag("Enemy")) continue;
 
             Vector3 toTarget = col.bounds.center - origin;
             float dist = toTarget.magnitude;
             if (dist <= Mathf.Epsilon || dist > radius) continue;
 
-            Vector3 dir = toTarget.normalized;
-            float ang = Vector3.Angle(forward, dir);
+            Vector3 dir = toTarget;
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.0001f) continue;
+            dir.Normalize();
+
+            float ang = Vector3.Angle(baseForward, dir);
             if (ang > halfAngle) continue;
 
             // 거리감쇠 가중치
@@ -67,18 +99,14 @@ public class HitBox_PC_Sector : MonoBehaviour
                 weight = Mathf.Lerp(sg.shotgunFalloffMin, 1f, norm);
             }
 
-            float finalKb = knockbackPower * weight;
             float finalDmg = damage * weight;
 
             if (col.GetComponentInParent<Enemy>() is Enemy enemy)
             {
                 Vector3 knockDir = dir; knockDir.y = 0f;
-
-                // ✅ 넉백/스턴 시간·세기 모두 weight 적용 (impactScale=weight)
-                enemy.ApplyKnockback(knockDir, weapon, weight);
+                enemy.ApplyKnockback(knockDir, weapon, weight); // impactScale=weight
             }
 
-            // ✅ 데미지 1회만(여기서만) 적용
             if (col.GetComponentInParent<EnemyHealth>() is EnemyHealth hp)
             {
                 Vector3 hitDir = dir;
