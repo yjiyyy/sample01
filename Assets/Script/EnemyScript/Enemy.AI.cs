@@ -35,8 +35,6 @@ public class EnemyAI : MonoBehaviour
 
     // Backstep 플래그
     private bool backstepping;
-    // 공격 중 여부 플래그 (향후 확장 대비)
-    private bool inAttackAnim;
 
     private float signedForwardSpeed; // +0~+1 로 서서히 보간
     private float forwardSpeedLerpT;
@@ -390,7 +388,6 @@ public class EnemyAI : MonoBehaviour
 
     public void OnAttackStarted(Enemy ctx)
     {
-        inAttackAnim = true;
         ctx.animCtrl?.SetSignedSpeed(0f);
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
@@ -398,7 +395,6 @@ public class EnemyAI : MonoBehaviour
 
     public void InterruptAttack()
     {
-        inAttackAnim = false;
         if (backstepping)
             CancelBackstep();
     }

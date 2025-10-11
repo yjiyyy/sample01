@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEngine;
 
 [CustomEditor(typeof(WeaponDataSO_Shotgun))]
 public class WeaponDataSO_ShotgunEditor : Editor
@@ -44,14 +43,6 @@ public class WeaponDataSO_ShotgunEditor : Editor
         Draw("torqueImpulse");
         Draw("sliceForce");
         EditorGUILayout.PropertyField(serializedObject.FindProperty("possibleSliceParts"), true);
-
-        EditorGUILayout.Space();
-        DrawHeader("기타(읽기전용 상태)");
-        EditorGUI.BeginDisabledGroup(true);
-        EditorGUILayout.EnumPopup("weaponCategory", WeaponCategory.Shotgun);
-        EditorGUILayout.Toggle("isMelee", false);
-        EditorGUILayout.Toggle("isExplosiveProjectile", false);
-        EditorGUI.EndDisabledGroup();
 
         serializedObject.ApplyModifiedProperties();
     }

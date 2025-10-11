@@ -25,6 +25,8 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
     private float cachedLifetime, cachedSpeed, cachedDamage, cachedRadius, cachedEdgeMul;
     private float lifeTimer;
 
+    private WeaponDataSO_Launcher launcherData;
+
     private static readonly Collider[] Overlap = new Collider[256];
 
     private const float DEF_LIFETIME = 5f;
@@ -42,19 +44,20 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
     public void Initialize(WeaponDataSO data, Vector3 forward)
     {
         weaponData = data;
+        launcherData = data as WeaponDataSO_Launcher;
         launchForward = forward;
 
-        cachedLifetime = data != null ? data.projectileLifetime : DEF_LIFETIME;
-        cachedSpeed = data != null ? data.projectileSpeed : DEF_SPEED;
+        cachedLifetime = launcherData != null ? launcherData.projectileLifetime : DEF_LIFETIME;
+        cachedSpeed = launcherData != null ? launcherData.projectileSpeed : DEF_SPEED;
         cachedDamage = data != null ? data.damage : DEF_DAMAGE;
-        cachedRadius = data != null ? data.explosiveRadius : DEF_RADIUS;
-        cachedEdgeMul = data != null ? data.explosiveEdgeMul : DEF_EDGE;
+        cachedRadius = launcherData != null ? launcherData.explosiveRadius : DEF_RADIUS;
+        cachedEdgeMul = launcherData != null ? launcherData.explosiveEdgeMul : DEF_EDGE;
 
         initialized = true;
         hasExploded = false;
         lifeTimer = 0f;
 
-        // 원본과 맞추기: Lifetime이 지나면 Destroy
+        // Lifetime이 지나면 Destroy
         Destroy(gameObject, cachedLifetime);
     }
 
@@ -69,7 +72,7 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
         }
         else
         {
-            // ✅ 원본(직선 투사체)과 동일한 방식으로 이동
+            // 직선 이동
             transform.position += launchForward * cachedSpeed * Time.deltaTime;
         }
     }
@@ -99,7 +102,8 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
             bool isEnemy = target.CompareTag("Enemy");
             bool isPlayer = target.CompareTag("Player");
 
-            switch (weaponData.damageTargetType)
+            DamageTargetType tgt = launcherData != null ? launcherData.damageTargetType : DamageTargetType.EnemyOnly;
+            switch (tgt)
             {
                 case DamageTargetType.EnemyOnly:
                     if (!isEnemy) continue;

@@ -5,7 +5,7 @@
 /// - 스폰 시 Initialize로 dmg/radius/knockbackPower/lifetime 주입
 /// - SetWeapon으로 WeaponDataSO 주입
 /// - 스폰 즉시 1회 판정(근접과 동일한 즉시형)
-/// - 거리감쇠는 WeaponDataSO의 옵션 사용
+/// - 거리감쇠는 Shotgun 전용 옵션 사용
 /// - 게임뷰 표시: LineRenderer로 "실제 섹터"를 일정 시간 표시
 /// </summary>
 public class HitBox_PC_Sector : MonoBehaviour
@@ -47,7 +47,10 @@ public class HitBox_PC_Sector : MonoBehaviour
     {
         Vector3 origin = transform.position;
         Vector3 forward = transform.forward;
-        float halfAngle = (weapon != null ? weapon.shotgunAngle : 90f) * 0.5f;
+
+        var sg = weapon as WeaponDataSO_Shotgun;
+        float angle = sg != null ? sg.shotgunAngle : 90f;
+        float halfAngle = angle * 0.5f;
 
         // 반경 내 후보 수집(모든 레이어 → Tag로 필터)
         Collider[] cols = Physics.OverlapSphere(origin, radius, ~0, QueryTriggerInteraction.Ignore);
@@ -68,10 +71,10 @@ public class HitBox_PC_Sector : MonoBehaviour
 
             // 거리감쇠 가중치
             float weight = 1f;
-            if (weapon != null && weapon.shotgunUseDistanceFalloff && radius > 0.01f)
+            if (sg != null && sg.shotgunUseDistanceFalloff && radius > 0.01f)
             {
                 float norm = Mathf.Clamp01(1f - (dist / radius)); // 가까울수록 1
-                weight = Mathf.Lerp(weapon.shotgunFalloffMin, 1f, norm);
+                weight = Mathf.Lerp(sg.shotgunFalloffMin, 1f, norm);
             }
 
             float finalKb = knockbackPower * weight;
@@ -97,9 +100,9 @@ public class HitBox_PC_Sector : MonoBehaviour
         }
 
         // 공격 시 "실제 섹터"를 다른 색으로 잠깐 보여줌
-        if (actualLR != null && weapon != null && weapon.shotgunDebugVisualize)
+        if (actualLR != null && sg != null && sg.shotgunDebugVisualize)
         {
-            UpdateActualSector(origin, forward, radius, weapon.shotgunAngle, weapon.shotgunDebugActualColor);
+            UpdateActualSector(origin, forward, radius, sg.shotgunAngle, sg.shotgunDebugActualColor);
             // LineRenderer는 이 오브젝트의 lifetime 동안 보였다가 함께 제거됨
         }
         else if (actualLR != null)

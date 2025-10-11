@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEngine;
 
 [CustomEditor(typeof(WeaponDataSO_Gun))]
 public class WeaponDataSO_GunEditor : Editor
@@ -18,7 +17,6 @@ public class WeaponDataSO_GunEditor : Editor
 
         EditorGUILayout.Space();
         DrawHeader("투사체");
-        Draw("projectileCount");
         Draw("projectileSpeed");
         Draw("projectileLifetime");
         Draw("pierceCount");
@@ -36,11 +34,6 @@ public class WeaponDataSO_GunEditor : Editor
         Draw("jerkDuration");
 
         EditorGUILayout.Space();
-        DrawHeader("시야(FOV 표시용, 선택)");
-        Draw("viewAngle");
-        Draw("viewDistance");
-
-        EditorGUILayout.Space();
         DrawHeader("처치 연출");
         Draw("deathType");
         Draw("ragdollImpulse");
@@ -48,14 +41,6 @@ public class WeaponDataSO_GunEditor : Editor
         Draw("torqueImpulse");
         Draw("sliceForce");
         EditorGUILayout.PropertyField(serializedObject.FindProperty("possibleSliceParts"), true);
-
-        EditorGUILayout.Space();
-        DrawHeader("기타(읽기전용 상태)");
-        EditorGUI.BeginDisabledGroup(true);
-        EditorGUILayout.EnumPopup("weaponCategory", WeaponCategory.Gun);
-        EditorGUILayout.Toggle("isMelee", false);
-        EditorGUILayout.Toggle("isExplosiveProjectile", false);
-        EditorGUI.EndDisabledGroup();
 
         serializedObject.ApplyModifiedProperties();
     }

@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEngine;
 
 [CustomEditor(typeof(WeaponDataSO_Melee))]
 public class WeaponDataSO_MeleeEditor : Editor
@@ -37,13 +36,6 @@ public class WeaponDataSO_MeleeEditor : Editor
         Draw("torqueImpulse");
         Draw("sliceForce");
         EditorGUILayout.PropertyField(serializedObject.FindProperty("possibleSliceParts"), true);
-
-        EditorGUILayout.Space();
-        DrawHeader("기타(읽기전용 상태)");
-        EditorGUI.BeginDisabledGroup(true);
-        EditorGUILayout.EnumPopup("weaponCategory", WeaponCategory.Bat);
-        EditorGUILayout.Toggle("isMelee", true);
-        EditorGUI.EndDisabledGroup();
 
         serializedObject.ApplyModifiedProperties();
     }

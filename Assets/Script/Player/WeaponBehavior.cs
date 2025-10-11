@@ -47,21 +47,16 @@ public class WeaponBehavior : MonoBehaviour
 
     void LateUpdate()
     {
-        // ── 타입 우선(신규 SO) + 레거시(category) 병행 지원 ──
-        bool isShotgunType = data is WeaponDataSO_Shotgun;
-        bool isShotgunLegacy = data != null && data.weaponCategory == WeaponCategory.Shotgun;
-
-        if ((isShotgunType || isShotgunLegacy)
-            && data != null
-            && data.shotgunDebugVisualize
-            && projectileSpawnPoint != null)
+        // ── 타입 기반: 샷건 미리보기 ──
+        var sg = data as WeaponDataSO_Shotgun;
+        if (sg != null && sg.shotgunDebugVisualize && projectileSpawnPoint != null)
         {
             if (previewLR == null) EnsurePreviewLine();
             UpdatePreviewSector(projectileSpawnPoint.position,
                                 projectileSpawnPoint.forward,
-                                data.shotgunRadius,
-                                data.shotgunAngle,
-                                data.shotgunDebugColor);
+                                sg.shotgunRadius,
+                                sg.shotgunAngle,
+                                sg.shotgunDebugColor);
         }
         else
         {
@@ -85,7 +80,7 @@ public class WeaponBehavior : MonoBehaviour
         if (data.hitboxSpawnDelay > 0f)
             yield return new WaitForSeconds(data.hitboxSpawnDelay);
 
-        // ── 타입 우선(신규 SO) ──
+        // ── 타입 기반 ──
         if (data is WeaponDataSO_Melee)
         {
             SpawnMeleeHitbox();
@@ -107,26 +102,8 @@ public class WeaponBehavior : MonoBehaviour
             yield break;
         }
 
-        // ── 레거시(카테고리) 호환 ──
-        switch (data.weaponCategory)
-        {
-            case WeaponCategory.None:
-            case WeaponCategory.Bat:
-                SpawnMeleeHitbox();
-                break;
-
-            case WeaponCategory.Gun:
-                SpawnProjectile();
-                break;
-
-            case WeaponCategory.Shotgun:
-                SpawnShotgunSector();
-                break;
-
-            case WeaponCategory.Launcher:
-                SpawnProjectile();
-                break;
-        }
+        // 기본(안전) 처리: 근접으로 간주
+        SpawnMeleeHitbox();
     }
 
     private void SpawnMeleeHitbox()
@@ -190,18 +167,34 @@ public class WeaponBehavior : MonoBehaviour
 
         if (bulletGO.TryGetComponent(out HitBox_PC_Projectile_Sector sectorProj))
         {
+            // Launcher 폭발 투사체 전용
             sectorProj.Initialize(this.data, shootDir);
             return;
         }
 
         if (bulletGO.TryGetComponent(out HitBox_PC_Projectile proj))
         {
+            // 일반 총알(직선)
             proj.SetWeapon(this.data);
+
+            float spd = 10f, life = 5f;
+            if (data is WeaponDataSO_Gun g)
+            {
+                spd = g.projectileSpeed;
+                life = g.projectileLifetime;
+            }
+            else if (data is WeaponDataSO_Launcher l)
+            {
+                // 런처가 직선 탄환 프리팹을 사용할 수도 있으니 가드
+                spd = l.projectileSpeed;
+                life = l.projectileLifetime;
+            }
+
             proj.InitializeTowards(
                 shootDir,
                 data.damage,
-                data.projectileSpeed,
-                data.projectileLifetime
+                spd,
+                life
             );
             return;
         }
@@ -223,6 +216,8 @@ public class WeaponBehavior : MonoBehaviour
         if (projectileSpawnPoint == null)
             Debug.LogWarning("[WeaponBehavior] projectileSpawnPoint(Fire_Point)가 비어 있어 다른 위치로 대체합니다.");
 
+        var sg = data as WeaponDataSO_Shotgun;
+
         GameObject sectorGO = Instantiate(
             shotgunSectorPrefab,
             spawnPoint.position,
@@ -232,15 +227,19 @@ public class WeaponBehavior : MonoBehaviour
         if (sectorGO.TryGetComponent(out HitBox_PC_Sector sector))
         {
             sector.SetWeapon(data);
+            float radius = sg != null ? sg.shotgunRadius : 5f;
             sector.Initialize(
                 data.damage,
-                data.shotgunRadius,
+                radius,
                 data.knockbackPower,
                 data.hitBoxLifetime
             );
         }
 
-        Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ dmg:{data.damage}, radius:{data.shotgunRadius}, angle:{data.shotgunAngle}, life:{data.hitBoxLifetime}");
+        if (sg != null)
+            Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ dmg:{data.damage}, radius:{sg.shotgunRadius}, angle:{sg.shotgunAngle}, life:{data.hitBoxLifetime}");
+        else
+            Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ dmg:{data.damage}, life:{data.hitBoxLifetime}");
     }
 
     /* ─────────── LineRenderer 유틸 ─────────── */

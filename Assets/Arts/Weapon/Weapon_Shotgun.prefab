@@ -47,7 +47,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   data: {fileID: 11400000, guid: b8500695101ee304f99b6e43d6f46df5, type: 2}
-  meleeSpawnPoint: {fileID: 330341601666460069}
+  meleeSpawnPoint: {fileID: 0}
   projectileSpawnPoint: {fileID: 330341601666460069}
   meleeHitboxPrefab: {fileID: 0}
   projectilePrefab: {fileID: 0}

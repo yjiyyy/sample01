@@ -30,14 +30,17 @@ public class EnemyDetector : MonoBehaviour
 
     void LateUpdate()
     {
-        if (weaponBehavior != null && weaponBehavior.data != null && !weaponBehavior.data.isMelee)
+        var d = weaponBehavior != null ? weaponBehavior.data : null;
+        bool showFOV = d is WeaponDataSO_Gun || d is WeaponDataSO_Launcher;
+
+        if (showFOV)
         {
             DrawFOV();
             meshFilter.mesh = viewMesh;
         }
         else
         {
-            viewMesh.Clear(); // 총 아니면 안보이게
+            viewMesh.Clear(); // 총/런처가 아니면 안보이게
         }
     }
 

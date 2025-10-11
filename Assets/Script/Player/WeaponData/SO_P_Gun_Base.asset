@@ -12,43 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e994ae4a4936deb43b2ab49330ac05e8, type: 3}
   m_Name: SO_P_Gun_Base
   m_EditorClassIdentifier: 
-  weaponName: Gun
+  weaponName: Gun_Base
   overrideController: {fileID: 0}
   cooldown: 0.5
   damage: 100
   range: 2.5
-  projectileCount: 1
-  isMelee: 0
-  AutoAttackDelay: 0.3
-  hitBoxLifetime: 0.2
-  criticalChance: 0
-  aoeRadius: 0
   hitboxSpawnDelay: 0
+  hitBoxLifetime: 0.2
   knockbackDuration: 0.2
   knockbackPower: 2
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 2
-  projectileLifetime: 5
-  projectileSpeed: 10
-  pierceCount: 0
-  isExplosiveProjectile: 0
-  explosiveRadius: 3
-  explosiveEdgeMul: 0.2
-  viewAngle: 45
-  viewDistance: 10
   ragdollImpulse: 5
   upwardImpulse: 3
   torqueImpulse: 6
   sliceForce: 8
   deathType: 1
   possibleSliceParts: 
-  weaponCategory: 2
-  shotgunRadius: 5
-  shotgunAngle: 30
-  shotgunUseDistanceFalloff: 1
-  shotgunFalloffMin: 0.2
-  shotgunDebugVisualize: 1
-  shotgunDebugColor: {r: 1, g: 0.6, b: 0, a: 0.25}
-  shotgunDebugActualColor: {r: 0, g: 1, b: 0, a: 0.25}
-  damageTargetType: 0
+  projectileLifetime: 5
+  projectileSpeed: 10
+  pierceCount: 0

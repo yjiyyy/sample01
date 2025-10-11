@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEngine;
 
 [CustomEditor(typeof(WeaponDataSO_Launcher))]
 public class WeaponDataSO_LauncherEditor : Editor
@@ -18,13 +17,11 @@ public class WeaponDataSO_LauncherEditor : Editor
 
         EditorGUILayout.Space();
         DrawHeader("투사체");
-        Draw("projectileCount");
         Draw("projectileSpeed");
         Draw("projectileLifetime");
 
         EditorGUILayout.Space();
         DrawHeader("폭발");
-        Draw("isExplosiveProjectile");
         Draw("explosiveRadius");
         Draw("explosiveEdgeMul");
         Draw("damageTargetType");
@@ -47,13 +44,6 @@ public class WeaponDataSO_LauncherEditor : Editor
         Draw("torqueImpulse");
         Draw("sliceForce");
         EditorGUILayout.PropertyField(serializedObject.FindProperty("possibleSliceParts"), true);
-
-        EditorGUILayout.Space();
-        DrawHeader("기타(읽기전용 상태)");
-        EditorGUI.BeginDisabledGroup(true);
-        EditorGUILayout.EnumPopup("weaponCategory", WeaponCategory.Launcher);
-        EditorGUILayout.Toggle("isMelee", false);
-        EditorGUI.EndDisabledGroup();
 
         serializedObject.ApplyModifiedProperties();
     }
