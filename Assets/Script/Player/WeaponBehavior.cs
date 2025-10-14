@@ -8,16 +8,18 @@ public class WeaponBehavior : MonoBehaviour
 
     [Header("공격 지점 설정")]
     [SerializeField] private Transform meleeSpawnPoint;
-    [SerializeField] private Transform projectileSpawnPoint;  // ← Fire_Point 연결
+    [SerializeField] private Transform projectileSpawnPoint;  // Fire_Point
 
     [Header("프리팹 연결")]
     public GameObject meleeHitboxPrefab;
     public GameObject projectilePrefab;
-
-    // ✅ 샷건 섹터용 히트박스 프리팹
     [SerializeField] private GameObject shotgunSectorPrefab;
 
-    /* ─────────── 런타임 전용(게임뷰 시각화) ─────────── */
+    /* ─ Ammo (Gun 전용) ─ */
+    [SerializeField] private WeaponAmmoRuntime ammoRuntime;
+    public WeaponAmmoRuntime Ammo => ammoRuntime;
+
+    /* ─ 시각화 ─ */
     private LineRenderer previewLR;
     private Material previewMat;
     private const int kPreviewSegments = 36;
@@ -31,13 +33,29 @@ public class WeaponBehavior : MonoBehaviour
                 root.GetComponentsInChildren<Transform>(),
                 t => t.name == "Root_dummy"
             );
-
             Debug.Log(meleeSpawnPoint
                 ? $"✅ Root_dummy 자동 연결: {meleeSpawnPoint.name}"
                 : "⚠ Root_dummy가 캐릭터 계층에 없습니다.");
         }
 
         EnsurePreviewLine();
+        EnsureAmmoInitialized(); // Gun이면 1회 초기화
+    }
+
+    /// <summary>
+    /// Gun SO일 때 한 번만 초기화. (재장전/발사 중 재초기화 금지)
+    /// </summary>
+    public void EnsureAmmoInitialized()
+    {
+        var gun = data as WeaponDataSO_Gun;
+        if (gun == null) return;
+
+        if (ammoRuntime == null)
+            ammoRuntime = GetComponent<WeaponAmmoRuntime>();
+        if (ammoRuntime == null)
+            ammoRuntime = gameObject.AddComponent<WeaponAmmoRuntime>();
+
+        ammoRuntime.Initialize(gun, force: false);
     }
 
     void OnDisable()
@@ -47,17 +65,13 @@ public class WeaponBehavior : MonoBehaviour
 
     void LateUpdate()
     {
-        // ── 타입 기반: 샷건 미리보기 ──
         var sg = data as WeaponDataSO_Shotgun;
         if (sg != null && sg.shotgunDebugVisualize && projectileSpawnPoint != null)
         {
             if (previewLR == null) EnsurePreviewLine();
-
-            // 미리보기 forward를 "플레이어 정면"으로 고정 (Fire_Point 축 영향 제거)
             var owner = GetComponentInParent<PlayerWeaponController>();
             Vector3 center = projectileSpawnPoint.position;
             Vector3 forward = owner != null ? owner.transform.forward : transform.forward;
-
             UpdatePreviewSector(center, forward, sg.shotgunRadius, sg.shotgunAngle, sg.shotgunDebugColor);
         }
         else
@@ -73,7 +87,6 @@ public class WeaponBehavior : MonoBehaviour
             Debug.LogWarning("⚠ WeaponDataSO가 비어 있습니다.");
             return;
         }
-
         StartCoroutine(DelayedHitbox());
     }
 
@@ -82,29 +95,23 @@ public class WeaponBehavior : MonoBehaviour
         if (data.hitboxSpawnDelay > 0f)
             yield return new WaitForSeconds(data.hitboxSpawnDelay);
 
-        // ── 타입 기반 ──
         if (data is WeaponDataSO_Melee)
         {
-            SpawnMeleeHitbox();
-            yield break;
+            SpawnMeleeHitbox(); yield break;
         }
         if (data is WeaponDataSO_Gun)
         {
-            SpawnProjectile();
-            yield break;
+            SpawnProjectile(); yield break;
         }
         if (data is WeaponDataSO_Shotgun)
         {
-            SpawnShotgunSector();
-            yield break;
+            SpawnShotgunSector(); yield break;
         }
         if (data is WeaponDataSO_Launcher)
         {
-            SpawnProjectile();
-            yield break;
+            SpawnProjectile(); yield break;
         }
 
-        // 기본(안전) 처리: 근접으로 간주
         SpawnMeleeHitbox();
     }
 
@@ -112,7 +119,7 @@ public class WeaponBehavior : MonoBehaviour
     {
         if (meleeHitboxPrefab == null || meleeSpawnPoint == null)
         {
-            Debug.LogWarning("meleeHitboxPrefab 또는 meleeSpawnPoint가 연결되지 않았습니다!");
+            Debug.LogWarning("meleeHitboxPrefab 또는 meleeSpawnPoint 미연결");
             return;
         }
 
@@ -138,9 +145,27 @@ public class WeaponBehavior : MonoBehaviour
 
     private void SpawnProjectile()
     {
+        // ───── Gun 탄약 게이트 (중복 초기화 제거) ─────
+        if (data is WeaponDataSO_Gun gun)
+        {
+            // 초기화는 Awake/EquipWeapon 에서 1회
+            if (ammoRuntime != null && gun.usesAmmo)
+            {
+                if (!ammoRuntime.TryConsumeForShot(gun.consumePerShot))
+                {
+                    // 탄 부족 → 자동 리로드 (로그는 내부 처리)
+                    if (!ammoRuntime.IsReloading && gun.autoReloadOnEmpty)
+                        ammoRuntime.TryStartReload();
+
+                    Debug.Log("[WeaponBehavior] 탄 부족/리로드 중 - 발사 취소");
+                    return;
+                }
+            }
+        }
+
         if (projectilePrefab == null || projectileSpawnPoint == null)
         {
-            Debug.LogWarning("projectilePrefab 또는 projectileSpawnPoint가 연결되지 않았습니다!");
+            Debug.LogWarning("projectilePrefab 또는 projectileSpawnPoint 미연결");
             return;
         }
 
@@ -169,46 +194,43 @@ public class WeaponBehavior : MonoBehaviour
 
         if (bulletGO.TryGetComponent(out HitBox_PC_Projectile_Sector sectorProj))
         {
-            // Launcher 폭발 투사체 전용
             sectorProj.Initialize(this.data, shootDir);
             return;
         }
 
         if (bulletGO.TryGetComponent(out HitBox_PC_Projectile proj))
         {
-            // 일반 총알(직선)
             proj.SetWeapon(this.data);
 
             float spd = 10f, life = 5f;
+            int pierce = 0;
             if (data is WeaponDataSO_Gun g)
             {
                 spd = g.projectileSpeed;
                 life = g.projectileLifetime;
+                pierce = g.pierceCount;
             }
             else if (data is WeaponDataSO_Launcher l)
             {
-                // 런처가 직선 탄환 프리팹을 사용할 수도 있으니 가드
                 spd = l.projectileSpeed;
                 life = l.projectileLifetime;
             }
 
-            proj.InitializeTowards(
-                shootDir,
-                data.damage,
-                spd,
-                life
-            );
+            if (pierce > 0)
+                proj.InitializeTowards(shootDir, data.damage, spd, life, pierce);
+            else
+                proj.InitializeTowards(shootDir, data.damage, spd, life);
             return;
         }
 
-        Debug.LogWarning("[WeaponBehavior] 발사체에서 지원하는 컴포넌트를 찾지 못했습니다.");
+        Debug.LogWarning("[WeaponBehavior] 지원 컴포넌트를 찾지 못한 발사체");
     }
 
     private void SpawnShotgunSector()
     {
         if (shotgunSectorPrefab == null)
         {
-            Debug.LogWarning("shotgunSectorPrefab 또는 projectileSpawnPoint가 연결되지 않았습니다!");
+            Debug.LogWarning("shotgunSectorPrefab 미연결");
             return;
         }
 
@@ -216,11 +238,10 @@ public class WeaponBehavior : MonoBehaviour
                                 : (meleeSpawnPoint != null ? meleeSpawnPoint : transform);
 
         if (projectileSpawnPoint == null)
-            Debug.LogWarning("[WeaponBehavior] projectileSpawnPoint(Fire_Point)가 비어 있어 다른 위치로 대체합니다.");
+            Debug.LogWarning("[WeaponBehavior] projectileSpawnPoint(Fire_Point) 비어 있음 → 대체 사용");
 
         var sg = data as WeaponDataSO_Shotgun;
 
-        // 🆕 실제 스폰 회전을 '플레이어 정면'으로 고정하고, 같은 forward를 섹터 히트박스에도 스냅샷 오버라이드로 주입
         var owner = GetComponentInParent<PlayerWeaponController>();
         Vector3 fwd = owner != null ? owner.transform.forward : transform.forward;
         fwd.y = 0f;
@@ -238,7 +259,7 @@ public class WeaponBehavior : MonoBehaviour
         if (sectorGO.TryGetComponent(out HitBox_PC_Sector sector))
         {
             sector.SetWeapon(data);
-            sector.SetForwardOverride(fwd); // ← 스냅샷 forward 강제
+            sector.SetForwardOverride(fwd);
             float radius = sg != null ? sg.shotgunRadius : 5f;
             sector.Initialize(
                 data.damage,
@@ -254,7 +275,7 @@ public class WeaponBehavior : MonoBehaviour
             Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ pos@{spawnPoint.name}, forward=Snap({fwd}), dmg:{data.damage}, life:{data.hitBoxLifetime}");
     }
 
-    /* ─────────── LineRenderer 유틸 ─────────── */
+    /* ─ 시각화 유틸 ─ */
     private void EnsurePreviewLine()
     {
         if (previewLR != null) return;

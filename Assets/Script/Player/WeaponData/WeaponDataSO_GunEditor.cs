@@ -8,7 +8,6 @@ public class WeaponDataSO_GunEditor : Editor
     {
         serializedObject.Update();
 
-        // 무기 기본
         DrawHeader("무기 기본");
         Draw("weaponName");
         Draw("overrideController");
@@ -17,25 +16,35 @@ public class WeaponDataSO_GunEditor : Editor
         Draw("range");
 
         EditorGUILayout.Space();
-        // 프로젝타일
         DrawHeader("프로젝타일");
         Draw("projectileSpeed");
         Draw("projectileLifetime");
         Draw("pierceCount");
 
         EditorGUILayout.Space();
-        // 조준 스캔(플레이어 정면 부채꼴)
         DrawHeader("조준 스캔");
         Draw("aimScanAngle");
         Draw("aimScanDistance");
 
         EditorGUILayout.Space();
-        // 히트박스/타이밍
-        DrawHeader("히트박스/타이밍");
-        Draw("hitboxSpawnDelay");
+        DrawHeader("탄약 / 리로드");
+        Draw("usesAmmo");
+        if (serializedObject.FindProperty("usesAmmo").boolValue)
+        {
+            Draw("magazineSize");
+            Draw("initialReserve");
+            Draw("infiniteReserve");
+            Draw("reloadTime");
+            Draw("consumePerShot");
+            Draw("autoReloadOnEmpty");
+        }
 
         EditorGUILayout.Space();
-        // 넉백/저크/스턴
+        DrawHeader("히트박스/타이밍");
+        Draw("hitboxSpawnDelay");
+        Draw("hitBoxLifetime");
+
+        EditorGUILayout.Space();
         DrawHeader("넉백/저크/스턴");
         Draw("knockbackPower");
         Draw("knockbackDuration");
@@ -44,7 +53,6 @@ public class WeaponDataSO_GunEditor : Editor
         Draw("jerkDuration");
 
         EditorGUILayout.Space();
-        // 처치 연출
         DrawHeader("처치 연출");
         Draw("deathType");
         Draw("ragdollImpulse");

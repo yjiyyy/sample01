@@ -52,6 +52,18 @@ public class PlayerWeaponController : MonoBehaviour
 
     private NavMeshAgent agent;
 
+    // ───────── Ammo 스냅샷 저장 구조 ─────────
+    private struct AmmoSnapshot
+    {
+        public int magazine;
+        public int reserve;
+    }
+    private readonly Dictionary<WeaponDataSO_Gun, AmmoSnapshot> gunAmmoSnapshots = new();
+
+    // 리로드 중 메시지 쿨다운 (이전 단계에서 도입했다면 유지)
+    private float lastReloadMsgTime = -999f;
+    private const float RELOAD_MSG_COOLDOWN = 0.3f;
+
     private void Awake()
     {
         movement = GetComponent<PlayerMovement>();
@@ -70,11 +82,12 @@ public class PlayerWeaponController : MonoBehaviour
     {
         if (state == PlayerState.Dead) return;
 
-        // ✅ 게이지가 최대치가 아닐 때만 업데이트
         if (evadeData != null && currentEvadeGauge < evadeData.maxGauge)
         {
             UpdateEvadeGauge();
         }
+
+        AutoResumeReloadIfNeeded();
 
         if (InputManager.Instance.GetEvadeInput() && CanEvade() && state != PlayerState.Evade)
         {
@@ -99,6 +112,23 @@ public class PlayerWeaponController : MonoBehaviour
         }
     }
 
+    private void AutoResumeReloadIfNeeded()
+    {
+        if (weaponBehavior == null) return;
+        var gun = currentWeaponData as WeaponDataSO_Gun;
+        var ammo = weaponBehavior is { } wb ? wb.GetComponent<WeaponAmmoRuntime>() : null;
+        if (gun == null || ammo == null || !gun.usesAmmo) return;
+
+        if ((state == PlayerState.Idle || state == PlayerState.Move) &&
+            !ammo.IsReloading &&
+            ammo.IsMagazineEmpty() &&
+            ammo.HasAnyReserveOrInfinite())
+        {
+            ammo.TryStartReload();
+        }
+    }
+
+    #region Evade
     private void UpdateEvadeGauge()
     {
         if (evadeData == null) return;
@@ -120,16 +150,13 @@ public class PlayerWeaponController : MonoBehaviour
         if (!CanEvade()) return;
 
         Vector3 initialDirection;
-
         if (moveInput.magnitude > 0.1f)
         {
             initialDirection = new Vector3(moveInput.x, 0, moveInput.y);
-            Debug.Log($"[PerformEvade] 입력 방향 회피: {moveInput}");
         }
         else
         {
             initialDirection = transform.forward;
-            Debug.Log($"[PerformEvade] 정면 방향 회피: {transform.forward}");
         }
 
         if (Camera.main != null)
@@ -138,78 +165,45 @@ public class PlayerWeaponController : MonoBehaviour
             Vector3 camRight = Camera.main.transform.right;
             camForward.y = 0; camRight.y = 0;
             camForward.Normalize(); camRight.Normalize();
-
             initialDirection = (camForward * initialDirection.z + camRight * initialDirection.x).normalized;
         }
 
-        if (currentAttackCoroutine != null)
-        {
-            StopCoroutine(currentAttackCoroutine);
-            currentAttackCoroutine = null;
-            Debug.Log("[PlayerWeaponController] 공격 코루틴 강제 중단 (회피)");
-        }
+        // 기존 코루틴 정리
+        if (currentAttackCoroutine != null) { StopCoroutine(currentAttackCoroutine); currentAttackCoroutine = null; }
+        if (currentKnockbackCoroutine != null) { StopCoroutine(currentKnockbackCoroutine); currentKnockbackCoroutine = null; }
+        if (currentEvadeCoroutine != null) { StopCoroutine(currentEvadeCoroutine); currentEvadeCoroutine = null; }
 
-        if (currentKnockbackCoroutine != null)
-        {
-            StopCoroutine(currentKnockbackCoroutine);
-            currentKnockbackCoroutine = null;
-            Debug.Log("[PlayerWeaponController] 넉백/스턴 코루틴 강제 중단 (회피)");
-        }
-
-        if (currentEvadeCoroutine != null)
-        {
-            StopCoroutine(currentEvadeCoroutine);
-            currentEvadeCoroutine = null;
-            Debug.Log("[PlayerWeaponController] 기존 회피 코루틴 강제 중단");
-        }
+        // 회피 시 리로드 인터럽트 (스냅샷 저장은 교체 시점)
+        weaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
 
         currentEvadeGauge -= evadeData.evadeCost;
 
         if (evadeData.allowDirectionChangeWhileEvading)
-        {
             currentEvadeCoroutine = StartCoroutine(DynamicEvadeRoutine(initialDirection));
-            Debug.Log("[PerformEvade] 🔄 실시간 방향 변경 회피 시작");
-        }
         else
-        {
             currentEvadeCoroutine = StartCoroutine(FixedEvadeRoutine(initialDirection));
-            Debug.Log("[PerformEvade] ➡️ 고정 방향 회피 시작");
-        }
     }
 
     private IEnumerator FixedEvadeRoutine(Vector3 fixedDirection)
     {
         ChangeState(PlayerState.Evade);
 
-        Debug.Log($"[고정 회피] 시작 - 방향:{fixedDirection}, 속도:{evadeData.evadeSpeed}");
-
         float elapsed = 0f;
-        Vector3 evadeDir = fixedDirection.normalized;  // ⭐ 한 번 정하면 절대 안 바뀜!
+        Vector3 evadeDir = fixedDirection.normalized;
         evadeDir.y = 0f;
-
         isInvincible = true;
 
-        // ⭐ 회피 시작 시 캐릭터의 정면을 날아가는 방향으로 즉시 고정
         if (evadeDir.sqrMagnitude > 0.01f)
             transform.rotation = Quaternion.LookRotation(evadeDir);
 
-        // ⭐ 핵심: 처음 정한 방향으로만 쭉 이동 (입력 완전 무시!)
         while (elapsed < evadeData.evadeDuration)
         {
             float t = elapsed / evadeData.evadeDuration;
+            float speedMul = evadeData.speedCurve.Evaluate(t);
+            transform.position += evadeDir * (evadeData.evadeSpeed * speedMul) * Time.deltaTime;
 
-            // AnimationCurve로 속도 감쇠
-            float currentSpeedMultiplier = evadeData.speedCurve.Evaluate(t);
-            float currentSpeed = evadeData.evadeSpeed * currentSpeedMultiplier;
-
-            // 🎯 고정된 방향으로만 이동 (입력 절대 안 봄!)
-            transform.position += evadeDir * currentSpeed * Time.deltaTime;
-
-            // 무적 시간 체크
             if (elapsed >= evadeData.invincibilityDuration)
-            {
                 isInvincible = false;
-            }
 
             elapsed += Time.deltaTime;
             yield return null;
@@ -222,58 +216,44 @@ public class PlayerWeaponController : MonoBehaviour
     {
         ChangeState(PlayerState.Evade);
 
-        Debug.Log($"[실시간 회피] 시작 - 초기 방향:{initialDirection}, 속도:{evadeData.evadeSpeed}");
-
         float elapsed = 0f;
         Vector3 currentDirection = initialDirection.normalized;
         currentDirection.y = 0f;
-
         isInvincible = true;
 
-        // ⭐ 실시간으로 입력을 감지해서 방향 변경
         while (elapsed < evadeData.evadeDuration)
         {
             float t = elapsed / evadeData.evadeDuration;
 
-            // 🔄 실시간 입력 감지 및 방향 업데이트
-            Vector2 currentInput = InputManager.Instance.GetMoveInput();
-            if (currentInput.magnitude >= evadeData.minInputMagnitude)
+            Vector2 input = InputManager.Instance.GetMoveInput();
+            if (input.magnitude >= evadeData.minInputMagnitude)
             {
-                Vector3 newDirection = new Vector3(currentInput.x, 0, currentInput.y);
-
-                // 카메라 상대 좌표로 변환
+                Vector3 newDir = new Vector3(input.x, 0, input.y);
                 if (Camera.main != null)
                 {
-                    Vector3 camForward = Camera.main.transform.forward;
-                    Vector3 camRight = Camera.main.transform.right;
-                    camForward.y = 0; camRight.y = 0;
-                    camForward.Normalize(); camRight.Normalize();
-
-                    newDirection = (camForward * newDirection.z + camRight * newDirection.x).normalized;
-                    newDirection.y = 0f;
+                    Vector3 camF = Camera.main.transform.forward;
+                    Vector3 camR = Camera.main.transform.right;
+                    camF.y = 0; camR.y = 0;
+                    camF.Normalize(); camR.Normalize();
+                    newDir = (camF * newDir.z + camR * newDir.x).normalized;
+                    newDir.y = 0f;
                 }
 
-                float changeSpeed = evadeData.directionChangeSensitivity * Time.deltaTime;
-                currentDirection = Vector3.Lerp(currentDirection, newDirection, changeSpeed).normalized;
+                float lerp = evadeData.directionChangeSensitivity * Time.deltaTime;
+                currentDirection = Vector3.Lerp(currentDirection, newDir, lerp).normalized;
 
-                // ⭐ 회전도 입력 방향에 맞게 변경
                 if (currentDirection.sqrMagnitude > 0.01f)
                 {
-                    Quaternion targetRot = Quaternion.LookRotation(currentDirection, Vector3.up);
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, changeSpeed);
+                    Quaternion target = Quaternion.LookRotation(currentDirection, Vector3.up);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, target, lerp);
                 }
             }
 
-            float currentSpeedMultiplier = evadeData.speedCurve.Evaluate(t);
-            float currentSpeed = evadeData.evadeSpeed * currentSpeedMultiplier;
-
-            // 이동 적용 (방향 실시간 변경)
-            transform.position += currentDirection * currentSpeed * Time.deltaTime;
+            float speedMul = evadeData.speedCurve.Evaluate(t);
+            transform.position += currentDirection * (evadeData.evadeSpeed * speedMul) * Time.deltaTime;
 
             if (elapsed >= evadeData.invincibilityDuration)
-            {
                 isInvincible = false;
-            }
 
             elapsed += Time.deltaTime;
             yield return null;
@@ -285,87 +265,86 @@ public class PlayerWeaponController : MonoBehaviour
     private void FinishEvade()
     {
         isInvincible = false;
-        Debug.Log("[PlayerWeaponController] 회피 완료");
-
-        // ✅ 회피 애니메이션 파라미터 정리
-        if (animationController != null)
-        {
-            animationController.EndEvade();  // 이 라인 추가
-        }
-
-        // 상태 복구 (이동 중이면 Move, 아니면 Idle)
-        if (movement.GetVelocityMagnitude() > 0.1f)
-        {
-            ChangeState(PlayerState.Move);
-        }
-        else
-        {
-            ChangeState(PlayerState.Idle);
-        }
-
-        // 코루틴 추적 해제
+        animationController?.EndEvade();
+        if (movement.GetVelocityMagnitude() > 0.1f) ChangeState(PlayerState.Move);
+        else ChangeState(PlayerState.Idle);
         currentEvadeCoroutine = null;
     }
-
-
+    #endregion
 
     private void HandleIdle()
     {
-        if (state == PlayerState.Attack || state == PlayerState.Knockback || state == PlayerState.Stun || state == PlayerState.Evade)
-            return;
-
-        if (movement.GetVelocityMagnitude() > 0.1f)
-        {
-            ChangeState(PlayerState.Move);
-            return;
-        }
-
-        if (InputManager.Instance.GetAttackInput())
-            PlayAttack();
+        if (IsActionBlocking()) return;
+        if (movement.GetVelocityMagnitude() > 0.1f) { ChangeState(PlayerState.Move); return; }
+        if (InputManager.Instance.GetAttackInput()) PlayAttack();
     }
 
     private void HandleMove()
     {
-        if (state == PlayerState.Attack || state == PlayerState.Knockback || state == PlayerState.Stun || state == PlayerState.Evade)
-            return;
-
-        if (movement.GetVelocityMagnitude() <= 0.1f)
-        {
-            ChangeState(PlayerState.Idle);
-            return;
-        }
-
-        if (InputManager.Instance.GetAttackInput())
-            PlayAttack();
+        if (IsActionBlocking()) return;
+        if (movement.GetVelocityMagnitude() <= 0.1f) { ChangeState(PlayerState.Idle); return; }
+        if (InputManager.Instance.GetAttackInput()) PlayAttack();
     }
 
-    /// <summary>
-    /// 🆕 상태 변경 시 애니메이션도 강제로 맞춤
-    /// </summary>
+    private bool IsActionBlocking()
+    {
+        return state == PlayerState.Attack ||
+               state == PlayerState.Knockback ||
+               state == PlayerState.Stun ||
+               state == PlayerState.Evade;
+    }
+
     private void ChangeState(PlayerState newState)
     {
         if (state == newState) return;
-
         previousState = state;
         state = newState;
 
-        // 애니메이션 강제 전환
-        if (animationController != null)
+        // CC / 회피 / 죽음 시 리로드 인터럽트
+        if (newState == PlayerState.Knockback ||
+            newState == PlayerState.Stun ||
+            newState == PlayerState.Evade ||
+            newState == PlayerState.Dead)
         {
-            animationController.ForceAnimationByState(newState);
+            weaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
         }
 
+        animationController?.ForceAnimationByState(newState);
+    }
+
+    /// <summary>
+    /// 현재 장착 중인 Gun 탄약 상태를 스냅샷에 저장 (무기 파괴 직전 호출)
+    /// </summary>
+    private void SaveCurrentGunSnapshot()
+    {
+        if (weaponBehavior == null || currentWeaponData == null) return;
+        if (currentWeaponData is not WeaponDataSO_Gun gun || !gun.usesAmmo) return;
+
+        var ammo = weaponBehavior.GetComponent<WeaponAmmoRuntime>();
+        if (ammo == null || !ammo.IsInitialized) return;
+
+        // 리로드 중이라면 캔슬로 간주 (이미 InterruptReload 호출 가능)
+        if (ammo.IsReloading)
+            ammo.InterruptReload();
+
+        int magazine = ammo.CurrentMagazine;
+        int reserve = gun.infiniteReserve ? 0 : ammo.CurrentReserve; // infiniteReserve면 의미 없음
+
+        gunAmmoSnapshots[gun] = new AmmoSnapshot { magazine = magazine, reserve = reserve };
         if (debugMode)
-        {
-            //Debug.Log($"[PlayerWeaponController] 상태 변경: {previousState} → {newState}");
-        }
+            Debug.Log($"[Ammo] 스냅샷 저장 gun={gun.weaponName} mag:{magazine}/{gun.magazineSize} reserve:{(gun.infiniteReserve ? "∞" : reserve.ToString())}");
     }
 
     public void EquipWeapon(GameObject weaponPrefab)
     {
+        // 1) 기존 무기 스냅샷 저장
+        SaveCurrentGunSnapshot();
+
+        // 2) 기존 무기 제거
         if (currentWeapon != null)
             Destroy(currentWeapon);
 
+        // 3) 새 프리팹 결정
         GameObject prefabToSpawn = weaponPrefab != null ? weaponPrefab : defaultWeaponPrefab;
         if (prefabToSpawn == null)
         {
@@ -373,13 +352,35 @@ public class PlayerWeaponController : MonoBehaviour
             return;
         }
 
+        // 4) 인스턴스 생성
         currentWeapon = Instantiate(prefabToSpawn, weaponSocket);
         currentWeapon.transform.localPosition = Vector3.zero;
         currentWeapon.transform.localRotation = Quaternion.identity;
 
+        // 5) 참조 갱신
         weaponBehavior = currentWeapon.GetComponent<WeaponBehavior>();
         currentWeaponData = weaponBehavior != null ? weaponBehavior.data : null;
 
+        // 6) Gun이면 초기화 후 스냅샷 복원
+        if (currentWeaponData is WeaponDataSO_Gun g && g.usesAmmo)
+        {
+            // WeaponBehavior에 EnsureAmmoInitialized() 가 있다면 호출 (ammo 컴포넌트 생성/초기화)
+            weaponBehavior?.EnsureAmmoInitialized();
+            var ammo = weaponBehavior.GetComponent<WeaponAmmoRuntime>();
+
+            if (gunAmmoSnapshots.TryGetValue(g, out var snap) && ammo != null)
+            {
+                ammo.LoadSnapshot(snap.magazine, snap.reserve, triggerAutoReload: true);
+            }
+            else
+            {
+                // 스냅 없음 → 초기 상태 그대로
+                if (debugMode)
+                    Debug.Log($"[Ammo] 스냅샷 없음 → 기본 초기화 gun={g.weaponName}");
+            }
+        }
+
+        // 7) 애니메이션 AOC 적용
         if (animationController != null && currentWeaponData != null && currentWeaponData.overrideController != null)
         {
             animationController.GetAnimator().runtimeAnimatorController = currentWeaponData.overrideController;
@@ -391,20 +392,46 @@ public class PlayerWeaponController : MonoBehaviour
     public void PlayAttack()
     {
         if (currentWeaponData == null) return;
-        if (state == PlayerState.Attack || state == PlayerState.Knockback || state == PlayerState.Stun || state == PlayerState.Evade) return;
+        if (IsActionBlocking()) return;
+
+        // Gun 탄약 게이트
+        var gun = currentWeaponData as WeaponDataSO_Gun;
+        var ammo = weaponBehavior != null ? weaponBehavior.GetComponent<WeaponAmmoRuntime>() : null;
+
+        if (gun != null && gun.usesAmmo && ammo != null)
+        {
+            if (ammo.IsReloading)
+            {
+                if (Time.time - lastReloadMsgTime >= RELOAD_MSG_COOLDOWN)
+                {
+                    float remain = ammo.GetReloadRemaining();
+                    Debug.Log($"[Ammo] 리로드 중입니다… (남은:{remain:F2}s)");
+                    lastReloadMsgTime = Time.time;
+                }
+                return;
+            }
+
+            if (!ammo.CanFire(gun.consumePerShot))
+            {
+                if (!ammo.HasAnyReserveOrInfinite())
+                {
+                    Debug.Log("[Ammo] 탄약이 없습니다! (탄창 0 / 예비 0)");
+                    return;
+                }
+                ammo.TryStartReload();
+                return;
+            }
+        }
 
         float delta = Time.time - lastAttackTime;
         if (delta < currentWeaponData.cooldown) return;
-
         lastAttackTime = Time.time;
 
-        // 기존 공격 코루틴이 있으면 중단
         if (currentAttackCoroutine != null)
         {
             StopCoroutine(currentAttackCoroutine);
             currentAttackCoroutine = null;
         }
-
         currentAttackCoroutine = StartCoroutine(AttackRoutine());
     }
 
@@ -413,8 +440,7 @@ public class PlayerWeaponController : MonoBehaviour
         ChangeState(PlayerState.Attack);
         animationController?.PlayAttack(currentWeaponData);
 
-        if (weaponBehavior != null)
-            weaponBehavior.AttackHit();
+        weaponBehavior?.AttackHit();
 
         yield return new WaitForSeconds(currentWeaponData.cooldown);
 
@@ -424,43 +450,19 @@ public class PlayerWeaponController : MonoBehaviour
         currentAttackCoroutine = null;
     }
 
-    /* ───────── 🆕 강제 넉백 (모든 코루틴 중단 후 새로 시작) ───────── */
-
-    /// <summary>
-    /// 기존 모든 액션(공격, 넉백, 스턴, 회피)을 강제로 중단하고 새로운 넉백을 적용
-    /// </summary>
+    #region Knockback / CC
     public void ForceApplyKnockback(Vector3 dir, float power, float duration, float stun)
     {
-        // 🔹 1단계: 모든 기존 코루틴 강제 중단 (회피 포함)
-        if (currentAttackCoroutine != null)
-        {
-            StopCoroutine(currentAttackCoroutine);
-            currentAttackCoroutine = null;
-            Debug.Log("[PlayerWeaponController] 공격 코루틴 강제 중단");
-        }
+        if (currentAttackCoroutine != null) { StopCoroutine(currentAttackCoroutine); currentAttackCoroutine = null; }
+        if (currentKnockbackCoroutine != null) { StopCoroutine(currentKnockbackCoroutine); currentKnockbackCoroutine = null; }
+        if (currentEvadeCoroutine != null) { StopCoroutine(currentEvadeCoroutine); currentEvadeCoroutine = null; isInvincible = false; }
 
-        if (currentKnockbackCoroutine != null)
-        {
-            StopCoroutine(currentKnockbackCoroutine);
-            currentKnockbackCoroutine = null;
-            Debug.Log("[PlayerWeaponController] 기존 넉백/스턴 코루틴 강제 중단");
-        }
+        // 리로드 인터럽트
+        weaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
 
-        if (currentEvadeCoroutine != null)
-        {
-            StopCoroutine(currentEvadeCoroutine);
-            currentEvadeCoroutine = null;
-            isInvincible = false; // 회피 중단 시 무적 해제
-            Debug.Log("[PlayerWeaponController] 회피 코루틴 강제 중단");
-        }
-
-        // 🔹 2단계: 새로운 넉백 즉시 시작
         currentKnockbackCoroutine = StartCoroutine(KnockbackRoutine(dir, power, duration, stun));
     }
 
-    /// <summary>
-    /// 기존 넉백 메서드 (호환성 유지)
-    /// </summary>
     public void ApplyKnockback(Vector3 dir, float power, float duration, float stun)
     {
         ForceApplyKnockback(dir, power, duration, stun);
@@ -468,21 +470,15 @@ public class PlayerWeaponController : MonoBehaviour
 
     private IEnumerator KnockbackRoutine(Vector3 dir, float power, float duration, float stun)
     {
-        // 넉백 상태 + 애니메이션
         ChangeState(PlayerState.Knockback);
 
-        Debug.Log($"[PlayerWeaponController] 넉백 시작 - Power:{power}, Duration:{duration}");
-
-        // 체력 컴포넌트에서 weight 가져오기
         float resistance = 1f;
         if (TryGetComponent(out PlayerHealth health))
             resistance = Mathf.Max(health.GetWeight(), 0.01f);
 
         float elapsed = 0f;
-        Vector3 knockDir = dir.normalized;
-        knockDir.y = 0f;
+        Vector3 knockDir = dir.normalized; knockDir.y = 0f;
 
-        // ⭐ 넉백 시작 시 바라보는 방향을 넉백 방향의 반대로 즉시 정렬
         if (knockDir.sqrMagnitude > 0.01f)
             transform.rotation = Quaternion.LookRotation(-knockDir);
 
@@ -491,82 +487,34 @@ public class PlayerWeaponController : MonoBehaviour
             float t = elapsed / duration;
             float currentSpeed = Mathf.Lerp(power / resistance, 0f, t);
             transform.position += knockDir * currentSpeed * Time.deltaTime;
-
             elapsed += Time.deltaTime;
             yield return null;
         }
 
-        Debug.Log("[PlayerWeaponController] 넉백 완료");
-
-        // 스턴 처리
         if (stun > 0f)
         {
             ChangeState(PlayerState.Stun);
-
-            Debug.Log($"[PlayerWeaponController] 스턴 시작 ({stun:F2}초)");
             yield return new WaitForSeconds(stun);
-            Debug.Log("[PlayerWeaponController] 스턴 완료");
         }
 
-        // 상태 복구
         ChangeState(PlayerState.Idle);
-
-        Debug.Log("[PlayerWeaponController] 정상 상태 복구");
-
-        // 코루틴 추적 해제
         currentKnockbackCoroutine = null;
     }
+    #endregion
 
-    private IEnumerator KnockbackThenStunRoutine(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
-    {
-        float resistance = 1f;
-        if (TryGetComponent(out PlayerHealth health))
-            resistance = Mathf.Max(health.GetWeight(), 0.01f);
+    // Invincible check
+    public bool IsInvincible() => isInvincible;
 
-        if (weapon.knockbackDuration > 0f && weapon.knockbackPower > 0f)
-        {
-            ChangeState(PlayerState.Knockback);
-
-            float elapsed = 0f;
-            Vector3 dir = hitDir.normalized;
-
-            while (elapsed < weapon.knockbackDuration)
-            {
-                float t = elapsed / weapon.knockbackDuration;
-                float currentPower = Mathf.Lerp((weapon.knockbackPower / resistance) * impactScale, 0f, t);
-                transform.position += dir * currentPower * Time.deltaTime;
-
-                elapsed += Time.deltaTime;
-                yield return null;
-            }
-        }
-
-        if (weapon.stunDuration > 0f)
-        {
-            ChangeState(PlayerState.Stun);
-            yield return new WaitForSeconds(weapon.stunDuration);
-        }
-
-        ChangeState(PlayerState.Idle);
-    }
-
-    // ✅ 무적 상태 체크 (외부에서 사용)
-    public bool IsInvincible()
-    {
-        return isInvincible;
-    }
-
-    // ✅ 회피 게이지 정보 (UI용)
+    // Evade gauge getters
     public float GetEvadeGauge() => currentEvadeGauge;
     public float GetMaxEvadeGauge() => evadeData?.maxGauge ?? 100f;
     public bool CanPerformEvade() => CanEvade();
 
-    /* ───────── EnemyDetector 프록시 ───────── */
+    // Enemy detector proxy
     public List<Transform> DetectEnemies()
     {
         if (enemyDetector == null)
             return new List<Transform>();
-
         return enemyDetector.GetEnemiesInRange(enemyDetector.viewDistance);
     }
 

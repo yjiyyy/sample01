@@ -267,6 +267,7 @@ MonoBehaviour:
   health: {fileID: 0}
   hpSlider: {fileID: 0}
   shieldSlider: {fileID: 0}
+  evadeSlider: {fileID: 0}
   offset: {x: 0, y: 2, z: 0}
 --- !u!1 &5512509510647806877
 GameObject:
