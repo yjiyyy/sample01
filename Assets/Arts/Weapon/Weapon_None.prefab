@@ -50,3 +50,4 @@ MonoBehaviour:
   meleeHitboxPrefab: {fileID: 1988047932026333537, guid: 4f98ed13c83d79348b3d04aa2cd0e190, type: 3}
   projectilePrefab: {fileID: 0}
   shotgunSectorPrefab: {fileID: 0}
+  ammoRuntime: {fileID: 0}

@@ -33,9 +33,6 @@ public class PlayerAnimationController : MonoBehaviour
 
     /* ───────── 🆕 상태별 강제 애니메이션 전환 (블렌드 트리 대응) ───────── */
 
-    /// <summary>
-    /// 플레이어 상태가 변경될 때 애니메이션을 강제로 맞춤
-    /// </summary>
     public void ForceAnimationByState(PlayerState newState)
     {
         if (animator == null) return;
@@ -65,7 +62,6 @@ public class PlayerAnimationController : MonoBehaviour
                 break;
 
             case PlayerState.Knockback:
-                // 🔹 블렌드 트리 방식: KnockbackIndex로 랜덤 선택
                 float randomKnockbackIndex = Random.Range(0, 3); // 0f, 1f, 2f
                 animator.SetFloat(hashKnockbackIndex, randomKnockbackIndex);
                 animator.SetTrigger(hashKnockback);
@@ -94,9 +90,6 @@ public class PlayerAnimationController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 모든 애니메이터 파라미터를 안전한 상태로 리셋
-    /// </summary>
     private void ResetAllAnimatorParams(PlayerState targetState = PlayerState.Idle)
     {
         // 트리거 리셋
@@ -121,9 +114,6 @@ public class PlayerAnimationController : MonoBehaviour
     }
 
 
-    /// <summary>
-    /// ✅ 회피 애니메이션 종료 처리 - 새로 추가된 메서드
-    /// </summary>
     public void EndEvade()
     {
         animator.SetBool(hashIsEvading, false);
@@ -154,26 +144,18 @@ public class PlayerAnimationController : MonoBehaviour
         Debug.Log("[PlayerAnim] Attack 종료 (쿨타임 종료)");
     }
 
-    /* ───────── 기존 호환 메서드들 ───────── */
-    public void PlayKnockback()
+    /* ───────── 🆕 Charged Attack 전용 재생 ───────── */
+    public void PlayChargedAttack(string stateNameOrClip)
     {
-        ForceAnimationByState(PlayerState.Knockback);
-    }
+        if (animator == null) return;
 
-    public void PlayStun()
-    {
-        ForceAnimationByState(PlayerState.Stun);
-    }
+        ResetAllAnimatorParams();
+        animator.SetBool(hashIsAttacking, true);
 
-    public void PlayDeath()
-    {
-        ForceAnimationByState(PlayerState.Dead);
-    }
+        string s = string.IsNullOrEmpty(stateNameOrClip) ? "Attack_Charged01" : stateNameOrClip;
+        animator.Play(s, 0, 0f);
 
-    public void ResetDeath()
-    {
-        animator.SetBool(hashIsDead, false);
-        Debug.Log("[PlayerAnim] Death 해제");
+        Debug.Log($"[PlayerAnim] ChargedAttack 시작 → {s}");
     }
 
     /* ───────── 애니메이션 이벤트 (기존 유지) ───────── */

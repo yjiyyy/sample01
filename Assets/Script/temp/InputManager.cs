@@ -42,14 +42,19 @@ public class InputManager : MonoBehaviour
         return -1; // 입력 없음
     }
 
-    /* ───── 공격 입력 ───── */
+    /* ───── 공격 입력(즉발) ───── */
     public bool GetAttackInput()
     {
         // 오직 0번 키로만 공격
         return Input.GetKeyDown(KeyCode.Alpha0);
     }
 
-    /* ───── ✅ 회피 입력 (새로 추가) ───── */
+    /* ───── 🆕 홀드/업(차지 모니터링) ───── */
+    public bool GetAttackDown() => Input.GetKeyDown(KeyCode.Alpha0);
+    public bool GetAttack() => Input.GetKey(KeyCode.Alpha0);
+    public bool GetAttackUp() => Input.GetKeyUp(KeyCode.Alpha0);
+
+    /* ───── ✅ 회피 입력 ───── */
     public bool GetEvadeInput()
     {
         return Input.GetKeyDown(KeyCode.Space);

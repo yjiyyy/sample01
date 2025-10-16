@@ -132,11 +132,22 @@ public class WeaponBehavior : MonoBehaviour
         if (hitboxGO.TryGetComponent(out HitBox_PC hitbox))
         {
             hitbox.SetWeapon(data);
+
+            bool allowDup = false;
+            float dupInterval = 0f;
+            if (data is WeaponDataSO_NoneCharged nc)
+            {
+                allowDup = nc.allowDuplicateHit;
+                dupInterval = nc.duplicateHitInterval;
+            }
+
             hitbox.Initialize(
                 data.damage,
                 data.range,
                 data.knockbackPower,
-                data.hitBoxLifetime
+                data.hitBoxLifetime,
+                allowDup,
+                dupInterval
             );
         }
 
