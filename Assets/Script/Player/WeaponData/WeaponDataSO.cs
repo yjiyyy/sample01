@@ -51,6 +51,11 @@ public class WeaponDataSO : ScriptableObject
     [Header("처치 연출")]
     public EnemyDeathType deathType = EnemyDeathType.Default;
     public List<BodySliceType> possibleSliceParts = new();
+
+    /* ───────── Per-Weapon Charge Attack Slot ───────── */
+    [Header("Charge Attack (무기별 선택 적용)")]
+    [Tooltip("이 무기에 사용할 플레이어 차지 공격 SO. 비어있으면 이 무기는 차지 비활성.")]
+    public PlayerChargeAttackSO chargeSlot;
 }
 
 public enum EnemyDeathType

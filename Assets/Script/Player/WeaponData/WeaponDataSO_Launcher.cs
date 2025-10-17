@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Weapon/Launcher")]
+[CreateAssetMenu(menuName = "Player/Launcher")]
 public class WeaponDataSO_Launcher : WeaponDataSO
 {
     [Header("Launcher 전용 - 투사체/폭발")]

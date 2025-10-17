@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Weapon/Gun")]
+[CreateAssetMenu(menuName = "Player/Gun")]
 public class WeaponDataSO_Gun : WeaponDataSO
 {
     [Header("Gun 프로젝타일")]

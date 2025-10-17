@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Weapon/Shotgun")]
+[CreateAssetMenu(menuName = "Player/Shotgun")]
 public class WeaponDataSO_Shotgun : WeaponDataSO
 {
     [Header("샷건(섹터) 파라미터")]

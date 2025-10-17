@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 [CreateAssetMenu(menuName = "Player/ChargeAttack")]
 public class PlayerChargeAttackSO : ScriptableObject
@@ -46,6 +47,19 @@ public class PlayerChargeAttackSO : ScriptableObject
     [Tooltip("틱 주기(초)")]
     public float dotTickInterval = 0.2f;
 
+    /* ───────── 처치 연출/랙돌/슬라이스 (WeaponDataSO와 동일 스펙) ───────── */
+    [Header("처치 연출")]
+    public EnemyDeathType deathType = EnemyDeathType.Default;
+
+    [Header("랙돌/슬라이스 연출 파라미터")]
+    public float ragdollImpulse = 5f;
+    public float upwardImpulse = 3f;
+    public float torqueImpulse = 6f;
+    public float sliceForce = 8f;
+
+    [Tooltip("슬라이스 모드일 때 절단 가능한 부위 후보 리스트")]
+    public List<BodySliceType> possibleSliceParts = new();
+
     private void OnValidate()
     {
         holdSuccessTime = Mathf.Max(0f, holdSuccessTime);
@@ -59,5 +73,10 @@ public class PlayerChargeAttackSO : ScriptableObject
         spawnDelay = Mathf.Max(0f, spawnDelay);
         dotDamagePerTick = Mathf.Max(0f, dotDamagePerTick);
         dotTickInterval = Mathf.Max(0.01f, dotTickInterval);
+
+        ragdollImpulse = Mathf.Max(0f, ragdollImpulse);
+        upwardImpulse = Mathf.Max(0f, upwardImpulse);
+        torqueImpulse = Mathf.Max(0f, torqueImpulse);
+        sliceForce = Mathf.Max(0f, sliceForce);
     }
 }
