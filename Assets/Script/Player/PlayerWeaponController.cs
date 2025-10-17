@@ -729,10 +729,23 @@ public class PlayerWeaponController : MonoBehaviour
             chargeWeaponProxy.weaponName = "ChargeAttack";
         }
 
-        // 프록시에 넉백/스턴 값만 최신 반영
+        // 넉백/스턴
         chargeWeaponProxy.knockbackPower = slot.knockbackPower;
         chargeWeaponProxy.knockbackDuration = slot.knockbackDuration;
         chargeWeaponProxy.stunDuration = slot.stunDuration;
+
+        // 처치 연출/랙돌/슬라이스 파라미터 복사
+        chargeWeaponProxy.deathType = slot.deathType;
+        chargeWeaponProxy.ragdollImpulse = slot.ragdollImpulse;
+        chargeWeaponProxy.upwardImpulse = slot.upwardImpulse;
+        chargeWeaponProxy.torqueImpulse = slot.torqueImpulse;
+        chargeWeaponProxy.sliceForce = slot.sliceForce;
+
+        // 리스트는 참조 공유 대신 매번 새 인스턴스로 복사
+        if (slot.possibleSliceParts != null && slot.possibleSliceParts.Count > 0)
+            chargeWeaponProxy.possibleSliceParts = new List<BodySliceType>(slot.possibleSliceParts);
+        else
+            chargeWeaponProxy.possibleSliceParts = new List<BodySliceType>();
     }
 
     private IEnumerator GrantTemporalInvincibility(float duration)

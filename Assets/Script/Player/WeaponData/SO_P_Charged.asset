@@ -12,19 +12,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d38a679b8895334f8b59a65572d35ad, type: 3}
   m_Name: SO_P_Charged
   m_EditorClassIdentifier: 
-  holdSuccessTime: 3
+  holdSuccessTime: 2
   chargedClip: {fileID: 0}
   chargedStateName: Attack_Charged01
   hitBoxPrefab: {fileID: 4874105736294604296, guid: 0d26afa0cfa1f7c448bd54a078bfae5a, type: 3}
   damage: 50
+  duration: 0.8
   range: 2.5
   hitBoxLifetime: 1
-  knockbackPower: 5
+  knockbackPower: 1
   knockbackDuration: 0.3
   stunDuration: 0
   invincibilityDuration: 0.5
   meleeSpawnPointName: Root_dummy
   spawnDelay: 0.1
-  enableAreaDot: 0
-  dotDamagePerTick: 10
-  dotTickInterval: 0.2
+  enableAreaDot: 1
+  dotDamagePerTick: 20
+  dotTickInterval: 0.1
+  deathType: 2
+  ragdollImpulse: 15
+  upwardImpulse: 50
+  torqueImpulse: 30
+  sliceForce: 8
+  possibleSliceParts: 01000000
