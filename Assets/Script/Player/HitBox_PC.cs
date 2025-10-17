@@ -5,19 +5,21 @@ using System.Collections.Generic;
 public class HitBox_PC : MonoBehaviour
 {
     private float damage;
-    private float knockbackPower;
+    private float knockbackPower; // 주입만 받고 사용은 SO(weapon) 측 값 적용
     private float lifetime;
     private float range;
     private WeaponDataSO weapon;
 
-    // AoE-DoT(틱 모드) 옵션
-    private bool areaDotEnabled = false;
-    private float dotDamagePerTick = 0f;
-    private float dotTickInterval = 0.2f;
-    private readonly HashSet<EnemyHealth> overlapping = new();
-    private Coroutine dotRoutine;
+    // 드릴형 중복 히트 옵션
+    private bool duplicateEnabled = false;
+    private float duplicateInterval = 0.2f;
 
-    // ───────── 오버로드 1: 기존 4-인자 (기본 동작) ─────────
+    // 겹침/히트 관리
+    private readonly HashSet<EnemyHealth> overlapping = new();
+    private readonly HashSet<EnemyHealth> alreadyHit = new();
+    private Coroutine dupRoutine;
+
+    // ───────── 오버로드 1: 즉발 1회 ─────────
     public void Initialize(float dmg, float rng, float kbPower, float life)
     {
         damage = dmg;
@@ -25,34 +27,32 @@ public class HitBox_PC : MonoBehaviour
         knockbackPower = kbPower;
         lifetime = life;
 
-        areaDotEnabled = false; // 기본 OFF
-        dotDamagePerTick = 0f;
-        dotTickInterval = 0.2f;
+        duplicateEnabled = false;
+        duplicateInterval = 0.2f;
 
-        Debug.Log($"[HitBox_PC] Init │ dmg:{damage}, kb:{knockbackPower}, life:{lifetime}, DoT:false");
+        Debug.Log($"[HitBox_PC] Init │ dmg:{damage}, kb:{knockbackPower}, life:{lifetime}, Dup:false");
         Destroy(gameObject, lifetime);
     }
 
-    // ───────── 오버로드 2: AoE-DoT(틱 모드) 포함 ─────────
-    // enableAreaDot=true이면 라이프타임 동안 dotTickInterval 주기로 dotDamagePerTick만큼 피해(즉발 1회 타격은 생략)
-    public void Initialize(float dmg, float rng, float kbPower, float life, bool enableAreaDot, float tickDamage, float tickInterval)
+    // ───────── 오버로드 2: 드릴형 중복 히트 ─────────
+    // allowDup=true면 겹쳐 있는 동안 dupInterval마다 재타격(매번 데미지+넉백+스턴 적용)
+    public void Initialize(float dmg, float rng, float kbPower, float life, bool allowDup, float dupInterval)
     {
         damage = dmg;
         range = rng;
         knockbackPower = kbPower;
         lifetime = life;
 
-        areaDotEnabled = enableAreaDot;
-        dotDamagePerTick = Mathf.Max(0f, tickDamage);
-        dotTickInterval = Mathf.Max(0.01f, tickInterval);
+        duplicateEnabled = allowDup;
+        duplicateInterval = Mathf.Max(0.01f, dupInterval);
 
-        Debug.Log($"[HitBox_PC] Init │ dmg:{damage}, kb:{knockbackPower}, life:{lifetime}, DoT:{areaDotEnabled}, tick:{dotDamagePerTick}@{dotTickInterval}s");
+        Debug.Log($"[HitBox_PC] Init │ dmg:{damage}, kb:{knockbackPower}, life:{lifetime}, Dup:{duplicateEnabled}, interval:{duplicateInterval}");
         Destroy(gameObject, lifetime);
 
-        if (areaDotEnabled)
+        if (duplicateEnabled)
         {
-            if (dotRoutine != null) StopCoroutine(dotRoutine);
-            dotRoutine = StartCoroutine(DotTickRoutine());
+            if (dupRoutine != null) StopCoroutine(dupRoutine);
+            dupRoutine = StartCoroutine(DuplicateTickRoutine());
         }
     }
 
@@ -60,53 +60,39 @@ public class HitBox_PC : MonoBehaviour
 
     private void OnDisable()
     {
-        if (dotRoutine != null)
+        if (dupRoutine != null)
         {
-            StopCoroutine(dotRoutine);
-            dotRoutine = null;
+            StopCoroutine(dupRoutine);
+            dupRoutine = null;
         }
         overlapping.Clear();
+        alreadyHit.Clear();
     }
 
     private void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag("Enemy")) return;
 
-        // DoT 모드: 겹침 등록만, 즉발 타격은 생략
-        if (areaDotEnabled)
+        var hp = other.GetComponentInParent<EnemyHealth>();
+        if (hp == null) return;
+
+        if (!duplicateEnabled)
         {
-            var hp = other.GetComponentInParent<EnemyHealth>();
-            if (hp != null)
-                overlapping.Add(hp);
+            // 즉발 1회: 동일 대상 중복방지(멀티 콜라이더 보호)
+            if (alreadyHit.Contains(hp)) return;
+            alreadyHit.Add(hp);
+            ApplyHit(hp);
             return;
         }
 
-        Debug.Log($"[HitBox_PC] collide:{other.name} | weapon:{weapon?.name}");
-
-        // 넉백 → Enemy.cs 내부에서 stunDuration 처리됨
-        if (other.GetComponentInParent<Enemy>() is Enemy enemy)
-        {
-            Vector3 dir = (enemy.transform.position - transform.position).normalized;
-            dir.y = 0f;
-            enemy.ApplyKnockback(dir * knockbackPower, weapon);
-        }
-
-        // 데미지 1회 적용
-        if (other.GetComponentInParent<EnemyHealth>() is EnemyHealth hp2)
-        {
-            Vector3 dir = (other.transform.position - transform.position).normalized;
-            hp2.ApplyDamage(damage, dir, weapon);
-            Debug.Log($"✅ [HitBox_PC] EnemyHealth에 {damage} 데미지 적용!");
-        }
-        else
-        {
-            Debug.LogWarning($"❌ [HitBox_PC] {other.name}에서 EnemyHealth를 찾을 수 없습니다!");
-        }
+        // 중복 히트: 진입 즉시 1회 + 겹침 등록
+        ApplyHit(hp);
+        overlapping.Add(hp);
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (!areaDotEnabled) return;
+        if (!duplicateEnabled) return;
         if (!other.CompareTag("Enemy")) return;
 
         var hp = other.GetComponentInParent<EnemyHealth>();
@@ -114,11 +100,11 @@ public class HitBox_PC : MonoBehaviour
             overlapping.Remove(hp);
     }
 
-    private IEnumerator DotTickRoutine()
+    private IEnumerator DuplicateTickRoutine()
     {
         while (true)
         {
-            yield return new WaitForSeconds(dotTickInterval);
+            yield return new WaitForSeconds(duplicateInterval);
 
             if (overlapping.Count == 0) continue;
 
@@ -127,12 +113,32 @@ public class HitBox_PC : MonoBehaviour
             foreach (var hp in snapshot)
             {
                 if (hp == null) continue;
-
-                Vector3 dir = (hp.transform.position - transform.position).normalized;
-                dir.y = 0f;
-                hp.ApplyDamage(dotDamagePerTick, dir, weapon);
-                Debug.Log($"🟢 [HitBox_PC.DoT] {hp.name}에 {dotDamagePerTick} 틱 데미지");
+                ApplyHit(hp);
             }
         }
+    }
+
+    private void ApplyHit(EnemyHealth hp)
+    {
+        if (hp == null) return;
+
+        // 방향 계산(수평)
+        Vector3 dir = (hp.transform.position - transform.position);
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.0001f) dir = Vector3.forward;
+        dir.Normalize();
+
+        // 데미지
+        hp.ApplyDamage(damage, dir, weapon);
+
+        // 넉백/스턴(무기 SO 값 사용)
+        var enemy = hp.GetComponent<Enemy>() ?? hp.GetComponentInParent<Enemy>();
+        if (enemy != null)
+        {
+            // power/duration/stun은 weapon에서 읽음 → 방향만 전달
+            enemy.ApplyKnockback(dir, weapon);
+        }
+
+        Debug.Log($"✅ [HitBox_PC] {hp.name} hit │ dmg:{damage}, dup:{duplicateEnabled}");
     }
 }

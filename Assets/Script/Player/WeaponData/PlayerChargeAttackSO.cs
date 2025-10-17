@@ -18,6 +18,7 @@ public class PlayerChargeAttackSO : ScriptableObject
 
     [Header("전투 스탯(차지 전용)")]
     public float damage = 120f;
+    public float duration = 0.8f;
     public float range = 2.5f;
     public float hitBoxLifetime = 0.15f;
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using System; // StringComparison
 
 public enum PlayerState
 {
@@ -55,6 +56,9 @@ public class PlayerWeaponController : MonoBehaviour
     private Coroutine currentKnockbackCoroutine;
     private Coroutine currentEvadeCoroutine;
 
+    // 🆕 차지 유지 코루틴
+    private Coroutine currentChargedAttackCoroutine;
+
     private float currentEvadeGauge;
     private bool isInvincible = false;
 
@@ -65,7 +69,8 @@ public class PlayerWeaponController : MonoBehaviour
     private float chargeHoldStartTime = 0f;
     private bool chargeStartMsgDone = false;   // 1.0s
     private bool chargeSuccessMsgDone = false; // SO.holdSuccessTime
-    private bool chargeExecuted = false;       // 차지 발동 1회 보장
+    private bool chargeExecuted = false;       // 발사 1회 보장
+    private bool chargeReady = false;          // holdSuccessTime 달성 여부
 
     // 🆕 무적/스폰 딜레이 루틴
     private Coroutine invincibleRoutine;
@@ -85,7 +90,7 @@ public class PlayerWeaponController : MonoBehaviour
     }
     private readonly Dictionary<WeaponDataSO_Gun, AmmoSnapshot> gunAmmoSnapshots = new();
 
-    // 리로드 중 메시지 쿨다운 (이전 단계에서 도입했다면 유지)
+    // 리로드 중 메시지 쿨다운
     private float lastReloadMsgTime = -999f;
     private const float RELOAD_MSG_COOLDOWN = 0.3f;
 
@@ -119,7 +124,7 @@ public class PlayerWeaponController : MonoBehaviour
     {
         if (state == PlayerState.Dead) return;
 
-        // 🆕 기본 공격 즉발 후 홀드 진행 체크(차지)
+        // 🆕 홀드-투-릴리스 차지
         TickChargeHold();
 
         if (evadeData != null && currentEvadeGauge < evadeData.maxGauge)
@@ -152,26 +157,41 @@ public class PlayerWeaponController : MonoBehaviour
         }
     }
 
+    // 🆕 차지 시작/발사 허용 게이트: Idle/Move + 무기 None
+    private bool IsChargeAllowedNow()
+    {
+        if (!(state == PlayerState.Idle || state == PlayerState.Move)) return false;
+        if (currentWeaponData == null) return false;
+        return string.Equals(currentWeaponData.weaponName, "None", StringComparison.OrdinalIgnoreCase);
+    }
+
     private void TickChargeHold()
     {
-        // Down: 홀드 시작(슬롯이 비어 있으면 알림만)
+        // Down: 홀드 시작 (게이트 충족 시에만)
         if (!chargeHoldActive && InputManager.Instance.GetAttackDown())
         {
             if (chargeSlot == null)
             {
                 Debug.Log("⚠ 차지 슬롯이 비어있습니다.");
             }
-            else
+            else if (IsChargeAllowedNow())
             {
                 chargeHoldActive = true;
                 chargeHoldStartTime = Time.time;
                 chargeStartMsgDone = false;
                 chargeSuccessMsgDone = false;
                 chargeExecuted = false;
+                chargeReady = false;
+
+                if (debugMode) Debug.Log("[Charge] 홀드 시작");
+            }
+            else
+            {
+                if (debugMode) Debug.Log("[Charge] 시작 불가: 상태(Idle/Move) 아님 또는 무기 None 아님");
             }
         }
 
-        // Hold 중: 메시지/성공 판정/발동
+        // Hold 중: 메시지/성공 플래그만 (즉시 발사 금지)
         if (chargeHoldActive && InputManager.Instance.GetAttack())
         {
             float held = Time.time - chargeHoldStartTime;
@@ -183,27 +203,47 @@ public class PlayerWeaponController : MonoBehaviour
                 Debug.Log("차지 시작");
             }
 
-            // SO 지정 시간: 차지 성공 메시지 + 실제 차지 발동(1회)
-            if (chargeSlot != null && !chargeSuccessMsgDone && held >= chargeSlot.holdSuccessTime)
+            // SO 지정 시간: 차지 성공(발사 준비) 플래그
+            if (chargeSlot != null && !chargeReady && held >= chargeSlot.holdSuccessTime)
             {
-                chargeSuccessMsgDone = true;
-                if (enableChargeMessages) Debug.Log("차지 성공");
-
-                if (!chargeExecuted)
+                chargeReady = true;
+                if (enableChargeMessages && !chargeSuccessMsgDone)
                 {
-                    chargeExecuted = true;
-                    ExecuteChargeAttack();
+                    chargeSuccessMsgDone = true;
+                    Debug.Log("차지 성공");
                 }
             }
         }
 
-        // Up: 리셋(성공 전이면 실패 취소)
+        // Up: 발사 시도 (게이트: Idle/Move + None + 성공 달성)
         if (chargeHoldActive && InputManager.Instance.GetAttackUp())
         {
+            bool fired = false;
+
+            if (chargeReady && !chargeExecuted && IsChargeAllowedNow())
+            {
+                ExecuteChargeAttack();
+                chargeExecuted = true;
+                fired = true;
+            }
+            else
+            {
+                if (debugMode)
+                {
+                    if (!chargeReady) Debug.Log("[Charge] 실패: 성공 시간 도달 전 방출");
+                    else if (chargeExecuted) Debug.Log("[Charge] 이미 발사 처리됨");
+                    else Debug.Log("[Charge] 방출 시점 게이트 불만족(Idle/Move+None 아님) → 취소");
+                }
+            }
+
+            // 플래그 리셋
             chargeHoldActive = false;
             chargeStartMsgDone = false;
             chargeSuccessMsgDone = false;
+            chargeReady = false;
             chargeExecuted = false;
+
+            if (fired && debugMode) Debug.Log("[Charge] 릴리스 → 발사 완료");
         }
     }
 
@@ -268,7 +308,7 @@ public class PlayerWeaponController : MonoBehaviour
         if (currentKnockbackCoroutine != null) { StopCoroutine(currentKnockbackCoroutine); currentKnockbackCoroutine = null; }
         if (currentEvadeCoroutine != null) { StopCoroutine(currentEvadeCoroutine); currentEvadeCoroutine = null; }
 
-        // 회피 시 리로드 인터럽트 (스냅샷 저장은 교체 시점)
+        // 회피 시 리로드 인터럽트
         weaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
 
         currentEvadeGauge -= evadeData.evadeCost;
@@ -408,6 +448,7 @@ public class PlayerWeaponController : MonoBehaviour
             chargeStartMsgDone = false;
             chargeSuccessMsgDone = false;
             chargeExecuted = false;
+            chargeReady = false;
 
             if (chargeSpawnRoutine != null)
             {
@@ -430,12 +471,11 @@ public class PlayerWeaponController : MonoBehaviour
         var ammo = weaponBehavior.GetComponent<WeaponAmmoRuntime>();
         if (ammo == null || !ammo.IsInitialized) return;
 
-        // 리로드 중이라면 캔슬로 간주 (이미 InterruptReload 호출 가능)
         if (ammo.IsReloading)
             ammo.InterruptReload();
 
         int magazine = ammo.CurrentMagazine;
-        int reserve = gun.infiniteReserve ? 0 : ammo.CurrentReserve; // infiniteReserve면 의미 없음
+        int reserve = gun.infiniteReserve ? 0 : ammo.CurrentReserve;
 
         gunAmmoSnapshots[gun] = new AmmoSnapshot { magazine = magazine, reserve = reserve };
         if (debugMode)
@@ -471,7 +511,6 @@ public class PlayerWeaponController : MonoBehaviour
         // 6) Gun이면 초기화 후 스냅샷 복원
         if (currentWeaponData is WeaponDataSO_Gun g && g.usesAmmo)
         {
-            // WeaponBehavior에 EnsureAmmoInitialized() 가 있다면 호출 (ammo 컴포넌트 생성/초기화)
             weaponBehavior?.EnsureAmmoInitialized();
             var ammo = weaponBehavior.GetComponent<WeaponAmmoRuntime>();
 
@@ -481,7 +520,6 @@ public class PlayerWeaponController : MonoBehaviour
             }
             else
             {
-                // 스냅 없음 → 초기 상태 그대로
                 if (debugMode)
                     Debug.Log($"[Ammo] 스냅샷 없음 → 기본 초기화 gun={g.weaponName}");
             }
@@ -557,12 +595,15 @@ public class PlayerWeaponController : MonoBehaviour
         currentAttackCoroutine = null;
     }
 
-    // ───── 🆕 차지 발동 ─────
+    // ───── 🆕 차지 발사(릴리스 시점) ─────
     private void ExecuteChargeAttack()
     {
         if (chargeSlot == null) return;
 
-        // 무적창 적용 (A안: 즉시 시작)
+        // 상태 전환(차지 공격 유지 시작)
+        ChangeState(PlayerState.Attack);
+
+        // 무적창 적용(발사 시점)
         if (chargeSlot.invincibilityDuration > 0f)
         {
             if (invincibleRoutine != null) StopCoroutine(invincibleRoutine);
@@ -581,6 +622,36 @@ public class PlayerWeaponController : MonoBehaviour
             chargeSpawnRoutine = null;
         }
         chargeSpawnRoutine = StartCoroutine(ChargeHitboxSpawnRoutine(chargeSlot));
+
+        // 유지 시간 코루틴 시작 (slot.duration, 기본 0.8s)
+        float dur = (chargeSlot.duration > 0f) ? chargeSlot.duration : 0.8f;
+        if (currentChargedAttackCoroutine != null) { StopCoroutine(currentChargedAttackCoroutine); currentChargedAttackCoroutine = null; }
+        currentChargedAttackCoroutine = StartCoroutine(ChargedAttackMaintainRoutine(dur));
+    }
+
+    private IEnumerator ChargedAttackMaintainRoutine(float duration)
+    {
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            // 하드 CC/죽음/회피로 상태 전환되면 즉시 종료
+            if (state == PlayerState.Knockback || state == PlayerState.Stun ||
+                state == PlayerState.Dead || state == PlayerState.Evade)
+            {
+                currentChargedAttackCoroutine = null;
+                yield break;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // 끝나면 Idle/Move 복귀
+        if (movement != null && movement.GetVelocityMagnitude() > 0.1f) ChangeState(PlayerState.Move);
+        else ChangeState(PlayerState.Idle);
+
+        currentChargedAttackCoroutine = null;
     }
 
     private IEnumerator ChargeHitboxSpawnRoutine(PlayerChargeAttackSO slot)
@@ -627,18 +698,23 @@ public class PlayerWeaponController : MonoBehaviour
 
             if (slot.enableAreaDot)
             {
+                // 7인자 삭제 → 6인자 중복 히트로 대체
+                // dmg: dotDamagePerTick(>0이면) 또는 base damage 사용
+                float dmgPerTick = slot.dotDamagePerTick > 0f ? slot.dotDamagePerTick : slot.damage;
+                float interval = Mathf.Max(0.01f, slot.dotTickInterval);
+
                 hitbox.Initialize(
-                    slot.damage,
+                    dmgPerTick,
                     slot.range,
                     slot.knockbackPower,
                     slot.hitBoxLifetime,
-                    enableAreaDot: true,
-                    tickDamage: slot.dotDamagePerTick,
-                    tickInterval: slot.dotTickInterval
+                    allowDup: true,
+                    dupInterval: interval
                 );
             }
             else
             {
+                // 즉발 1회
                 hitbox.Initialize(
                     slot.damage,
                     slot.range,
@@ -654,7 +730,7 @@ public class PlayerWeaponController : MonoBehaviour
 
         if (debugMode)
         {
-            Debug.Log($"[Charge] HB Spawn(Delay {slot.spawnDelay:F2}s) │ dmg:{slot.damage}, range:{slot.range}, kb:{slot.knockbackPower}, life:{slot.hitBoxLifetime}, dot:{slot.enableAreaDot}");
+            Debug.Log($"[Charge] HB Spawn(Delay {slot.spawnDelay:F2}s) │ dmg:{slot.damage}, range:{slot.range}, kb:{slot.knockbackPower}, life:{slot.hitBoxLifetime}, dup:{slot.enableAreaDot}");
         }
 
         chargeSpawnRoutine = null;
@@ -688,6 +764,7 @@ public class PlayerWeaponController : MonoBehaviour
         if (currentAttackCoroutine != null) { StopCoroutine(currentAttackCoroutine); currentAttackCoroutine = null; }
         if (currentKnockbackCoroutine != null) { StopCoroutine(currentKnockbackCoroutine); currentKnockbackCoroutine = null; }
         if (currentEvadeCoroutine != null) { StopCoroutine(currentEvadeCoroutine); currentEvadeCoroutine = null; isInvincible = false; }
+        if (currentChargedAttackCoroutine != null) { StopCoroutine(currentChargedAttackCoroutine); currentChargedAttackCoroutine = null; }
 
         // 리로드 인터럽트
         weaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
@@ -697,6 +774,7 @@ public class PlayerWeaponController : MonoBehaviour
         chargeStartMsgDone = false;
         chargeSuccessMsgDone = false;
         chargeExecuted = false;
+        chargeReady = false;
 
         // 차지 스폰 대기 중단
         if (chargeSpawnRoutine != null)

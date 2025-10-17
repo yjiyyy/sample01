@@ -133,21 +133,12 @@ public class WeaponBehavior : MonoBehaviour
         {
             hitbox.SetWeapon(data);
 
-            bool allowDup = false;
-            float dupInterval = 0f;
-            if (data is WeaponDataSO_NoneCharged nc)
-            {
-                allowDup = nc.allowDuplicateHit;
-                dupInterval = nc.duplicateHitInterval;
-            }
-
+            // 근접은 ‘즉발 1회’만 사용(중복 히트는 차지/별도에서 운용)
             hitbox.Initialize(
                 data.damage,
                 data.range,
                 data.knockbackPower,
-                data.hitBoxLifetime,
-                allowDup,
-                dupInterval
+                data.hitBoxLifetime
             );
         }
 
