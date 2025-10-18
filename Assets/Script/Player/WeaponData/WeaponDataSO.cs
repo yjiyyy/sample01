@@ -56,6 +56,40 @@ public class WeaponDataSO : ScriptableObject
     [Header("Charge Attack (무기별 선택 적용)")]
     [Tooltip("이 무기에 사용할 플레이어 차지 공격 SO. 비어있으면 이 무기는 차지 비활성.")]
     public PlayerChargeAttackSO chargeSlot;
+
+    /* ───────── 🆕 리코일(자기 반동) ───────── */
+    [Header("리코일(자기 반동)")]
+    [Tooltip("공격 시작 후 리코일이 시작되기까지의 지연 시간(초)")]
+    public float recoilStartDelay = 0f;
+
+    [Tooltip("리코일 파워 (+면 뒤로, -면 앞으로). 단위: m/s")]
+    public float recoilPower = 0f;
+
+    [Tooltip("리코일 지속 시간(초)")]
+    public float recoilDuration = 0f;
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        cooldown = Mathf.Max(0f, cooldown);
+        hitboxSpawnDelay = Mathf.Max(0f, hitboxSpawnDelay);
+        hitBoxLifetime = Mathf.Max(0f, hitBoxLifetime);
+
+        knockbackDuration = Mathf.Max(0f, knockbackDuration);
+        jerkDuration = Mathf.Max(0f, jerkDuration);
+
+        stunDuration = Mathf.Max(0f, stunDuration);
+
+        ragdollImpulse = Mathf.Max(0f, ragdollImpulse);
+        upwardImpulse = Mathf.Max(0f, upwardImpulse);
+        torqueImpulse = Mathf.Max(0f, torqueImpulse);
+        sliceForce = Mathf.Max(0f, sliceForce);
+
+        // 리코일: 시간은 0 이상, 파워는 부호 허용
+        recoilStartDelay = Mathf.Max(0f, recoilStartDelay);
+        recoilDuration = Mathf.Max(0f, recoilDuration);
+    }
+#endif
 }
 
 public enum EnemyDeathType

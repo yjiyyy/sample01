@@ -51,6 +51,9 @@ public class PlayerWeaponController : MonoBehaviour
     private Coroutine currentKnockbackCoroutine;
     private Coroutine currentEvadeCoroutine;
 
+    // ───────── 🆕 리코일 ─────────
+    private Coroutine recoilRoutine;
+
     // 차지 유지 코루틴
     private Coroutine currentChargedAttackCoroutine;
 
@@ -303,8 +306,9 @@ public class PlayerWeaponController : MonoBehaviour
         if (currentAttackCoroutine != null) { StopCoroutine(currentAttackCoroutine); currentAttackCoroutine = null; }
         if (currentKnockbackCoroutine != null) { StopCoroutine(currentKnockbackCoroutine); currentKnockbackCoroutine = null; }
         if (currentEvadeCoroutine != null) { StopCoroutine(currentEvadeCoroutine); currentEvadeCoroutine = null; }
+        CancelRecoil(); // 🆕 회피 시 리코일 취소
 
-        // 회피 시 리로드 인터럽트
+        // 회피 시 리ロード 인터럽트
         weaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
 
         currentEvadeGauge -= evadeData.evadeCost;
@@ -440,6 +444,10 @@ public class PlayerWeaponController : MonoBehaviour
             CancelChargeAll();
         }
 
+        // 🆕 Attack이 아닌 상태로 전환되면 리코일 취소
+        if (newState != PlayerState.Attack)
+            CancelRecoil();
+
         animationController?.ForceAnimationByState(newState);
     }
 
@@ -571,12 +579,18 @@ public class PlayerWeaponController : MonoBehaviour
         ChangeState(PlayerState.Attack);
         animationController?.PlayAttack(currentWeaponData);
 
+        // 🆕 리코일 시작 (SO 파라미터 기반)
+        StartRecoilIfNeeded(currentWeaponData);
+
         weaponBehavior?.AttackHit();
 
         yield return new WaitForSeconds(currentWeaponData.cooldown);
 
         ChangeState(PlayerState.Idle);
         animationController?.EndAttack();
+
+        // 안전상 리코일 정리
+        CancelRecoil();
 
         currentAttackCoroutine = null;
     }
@@ -763,6 +777,7 @@ public class PlayerWeaponController : MonoBehaviour
         if (currentKnockbackCoroutine != null) { StopCoroutine(currentKnockbackCoroutine); currentKnockbackCoroutine = null; }
         if (currentEvadeCoroutine != null) { StopCoroutine(currentEvadeCoroutine); currentEvadeCoroutine = null; isInvincible = false; }
         if (currentChargedAttackCoroutine != null) { StopCoroutine(currentChargedAttackCoroutine); currentChargedAttackCoroutine = null; }
+        CancelRecoil(); // 🆕 CC 시 리코일 즉시 취소
 
         // 리로드 인터럽트
         weaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
@@ -854,4 +869,69 @@ public class PlayerWeaponController : MonoBehaviour
 
     public WeaponDataSO GetCurrentWeaponData() => currentWeaponData;
     public PlayerState CurrentState => state;
+
+    /* ───────── 🆕 리코일 내부 구현 ───────── */
+    private void StartRecoilIfNeeded(WeaponDataSO data)
+    {
+        if (data == null) return;
+        if (data.recoilDuration <= 0f) return;
+        if (Mathf.Approximately(data.recoilPower, 0f)) return;
+
+        CancelRecoil();
+        recoilRoutine = StartCoroutine(RecoilRoutine(data));
+    }
+
+    private void CancelRecoil()
+    {
+        if (recoilRoutine != null)
+        {
+            StopCoroutine(recoilRoutine);
+            recoilRoutine = null;
+        }
+    }
+
+    private IEnumerator RecoilRoutine(WeaponDataSO data)
+    {
+        // Start delay (Attack 상태 유지되는 동안만)
+        float delay = Mathf.Max(0f, data.recoilStartDelay);
+        float waited = 0f;
+        while (waited < delay)
+        {
+            if (state != PlayerState.Attack) { recoilRoutine = null; yield break; }
+            float step = Mathf.Min(Time.deltaTime, delay - waited);
+            waited += step;
+            yield return null;
+        }
+
+        if (state != PlayerState.Attack) { recoilRoutine = null; yield break; }
+
+        // 방향 스냅샷 (+면 뒤로, -면 앞으로)
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
+        forward.Normalize();
+
+        Vector3 dir = (data.recoilPower >= 0f ? -forward : forward);
+        float speedAbs = Mathf.Abs(data.recoilPower);
+        float duration = Mathf.Max(0f, data.recoilDuration);
+
+        float elapsed = 0f;
+
+        // 내부 감쇠 커브: v(t) = 4t(1-t) (t∈[0,1]) → 초반 가속 후 감속 정지
+        while (elapsed < duration)
+        {
+            if (state != PlayerState.Attack) { recoilRoutine = null; yield break; }
+
+            float t = duration > 0f ? (elapsed / duration) : 1f;
+            float speedMul = 4f * t * (1f - t); // 0→최대(0.5)→0
+            float currentSpeed = speedAbs * Mathf.Max(0f, speedMul);
+
+            transform.position += dir * currentSpeed * Time.deltaTime;
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        recoilRoutine = null;
+    }
 }
