@@ -195,6 +195,28 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    // ✅ 넉백 즉시 해제(Evade 우선 적용용)
+    public void CancelKnockback()
+    {
+        if (!isKnockbacked) return;
+        isKnockbacked = false;
+        knockbackTimer = knockbackDuration;
+
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.velocity = Vector3.zero;
+            agent.isStopped = true;   // Evade/Attack 등에서 어차피 정지됨
+            agent.ResetPath();
+        }
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        Debug.Log("[PlayerMovement] CancelKnockback()");
+    }
+
     public bool IsCurrentlyKnockbacked() => isKnockbacked;
     public float GetVelocityMagnitude() => agent != null ? agent.velocity.magnitude : 0f;
     private bool CanUseAgent() => agent.enabled && agent.isOnNavMesh;

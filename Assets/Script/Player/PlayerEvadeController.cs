@@ -1,12 +1,7 @@
-using System;
+ï»¿using System;
 using System.Collections;
 using UnityEngine;
 
-/// <summary>
-/// È¸ÇÇ Àü´ã(°ÔÀÌÁö/½ÇÇà/¹«Àû/Á¾·á)
-/// - ´ÜÀÏ ·çÆ¾ ±¸Á¶·Î GC/ºĞ±â ÃÖ¼ÒÈ­
-/// - CC/Á×À½ ¹ß»ı ½Ã Áï½Ã Á¾·á
-/// </summary>
 [DisallowMultipleComponent]
 public class PlayerEvadeController : MonoBehaviour
 {
@@ -47,24 +42,34 @@ public class PlayerEvadeController : MonoBehaviour
         }
     }
 
-    public bool CanEvade() => data != null && currentGauge >= data.evadeCost;
+    public bool CanEvade()
+    {
+        if (data == null) return false;
+        return currentGauge >= data.evadeCost;
+    }
+
     public float GetEvadeGauge() => currentGauge;
     public float GetMaxEvadeGauge() => data != null ? data.maxGauge : 100f;
     public bool IsInvincible() => isInvincible;
 
     public void PerformEvade(Vector2 moveInput, Action preEvadeCleanup)
     {
-        if (data == null || !CanEvade()) return;
+        if (data == null) return;
+        if (!CanEvade()) return;
 
+        // ì‚¬ì „ ì •ë¦¬(ê³µê²©/ë„‰ë°±/ë¦¬ì½”ì¼/ë¦¬ë¡œë“œ)
         preEvadeCleanup?.Invoke();
+
         currentGauge -= data.evadeCost;
 
+        // ì´ˆê¸° ë°©í–¥ ê³„ì‚°
         Vector3 initialDir;
         if (moveInput.magnitude > 0.1f)
             initialDir = new Vector3(moveInput.x, 0, moveInput.y);
         else
             initialDir = transform.forward;
 
+        // ì¹´ë©”ë¼ ê¸°ì¤€ ë³´ì •
         if (Camera.main != null)
         {
             Vector3 camF = Camera.main.transform.forward;
@@ -74,8 +79,14 @@ public class PlayerEvadeController : MonoBehaviour
             initialDir = (camF * initialDir.z + camR * initialDir.x).normalized;
         }
 
+        // ê¸°ì¡´ ë£¨í‹´ ì¤‘ë‹¨
         if (evadeRoutine != null) { StopCoroutine(evadeRoutine); evadeRoutine = null; }
-        evadeRoutine = StartCoroutine(EvadeRoutine(initialDir));
+
+        // ì‹¤í–‰
+        if (data.allowDirectionChangeWhileEvading)
+            evadeRoutine = StartCoroutine(DynamicEvadeRoutine(initialDir));
+        else
+            evadeRoutine = StartCoroutine(FixedEvadeRoutine(initialDir));
     }
 
     public void CancelEvade()
@@ -89,12 +100,53 @@ public class PlayerEvadeController : MonoBehaviour
         anim?.EndEvade();
     }
 
-    private IEnumerator EvadeRoutine(Vector3 initialDir)
+    private IEnumerator FixedEvadeRoutine(Vector3 fixedDirection)
     {
         changeState?.Invoke(PlayerState.Evade);
 
         float elapsed = 0f;
-        Vector3 currentDir = initialDir.normalized;
+        Vector3 dir = fixedDirection.normalized;
+        dir.y = 0f;
+        isInvincible = true;
+
+        if (dir.sqrMagnitude > 0.01f)
+            transform.rotation = Quaternion.LookRotation(dir);
+
+        float dur = Mathf.Max(0f, data.evadeDuration);
+        while (elapsed < dur)
+        {
+            float t = dur > 0f ? (elapsed / dur) : 1f;
+            float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
+            transform.position += dir * (data.evadeSpeed * speedMul) * Time.deltaTime;
+
+            if (elapsed >= data.invincibilityDuration)
+                isInvincible = false;
+
+            // CC/ì£½ìŒ ë“±ìœ¼ë¡œ ìƒíƒœê°€ ë°”ë€Œë©´ ì¦‰ì‹œ ì¢…ë£Œ
+            if (getState != null)
+            {
+                var s = getState();
+                if (s == PlayerState.Knockback || s == PlayerState.Stun || s == PlayerState.Dead)
+                {
+                    evadeRoutine = null;
+                    yield break;
+                }
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        FinishEvade();
+        evadeRoutine = null;
+    }
+
+    private IEnumerator DynamicEvadeRoutine(Vector3 initialDirection)
+    {
+        changeState?.Invoke(PlayerState.Evade);
+
+        float elapsed = 0f;
+        Vector3 currentDir = initialDirection.normalized;
         currentDir.y = 0f;
         isInvincible = true;
 
@@ -103,37 +155,29 @@ public class PlayerEvadeController : MonoBehaviour
         {
             float t = dur > 0f ? (elapsed / dur) : 1f;
 
-            // ¹æÇâ °íÁ¤/µ¿Àû
-            if (data.allowDirectionChangeWhileEvading)
+            // ì…ë ¥ì— ë”°ë¥¸ ë°©í–¥ ë³€ê²½
+            Vector2 input = InputManager.Instance.GetMoveInput();
+            if (input.magnitude >= data.minInputMagnitude)
             {
-                Vector2 input = InputManager.Instance.GetMoveInput();
-                if (input.magnitude >= data.minInputMagnitude)
+                Vector3 newDir = new Vector3(input.x, 0, input.y);
+                if (Camera.main != null)
                 {
-                    Vector3 newDir = new Vector3(input.x, 0, input.y);
-                    if (Camera.main != null)
-                    {
-                        Vector3 camF = Camera.main.transform.forward;
-                        Vector3 camR = Camera.main.transform.right;
-                        camF.y = 0; camR.y = 0;
-                        camF.Normalize(); camR.Normalize();
-                        newDir = (camF * newDir.z + camR * newDir.x).normalized;
-                        newDir.y = 0f;
-                    }
-
-                    float lerp = data.directionChangeSensitivity * Time.deltaTime;
-                    currentDir = Vector3.Lerp(currentDir, newDir, lerp).normalized;
-
-                    if (currentDir.sqrMagnitude > 0.01f)
-                    {
-                        Quaternion target = Quaternion.LookRotation(currentDir, Vector3.up);
-                        transform.rotation = Quaternion.Slerp(transform.rotation, target, lerp);
-                    }
+                    Vector3 camF = Camera.main.transform.forward;
+                    Vector3 camR = Camera.main.transform.right;
+                    camF.y = 0; camR.y = 0;
+                    camF.Normalize(); camR.Normalize();
+                    newDir = (camF * newDir.z + camR * newDir.x).normalized;
+                    newDir.y = 0f;
                 }
-            }
-            else
-            {
+
+                float lerp = data.directionChangeSensitivity * Time.deltaTime;
+                currentDir = Vector3.Lerp(currentDir, newDir, lerp).normalized;
+
                 if (currentDir.sqrMagnitude > 0.01f)
-                    transform.rotation = Quaternion.LookRotation(currentDir);
+                {
+                    Quaternion target = Quaternion.LookRotation(currentDir, Vector3.up);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, target, lerp);
+                }
             }
 
             float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
@@ -142,25 +186,34 @@ public class PlayerEvadeController : MonoBehaviour
             if (elapsed >= data.invincibilityDuration)
                 isInvincible = false;
 
-            // CC/Á×À½À¸·Î »óÅÂ ¹Ù²î¸é Áß´Ü
-            var s = getState != null ? getState() : PlayerState.Idle;
-            if (s == PlayerState.Knockback || s == PlayerState.Stun || s == PlayerState.Dead)
+            // CC/ì£½ìŒ ë“±ìœ¼ë¡œ ìƒíƒœê°€ ë°”ë€Œë©´ ì¦‰ì‹œ ì¢…ë£Œ
+            if (getState != null)
             {
-                evadeRoutine = null;
-                yield break;
+                var s = getState();
+                if (s == PlayerState.Knockback || s == PlayerState.Stun || s == PlayerState.Dead)
+                {
+                    evadeRoutine = null;
+                    yield break;
+                }
             }
 
             elapsed += Time.deltaTime;
             yield return null;
         }
 
+        FinishEvade();
+        evadeRoutine = null;
+    }
+
+    private void FinishEvade()
+    {
         isInvincible = false;
         anim?.EndEvade();
 
-        changeState?.Invoke(movement != null && movement.GetVelocityMagnitude() > 0.1f
-            ? PlayerState.Move
-            : PlayerState.Idle);
-
-        evadeRoutine = null;
+        // ì†ë„ ê¸°ë°˜ìœ¼ë¡œ Idle/Move ê²°ì •
+        if (movement != null && movement.GetVelocityMagnitude() > 0.1f)
+            changeState?.Invoke(PlayerState.Move);
+        else
+            changeState?.Invoke(PlayerState.Idle);
     }
 }

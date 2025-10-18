@@ -60,6 +60,8 @@ public class PlayerWeaponController : MonoBehaviour
 
     // 코루틴
     private Coroutine attackRoutine;
+    // ✅ 넉백 코루틴 핸들 보유(회피 진입 시 중단용)
+    private Coroutine knockbackRoutine;
 
     // 스폰 포인트 캐시 (Root_dummy)
     private Transform meleeSpawnPointCache;
@@ -126,7 +128,7 @@ public class PlayerWeaponController : MonoBehaviour
     {
         if (state == PlayerState.Dead) return;
 
-        // 차지 입력 틱
+        // 차지 입력 틱(상태 무관)
         chargeComp?.Tick();
 
         // 회피 게이지 충전
@@ -142,11 +144,15 @@ public class PlayerWeaponController : MonoBehaviour
             System.Action preEvadeCleanup = () =>
             {
                 if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
+                // ✅ 넉백 이동/코루틴 즉시 중단(Evade 우선 적용)
+                if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
+                movement?.CancelKnockback();
+
                 CancelRecoil();
                 // 리로드 인터럽트
                 equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
-                // 차지 대기/유지 취소
-                chargeComp.CancelAll();
+                // ❌ 정책: 회피 중 차지 유지 → CancelAll() 호출하지 않음
+                // chargeComp.CancelAll();
             };
 
             evadeComp.PerformEvade(currentMoveInput, preEvadeCleanup);
@@ -198,7 +204,7 @@ public class PlayerWeaponController : MonoBehaviour
         state = newState;
         fsm?.Set(newState);
 
-        // CC/죽음 시 차지 취소
+        // CC/죽음 시 차지 취소(정책 유지)
         if (newState == PlayerState.Knockback ||
             newState == PlayerState.Stun ||
             newState == PlayerState.Dead)
@@ -216,6 +222,7 @@ public class PlayerWeaponController : MonoBehaviour
 
     public void EquipWeapon(GameObject weaponPrefab)
     {
+        // 무기 교체 시 차지 취소(정책 유지)
         chargeComp?.CancelAll();
 
         equipComp.Equip(weaponPrefab, defaultWeaponPrefab, debugLogs: debugMode);
@@ -319,7 +326,7 @@ public class PlayerWeaponController : MonoBehaviour
         // 회피 취소
         evadeComp?.CancelEvade();
 
-        // 차지 무적 해제
+        // 차지 무적/대기 해제(정책 유지: CC 시 취소)
         chargeComp?.CancelAll();
         chargeInvincible = false;
 
@@ -329,7 +336,9 @@ public class PlayerWeaponController : MonoBehaviour
         // 리로드 인터럽트
         equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
 
-        StartCoroutine(KnockbackRoutine(dir, power, duration, stun));
+        // 기존 넉백 루틴 중단 후 재시작
+        if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
+        knockbackRoutine = StartCoroutine(KnockbackRoutine(dir, power, duration, stun));
     }
 
     public void ApplyKnockback(Vector3 dir, float power, float duration, float stun)
@@ -359,6 +368,7 @@ public class PlayerWeaponController : MonoBehaviour
         }
 
         ChangeState(PlayerState.Idle);
+        knockbackRoutine = null; // ✅ 정리
     }
     #endregion
 
