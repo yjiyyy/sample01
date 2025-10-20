@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 239271d3c0ac4454a8ed3fc8e1dde8ee, type: 3}
+  m_Name: WeaponRegistry
+  m_EditorClassIdentifier: 
+  entries:
+  - id: Weapon_01_None
+    displayName: Weapon_01_None
+    prefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
+  - id: Weapon_02_Bat
+    displayName: Weapon_02_Bat
+    prefab: {fileID: 2739951429482498694, guid: 61b8bb56613b29841b73e0b856e05ad4, type: 3}
+  - id: Weapon_03_Gun
+    displayName: Weapon_03_Gun
+    prefab: {fileID: 38192432513176113, guid: d90c3f245074e2048af3c0061756d414, type: 3}
+  - id: Weapon_Shotgun
+    displayName: Weapon_Shotgun
+    prefab: {fileID: 522649090004456507, guid: 3e0286ade08eaa547bd0a6bce8217b10, type: 3}

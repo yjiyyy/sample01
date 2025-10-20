@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1495834140355240803}
   - component: {fileID: 6861948512720768995}
   m_Layer: 0
-  m_Name: Weapon_Bat
+  m_Name: Weapon_02_Bat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -4,6 +4,11 @@ public class InputManager : MonoBehaviour
 {
     public static InputManager Instance { get; private set; }
 
+    [Header("Move Input Settings")]
+    [Tooltip("게임패드 스틱 입력 데드존(이 값보다 작으면 0으로 처리)")]
+    [Range(0f, 0.5f)]
+    public float gamepadDeadzone = 0.15f;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -17,12 +22,39 @@ public class InputManager : MonoBehaviour
         }
     }
 
-    /* ───── 이동 입력 ───── */
+    /* ───── 이동 입력 (전역으로 방향키 제외) ───── */
     public Vector2 GetMoveInput()
     {
+        // 1) 키보드: WASD만 직접 계산
+        float x = 0f, y = 0f;
+        if (Input.GetKey(KeyCode.A)) x -= 1f;
+        if (Input.GetKey(KeyCode.D)) x += 1f;
+        if (Input.GetKey(KeyCode.S)) y -= 1f;
+        if (Input.GetKey(KeyCode.W)) y += 1f;
+
+        Vector2 wasd = new Vector2(x, y);
+        if (wasd.sqrMagnitude > 0.0001f)
+            return wasd;
+
+        // 2) 방향키가 눌린 경우 → 이동에 영향 0 (전역 차단)
+        bool arrowHeld =
+            Input.GetKey(KeyCode.UpArrow) ||
+            Input.GetKey(KeyCode.DownArrow) ||
+            Input.GetKey(KeyCode.LeftArrow) ||
+            Input.GetKey(KeyCode.RightArrow);
+
+        if (arrowHeld)
+            return Vector2.zero;
+
+        // 3) 게임패드/축 입력(방향키 영향 제거를 위해 방향키가 눌린 프레임엔 무시)
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
-        return new Vector2(h, v);
+        Vector2 gamepad = new Vector2(h, v);
+
+        if (gamepad.magnitude < gamepadDeadzone)
+            return Vector2.zero;
+
+        return gamepad;
     }
 
     /* ───── 무기 교체 입력 ───── */
