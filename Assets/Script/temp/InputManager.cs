@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+[DisallowMultipleComponent]
 public class InputManager : MonoBehaviour
 {
     public static InputManager Instance { get; private set; }
@@ -9,22 +10,72 @@ public class InputManager : MonoBehaviour
     [Range(0f, 0.5f)]
     public float gamepadDeadzone = 0.15f;
 
+    [Header("Mobile Settings")]
+    [Tooltip("에디터에서도 모바일 UI/입력을 강제로 활성화")]
+    public bool forceMobileInEditor = false;
+
+    // ───────── Mobile state (조이스틱/버튼에서 주입) ─────────
+    private Vector2 mobileMove; // -1..1
+    private bool mobileAttackPressed;
+    private int mobileAttackDownFrames;
+    private int mobileAttackUpFrames;
+
+    private bool mobileEvadePressed;
+    private int mobileEvadeDownFrames;
+    private int mobileEvadeUpFrames;
+
+    private bool IsMobileRuntimeActive =>
+#if UNITY_EDITOR
+        forceMobileInEditor;
+#else
+        Application.isMobilePlatform;
+#endif
+
+    // 도메인 리로드 비활성 시에도 정적 필드 초기화
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        Instance = null;
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(this.gameObject);
+#if UNITY_EDITOR
+            Debug.LogWarning("[InputManager] Duplicate detected. Destroying this component (not GameObject).", this);
+#endif
+            // 호스트 오브젝트 파괴 대신, 컴포넌트만 제거
+            Destroy(this);
+            return;
         }
-        else
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject); // 씬 전환 시에도 유지
-        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject); // 씬 전환 시에도 유지
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
+    private void LateUpdate()
+    {
+        // 모바일 엣지 신호는 1~2프레임만 유지
+        if (mobileAttackDownFrames > 0) mobileAttackDownFrames--;
+        if (mobileAttackUpFrames > 0) mobileAttackUpFrames--;
+        if (mobileEvadeDownFrames > 0) mobileEvadeDownFrames--;
+        if (mobileEvadeUpFrames > 0) mobileEvadeUpFrames--;
     }
 
     /* ───── 이동 입력 (전역으로 방향키 제외) ───── */
     public Vector2 GetMoveInput()
     {
+        // 0) 모바일 조이스틱이 활성값이면 최우선 사용
+        if (IsMobileRuntimeActive && mobileMove.sqrMagnitude > 0.0001f)
+            return mobileMove;
+
         // 1) 키보드: WASD만 직접 계산
         float x = 0f, y = 0f;
         if (Input.GetKey(KeyCode.A)) x -= 1f;
@@ -77,22 +128,73 @@ public class InputManager : MonoBehaviour
     /* ───── 공격 입력(즉발) ───── */
     public bool GetAttackInput()
     {
-        // 오직 0번 키로만 공격
-        return Input.GetKeyDown(KeyCode.Alpha0);
+        // 기존 설계상 GetAttackInput은 즉발(Down)로 사용
+        return GetAttackDown();
     }
 
-    /* ───── 🆕 홀드/업(차지 모니터링) ───── */
-    public bool GetAttackDown() => Input.GetKeyDown(KeyCode.Alpha0);
-    public bool GetAttack() => Input.GetKey(KeyCode.Alpha0);
-    public bool GetAttackUp() => Input.GetKeyUp(KeyCode.Alpha0);
+    /* ───── 홀드/업(차지 모니터링) ───── */
+    public bool GetAttackDown()
+    {
+        bool kb = Input.GetKeyDown(KeyCode.Alpha0);
+        bool mobile = IsMobileRuntimeActive && mobileAttackDownFrames > 0;
+        return kb || mobile;
+    }
 
-    /* ───── ✅ 회피 입력 ───── */
+    public bool GetAttack()
+    {
+        bool kb = Input.GetKey(KeyCode.Alpha0);
+        bool mobile = IsMobileRuntimeActive && mobileAttackPressed;
+        return kb || mobile;
+    }
+
+    public bool GetAttackUp()
+    {
+        bool kb = Input.GetKeyUp(KeyCode.Alpha0);
+        bool mobile = IsMobileRuntimeActive && mobileAttackUpFrames > 0;
+        return kb || mobile;
+    }
+
+    /* ───── 회피 입력 ───── */
     public bool GetEvadeInput()
     {
-        return Input.GetKeyDown(KeyCode.Space);
+        bool kb = Input.GetKeyDown(KeyCode.Space);
+        bool mobile = IsMobileRuntimeActive && mobileEvadeDownFrames > 0;
+        return kb || mobile;
     }
 
     /* ───── 테스트 입력 ───── */
     public bool GetDamageTestInput() => Input.GetKeyDown(KeyCode.Minus);      // - 키
     public bool GetHealTestInput() => Input.GetKeyDown(KeyCode.Equals);       // = 키 (+ 키)
+
+    // ───────── Mobile setters (UI에서 호출) ─────────
+    public void SetMobileMove(Vector2 v)
+    {
+        // Clamp -1..1
+        v = Vector2.ClampMagnitude(v, 1f);
+        mobileMove = v;
+    }
+
+    public void MobileAttackDown()
+    {
+        mobileAttackPressed = true;
+        mobileAttackDownFrames = 2; // 1~2프레임 유지
+    }
+
+    public void MobileAttackUp()
+    {
+        mobileAttackPressed = false;
+        mobileAttackUpFrames = 2;
+    }
+
+    public void MobileEvadeDown()
+    {
+        mobileEvadePressed = true;
+        mobileEvadeDownFrames = 2;
+    }
+
+    public void MobileEvadeUp()
+    {
+        mobileEvadePressed = false;
+        mobileEvadeUpFrames = 2;
+    }
 }
