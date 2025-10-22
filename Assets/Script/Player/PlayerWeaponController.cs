@@ -62,6 +62,14 @@ public class PlayerWeaponController : MonoBehaviour
     private Coroutine attackRoutine;
     // ✅ 넉백 코루틴 핸들 보유(회피 진입 시 중단용)
     private Coroutine knockbackRoutine;
+    // 🆕 AR 연사 루틴
+    private Coroutine arFireRoutine;
+
+    // 🆕 AR 상태 플래그
+    private bool arRotationLocked = false;
+    private Vector3 arLockedForward;
+    private bool arAllowMoveWhileFiringFlag = false;
+    private bool arAutoResumeWhileHeld = false;
 
     // 스폰 포인트 캐시 (Root_dummy)
     private Transform meleeSpawnPointCache;
@@ -148,9 +156,14 @@ public class PlayerWeaponController : MonoBehaviour
                 if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
                 movement?.CancelKnockback();
 
+                // AR 연사 취소
+                if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
+                EndARFireState();
+
                 CancelRecoil();
                 // 리로드 인터럽트
                 equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
+                equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
                 // ❌ 정책: 회피 중 차지 유지 → CancelAll() 호출하지 않음
                 // chargeComp.CancelAll();
             };
@@ -210,6 +223,7 @@ public class PlayerWeaponController : MonoBehaviour
             newState == PlayerState.Dead)
         {
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
+            equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
             chargeComp?.CancelAll();
         }
 
@@ -224,6 +238,9 @@ public class PlayerWeaponController : MonoBehaviour
     {
         // 무기 교체 시 차지 취소(정책 유지)
         chargeComp?.CancelAll();
+        // AR 연사 종료
+        if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
+        EndARFireState();
 
         equipComp.Equip(weaponPrefab, defaultWeaponPrefab, debugLogs: debugMode);
 
@@ -237,6 +254,14 @@ public class PlayerWeaponController : MonoBehaviour
         var data = equipComp.CurrentWeaponData;
         if (data == null) return;
         if (IsActionBlocking()) return;
+
+        // 🆕 Assault Rifle: 홀드 연사 진입 (cooldown 간격)
+        if (data is WeaponDataSO_AR arData)
+        {
+            if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
+            arFireRoutine = StartCoroutine(AssaultRifleFireRoutine(arData));
+            return;
+        }
 
         // Gun 탄약 게이트
         var gun = data as WeaponDataSO_Gun;
@@ -335,6 +360,11 @@ public class PlayerWeaponController : MonoBehaviour
 
         // 리로드 인터럽트
         equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
+        equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
+
+        // AR 연사 취소
+        if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
+        EndARFireState();
 
         // 기존 넉백 루틴 중단 후 재시작
         if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
@@ -403,5 +433,132 @@ public class PlayerWeaponController : MonoBehaviour
     private void CancelRecoil()
     {
         recoilComp?.Cancel();
+    }
+
+    /* ───────── Assault Rifle 전용 ───────── */
+    public bool IsARFiring => arFireRoutine != null;
+    public bool ARAllowMoveWhileFiring => arAllowMoveWhileFiringFlag && IsARFiring;
+    public bool ARIsRotationLocked => arRotationLocked && IsARFiring;
+    public Vector3 ARLockedForward => arLockedForward;
+
+    private void BeginARFireState(WeaponDataSO_AR arData)
+    {
+        arAllowMoveWhileFiringFlag = arData.allowMoveWhileFiring;
+        arAutoResumeWhileHeld = arData.autoReloadResumeWhileHeld;
+        arRotationLocked = arData.lockRotationDuringFiring;
+
+        // 스냅샷 forward
+        Vector3 fwd = transform.forward; fwd.y = 0f;
+        if (fwd.sqrMagnitude < 0.0001f) fwd = Vector3.forward;
+        arLockedForward = fwd.normalized;
+    }
+
+    private void EndARFireState()
+    {
+        arRotationLocked = false;
+        arAllowMoveWhileFiringFlag = false;
+        arAutoResumeWhileHeld = false;
+    }
+
+    private IEnumerator AssaultRifleFireRoutine(WeaponDataSO_AR ar)
+    {
+        // 상태 진입
+        ChangeState(PlayerState.Attack);
+        animationController?.PlayAttack(ar);
+        BeginARFireState(ar);
+
+        var wb = equipComp.WeaponBehavior;
+        if (wb == null)
+        {
+            Debug.LogWarning("[AR] WeaponBehavior 없음");
+            ChangeState(PlayerState.Idle);
+            EndARFireState();
+            yield break;
+        }
+
+        // 탄약 런타임
+        var ammo = wb.GetComponent<WeaponAmmoRuntime_AR>();
+        if (ammo == null) { ammo = wb.gameObject.AddComponent<WeaponAmmoRuntime_AR>(); }
+        ammo.Initialize(ar, force: false);
+
+        float interval = Mathf.Max(0.01f, ar.cooldown);
+        float nextTime = Time.time;
+
+        // 연사 루프
+        while (true)
+        {
+            // 중단 조건: CC/죽음/회피 등
+            if (state == PlayerState.Knockback || state == PlayerState.Stun || state == PlayerState.Dead || state == PlayerState.Evade)
+                break;
+
+            // 홀드 체크
+            bool holding = InputManager.Instance.GetAttack();
+            if (!holding)
+                break;
+
+            // 리로드 중 처리
+            if (ammo.IsReloading)
+            {
+                // 홀드+자동재개 ON이면 리로드 동안에도 회전 잠금/상태 유지
+                if (arAutoResumeWhileHeld && ar.lockRotationDuringFiring)
+                {
+                    // 리로드 완료까지 대기
+                    yield return null;
+                    continue;
+                }
+                // 옵션 OFF거나 홀드 해제 → 종료
+                break;
+            }
+
+            // 탄 발사
+            if (Time.time >= nextTime)
+            {
+                if (ammo.CanFire(ar.consumePerShot))
+                {
+                    if (ammo.TryConsumeForShot(ar.consumePerShot))
+                    {
+                        // 매 탄마다 리코일
+                        StartRecoilIfNeeded(ar);
+                        // 강제 방향 발사(EnemyDetector 미사용)
+                        wb.FireProjectileForced(arRotationLocked ? arLockedForward : transform.forward);
+                        nextTime += interval;
+                        // 드리프트 보정
+                        if (Time.time - nextTime > interval) nextTime = Time.time + interval;
+                    }
+                }
+                else
+                {
+                    // 자동 리로드 정책
+                    if (ar.autoReloadOnEmpty && ammo.HasAnyReserveOrInfinite())
+                    {
+                        ammo.TryStartReload();
+                        if (arAutoResumeWhileHeld && holding && ar.lockRotationDuringFiring)
+                        {
+                            // 리로드 완료 후 즉시 발사 가능하게 nextTime 리셋
+                            nextTime = Time.time;
+                            // 루프 유지(회전 잠금 유지)
+                            yield return null;
+                            continue;
+                        }
+                    }
+
+                    // 탄약 없음 또는 옵션 OFF → 종료
+                    break;
+                }
+            }
+
+            yield return null;
+        }
+
+        // 종료
+        animationController?.EndAttack();
+        // 이동 속도에 따라 Idle/Move 결정
+        if (movement != null && movement.GetVelocityMagnitude() > 0.1f)
+            ChangeState(PlayerState.Move);
+        else
+            ChangeState(PlayerState.Idle);
+
+        EndARFireState();
+        arFireRoutine = null;
     }
 }

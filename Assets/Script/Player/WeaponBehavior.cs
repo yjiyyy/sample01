@@ -217,6 +217,12 @@ public class WeaponBehavior : MonoBehaviour
                 spd = l.projectileSpeed;
                 life = l.projectileLifetime;
             }
+            else if (data is WeaponDataSO_AR ar)
+            {
+                spd = ar.projectileSpeed;
+                life = ar.projectileLifetime;
+                pierce = ar.pierceCount;
+            }
 
             if (pierce > 0)
                 proj.InitializeTowards(shootDir, data.damage, spd, life, pierce);
@@ -275,6 +281,74 @@ public class WeaponBehavior : MonoBehaviour
             Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ pos@{spawnPoint.name}, forward=Snap({fwd}), dmg:{data.damage}, radius:{sg.shotgunRadius}, angle:{sg.shotgunAngle}, life:{data.hitBoxLifetime}");
         else
             Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ pos@{spawnPoint.name}, forward=Snap({fwd}), dmg:{data.damage}, life:{data.hitBoxLifetime}");
+    }
+
+    /// <summary>
+    /// Assault Rifle 등에서 EnemyDetector 없이, 지정 방향으로 즉시 발사
+    /// - 탄약 체크/소모는 호출측에서 수행
+    /// - projectileSpawnPoint가 없으면 meleeSpawnPoint나 transform를 폴백으로 사용
+    /// </summary>
+    public void FireProjectileForced(Vector3 shootDir)
+    {
+        if (projectilePrefab == null)
+        {
+            Debug.LogWarning("projectilePrefab 미연결");
+            return;
+        }
+
+        Transform spawn = projectileSpawnPoint != null ? projectileSpawnPoint
+                               : (meleeSpawnPoint != null ? meleeSpawnPoint : transform);
+
+        Vector3 dir = shootDir;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
+        dir.Normalize();
+
+        GameObject bulletGO = Instantiate(
+            projectilePrefab,
+            spawn.position,
+            Quaternion.LookRotation(dir, Vector3.up)
+        );
+
+        if (bulletGO.TryGetComponent<HitBox_PC_Projectile_Sector>(out var sectorProj))
+        {
+            sectorProj.Initialize(this.data, dir);
+            return;
+        }
+
+        if (bulletGO.TryGetComponent<HitBox_PC_Projectile>(out var proj))
+        {
+            proj.SetWeapon(this.data);
+
+            float spd = 10f, life = 5f;
+            int pierce = 0;
+
+            if (data is WeaponDataSO_Gun g)
+            {
+                spd = g.projectileSpeed;
+                life = g.projectileLifetime;
+                pierce = g.pierceCount;
+            }
+            else if (data is WeaponDataSO_Launcher l)
+            {
+                spd = l.projectileSpeed;
+                life = l.projectileLifetime;
+            }
+            else if (data is WeaponDataSO_AR ar)
+            {
+                spd = ar.projectileSpeed;
+                life = ar.projectileLifetime;
+                pierce = ar.pierceCount;
+            }
+
+            if (pierce > 0)
+                proj.InitializeTowards(dir, data.damage, spd, life, pierce);
+            else
+                proj.InitializeTowards(dir, data.damage, spd, life);
+            return;
+        }
+
+        Debug.LogWarning("[WeaponBehavior] 지원 컴포넌트를 찾지 못한 발사체(Forced)");
     }
 
     /* ─ 시각화 유틸 ─ */

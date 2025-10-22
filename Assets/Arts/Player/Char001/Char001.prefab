@@ -185,7 +185,7 @@ MonoBehaviour:
   - {fileID: 2739951429482498694, guid: 61b8bb56613b29841b73e0b856e05ad4, type: 3}
   - {fileID: 38192432513176113, guid: d90c3f245074e2048af3c0061756d414, type: 3}
   - {fileID: 522649090004456507, guid: 3e0286ade08eaa547bd0a6bce8217b10, type: 3}
-  - {fileID: 2526390543672874236, guid: a156b4a679f2b9045acf9f3b4b39960b, type: 3}
+  - {fileID: 4911667774358884905, guid: b65c1f005bff3494399f619b0ddfe200, type: 3}
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
@@ -274,6 +274,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4fe3e915e2db4c34b9d419a3e4976744, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gamepadDeadzone: 0.15
+  forceMobileInEditor: 0
 --- !u!114 &-3391735028938872280
 MonoBehaviour:
   m_ObjectHideFlags: 0

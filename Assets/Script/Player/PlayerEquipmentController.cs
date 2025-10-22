@@ -19,6 +19,8 @@ public class PlayerEquipmentController : MonoBehaviour
 
     private struct AmmoSnapshot { public int magazine; public int reserve; }
     private readonly Dictionary<WeaponDataSO_Gun, AmmoSnapshot> gunAmmoSnapshots = new();
+    // 🆕 AssaultRifle 전용 스냅샷
+    private readonly Dictionary<WeaponDataSO_AR, AmmoSnapshot> arAmmoSnapshots = new();
 
     public void Setup(Transform socket, PlayerAnimationController animationController)
     {
@@ -44,7 +46,9 @@ public class PlayerEquipmentController : MonoBehaviour
 
     public void Equip(GameObject weaponPrefab, GameObject defaultWeaponPrefab, bool debugLogs = false)
     {
+        // 기존 무기 스냅샷 저장
         SaveCurrentGunSnapshot();
+        SaveCurrentARSnapshot();
 
         if (CurrentWeapon != null)
             Destroy(CurrentWeapon);
@@ -72,6 +76,18 @@ public class PlayerEquipmentController : MonoBehaviour
                 ammo.LoadSnapshot(snap.magazine, snap.reserve, triggerAutoReload: true);
             else if (debugLogs)
                 Debug.Log($"[Ammo] 스냅샷 없음 → 기본 초기화 gun={g.weaponName}");
+        }
+        // 🆕 AssaultRifle면 전용 런타임 초기화/복원
+        else if (CurrentWeaponData is WeaponDataSO_AR ar && ar.usesAmmo)
+        {
+            var arAmmo = WeaponBehavior.GetComponent<WeaponAmmoRuntime_AR>();
+            if (arAmmo == null) arAmmo = WeaponBehavior.gameObject.AddComponent<WeaponAmmoRuntime_AR>();
+            arAmmo.Initialize(ar, force: false);
+
+            if (arAmmoSnapshots.TryGetValue(ar, out var snap))
+                arAmmo.LoadSnapshot(snap.magazine, snap.reserve, triggerAutoReload: true);
+            else if (debugLogs)
+                Debug.Log($"[Ammo] 스냅샷 없음 → 기본 초기화 ar={ar.weaponName}");
         }
 
         // 🆕 애니메이터 컨트롤러 적용 정책
@@ -124,6 +140,26 @@ public class PlayerEquipmentController : MonoBehaviour
         gunAmmoSnapshots[gun] = new AmmoSnapshot { magazine = magazine, reserve = reserve };
 #if UNITY_EDITOR
         Debug.Log($"[Ammo] 스냅샷 저장 gun={gun.weaponName} mag:{magazine}/{gun.magazineSize} reserve:{(gun.infiniteReserve ? "∞" : reserve.ToString())}");
+#endif
+    }
+
+    private void SaveCurrentARSnapshot()
+    {
+        if (WeaponBehavior == null || CurrentWeaponData == null) return;
+        if (CurrentWeaponData is not WeaponDataSO_AR ar || !ar.usesAmmo) return;
+
+        var ammo = WeaponBehavior.GetComponent<WeaponAmmoRuntime_AR>();
+        if (ammo == null || !ammo.IsInitialized) return;
+
+        if (ammo.IsReloading)
+            ammo.InterruptReload();
+
+        int magazine = ammo.CurrentMagazine;
+        int reserve = ar.infiniteReserve ? 0 : ammo.CurrentReserve;
+
+        arAmmoSnapshots[ar] = new AmmoSnapshot { magazine = magazine, reserve = reserve };
+#if UNITY_EDITOR
+        Debug.Log($"[Ammo] 스냅샷 저장 ar={ar.weaponName} mag:{magazine}/{ar.magazineSize} reserve:{(ar.infiniteReserve ? "∞" : reserve.ToString())}");
 #endif
     }
 }

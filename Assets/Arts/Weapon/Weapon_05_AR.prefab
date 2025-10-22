@@ -40,8 +40,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2971992339863753242}
+  - component: {fileID: 8004651427081155676}
   m_Layer: 0
-  m_Name: Weapon_AR
+  m_Name: Weapon_05_AR
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -64,6 +65,25 @@ Transform:
   - {fileID: 5599336561574612511}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8004651427081155676
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4911667774358884905}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 694f5e900f31199479729c357cd73c40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  data: {fileID: 11400000, guid: 74c3a9dc47cc68f438b9572e6098ef48, type: 2}
+  meleeSpawnPoint: {fileID: 0}
+  projectileSpawnPoint: {fileID: 5599336561574612511}
+  meleeHitboxPrefab: {fileID: 0}
+  projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
+  shotgunSectorPrefab: {fileID: 0}
+  ammoRuntime: {fileID: 0}
 --- !u!1001 &4029635167577970539
 PrefabInstance:
   m_ObjectHideFlags: 0

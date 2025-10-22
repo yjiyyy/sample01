@@ -85,7 +85,11 @@ public class PlayerMovement : MonoBehaviour
         var weaponCtrl = GetComponent<PlayerWeaponController>();
         if (weaponCtrl != null)
         {
-            if (weaponCtrl.CurrentState == PlayerState.Attack ||
+            // Attack 상태 예외: AR 연사 + 이동 허용이면 이동 가능
+            bool isAttackBlocking = weaponCtrl.CurrentState == PlayerState.Attack &&
+                                    !(weaponCtrl.IsARFiring && weaponCtrl.ARAllowMoveWhileFiring);
+
+            if (isAttackBlocking ||
                 weaponCtrl.CurrentState == PlayerState.Knockback ||
                 weaponCtrl.CurrentState == PlayerState.Stun ||
                 weaponCtrl.CurrentState == PlayerState.Dead ||
@@ -116,8 +120,13 @@ public class PlayerMovement : MonoBehaviour
                 Vector3 destination = transform.position + moveDir;
                 agent.SetDestination(destination);
 
-                Quaternion rot = Quaternion.LookRotation(moveDir);
-                transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 20f);
+                // AR 연사 중 회전 잠금이면 회전 갱신 금지
+                bool lockRot = weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARIsRotationLocked;
+                if (!lockRot)
+                {
+                    Quaternion rot = Quaternion.LookRotation(moveDir);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 20f);
+                }
             }
         }
         else if (stopWhenNoInput)
