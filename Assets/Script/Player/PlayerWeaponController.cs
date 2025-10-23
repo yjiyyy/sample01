@@ -1,4 +1,4 @@
-﻿// (파일 전체 — AR 쿨다운 관련 로직을 수정한 버전)
+﻿// (파일 전체 — AR 쿨다운/연사/스프레드/상체 애니메이션 동작 포함, EquipWeapon에서 UpperBody 레이어 토글 추가)
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -248,6 +248,20 @@ public class PlayerWeaponController : MonoBehaviour
         // EnemyDetector에 무기 연결
         if (enemyDetector != null && equipComp.WeaponBehavior != null)
             enemyDetector.weaponBehavior = equipComp.WeaponBehavior;
+
+        // ── 추가: 장착한 무기에 따라 UpperBody 레이어 활성화/비활성화(무기 교체시 리셋)
+        var curData = equipComp.CurrentWeaponData;
+        bool isAR = curData is WeaponDataSO_AR;
+        if (isAR)
+        {
+            animationController?.SetUpperBodyLayerEnabled(true);
+        }
+        else
+        {
+            // 비AR 또는 None 장착시 UpperBody 레이어 끄고 공격 파라미터 리셋
+            animationController?.SetUpperBodyLayerEnabled(false);
+            animationController?.EndAttack();
+        }
     }
 
     public void PlayAttack()
@@ -259,7 +273,7 @@ public class PlayerWeaponController : MonoBehaviour
         // 🆕 Assault Rifle: 홀드 연사 진입 (cooldown 간격)
         if (data is WeaponDataSO_AR arData)
         {
-            // ---- 변경: AR도 일반 무기와 동일한 쿨다운 검사를 통과해야 연사 루틴 시작 ----
+            // ---- AR도 일반 무기와 동일한 쿨다운 검사를 통과해야 연사 루틴 시작 ----
             float delta = Time.time - lastAttackTime;
             if (delta < arData.cooldown)
                 return;
@@ -473,7 +487,8 @@ public class PlayerWeaponController : MonoBehaviour
     {
         // 상태 진입
         ChangeState(PlayerState.Attack);
-        animationController?.PlayAttack(ar); // 초기 한 번 재생
+        // 상체 전용 재생: 하체(이동) 유지하려면 upperBodyOnly=true로 호출
+        animationController?.PlayAttack(ar, true);
         BeginARFireState(ar);
 
         var wb = equipComp.WeaponBehavior;
@@ -547,14 +562,13 @@ public class PlayerWeaponController : MonoBehaviour
                             shootDir = baseDir;
                         }
 
-                        // ─── 추가: 발사 시 애니메이션을 매샷 재생 ───
-                        animationController?.PlayAttack(ar);
-                        // --------------------------------------------
+                        // 발사 시 상체 애니메이션을 매샷 재생 (upperBodyOnly)
+                        animationController?.PlayAttack(ar, true);
 
                         // AR은 FireProjectileForced를 사용하므로 preserveVertical 플래그로 y 보존 여부 지정
                         wb.FireProjectileForced(shootDir, ar.spread3D);
 
-                        // 발사 시점에 lastAttackTime 갱신(쿨다운 일관성)
+                        // 발사 시점에 lastAttackTime 갱신(쿨타임 일관성)
                         lastAttackTime = Time.time;
 
                         nextTime += interval;
@@ -572,7 +586,7 @@ public class PlayerWeaponController : MonoBehaviour
                         {
                             // 리로드 완료 후 즉시 발사 가능하게 nextTime 리셋
                             nextTime = Time.time;
-                            // 루프 유지(회전 잠금 유지)
+                            // 루프 유지(회전 잠수 유지)
                             yield return null;
                             continue;
                         }

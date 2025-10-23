@@ -120,28 +120,95 @@ public class PlayerAnimationController : MonoBehaviour
         Debug.Log("[PlayerAnim] 회피 애니메이션 종료");
     }
 
-    /* ───────── 공격 실행 (기존 유지) ───────── */
-    public void PlayAttack(WeaponDataSO weaponData)
+    /* ───────── 공격 실행 (수정: upperBodyOnly 옵션 추가) ───────── */
+    /// <summary>
+    /// weaponData: 발사하는 무기 데이터(로그/디버깅 용도)
+    /// upperBodyOnly: true면 Animator의 UpperBody 레이어(상체 마스크)에만 Attack을 재생하고
+    ///                기본 레이어의 파라미터 리셋은 최소화합니다.
+    /// </summary>
+    public void PlayAttack(WeaponDataSO weaponData, bool upperBodyOnly = false)
     {
         if (animator == null) return;
 
-        // 공격 시에도 파라미터 리셋 후 설정
-        ResetAllAnimatorParams();
-
         float randomIndex = Random.Range(0, 3); // 0f, 1f, 2f
-        animator.SetFloat(hashAttackIndex, randomIndex);
-        animator.SetBool(hashIsAttacking, true);
 
-        // Attack 애니메이션 강제 재생
-        animator.Play("Attack_BlendTree", 0, 0f);
+        if (upperBodyOnly)
+        {
+            // 상체 전용 재생: 하체 파라미터(속도 등)를 유지하기 위해 ResetAllAnimatorParams를 호출하지 않음.
+            animator.SetFloat(hashAttackIndex, randomIndex);
+            animator.SetBool(hashIsAttacking, true);
 
-        Debug.Log($"[PlayerAnim] Attack 시작 → Index:{randomIndex}, 무기:{weaponData?.weaponName}");
+            // UpperBody 레이어가 있으면 해당 레이어에서 재생을 시도
+            int upperLayer = animator.GetLayerIndex("UpperBody");
+            if (upperLayer >= 0)
+            {
+                // 재생할 상태 이름은 기본과 동일한 "Attack_BlendTree"를 기대합니다.
+                // Animator에 UpperBody 레이어에 상체용 Attack 상태(같은 이름 또는 별도)를 준비하세요.
+                animator.Play("Attack_BlendTree", upperLayer, 0f);
+                Debug.Log($"[PlayerAnim] Upper-body Attack 시작 → Index:{randomIndex}, 무기:{weaponData?.weaponName}");
+            }
+            else
+            {
+                // UpperBody 레이어가 없으면 fallback: 기본 레이어 재생(기존 동작)
+                ResetAllAnimatorParams();
+                animator.SetFloat(hashAttackIndex, randomIndex);
+                animator.SetBool(hashIsAttacking, true);
+                animator.Play("Attack_BlendTree", 0, 0f);
+                Debug.Log($"[PlayerAnim] UpperLayer 없음 → 전체 Attack 시작(fallback) Index:{randomIndex}, 무기:{weaponData?.weaponName}");
+            }
+        }
+        else
+        {
+            // 기본 동작: 모든 파라미터를 초기화하고 전체 Attack 재생
+            ResetAllAnimatorParams();
+            animator.SetFloat(hashAttackIndex, randomIndex);
+            animator.SetBool(hashIsAttacking, true);
+
+            // Attack 애니메이션 강제 재생 (기본 레이어)
+            animator.Play("Attack_BlendTree", 0, 0f);
+
+            Debug.Log($"[PlayerAnim] Attack 시작 → Index:{randomIndex}, 무기:{weaponData?.weaponName}");
+        }
     }
 
     public void EndAttack()
     {
         animator.SetBool(hashIsAttacking, false);
         Debug.Log("[PlayerAnim] Attack 종료 (쿨타임 종료)");
+    }
+
+    /* ───────── 🆕 UpperBody 레이어 토글 (무기 변경시 리셋) ───────── */
+    /// <summary>
+    /// UpperBody 레이어를 활성화/비활성화합니다.
+    /// - enabled == true : layer weight = 1
+    /// - enabled == false: layer weight = 0, IsAttacking false로 리셋하여 상체 포즈 잔존을 방지
+    /// </summary>
+    public void SetUpperBodyLayerEnabled(bool enabled)
+    {
+        if (animator == null) return;
+
+        int layerIndex = animator.GetLayerIndex("UpperBody");
+        if (layerIndex < 0)
+        {
+            Debug.LogWarning("[PlayerAnim] UpperBody 레이어가 없습니다. SetUpperBodyLayerEnabled 무시됨.");
+            return;
+        }
+
+        if (enabled)
+        {
+            animator.SetLayerWeight(layerIndex, 1f);
+            Debug.Log("[PlayerAnim] UpperBody 레이어 활성화");
+        }
+        else
+        {
+            // 상체 레이어 비활성화: attack flag 리셋, 레이어 weight 0, 즉시 적용
+            animator.SetBool(hashIsAttacking, false);
+            animator.SetLayerWeight(layerIndex, 0f);
+
+            // 즉시 적용(프레임 반영)
+            animator.Update(0f);
+            Debug.Log("[PlayerAnim] UpperBody 레이어 비활성화 및 공격 파라미터 리셋");
+        }
     }
 
     /* ───────── 🆕 Charged Attack 전용 재생 ───────── */
