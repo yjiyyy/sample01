@@ -83,6 +83,23 @@ public class PlayerMovement : MonoBehaviour
         }
 
         var weaponCtrl = GetComponent<PlayerWeaponController>();
+
+        // ── AR 연사 중 이동 속도 보정: AR이고 ARAllowMoveWhileFiring이면 SO의 moveSpeedWhileFiring 사용
+        float speedMul = 1f;
+        if (weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARAllowMoveWhileFiring)
+        {
+            var ar = weaponCtrl.GetCurrentWeaponData() as WeaponDataSO_AR;
+            if (ar != null)
+                speedMul = Mathf.Clamp01(ar.moveSpeedWhileFiring);
+        }
+
+        // agent가 있으면 매 프레임 속도를 적용
+        if (agent != null)
+        {
+            agent.speed = moveSpeed * speedMul;
+        }
+        // ─────────────────────────────────────────────────────────────────
+
         if (weaponCtrl != null)
         {
             // Attack 상태 예외: AR 연사 + 이동 허용이면 이동 가능

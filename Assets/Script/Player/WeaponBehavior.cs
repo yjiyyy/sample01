@@ -288,7 +288,7 @@ public class WeaponBehavior : MonoBehaviour
     /// - 탄약 체크/소모는 호출측에서 수행
     /// - projectileSpawnPoint가 없으면 meleeSpawnPoint나 transform를 폴백으로 사용
     /// </summary>
-    public void FireProjectileForced(Vector3 shootDir)
+    public void FireProjectileForced(Vector3 shootDir, bool preserveVertical = false)
     {
         if (projectilePrefab == null)
         {
@@ -300,7 +300,10 @@ public class WeaponBehavior : MonoBehaviour
                                : (meleeSpawnPoint != null ? meleeSpawnPoint : transform);
 
         Vector3 dir = shootDir;
-        dir.y = 0f;
+        // preserveVertical 플래그가 false면 기존처럼 수직 성분을 제거(평면 발사)
+        if (!preserveVertical)
+            dir.y = 0f;
+
         if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
         dir.Normalize();
 

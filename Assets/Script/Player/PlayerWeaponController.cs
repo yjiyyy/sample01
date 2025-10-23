@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿// (파일 전체 — AR 쿨다운 관련 로직을 수정한 버전)
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -258,6 +259,14 @@ public class PlayerWeaponController : MonoBehaviour
         // 🆕 Assault Rifle: 홀드 연사 진입 (cooldown 간격)
         if (data is WeaponDataSO_AR arData)
         {
+            // ---- 변경: AR도 일반 무기와 동일한 쿨다운 검사를 통과해야 연사 루틴 시작 ----
+            float delta = Time.time - lastAttackTime;
+            if (delta < arData.cooldown)
+                return;
+            // 첫 발 허용 시점(시작) 기준으로 lastAttackTime 갱신
+            lastAttackTime = Time.time;
+            // --------------------------------------------------------------
+
             if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
             arFireRoutine = StartCoroutine(AssaultRifleFireRoutine(arData));
             return;
@@ -292,8 +301,8 @@ public class PlayerWeaponController : MonoBehaviour
             }
         }
 
-        float delta = Time.time - lastAttackTime;
-        if (delta < data.cooldown) return;
+        float delta2 = Time.time - lastAttackTime;
+        if (delta2 < data.cooldown) return;
         lastAttackTime = Time.time;
 
         if (attackRoutine != null)
@@ -464,7 +473,7 @@ public class PlayerWeaponController : MonoBehaviour
     {
         // 상태 진입
         ChangeState(PlayerState.Attack);
-        animationController?.PlayAttack(ar);
+        animationController?.PlayAttack(ar); // 초기 한 번 재생
         BeginARFireState(ar);
 
         var wb = equipComp.WeaponBehavior;
@@ -519,8 +528,35 @@ public class PlayerWeaponController : MonoBehaviour
                     {
                         // 매 탄마다 리코일
                         StartRecoilIfNeeded(ar);
-                        // 강제 방향 발사(EnemyDetector 미사용)
-                        wb.FireProjectileForced(arRotationLocked ? arLockedForward : transform.forward);
+
+                        // 기준 방향(locked 또는 현재 forward)
+                        Vector3 baseDir = arRotationLocked ? arLockedForward : transform.forward;
+                        baseDir.y = 0f; // 기준을 평면 전방으로 잡되, preserveVertical == true일 때는 콘 샘플이 y를 갖게 함
+                        if (baseDir.sqrMagnitude < 0.0001f) baseDir = Vector3.forward;
+                        baseDir.Normalize();
+
+                        Vector3 shootDir;
+                        if (ar.spreadAngle > 0f)
+                        {
+                            float halfAngle = ar.spreadAngle * 0.5f;
+                            // 3D 콘 샘플링 (구면 균등)
+                            shootDir = RandomDirectionInCone(baseDir, halfAngle);
+                        }
+                        else
+                        {
+                            shootDir = baseDir;
+                        }
+
+                        // ─── 추가: 발사 시 애니메이션을 매샷 재생 ───
+                        animationController?.PlayAttack(ar);
+                        // --------------------------------------------
+
+                        // AR은 FireProjectileForced를 사용하므로 preserveVertical 플래그로 y 보존 여부 지정
+                        wb.FireProjectileForced(shootDir, ar.spread3D);
+
+                        // 발사 시점에 lastAttackTime 갱신(쿨다운 일관성)
+                        lastAttackTime = Time.time;
+
                         nextTime += interval;
                         // 드리프트 보정
                         if (Time.time - nextTime > interval) nextTime = Time.time + interval;
@@ -560,5 +596,24 @@ public class PlayerWeaponController : MonoBehaviour
 
         EndARFireState();
         arFireRoutine = null;
+    }
+
+    // ---------- 헬퍼: baseDir 기준 콘 내부 균등 샘플(halfAngle in degrees) ----------
+    private Vector3 RandomDirectionInCone(Vector3 baseDir, float halfAngleDeg)
+    {
+        if (halfAngleDeg <= 0f) return baseDir.normalized;
+
+        float halfRad = Mathf.Deg2Rad * halfAngleDeg;
+        float cosMax = Mathf.Cos(halfRad);
+        float u = Random.Range(cosMax, 1f); // cosθ 균등 분포
+        float theta = Mathf.Acos(u);
+        float phi = Random.Range(0f, Mathf.PI * 2f);
+        float sinTheta = Mathf.Sin(theta);
+
+        // 로컬(전방 z축 기준) 벡터
+        Vector3 local = new Vector3(sinTheta * Mathf.Cos(phi), sinTheta * Mathf.Sin(phi), Mathf.Cos(theta));
+        // 회전해서 baseDir 축에 맞춤
+        Quaternion rot = Quaternion.FromToRotation(Vector3.forward, baseDir.normalized);
+        return rot * local;
     }
 }

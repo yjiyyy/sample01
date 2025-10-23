@@ -57,7 +57,11 @@ public class PlayerChargeController : MonoBehaviour
     public void Tick()
     {
         var data = getWeaponData != null ? getWeaponData() : null;
-        var slot = data != null ? data.chargeSlot : null;
+        // ---- 변경: AR 무기일 경우 차지 슬롯을 무시하도록 처리 ----
+        PlayerChargeAttackSO slot = null;
+        if (data != null && !(data is WeaponDataSO_AR))
+            slot = data.chargeSlot;
+        // ----------------------------------------------------
 
         // Down: 홀드 시작
         if (!chargeHoldActive && InputManager.Instance.GetAttackDown())
@@ -105,7 +109,11 @@ public class PlayerChargeController : MonoBehaviour
         {
             bool fired = false;
 
-            var slot2 = getWeaponData()?.chargeSlot;
+            // ---- 변경: Up 시에도 current weapon이 AR이면 차지 슬롯 무시 ----
+            var data2 = getWeaponData != null ? getWeaponData() : null;
+            var slot2 = (data2 != null && !(data2 is WeaponDataSO_AR)) ? data2.chargeSlot : null;
+            // ------------------------------------------------------------
+
             if (slot2 == null)
             {
                 if (debugMode) Debug.Log("[Charge] 취소: 방출 시점에 차지 슬롯 없음");
