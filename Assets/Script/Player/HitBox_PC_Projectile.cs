@@ -24,7 +24,7 @@ public class HitBox_PC_Projectile : MonoBehaviour
         moveDir = direction.normalized;
 
         Destroy(gameObject, lifetime);
-        Debug.Log($"🚀 Projectile Init │ dmg:{damage}, spd:{speed}, life:{lifetime}, moveDir:{moveDir}");
+        //Debug.Log($"🚀 Projectile Init │ dmg:{damage}, spd:{speed}, life:{lifetime}, moveDir:{moveDir}");
     }
 
     // 🆕 오버로드: 피어스 카운트까지 설정

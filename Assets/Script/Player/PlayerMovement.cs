@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
+using System;
 using System.Collections;
+using System.Reflection;
 
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(Rigidbody))]
@@ -28,6 +30,17 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 lastInput = Vector3.zero;
     private Vector3 lastPosition;
+
+    // --- AR BackStep 관련 ---
+    private bool arBackStepActive = false;
+    [Header("AR BackStep Settings")]
+    [Tooltip("각도가 이 값(도) 이상이면 BackStep으로 진입")]
+    [SerializeField] private float enterBackstepAngle = 120f;
+    [Tooltip("각도가 이 값(도) 이하이면 BackStep에서 복귀")]
+    [SerializeField] private float exitBackstepAngle = 100f;
+
+    private PlayerAnimationController anim; // Animator helper
+    // -------------------------
 
     void Start()
     {
@@ -63,6 +76,9 @@ public class PlayerMovement : MonoBehaviour
             transform.position = fixedPos;
             rb.position = fixedPos;
         }
+
+        // PlayerAnimationController 참조 (존재하면 사용)
+        anim = GetComponent<PlayerAnimationController>();
     }
 
     void Update()
@@ -84,19 +100,27 @@ public class PlayerMovement : MonoBehaviour
 
         var weaponCtrl = GetComponent<PlayerWeaponController>();
 
-        // ── AR 연사 중 이동 속도 보정: AR이고 ARAllowMoveWhileFiring이면 SO의 moveSpeedWhileFiring 사용
-        float speedMul = 1f;
+        // ── AR 연사 중 이동 속도 보정: AR이고 ARAllowMoveWhileFiring이면 SO의 moveSpeedWhileFiring 사용 (A)
+        float a_mul = 1f; // A
+        float b_mul = 1f; // B (하체 애니 재생속도)
+        WeaponDataSO_AR arData = null;
         if (weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARAllowMoveWhileFiring)
         {
-            var ar = weaponCtrl.GetCurrentWeaponData() as WeaponDataSO_AR;
-            if (ar != null)
-                speedMul = Mathf.Clamp01(ar.moveSpeedWhileFiring);
+            arData = weaponCtrl.GetCurrentWeaponData() as WeaponDataSO_AR;
+            if (arData != null)
+            {
+                // A: moveSpeedWhileFiring (기존 필드)
+                a_mul = Mathf.Max(0f, arData.moveSpeedWhileFiring);
+                // B: animPlaybackSpeedWhileFiring (새 필드)
+                b_mul = Mathf.Max(0f, arData.animPlaybackSpeedWhileFiring);
+            }
         }
 
-        // agent가 있으면 매 프레임 속도를 적용
+        // 최종 이동 속도: baseMoveSpeed * (A * B)
+        float finalSpeedMul = a_mul * b_mul;
         if (agent != null)
         {
-            agent.speed = moveSpeed * speedMul;
+            agent.speed = moveSpeed * finalSpeedMul;
         }
         // ─────────────────────────────────────────────────────────────────
 
@@ -112,6 +136,16 @@ public class PlayerMovement : MonoBehaviour
                 weaponCtrl.CurrentState == PlayerState.Dead ||
                 weaponCtrl.CurrentState == PlayerState.Evade)
             {
+                // AR 전용 BackStep은 끄기
+                if (arBackStepActive)
+                {
+                    arBackStepActive = false;
+                    if (anim != null) anim.SetBackStep(false);
+                }
+
+                // CC 진입 시 하체 속도 리셋
+                if (anim != null) anim.SetLowerBodyPlaybackSpeed(1f);
+
                 if (CanUseAgent())
                 {
                     agent.ResetPath();
@@ -137,6 +171,66 @@ public class PlayerMovement : MonoBehaviour
                 Vector3 destination = transform.position + moveDir;
                 agent.SetDestination(destination);
 
+                // --- AR BackStep 판정 로직 ---
+                bool considerARBack = false;
+                if (weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARAllowMoveWhileFiring)
+                    considerARBack = true;
+
+                if (considerARBack)
+                {
+                    // facing 기준: AR 고정 전방이면 ARLockedForward, 아니면 transform.forward
+                    Vector3 facing;
+                    if (weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARIsRotationLocked)
+                        facing = weaponCtrl.ARLockedForward;
+                    else
+                        facing = transform.forward;
+
+                    facing.y = 0f; moveDir.y = 0f;
+                    if (facing.sqrMagnitude < 0.0001f) facing = Vector3.forward;
+                    if (moveDir.sqrMagnitude < 0.0001f) moveDir = Vector3.forward;
+                    facing.Normalize(); moveDir.Normalize();
+
+                    float signed = Vector3.SignedAngle(facing, moveDir, Vector3.up);
+                    float absAngle = Mathf.Abs(signed);
+
+                    // 히스테리시스: 들어갈 때 enter, 나올 때 exit
+                    if (!arBackStepActive && absAngle >= enterBackstepAngle)
+                    {
+                        arBackStepActive = true;
+                        if (anim != null) anim.SetBackStep(true);
+                    }
+                    else if (arBackStepActive && absAngle <= exitBackstepAngle)
+                    {
+                        arBackStepActive = false;
+                        if (anim != null) anim.SetBackStep(false);
+                    }
+                    // else unchanged
+                }
+                else
+                {
+                    // AR이 아니면 항상 false
+                    if (arBackStepActive)
+                    {
+                        arBackStepActive = false;
+                        if (anim != null) anim.SetBackStep(false);
+                    }
+                }
+                // --- /AR BackStep 판정 끝 ---
+
+                // 하체 재생속도(B) 적용: 조건 -> AR 연사 중이고 이동 중일 때만 적용
+                if (weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARAllowMoveWhileFiring && anim != null)
+                {
+                    float lowerSpeed = 1f;
+                    if (arData != null)
+                        lowerSpeed = Mathf.Max(0f, arData.animPlaybackSpeedWhileFiring);
+                    anim.SetLowerBodyPlaybackSpeed(lowerSpeed);
+                }
+                else
+                {
+                    // 조건 아닐 때는 하체 속도 복구
+                    if (anim != null) anim.SetLowerBodyPlaybackSpeed(1f);
+                }
+
                 // AR 연사 중 회전 잠금이면 회전 갱신 금지
                 bool lockRot = weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARIsRotationLocked;
                 if (!lockRot)
@@ -154,6 +248,16 @@ public class PlayerMovement : MonoBehaviour
                 agent.SetDestination(transform.position);
                 agent.velocity = Vector3.zero;
             }
+
+            // 멈추면 BackStep 파라미터 끄기
+            if (arBackStepActive)
+            {
+                arBackStepActive = false;
+                if (anim != null) anim.SetBackStep(false);
+            }
+
+            // 정지 시 하체 속도 복구
+            if (anim != null) anim.SetLowerBodyPlaybackSpeed(1f);
         }
 
         if (InputManager.Instance.GetDamageTestInput())
@@ -245,6 +349,16 @@ public class PlayerMovement : MonoBehaviour
 
     public bool IsCurrentlyKnockbacked() => isKnockbacked;
     public float GetVelocityMagnitude() => agent != null ? agent.velocity.magnitude : 0f;
+    public float GetAnimatorSpeedEstimate()
+    {
+        // 우선 NavMeshAgent 기반 속도 사용 (가능하면 정확)
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            return agent.velocity.magnitude;
+        }
+        // fallback: 입력 기반 속도 추정 (lastInput는 normalized 입력이므로 moveSpeed를 곱함)
+        return lastInput.magnitude * moveSpeed;
+    }
     private bool CanUseAgent() => agent.enabled && agent.isOnNavMesh;
 
     private Vector3 CameraRelative(Vector3 input)
