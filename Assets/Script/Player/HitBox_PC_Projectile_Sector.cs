@@ -10,7 +10,6 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
 
     [Header("디버그")]
     [SerializeField] private bool debugDrawGizmos = false;
-    //[SerializeField] private bool debugLog = false;
 
     [Header("피해 대상 레이어 (Enemy 전용 권장)")]
     [SerializeField] private LayerMask damageLayers = ~0;
@@ -133,6 +132,20 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
                 float impactScale = 1f;
                 enemyHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale);
                 Debug.Log($"✅ [Explosion] EnemyHealth에 {finalDamage} 데미지!");
+
+                // 넉백/푸시 분기 (weaponData 기준)
+                var enemy = target.GetComponentInParent<Enemy>();
+                if (enemy != null)
+                {
+                    if (weaponData != null && weaponData.usePushInsteadOfKnockback)
+                    {
+                        enemy.ApplyPush(hitDir, weaponData, impactScale);
+                    }
+                    else
+                    {
+                        enemy.ApplyKnockback(hitDir, weaponData, impactScale);
+                    }
+                }
             }
         }
 

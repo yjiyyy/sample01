@@ -6,40 +6,18 @@
 /// - SetWeapon으로 WeaponDataSO 주입
 /// - 스폰 즉시 1회 판정(근접과 동일한 즉시형)
 /// - 거리감쇠는 Shotgun 전용 옵션 사용
-/// - 시각화: (요청) 초록 실제선 제거, WeaponBehavior의 주황 프리뷰만 사용
 /// </summary>
 public class HitBox_PC_Sector : MonoBehaviour
 {
-    /* ─────────── 런타임 파라미터(스폰 시 주입) ─────────── */
     private float damage;
     private float radius;
     private float knockbackPower;
     private float lifetime;
-
-    /// <summary>무기 SO 주입용</summary>
     private WeaponDataSO weapon;
 
     // 🆕 forward 스냅샷 오버라이드
     private bool hasForwardOverride = false;
     private Vector3 forwardOverride;
-
-    /// <summary>
-    /// 샷건 판정에 사용할 forward를 "스냅샷"으로 고정.
-    /// transform.forward 대신 이 값만 사용해서 프리뷰-실제 판정 기준을 일치시킨다.
-    /// </summary>
-    public void SetForwardOverride(Vector3 fwd)
-    {
-        fwd.y = 0f;
-        if (fwd.sqrMagnitude > 0.0001f)
-        {
-            hasForwardOverride = true;
-            forwardOverride = fwd.normalized;
-        }
-        else
-        {
-            hasForwardOverride = false;
-        }
-    }
 
     public void Initialize(float dmg, float rad, float kbPower, float life)
     {
@@ -56,6 +34,20 @@ public class HitBox_PC_Sector : MonoBehaviour
     }
 
     public void SetWeapon(WeaponDataSO w) => weapon = w;
+
+    public void SetForwardOverride(Vector3 fwd)
+    {
+        fwd.y = 0f;
+        if (fwd.sqrMagnitude > 0.0001f)
+        {
+            hasForwardOverride = true;
+            forwardOverride = fwd.normalized;
+        }
+        else
+        {
+            hasForwardOverride = false;
+        }
+    }
 
     private void DoHit()
     {
@@ -101,21 +93,33 @@ public class HitBox_PC_Sector : MonoBehaviour
 
             float finalDmg = damage * weight;
 
-            if (col.GetComponentInParent<Enemy>() is Enemy enemy)
-            {
-                Vector3 knockDir = dir; knockDir.y = 0f;
-                enemy.ApplyKnockback(knockDir, weapon, weight); // impactScale=weight
-            }
-
-            if (col.GetComponentInParent<EnemyHealth>() is EnemyHealth hp)
-            {
-                Vector3 hitDir = dir;
-                hp.ApplyDamage(finalDmg, hitDir, weapon, weight);
-                Debug.Log($"✅ [Shotgun] EnemyHealth에 {finalDmg} 데미지 적용!(w={weight:F2})");
-            }
-            else
+            // 먼저 EnemyHealth에 데미지 적용(중복 방지 등 내부 처리)
+            var hp = col.GetComponentInParent<EnemyHealth>();
+            if (hp == null)
             {
                 Debug.LogWarning($"❌ [Shotgun] {col.name}에서 EnemyHealth를 찾을 수 없습니다!");
+                continue;
+            }
+
+            // 데미지
+            hp.ApplyDamage(finalDmg, dir, weapon, weight);
+            Debug.Log($"✅ [Shotgun] EnemyHealth에 {finalDmg} 데미지 적용!(w={weight:F2})");
+
+            // 넉백/푸시 분기
+            var enemy = col.GetComponentInParent<Enemy>();
+            if (enemy != null)
+            {
+                if (weapon != null && weapon.usePushInsteadOfKnockback)
+                {
+                    // Push: 상태 변화 없음
+                    enemy.ApplyPush(dir, weapon, weight);
+                }
+                else
+                {
+                    // 기존 넉백(상태 변화)
+                    Vector3 knockDir = dir; knockDir.y = 0f;
+                    enemy.ApplyKnockback(knockDir, weapon, weight);
+                }
             }
         }
     }

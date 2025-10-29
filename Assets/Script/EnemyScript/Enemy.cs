@@ -170,6 +170,17 @@ public class Enemy : MonoBehaviour
         impact?.ApplyKnockback(this, hitDir, weapon, impactScale);
     }
 
+    // ───────── 새 메서드: Push(밀림) ─────────
+    // 상태 변화 없이 단순히 뒤로 밀기만 할 때 사용.
+    // Push는 AI/공격을 중단하지 않습니다 (요청에 따라).
+    public void ApplyPush(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
+    {
+        if (CurrentState == EnemyState.Dead) return;
+
+        // Push는 넉백/스턴과 별개로 동작하므로, 넉백 루틴을 강제로 중단하지 않습니다.
+        impact?.ApplyPush(this, hitDir, weapon, impactScale);
+    }
+
     public void Die(Vector3 hitDir, WeaponDataSO weapon) => Die(hitDir, weapon, 1f);
     public void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
     {

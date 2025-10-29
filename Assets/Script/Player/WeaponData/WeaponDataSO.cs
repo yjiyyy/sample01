@@ -42,6 +42,14 @@ public class WeaponDataSO : ScriptableObject
     [Tooltip("0이면 스턴 없음, 값이 있으면 스턴 지속 시간 (초)")]
     public float stunDuration = 0f;
 
+    /* ───────── 🆕 Push(밀림) 옵션 ───────── */
+    [Header("Push(밀림) 옵션")]
+    [Tooltip("체크하면 이 무기 히트는 상태 변화(넉백) 대신 단순히 뒤로 밀림(Push)으로 동작합니다.")]
+    public bool usePushInsteadOfKnockback = false;
+
+    [Tooltip("피격 대상만 멈추는 히트스탑(초). 0이면 비활성")]
+    public float hitstopTime = 0f;
+
     [Header("랙돌/슬라이스 연출")]
     public float ragdollImpulse = 5f;
     public float upwardImpulse = 3f;
@@ -73,7 +81,7 @@ public class WeaponDataSO : ScriptableObject
     {
         cooldown = Mathf.Max(0f, cooldown);
         hitboxSpawnDelay = Mathf.Max(0f, hitboxSpawnDelay);
-        hitBoxLifetime = Mathf.Max(0f, hitBoxLifetime);
+        hitBoxLifetime = Mathf.Max(0.01f, hitBoxLifetime);
 
         knockbackDuration = Mathf.Max(0f, knockbackDuration);
         jerkDuration = Mathf.Max(0f, jerkDuration);
@@ -88,6 +96,9 @@ public class WeaponDataSO : ScriptableObject
         // 리코일: 시간은 0 이상, 파워는 부호 허용
         recoilStartDelay = Mathf.Max(0f, recoilStartDelay);
         recoilDuration = Mathf.Max(0f, recoilDuration);
+
+        // 새 필드 검증
+        hitstopTime = Mathf.Max(0f, hitstopTime);
     }
 #endif
 }

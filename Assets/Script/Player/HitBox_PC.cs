@@ -1,6 +1,6 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class HitBox_PC : MonoBehaviour
 {
@@ -35,7 +35,6 @@ public class HitBox_PC : MonoBehaviour
     }
 
     // ───────── 오버로드 2: 드릴형 중복 히트 ─────────
-    // allowDup=true면 겹쳐 있는 동안 dupInterval마다 재타격(매번 데미지+넉백+스턴 적용)
     public void Initialize(float dmg, float rng, float kbPower, float life, bool allowDup, float dupInterval)
     {
         damage = dmg;
@@ -131,12 +130,20 @@ public class HitBox_PC : MonoBehaviour
         // 데미지
         hp.ApplyDamage(damage, dir, weapon);
 
-        // 넉백/스턴(무기 SO 값 사용)
+        // 넉백/스턴 vs Push 분기(WeaponDataSO의 옵션 사용)
         var enemy = hp.GetComponent<Enemy>() ?? hp.GetComponentInParent<Enemy>();
         if (enemy != null)
         {
-            // power/duration/stun은 weapon에서 읽음 → 방향만 전달
-            enemy.ApplyKnockback(dir, weapon);
+            if (weapon != null && weapon.usePushInsteadOfKnockback)
+            {
+                // Push: 상태 변화 없음, 대상만 잠깐 밀기 (Enemy.ApplyPush가 구현되어 있음)
+                enemy.ApplyPush(dir, weapon);
+            }
+            else
+            {
+                // 기존 넉백 동작(상태 변화, 스턴 등)
+                enemy.ApplyKnockback(dir, weapon);
+            }
         }
 
         Debug.Log($"✅ [HitBox_PC] {hp.name} hit │ dmg:{damage}, dup:{duplicateEnabled}");

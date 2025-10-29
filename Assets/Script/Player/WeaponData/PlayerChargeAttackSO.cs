@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 [CreateAssetMenu(menuName = "Player/ChargeAttack")]
 public class PlayerChargeAttackSO : ScriptableObject
@@ -27,6 +27,14 @@ public class PlayerChargeAttackSO : ScriptableObject
     public float knockbackPower = 5f;
     public float knockbackDuration = 0.3f;
     public float stunDuration = 0f;
+
+    /* ───────── Push 옵션 (WeaponDataSO와 동일 스펙으로 추가) ───────── */
+    [Header("Push(밀림) 옵션")]
+    [Tooltip("체크하면 이 차지 공격은 상태 변화(넉백) 대신 단순 Push로 동작합니다.")]
+    public bool usePushInsteadOfKnockback = false;
+
+    [Tooltip("피격 대상만 멈추는 히트스탑(초). 0이면 비활성")]
+    public float hitstopTime = 0f;
 
     [Header("발동 무적 (A안: 차지 성공 즉시부터 적용)")]
     public float invincibilityDuration = 0.3f;
@@ -78,5 +86,8 @@ public class PlayerChargeAttackSO : ScriptableObject
         upwardImpulse = Mathf.Max(0f, upwardImpulse);
         torqueImpulse = Mathf.Max(0f, torqueImpulse);
         sliceForce = Mathf.Max(0f, sliceForce);
+
+        // Push 관련
+        hitstopTime = Mathf.Max(0f, hitstopTime);
     }
 }

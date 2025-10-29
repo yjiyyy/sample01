@@ -10,7 +10,7 @@ public class HitBox_PC_Projectile : MonoBehaviour
 
     private WeaponDataSO weapon;
 
-    // 🆕 관통 관련
+    // 관통 관련
     private int remainingPierce = 0;
     private readonly HashSet<EnemyHealth> hitSet = new HashSet<EnemyHealth>();
 
@@ -27,7 +27,7 @@ public class HitBox_PC_Projectile : MonoBehaviour
         //Debug.Log($"🚀 Projectile Init │ dmg:{damage}, spd:{speed}, life:{lifetime}, moveDir:{moveDir}");
     }
 
-    // 🆕 오버로드: 피어스 카운트까지 설정
+    // 오버로드: 피어스 카운트까지 설정
     public void InitializeTowards(Vector3 direction, float dmg, float spd, float life, int pierceCount)
     {
         InitializeTowards(direction, dmg, spd, life);
@@ -55,7 +55,7 @@ public class HitBox_PC_Projectile : MonoBehaviour
         if (hitSet.Contains(hp))
             return; // 같은 적의 다른 콜라이더 중복 방지
 
-        // 넉백
+        // 넉백 / Push 분기 처리
         if (other.GetComponentInParent<Enemy>() is Enemy enemy)
         {
             Vector3 knockbackDir = moveDir;
@@ -63,9 +63,16 @@ public class HitBox_PC_Projectile : MonoBehaviour
             if (knockbackDir == Vector3.zero) knockbackDir = Vector3.back;
             knockbackDir = knockbackDir.normalized;
 
-            Debug.Log($"💥 Projectile 충돌 │ 넉백 방향: {knockbackDir}");
-            // 방향만 전달(세기는 EnemyImpact에서 weapon 값 사용)
-            enemy.ApplyKnockback(knockbackDir, weapon);
+            if (weapon != null && weapon.usePushInsteadOfKnockback)
+            {
+                enemy.ApplyPush(knockbackDir, weapon);
+                Debug.Log($"💥 Projectile 충돌 │ Push 방향: {knockbackDir}");
+            }
+            else
+            {
+                enemy.ApplyKnockback(knockbackDir, weapon);
+                Debug.Log($"💥 Projectile 충돌 │ 넉백 방향: {knockbackDir}");
+            }
         }
 
         // 데미지 1회 적용(Projectile 기준)
@@ -92,6 +99,5 @@ public class HitBox_PC_Projectile : MonoBehaviour
         {
             Destroy(gameObject);
         }
-        // remainingPierce > 0 이면 계속 진행
     }
 }
