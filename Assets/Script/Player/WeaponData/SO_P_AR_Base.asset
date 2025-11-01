@@ -15,15 +15,17 @@ MonoBehaviour:
   weaponName: AR_Base
   overrideController: {fileID: 22100000, guid: 26da7d36aa69f4c4ebdaa1aa693b4b8f, type: 2}
   cooldown: 0.2
-  damage: 10
+  damage: 1
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.1
   knockbackDuration: 0.2
-  knockbackPower: 0.1
+  knockbackPower: 5
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 0
+  usePushInsteadOfKnockback: 0
+  hitstopTime: 0.1
   ragdollImpulse: 5
   upwardImpulse: 3
   torqueImpulse: 6

@@ -15,15 +15,17 @@ MonoBehaviour:
   weaponName: Shotgun_Base
   overrideController: {fileID: 22100000, guid: edf16d4553c293c42b2ec9e26bb30453, type: 2}
   cooldown: 1
-  damage: 60
+  damage: 1
   range: 2.5
   hitboxSpawnDelay: 0.15
   hitBoxLifetime: 0.1
-  knockbackDuration: 0.3
-  knockbackPower: 5
+  knockbackDuration: 1
+  knockbackPower: 10
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 2
+  usePushInsteadOfKnockback: 1
+  hitstopTime: 0.2
   ragdollImpulse: 5
   upwardImpulse: 3
   torqueImpulse: 6
