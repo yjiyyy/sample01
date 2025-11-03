@@ -15,8 +15,18 @@ public enum DamageTargetType
 [CreateAssetMenu(menuName = "Weapon/WeaponDataSO")]
 public class WeaponDataSO : ScriptableObject
 {
-    [Header("공통 옵션")]
+    [Header("식별/표시")]
+    [Tooltip("고유 ID (예: \"grenade\", \"pistol_01\"). Inventory/DB에서 이 id로 참조합니다.")]
+    public string id;
+
+    [Tooltip("에디터에서 표시할 무기 이름")]
     public string weaponName = "NewWeapon";
+
+    [Tooltip("UI에 표시할 아이콘 스프라이트")]
+    public Sprite icon;
+
+    [Tooltip("무기 분류(특수/투척 등 처리를 위해 사용)")]
+    public WeaponCategory category = WeaponCategory.Primary;
 
     [Header("애니메이션 세트 (Animator Override Controller 방식)")]
     [Tooltip("무기별 애니메이션을 교체하려면 여기에 AOC를 등록")]
@@ -99,6 +109,13 @@ public class WeaponDataSO : ScriptableObject
 
         // 새 필드 검증
         hitstopTime = Mathf.Max(0f, hitstopTime);
+
+        // id 기본값 경고(에셋 생성 후 고유 id 설정 권장)
+        if (string.IsNullOrEmpty(id))
+        {
+            // 에디터에서만 경고 출력 (실행 중 잦은 로그 방지)
+            Debug.LogWarning($"WeaponDataSO '{name}' has empty id. Please set a unique id for inventory/DB usage.");
+        }
     }
 #endif
 }
@@ -119,4 +136,12 @@ public enum BodySliceType
     LeftLeg,
     RightLeg,
     All,
+}
+
+public enum WeaponCategory
+{
+    Primary,
+    Secondary,
+    Special,
+    Throwable
 }
