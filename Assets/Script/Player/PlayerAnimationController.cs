@@ -350,7 +350,7 @@ public class PlayerAnimationController : MonoBehaviour
     public void SetLowerBodyPlaybackSpeed(float speed)
     {
         SafeSetFloat(hashLowerBodySpeed, speed);
-        Debug.Log($"[PlayerAnim] LowerBodySpeed -> {speed}");
+        //Debug.Log($"[PlayerAnim] LowerBodySpeed -> {speed}");
     }
 
     // 하체 BackStep 플래그 설정(외부에서 호출)

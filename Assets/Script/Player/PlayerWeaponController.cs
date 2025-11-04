@@ -286,7 +286,37 @@ public class PlayerWeaponController : MonoBehaviour
             return;
         }
 
-        // Gun 탄약 게이트
+        // ───────── Shotgun 탄약 게이트 (사전 검사: 애니/쿨다운 낭비 방지) ─────────
+        var sg = data as WeaponDataSO_Shotgun;
+        var ammoForShotgun = equipComp.WeaponBehavior != null ? equipComp.WeaponBehavior.GetComponent<WeaponAmmoRuntime>() : null;
+        if (sg != null && sg.usesAmmo && ammoForShotgun != null)
+        {
+            if (ammoForShotgun.IsReloading)
+            {
+                if (Time.time - lastReloadMsgTime >= RELOAD_MSG_COOLDOWN)
+                {
+                    float remain = ammoForShotgun.GetReloadRemaining();
+                    Debug.Log($"[Ammo] 리로드 중입니다… (남은:{remain:F2}s)");
+                    lastReloadMsgTime = Time.time;
+                }
+                return;
+            }
+
+            if (!ammoForShotgun.CanFire(sg.consumePerShot))
+            {
+                if (!ammoForShotgun.HasAnyReserveOrInfinite())
+                {
+                    Debug.Log("[Ammo] 탄약이 없습니다! (탄창 0 / 예비 0) → 기본 무기로 전환");
+                    EquipWeapon(null); // 기본 무기로 자동 전환
+                    return;
+                }
+                // 자동 리로드 시도
+                ammoForShotgun.TryStartReload();
+                return;
+            }
+        }
+
+        // Gun 탄약 게이트 (기존 로직)
         var gun = data as WeaponDataSO_Gun;
         var ammo = equipComp.WeaponBehavior != null ? equipComp.WeaponBehavior.GetComponent<WeaponAmmoRuntime>() : null;
 
@@ -307,7 +337,8 @@ public class PlayerWeaponController : MonoBehaviour
             {
                 if (!ammo.HasAnyReserveOrInfinite())
                 {
-                    Debug.Log("[Ammo] 탄약이 없습니다! (탄창 0 / 예비 0)");
+                    Debug.Log("[Ammo] 탄약이 없습니다! (탄창 0 / 예비 0) → 기본 무기로 전환");
+                    EquipWeapon(null); // 기본 무기로 자동 전환
                     return;
                 }
                 ammo.TryStartReload();
@@ -353,16 +384,50 @@ public class PlayerWeaponController : MonoBehaviour
         var wb = equipComp.WeaponBehavior;
 
         if (wb == null || data == null) return;
-        var gun = data as WeaponDataSO_Gun;
-        var ammo = wb.GetComponent<WeaponAmmoRuntime>();
-        if (gun == null || ammo == null || !gun.usesAmmo) return;
 
-        if ((state == PlayerState.Idle || state == PlayerState.Move) &&
-            !ammo.IsReloading &&
-            ammo.IsMagazineEmpty() &&
-            ammo.HasAnyReserveOrInfinite())
+        // Gun case
+        var gun = data as WeaponDataSO_Gun;
+        var ammoGun = wb.GetComponent<WeaponAmmoRuntime>();
+        if (gun != null && ammoGun != null && gun.usesAmmo)
         {
-            ammo.TryStartReload();
+            if ((state == PlayerState.Idle || state == PlayerState.Move) &&
+                !ammoGun.IsReloading &&
+                ammoGun.IsMagazineEmpty() &&
+                ammoGun.HasAnyReserveOrInfinite())
+            {
+                ammoGun.TryStartReload();
+            }
+            return;
+        }
+
+        // AR case
+        var ar = data as WeaponDataSO_AR;
+        var ammoAR = wb.GetComponent<WeaponAmmoRuntime_AR>();
+        if (ar != null && ammoAR != null && ar.usesAmmo)
+        {
+            if ((state == PlayerState.Idle || state == PlayerState.Move) &&
+                !ammoAR.IsReloading &&
+                ammoAR.IsMagazineEmpty() &&
+                ammoAR.HasAnyReserveOrInfinite())
+            {
+                ammoAR.TryStartReload();
+            }
+            return;
+        }
+
+        // Shotgun case (shares WeaponAmmoRuntime)
+        var sg = data as WeaponDataSO_Shotgun;
+        var ammoSg = wb.GetComponent<WeaponAmmoRuntime>();
+        if (sg != null && ammoSg != null && sg.usesAmmo)
+        {
+            if ((state == PlayerState.Idle || state == PlayerState.Move) &&
+                !ammoSg.IsReloading &&
+                ammoSg.IsMagazineEmpty() &&
+                ammoSg.HasAnyReserveOrInfinite())
+            {
+                ammoSg.TryStartReload();
+            }
+            return;
         }
     }
 
@@ -589,6 +654,15 @@ public class PlayerWeaponController : MonoBehaviour
                             // 루프 유지(회전 잠수 유지)
                             yield return null;
                             continue;
+                        }
+                    }
+                    else
+                    {
+                        // 탄창/예비 모두 없는 경우 → 기본 무기로 전환
+                        if (!ammo.HasAnyReserveOrInfinite())
+                        {
+                            Debug.Log("[Ammo] AR 탄약 완전 고갈 → 기본 무기로 전환");
+                            EquipWeapon(null);
                         }
                     }
 

@@ -15,7 +15,7 @@ public class WeaponBehavior : MonoBehaviour
     public GameObject projectilePrefab;
     [SerializeField] private GameObject shotgunSectorPrefab;
 
-    /* ─ Ammo (Gun 전용) ─ */
+    /* ─ Ammo (기본 WeaponAmmoRuntime 재사용) ─ */
     [SerializeField] private WeaponAmmoRuntime ammoRuntime;
     public WeaponAmmoRuntime Ammo => ammoRuntime;
 
@@ -34,28 +34,47 @@ public class WeaponBehavior : MonoBehaviour
                 t => t.name == "Root_dummy"
             );
             Debug.Log(meleeSpawnPoint
-                ? $"✅ Root_dummy 자동 연결: {meleeSpawnPoint.name}"
+                ? $"✅ Root_dummy 자동연결: {meleeSpawnPoint.name}"
                 : "⚠ Root_dummy가 캐릭터 계층에 없습니다.");
         }
 
         EnsurePreviewLine();
-        EnsureAmmoInitialized(); // Gun이면 1회 초기화
+        EnsureAmmoInitialized(); // Gun/Shotgun이면 1회 초기화
     }
 
     /// <summary>
-    /// Gun SO일 때 한 번만 초기화. (재장전/발사 중 재초기화 금지)
+    /// 무기 데이터에 따라 WeaponAmmoRuntime을 초기화.
+    /// 기존 Gun 전용 초기화는 유지하고, Shotgun SO 같은 다른 SO도 범용 Initialize 오버로드로 초기화합니다.
     /// </summary>
     public void EnsureAmmoInitialized()
     {
+        // Gun 전용(기존)
         var gun = data as WeaponDataSO_Gun;
-        if (gun == null) return;
+        if (gun != null)
+        {
+            if (ammoRuntime == null)
+                ammoRuntime = GetComponent<WeaponAmmoRuntime>();
+            if (ammoRuntime == null)
+                ammoRuntime = gameObject.AddComponent<WeaponAmmoRuntime>();
 
-        if (ammoRuntime == null)
-            ammoRuntime = GetComponent<WeaponAmmoRuntime>();
-        if (ammoRuntime == null)
-            ammoRuntime = gameObject.AddComponent<WeaponAmmoRuntime>();
+            ammoRuntime.Initialize(gun, force: false);
+            return;
+        }
 
-        ammoRuntime.Initialize(gun, force: false);
+        // Shotgun 및 기타 WeaponDataSO 계열 (범용 초기화)
+        var sg = data as WeaponDataSO_Shotgun;
+        if (sg != null)
+        {
+            if (ammoRuntime == null)
+                ammoRuntime = GetComponent<WeaponAmmoRuntime>();
+            if (ammoRuntime == null)
+                ammoRuntime = gameObject.AddComponent<WeaponAmmoRuntime>();
+
+            ammoRuntime.Initialize(sg, force: false);
+            return;
+        }
+
+        // 다른 타입은 초기화 없음
     }
 
     void OnDisable()
@@ -159,6 +178,17 @@ public class WeaponBehavior : MonoBehaviour
                     if (!ammoRuntime.IsReloading && gun.autoReloadOnEmpty)
                         ammoRuntime.TryStartReload();
 
+                    // 탄창/예비 모두 없는 경우 → 기본 무기로 전환
+                    if (!ammoRuntime.HasAnyReserveOrInfinite())
+                    {
+                        var pwcFallback = Object.FindFirstObjectByType<PlayerWeaponController>();
+                        if (pwcFallback != null)
+                        {
+                            Debug.Log("[WeaponBehavior] Gun 탄 완전 고갈 → 기본 무기로 전환");
+                            pwcFallback.EquipWeapon(null);
+                        }
+                    }
+
                     Debug.Log("[WeaponBehavior] 탄 부족/리로드 중 - 발사 취소");
                     return;
                 }
@@ -171,12 +201,12 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        PlayerWeaponController pwc = Object.FindFirstObjectByType<PlayerWeaponController>();
-        Vector3 shootDir = pwc ? pwc.transform.forward : transform.forward;
+        PlayerWeaponController playerCtrl = Object.FindFirstObjectByType<PlayerWeaponController>();
+        Vector3 shootDir = playerCtrl ? playerCtrl.transform.forward : transform.forward;
 
-        if (pwc && pwc.enemyDetector != null)
+        if (playerCtrl && playerCtrl.enemyDetector != null)
         {
-            var list = pwc.DetectEnemies();
+            var list = playerCtrl.DetectEnemies();
             if (list != null && list.Count > 0)
             {
                 shootDir = (list[0].transform.position - projectileSpawnPoint.position).normalized;
@@ -236,6 +266,34 @@ public class WeaponBehavior : MonoBehaviour
 
     private void SpawnShotgunSector()
     {
+        // 탄약 게이트 (샷건도 WeaponAmmoRuntime 공유)
+        var sg = data as WeaponDataSO_Shotgun;
+        if (sg != null)
+        {
+            if (ammoRuntime != null && sg.usesAmmo)
+            {
+                if (!ammoRuntime.TryConsumeForShot(sg.consumePerShot))
+                {
+                    if (!ammoRuntime.IsReloading && sg.autoReloadOnEmpty)
+                        ammoRuntime.TryStartReload();
+
+                    // 탄창/예비 모두 없는 경우 → 기본 무기로 전환
+                    if (!ammoRuntime.HasAnyReserveOrInfinite())
+                    {
+                        var pwc = Object.FindFirstObjectByType<PlayerWeaponController>();
+                        if (pwc != null)
+                        {
+                            Debug.Log("[WeaponBehavior] Shotgun 탄 완전 고갈 → 기본 무기로 전환");
+                            pwc.EquipWeapon(null);
+                        }
+                    }
+
+                    Debug.Log("[WeaponBehavior] 샷건 탄 부족/리로드 중 - 발사 취소");
+                    return;
+                }
+            }
+        }
+
         if (shotgunSectorPrefab == null)
         {
             Debug.LogWarning("shotgunSectorPrefab 미연결");
@@ -247,8 +305,6 @@ public class WeaponBehavior : MonoBehaviour
 
         if (projectileSpawnPoint == null)
             Debug.LogWarning("[WeaponBehavior] projectileSpawnPoint(Fire_Point) 비어 있음 → 대체 사용");
-
-        var sg = data as WeaponDataSO_Shotgun;
 
         var owner = GetComponentInParent<PlayerWeaponController>();
         Vector3 fwd = owner != null ? owner.transform.forward : transform.forward;
