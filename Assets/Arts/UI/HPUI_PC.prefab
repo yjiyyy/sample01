@@ -35,7 +35,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -30}
   m_SizeDelta: {x: 500, y: 50}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1813747598196880116
@@ -317,9 +317,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   health: {fileID: 0}
-  hpSlider: {fileID: 0}
+  hpSlider: {fileID: 7616516237972522508}
   shieldSlider: {fileID: 0}
-  evadeSlider: {fileID: 0}
+  evadeSlider: {fileID: 1813747598196880116}
 --- !u!1 &5512509510647806877
 GameObject:
   m_ObjectHideFlags: 0

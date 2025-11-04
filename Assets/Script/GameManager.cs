@@ -50,7 +50,7 @@ public class GameManager : MonoBehaviour
         var uiControllers = hudCanvas.GetComponentsInChildren<HPUIControllerBase>(true);
 
         // 씬에 존재하는 PlayerHealth들을 찾아서 연결합니다.
-        var players = FindObjectsOfType<PlayerHealth>();
+        var players = UnityEngine.Object.FindObjectsByType<PlayerHealth>(UnityEngine.FindObjectsSortMode.InstanceID);
 
         int count = Mathf.Min(uiControllers.Length, players.Length);
         for (int i = 0; i < count; i++)
