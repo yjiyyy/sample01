@@ -12,7 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e994ae4a4936deb43b2ab49330ac05e8, type: 3}
   m_Name: SO_P_Weapon_02_Pistol
   m_EditorClassIdentifier: 
+  id: Weapon_02_Pistol
   weaponName: Gun_Base
+  icon: {fileID: 21300000, guid: ad8bf8234a4f49a47b98e99d47be68a0, type: 3}
+  category: 0
   overrideController: {fileID: 22100000, guid: c4ecbdf1ac950334a81e5c66d1b9e96d, type: 2}
   cooldown: 0.5
   damage: 1

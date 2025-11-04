@@ -12,7 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8aecbbdb3fa87b4c977aab945b07586, type: 3}
   m_Name: SO_P_Weapon_04_AR
   m_EditorClassIdentifier: 
+  id: Weapon_04_AR
   weaponName: AR_Base
+  icon: {fileID: 21300000, guid: 11d8677ec0e09024d8d623faa359e265, type: 3}
+  category: 0
   overrideController: {fileID: 22100000, guid: 26da7d36aa69f4c4ebdaa1aa693b4b8f, type: 2}
   cooldown: 0.2
   damage: 1
@@ -42,9 +45,9 @@ MonoBehaviour:
   projectileLifetime: 5
   pierceCount: 0
   usesAmmo: 1
-  magazineSize: 300
-  initialReserve: 90
-  infiniteReserve: 1
+  magazineSize: 10
+  initialReserve: 15
+  infiniteReserve: 0
   reloadTime: 1
   consumePerShot: 1
   autoReloadOnEmpty: 1

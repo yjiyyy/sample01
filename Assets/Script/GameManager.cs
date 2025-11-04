@@ -1,19 +1,21 @@
-﻿using UnityEngine;
-using UnityEngine.UI;
+﻿using System.Linq;
+using UnityEngine;
+
+// GameManager는 UI의 위치(anchoredPosition 등)를 건드리지 않습니다(C2).
+// 대신 hudCanvas 아래에 미리 배치한 HPUIControllerBase들을 찾아서 PlayerHealth를 할당합니다.
+// 플레이어가 런타임에 추가되면 RegisterPlayerHealth를 호출하여 빈 슬롯에 할당해 줍니다.
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
     [Header("플레이어 관련")]
+    // 기존 playerTransform은 유지(호환성). 여러 플레이어를 지원하려면 PlayerHealth 컴포넌트들을 사용합니다.
     public Transform playerTransform;
-    public GameObject playerHPUIPrefab; // 플레이어용 HP UI 프리팹 (UI 기반)
-    [Tooltip("HUD로 사용할 Canvas (예: 가상패드가 있는 Canvas)")]
-    public Canvas hudCanvas;
 
-    [Header("플레이어 HP UI 위치 (스크린)")]
-    public float playerHPLeftPadding = 10f;
-    public float playerHPTopPadding = 10f;
+    [Tooltip("HUD로 사용할 Canvas (예: 가상패드가 있는 Canvas). " +
+             "HUD 아래에 미리 배치한 HP UI(HPUIControllerBase)를 넣어두세요.")]
+    public Canvas hudCanvas;
 
     void Awake()
     {
@@ -28,94 +30,73 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // 플레이어 HP UI 생성 메서드
-    public void SpawnPlayerHPUI(Transform playerTransform)
+    void Start()
     {
-        if (playerHPUIPrefab == null)
-        {
-            Debug.LogError("❌ playerHPUIPrefab이 설정되지 않았습니다!");
-            return;
-        }
+        // 씬에 미리 배치한 HP UI와 현재 씬의 PlayerHealth들을 연결
+        AssignExistingPlayerUIs();
+    }
 
+    // 씬에 배치된 HPUIControllerBase들을 찾아 현재 씬의 PlayerHealth들과 매칭해서 초기 연결을 수행합니다.
+    // 매칭 기준: 발견 순서(필요시 이 부분을 이름 기반 매칭 등으로 변경 가능)
+    public void AssignExistingPlayerUIs()
+    {
         if (hudCanvas == null)
         {
-            Debug.LogError("❌ HUD용 Canvas(hudCanvas)가 연결되지 않았습니다! 가상패드 Canvas를 연결하세요.");
+            Debug.LogWarning("[GameManager] hudCanvas가 설정되지 않았습니다. 씬에 배치한 HP UI를 자동으로 연결할 수 없습니다.");
             return;
         }
 
-        // hudCanvas 아래에 생성(로컬 transform 유지)
-        GameObject hpui = Instantiate(playerHPUIPrefab, hudCanvas.transform, false);
+        // HUD 아래에 있는 HPUIControllerBase 컴포넌트들(비활성 오브젝트 포함)을 가져옵니다.
+        var uiControllers = hudCanvas.GetComponentsInChildren<HPUIControllerBase>(true);
 
-        HPUIController controller = hpui.GetComponent<HPUIController>();
-        if (controller == null)
+        // 씬에 존재하는 PlayerHealth들을 찾아서 연결합니다.
+        var players = FindObjectsOfType<PlayerHealth>();
+
+        int count = Mathf.Min(uiControllers.Length, players.Length);
+        for (int i = 0; i < count; i++)
         {
-            Debug.LogError("❌ playerHPUIPrefab에 HPUIController 컴포넌트가 없습니다.");
-            return;
-        }
-
-        // target과 health는 플레이어로 연결(슬라이더 업데이트는 Controller가 담당)
-        controller.target = playerTransform;
-        controller.health = playerTransform.GetComponent<PlayerHealth>();
-
-        // 화면 고정 모드로 설정
-        controller.useScreenSpaceUI = true;
-        controller.leftPadding = playerHPLeftPadding;
-        controller.topPadding = playerHPTopPadding;
-
-        // RectTransform을 좌상단 앵커로 세팅(스크린 고정)
-        RectTransform rt = hpui.GetComponent<RectTransform>();
-        if (rt != null)
-        {
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(0f, 1f);
-            rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(playerHPLeftPadding, -playerHPTopPadding);
-        }
-
-        // CanvasGroup으로 터치 이벤트 차단 방지
-        CanvasGroup cg = hpui.GetComponent<CanvasGroup>();
-        if (cg == null)
-        {
-            cg = hpui.AddComponent<CanvasGroup>();
-        }
-        cg.blocksRaycasts = false; // HUD가 입력(가상패드)을 가로막지 않도록
-
-        // SafeArea 보정용 컴포넌트 추가(없으면 추가)
-        var safe = hpui.GetComponent<SafeAreaFitter>();
-        if (safe == null)
-        {
-            hpui.AddComponent<SafeAreaFitter>();
-        }
-
-        // 이름 기반 슬라이더 자동 매핑 (기존 로직 유지)
-        Slider[] sliders = hpui.GetComponentsInChildren<Slider>(true);
-        Slider hpFound = null, evadeFound = null, shieldFound = null;
-
-        foreach (Slider s in sliders)
-        {
-            string n = s.name.ToLower();
-            if (n.Contains("shield")) shieldFound = s;
-            else if (n.Contains("evade")) evadeFound = s;
-            else if (n.Contains("hp")) hpFound = s;
-        }
-
-        // 폴백: 이름이 애매할 경우 첫 번째를 HP, 두 번째를 Evade로 할당
-        if (hpFound == null && sliders.Length >= 1) hpFound = sliders[0];
-        if (evadeFound == null && sliders.Length >= 2)
-        {
-            foreach (var s in sliders)
+            if (uiControllers[i] != null && players[i] != null)
             {
-                if (s != hpFound) { evadeFound = s; break; }
+                uiControllers[i].Initialize(players[i]);
             }
         }
 
-        controller.hpSlider = hpFound;
-        controller.evadeSlider = evadeFound;
-        controller.shieldSlider = shieldFound; // 플레이어에선 숨김(Controller에서 처리)
-
-        if (controller.hpSlider == null)
+        if (players.Length > uiControllers.Length)
         {
-            Debug.LogError("❌ 플레이어 HP UI에서 HP 슬라이더를 찾지 못했습니다. 프리팹에 'HP' 이름을 포함한 Slider를 추가해주세요.");
+            Debug.LogWarning($"[GameManager] 플레이어({players.Length}) 수가 HP UI({uiControllers.Length}) 슬롯보다 많습니다. 남은 플레이어는 수동 또는 동적 생성으로 처리하세요.");
         }
+        else if (uiControllers.Length > players.Length)
+        {
+            Debug.Log($"[GameManager] HP UI 슬롯({uiControllers.Length})이 플레이어({players.Length})보다 많습니다. 남은 UI는 비어있습니다.");
+        }
+    }
+
+    // 런타임에 플레이어가 추가될 때 호출하세요. 빈 UI 슬롯이 있으면 그 슬롯에 할당합니다.
+    // 반환값: 할당 성공 여부
+    public bool RegisterPlayerHealth(PlayerHealth playerHealth)
+    {
+        if (playerHealth == null)
+            return false;
+
+        if (hudCanvas == null)
+        {
+            Debug.LogWarning("[GameManager] hudCanvas가 설정되지 않아 HP UI를 자동 연결할 수 없습니다.");
+            return false;
+        }
+
+        var uiControllers = hudCanvas.GetComponentsInChildren<HPUIControllerBase>(true);
+        // 첫 번째로 health가 null인(아직 할당되지 않은) UI를 찾아 초기화
+        foreach (var ui in uiControllers)
+        {
+            // 내부 필드가 protected, 그래서 체크는 reflection 없이 public 'health'를 사용 (public으로 남아있음)
+            if (ui != null && ui.health == null)
+            {
+                ui.Initialize(playerHealth);
+                return true;
+            }
+        }
+
+        Debug.LogWarning("[GameManager] 빈 HP UI 슬롯이 없습니다. 필요하면 HP UI 프리팹을 동적으로 생성하도록 변경하세요.");
+        return false;
     }
 }

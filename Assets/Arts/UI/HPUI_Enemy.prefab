@@ -159,7 +159,7 @@ GameObject:
   - component: {fileID: 8966420440405018380}
   - component: {fileID: 3055172020488798404}
   - component: {fileID: 6724978943297988960}
-  - component: {fileID: -3708347043908700023}
+  - component: {fileID: -5562313968330344245}
   m_Layer: 7
   m_Name: HPUI_Enemy
   m_TagString: Untagged
@@ -251,7 +251,7 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &-3708347043908700023
+--- !u!114 &-5562313968330344245
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -260,14 +260,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 5425390646291263780}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 65be0821889de704bb664804cf2e4ac7, type: 3}
+  m_Script: {fileID: 11500000, guid: 03d46bd446b6e9147879ec3dc0551afc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  target: {fileID: 0}
   health: {fileID: 0}
   hpSlider: {fileID: 0}
   shieldSlider: {fileID: 0}
   evadeSlider: {fileID: 0}
+  target: {fileID: 0}
   offset: {x: 0, y: 2, z: 0}
 --- !u!1 &5512509510647806877
 GameObject:
