@@ -314,6 +314,13 @@ public class PlayerAnimationController : MonoBehaviour
         // 하체 속도 복구
         SafeSetFloat(hashLowerBodySpeed, 1f);
         Debug.Log("[PlayerAnim] Attack 종료 (쿨타임 종료)");
+
+        // 애니메이션 종료 시점: pending 전환이 있으면 실행
+        var pwc = GetComponentInParent<PlayerWeaponController>();
+        if (pwc != null)
+        {
+            pwc.ExecutePendingSwitchIfAnyImmediate();
+        }
     }
 
     public void SetUpperBodyLayerEnabled(bool enabled)

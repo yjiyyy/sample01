@@ -1,4 +1,4 @@
-﻿// (파일 전체 — AR 쿨다운/연사/스프레드/상체 애니메이션 동작 포함, EquipWeapon에서 UpperBody 레이어 토글 추가)
+﻿// (수정본: pending switch 로직 추가, 발사 성공 직후 빈 상태 검사로 RequestSwitchToDefault 호출 추가)
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -78,6 +78,75 @@ public class PlayerWeaponController : MonoBehaviour
     // 탄약 메시지
     private float lastReloadMsgTime = -999f;
     private const float RELOAD_MSG_COOLDOWN = 0.3f;
+
+    // ───────── pending switch to default (애니/쿨다운 끝에 전환) ─────────
+    // 요청된 '쿨다운/애니 끝 시 기본무기로 전환' 플래그
+    private bool pendingSwitchToDefault = false;
+
+    /// <summary>
+    /// 발사 시점(또는 WeaponBehavior)에서 호출.
+    /// 공격 중(Attack state)이라면 즉시 전환하지 않고 애니메이션/쿨다운 종료 시 전환하도록 요청한다.
+    /// </summary>
+    public void RequestSwitchToDefault()
+    {
+        pendingSwitchToDefault = true;
+        if (debugMode) Debug.Log("[PlayerWeaponController] RequestSwitchToDefault() 호출 — 전환 보류(애니/쿨다운 끝에서 실행)");
+    }
+
+    /// <summary>
+    /// 보류된 전환이 있으면 즉시 실행(이 메서드는 EndAttack 및 CC 진입 시 호출됨).
+    /// 전환 직전에 현재 장착 무기의 ammo 상태를 재확인하며, 이미 ammo가 회복됐다면 전환을 취소한다.
+    /// </summary>
+    public void ExecutePendingSwitchIfAnyImmediate()
+    {
+        if (!pendingSwitchToDefault) return;
+        pendingSwitchToDefault = false;
+
+        // 재검사: 현재 무기의 ammo 상태 확인
+        var wb = equipComp != null ? equipComp.WeaponBehavior : null;
+        bool shouldSwitch = true;
+
+        if (wb != null)
+        {
+            var gunAmmo = wb.GetComponent<WeaponAmmoRuntime>();
+            var arAmmo = wb.GetComponent<WeaponAmmoRuntime_AR>();
+            if (gunAmmo != null)
+            {
+                shouldSwitch = gunAmmo.IsMagazineEmpty() && !gunAmmo.HasAnyReserveOrInfinite();
+            }
+            else if (arAmmo != null)
+            {
+                shouldSwitch = arAmmo.IsMagazineEmpty() && !arAmmo.HasAnyReserveOrInfinite();
+            }
+            else
+            {
+                // ammo 컴포넌트가 없으면 (근접무기 등) 원래 요청된 상황일 수 있으므로 전환 허용
+                shouldSwitch = true;
+            }
+        }
+
+        if (shouldSwitch)
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] ExecutePendingSwitchIfAnyImmediate: 조건 만족 → 기본무기로 전환");
+            EquipWeapon(null);
+        }
+        else
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] ExecutePendingSwitchIfAnyImmediate: ammo 회복되어 전환 취소");
+        }
+    }
+
+    /// <summary>
+    /// pending 전환을 취소합니다.
+    /// </summary>
+    public void CancelPendingSwitch()
+    {
+        if (pendingSwitchToDefault)
+        {
+            pendingSwitchToDefault = false;
+            if (debugMode) Debug.Log("[PlayerWeaponController] CancelPendingSwitch() 호출 — 보류 전환 취소");
+        }
+    }
 
     private void Awake()
     {
@@ -226,6 +295,9 @@ public class PlayerWeaponController : MonoBehaviour
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
             chargeComp?.CancelAll();
+
+            // 넉백/스턴/죽음 등 강제 상태가 발생하면 pending 전환 즉시 실행
+            ExecutePendingSwitchIfAnyImmediate();
         }
 
         // Attack 이탈 시 리코일 취소
@@ -307,7 +379,11 @@ public class PlayerWeaponController : MonoBehaviour
                 if (!ammoForShotgun.HasAnyReserveOrInfinite())
                 {
                     Debug.Log("[Ammo] 탄약이 없습니다! (탄창 0 / 예비 0) → 기본 무기로 전환");
-                    EquipWeapon(null); // 기본 무기로 자동 전환
+                    // Attack 중이면 요청으로, 아니면 즉시 전환
+                    if (state == PlayerState.Attack)
+                        RequestSwitchToDefault();
+                    else
+                        EquipWeapon(null);
                     return;
                 }
                 // 자동 리로드 시도
@@ -338,7 +414,10 @@ public class PlayerWeaponController : MonoBehaviour
                 if (!ammo.HasAnyReserveOrInfinite())
                 {
                     Debug.Log("[Ammo] 탄약이 없습니다! (탄창 0 / 예비 0) → 기본 무기로 전환");
-                    EquipWeapon(null); // 기본 무기로 자동 전환
+                    if (state == PlayerState.Attack)
+                        RequestSwitchToDefault();
+                    else
+                        EquipWeapon(null);
                     return;
                 }
                 ammo.TryStartReload();
@@ -372,6 +451,7 @@ public class PlayerWeaponController : MonoBehaviour
         yield return new WaitForSeconds(data.cooldown);
 
         ChangeState(PlayerState.Idle);
+        // 애니메이션 종료 처리(EndAttack 내부에서 pending 전환을 실행)
         animationController?.EndAttack();
 
         CancelRecoil();
@@ -636,6 +716,13 @@ public class PlayerWeaponController : MonoBehaviour
                         // 발사 시점에 lastAttackTime 갱신(쿨타임 일관성)
                         lastAttackTime = Time.time;
 
+                        // 발사 성공 직후: 탄창이 비어있고 예비가 없으면 전환 요청 남김
+                        if (ammo.IsMagazineEmpty() && !ammo.HasAnyReserveOrInfinite())
+                        {
+                            RequestSwitchToDefault();
+                            if (debugMode) Debug.Log("[PlayerWeaponController] AR: 발사 후 탄창 비어있음 → 전환 요청");
+                        }
+
                         nextTime += interval;
                         // 드리프트 보정
                         if (Time.time - nextTime > interval) nextTime = Time.time + interval;
@@ -658,11 +745,11 @@ public class PlayerWeaponController : MonoBehaviour
                     }
                     else
                     {
-                        // 탄창/예비 모두 없는 경우 → 기본 무기로 전환
+                        // 탄창/예비 모두 없는 경우 → 기본 무기로 전환 (AR 연사 중이면 요청으로 처리)
                         if (!ammo.HasAnyReserveOrInfinite())
                         {
-                            Debug.Log("[Ammo] AR 탄약 완전 고갈 → 기본 무기로 전환");
-                            EquipWeapon(null);
+                            Debug.Log("[Ammo] AR 탄약 완전 고갈 → 기본 무기로 전환 요청");
+                            RequestSwitchToDefault();
                         }
                     }
 

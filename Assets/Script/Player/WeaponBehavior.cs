@@ -1,3 +1,4 @@
+// (수정본: 발사 성공 직후 탄약이 비어있으면 RequestSwitchToDefault 호출 추가)
 using UnityEngine;
 using System.Collections;
 
@@ -42,13 +43,8 @@ public class WeaponBehavior : MonoBehaviour
         EnsureAmmoInitialized(); // Gun/Shotgun이면 1회 초기화
     }
 
-    /// <summary>
-    /// 무기 데이터에 따라 WeaponAmmoRuntime을 초기화.
-    /// 기존 Gun 전용 초기화는 유지하고, Shotgun SO 같은 다른 SO도 범용 Initialize 오버로드로 초기화합니다.
-    /// </summary>
     public void EnsureAmmoInitialized()
     {
-        // Gun 전용(기존)
         var gun = data as WeaponDataSO_Gun;
         if (gun != null)
         {
@@ -61,7 +57,6 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        // Shotgun 및 기타 WeaponDataSO 계열 (범용 초기화)
         var sg = data as WeaponDataSO_Shotgun;
         if (sg != null)
         {
@@ -73,8 +68,6 @@ public class WeaponBehavior : MonoBehaviour
             ammoRuntime.Initialize(sg, force: false);
             return;
         }
-
-        // 다른 타입은 초기화 없음
     }
 
     void OnDisable()
@@ -152,7 +145,6 @@ public class WeaponBehavior : MonoBehaviour
         {
             hitbox.SetWeapon(data);
 
-            // 근접은 ‘즉발 1회’만 사용(중복 히트는 차지/별도에서 운용)
             hitbox.Initialize(
                 data.damage,
                 data.range,
@@ -166,31 +158,39 @@ public class WeaponBehavior : MonoBehaviour
 
     private void SpawnProjectile()
     {
-        // ───── Gun 탄약 게이트 (중복 초기화 제거) ─────
-        if (data is WeaponDataSO_Gun gun)
+        // Gun 탄약 게이트 (중복 초기화 제거)
+        var gun = data as WeaponDataSO_Gun;
+        if (gun != null)
         {
-            // 초기화는 Awake/EquipWeapon 에서 1회
             if (ammoRuntime != null && gun.usesAmmo)
             {
                 if (!ammoRuntime.TryConsumeForShot(gun.consumePerShot))
                 {
-                    // 탄 부족 → 자동 리로드 (로그는 내부 처리)
                     if (!ammoRuntime.IsReloading && gun.autoReloadOnEmpty)
                         ammoRuntime.TryStartReload();
 
-                    // 탄창/예비 모두 없는 경우 → 기본 무기로 전환
                     if (!ammoRuntime.HasAnyReserveOrInfinite())
                     {
                         var pwcFallback = Object.FindFirstObjectByType<PlayerWeaponController>();
                         if (pwcFallback != null)
                         {
-                            Debug.Log("[WeaponBehavior] Gun 탄 완전 고갈 → 기본 무기로 전환");
-                            pwcFallback.EquipWeapon(null);
+                            Debug.Log("[WeaponBehavior] Gun 탄 완전 고갈 → 기본 무기로 전환 요청");
+                            pwcFallback.RequestSwitchToDefault();
                         }
                     }
 
                     Debug.Log("[WeaponBehavior] 탄 부족/리로드 중 - 발사 취소");
                     return;
+                }
+                // <-- 성공적으로 소비했다면, 바로 빈 상태인지 검사해서 요청 남김
+                if (ammoRuntime.IsMagazineEmpty() && !ammoRuntime.HasAnyReserveOrInfinite())
+                {
+                    var pwcFallback2 = Object.FindFirstObjectByType<PlayerWeaponController>();
+                    if (pwcFallback2 != null)
+                    {
+                        if (Debug.isDebugBuild) Debug.Log("[WeaponBehavior] Gun: 발사 후 탄창 비어있음 → 전환 요청");
+                        pwcFallback2.RequestSwitchToDefault();
+                    }
                 }
             }
         }
@@ -266,7 +266,6 @@ public class WeaponBehavior : MonoBehaviour
 
     private void SpawnShotgunSector()
     {
-        // 탄약 게이트 (샷건도 WeaponAmmoRuntime 공유)
         var sg = data as WeaponDataSO_Shotgun;
         if (sg != null)
         {
@@ -277,19 +276,29 @@ public class WeaponBehavior : MonoBehaviour
                     if (!ammoRuntime.IsReloading && sg.autoReloadOnEmpty)
                         ammoRuntime.TryStartReload();
 
-                    // 탄창/예비 모두 없는 경우 → 기본 무기로 전환
                     if (!ammoRuntime.HasAnyReserveOrInfinite())
                     {
                         var pwc = Object.FindFirstObjectByType<PlayerWeaponController>();
                         if (pwc != null)
                         {
-                            Debug.Log("[WeaponBehavior] Shotgun 탄 완전 고갈 → 기본 무기로 전환");
-                            pwc.EquipWeapon(null);
+                            Debug.Log("[WeaponBehavior] Shotgun 탄 완전 고갈 → 기본 무기로 전환 요청");
+                            pwc.RequestSwitchToDefault();
                         }
                     }
 
                     Debug.Log("[WeaponBehavior] 샷건 탄 부족/리로드 중 - 발사 취소");
                     return;
+                }
+
+                // 성공 소비 후 빈 상태 검사 및 요청
+                if (ammoRuntime.IsMagazineEmpty() && !ammoRuntime.HasAnyReserveOrInfinite())
+                {
+                    var pwc2 = Object.FindFirstObjectByType<PlayerWeaponController>();
+                    if (pwc2 != null)
+                    {
+                        if (Debug.isDebugBuild) Debug.Log("[WeaponBehavior] Shotgun: 발사 후 탄창 비어있음 → 전환 요청");
+                        pwc2.RequestSwitchToDefault();
+                    }
                 }
             }
         }
@@ -339,11 +348,6 @@ public class WeaponBehavior : MonoBehaviour
             Debug.Log($"[WeaponBehavior] Shotgun Sector Spawn │ pos@{spawnPoint.name}, forward=Snap({fwd}), dmg:{data.damage}, life:{data.hitBoxLifetime}");
     }
 
-    /// <summary>
-    /// Assault Rifle 등에서 EnemyDetector 없이, 지정 방향으로 즉시 발사
-    /// - 탄약 체크/소모는 호출측에서 수행
-    /// - projectileSpawnPoint가 없으면 meleeSpawnPoint나 transform를 폴백으로 사용
-    /// </summary>
     public void FireProjectileForced(Vector3 shootDir, bool preserveVertical = false)
     {
         if (projectilePrefab == null)
@@ -356,7 +360,6 @@ public class WeaponBehavior : MonoBehaviour
                                : (meleeSpawnPoint != null ? meleeSpawnPoint : transform);
 
         Vector3 dir = shootDir;
-        // preserveVertical 플래그가 false면 기존처럼 수직 성분을 제거(평면 발사)
         if (!preserveVertical)
             dir.y = 0f;
 
@@ -410,7 +413,6 @@ public class WeaponBehavior : MonoBehaviour
         Debug.LogWarning("[WeaponBehavior] 지원 컴포넌트를 찾지 못한 발사체(Forced)");
     }
 
-    /* ─ 시각화 유틸 ─ */
     private void EnsurePreviewLine()
     {
         if (previewLR != null) return;
