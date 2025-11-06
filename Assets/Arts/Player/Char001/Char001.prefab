@@ -107,6 +107,12 @@ MonoBehaviour:
   stoppingDistance: 0.01
   autoBraking: 1
   stopWhenNoInput: 1
+  debugLogs: 0
+  visualSyncEnabled: 1
+  visualSmoothingEnabled: 0
+  visualSmoothingSpeed: 30
+  enterBackstepAngle: 120
+  exitBackstepAngle: 100
 --- !u!114 &7043935488017820867
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -275,7 +281,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gamepadDeadzone: 0.15
-  forceMobileInEditor: 0
+  forceMobileInEditor: 1
 --- !u!114 &-3391735028938872280
 MonoBehaviour:
   m_ObjectHideFlags: 0

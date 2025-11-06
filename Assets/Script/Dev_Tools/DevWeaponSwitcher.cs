@@ -1,23 +1,23 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 public class DevWeaponSwitcher : MonoBehaviour
 {
-    [Header("Dev ¸ğµå Åä±Û Å°")]
-    [Tooltip("BackQuote(`)·Î ¿­°í/´İ±â")]
+    [Header("ê°œë°œììš© ì˜¤ë²„ë ˆì´ í‚¤")]
+    [Tooltip("BackQuote(`) í‚¤ë¡œ ì—´ê¸°/ë‹«ê¸°")]
     public KeyCode toggleKey = KeyCode.BackQuote;
 
-    [Header("·±Å¸ÀÓ ·Îµå (ºôµå Æ÷ÇÔ)")]
-    [Tooltip("Resources/Dev/WeaponRegistry.asset ¸¦ ÀÚµ¿ ·Îµå")]
+    [Header("ë¦¬ì†ŒìŠ¤ ê²½ë¡œ (ë¹Œë“œìš©)")]
+    [Tooltip("Resources/Dev/WeaponRegistry.asset ìœ„ì¹˜")]
     public string resourcesPath = "Dev/WeaponRegistry";
 
-    [Header("´ë»ó ÇÃ·¹ÀÌ¾î (ºñ¿öµÎ¸é ÀÚµ¿ Å½»ö)")]
+    [Header("ëŒ€ìƒ í”Œë ˆì´ì–´ (ë¹Œë“œì—ì„œ ì°¸ì¡°)")]
     public PlayerWeaponController targetPlayer;
 
-    [Header("ºôµå¿¡¼­µµ È°¼ºÈ­")]
+    [Header("ë¹Œë“œì—ì„œ í™œì„±í™” ì—¬ë¶€")]
     public bool enableInBuild = true;
 
-    // ³»ºÎ »óÅÂ
+    // ë‚´ë¶€ ìƒíƒœ
     private bool overlayOpen = false;
     private Vector2 scroll;
     private int selectedIndex = 0;
@@ -25,7 +25,7 @@ public class DevWeaponSwitcher : MonoBehaviour
     private WeaponRegistrySO registry;
     private List<WeaponRegistrySO.WeaponEntry> sorted;
 
-    // GUI ½ºÅ¸ÀÏ (OnGUI¿¡¼­¸¸ ÃÊ±âÈ­)
+    // GUI ìŠ¤íƒ€ì¼ ìºì‹œ
     private GUIStyle rowStyle;
     private GUIStyle selRowStyle;
     private GUIStyle headerStyle;
@@ -33,7 +33,7 @@ public class DevWeaponSwitcher : MonoBehaviour
 
     void Awake()
     {
-        // ¿¡µğÅÍ°¡ ¾Æ´Ï°í ºôµå¿¡¼­ ºñÈ°¼º ¿É¼ÇÀÌ¸é ²¨µÎ±â
+        // ë¹Œë“œì—ì„œ ë¹„í™œì„±í™” ì„¤ì •ì´ë©´ ì»´í¬ë„ŒíŠ¸ ìì²´ ë¹„í™œì„±í™”
         if (!Application.isEditor && !enableInBuild)
         {
             enabled = false;
@@ -43,10 +43,9 @@ public class DevWeaponSwitcher : MonoBehaviour
 
     void Start()
     {
-        // GUI API »ç¿ë ±İÁö: ´Ü¼ø µ¥ÀÌÅÍ ·Îµå/ÂüÁ¶¸¸
         TryLoadRegistry();
         EnsurePlayer();
-        // ½ºÅ¸ÀÏ ÃÊ±âÈ­´Â OnGUI¿¡¼­¸¸ ¼öÇà(lazy-init)
+        // OnGUIì—ì„œ ìŠ¤íƒ€ì¼ì„ lazy-initìœ¼ë¡œ ìƒì„±
     }
 
     void OnDestroy()
@@ -60,46 +59,49 @@ public class DevWeaponSwitcher : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(toggleKey))
+        if (InputManager.Instance == null) return;
+
+        // í† ê¸€ í‚¤ ì²˜ë¦¬
+        if (InputManager.Instance.GetKeyDown(toggleKey))
         {
             overlayOpen = !overlayOpen;
 
-            // ¿ÀÇÂÇÏ´Â ¼ø°£ ·¹Áö½ºÆ®¸® Àç½Ãµµ (Ã³À½¿¡ ¸ø ºÒ·¯¿Ô´ø °æ¿ì)
+            // ì˜¤ë²„ë ˆì´ë¥¼ ì—¬ëŠ” ìˆœê°„ ë ˆì§€ìŠ¤íŠ¸ë¦¬ê°€ ë¹„ì–´ìˆìœ¼ë©´ ë¡œë“œ
             if (overlayOpen && (registry == null || sorted == null))
                 TryLoadRegistry();
         }
 
         if (!overlayOpen) return;
 
-        // ¸®½ºÆ® ³» Å°º¸µå Å½»ö
         int count = sorted != null ? sorted.Count : 0;
         if (count == 0) return;
 
-        if (Input.GetKeyDown(KeyCode.DownArrow))
+        // í‚¤ ì…ë ¥ìœ¼ë¡œ ëª©ë¡ ì´ë™/ì„ íƒ
+        if (InputManager.Instance.GetKeyDown(KeyCode.DownArrow))
         {
             selectedIndex = Mathf.Clamp(selectedIndex + 1, 0, count - 1);
             ScrollToSelected(count);
         }
-        else if (Input.GetKeyDown(KeyCode.UpArrow))
+        else if (InputManager.Instance.GetKeyDown(KeyCode.UpArrow))
         {
             selectedIndex = Mathf.Clamp(selectedIndex - 1, 0, count - 1);
             ScrollToSelected(count);
         }
-        else if (Input.GetKeyDown(KeyCode.PageDown))
+        else if (InputManager.Instance.GetKeyDown(KeyCode.PageDown))
         {
             selectedIndex = Mathf.Clamp(selectedIndex + 10, 0, count - 1);
             ScrollToSelected(count);
         }
-        else if (Input.GetKeyDown(KeyCode.PageUp))
+        else if (InputManager.Instance.GetKeyDown(KeyCode.PageUp))
         {
             selectedIndex = Mathf.Clamp(selectedIndex - 10, 0, count - 1);
             ScrollToSelected(count);
         }
-        else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        else if (InputManager.Instance.GetKeyDown(KeyCode.Return) || InputManager.Instance.GetKeyDown(KeyCode.KeypadEnter))
         {
             EquipSelected();
         }
-        else if (Input.GetKeyDown(KeyCode.Escape))
+        else if (InputManager.Instance.GetKeyDown(KeyCode.Escape))
         {
             overlayOpen = false;
         }
@@ -107,7 +109,6 @@ public class DevWeaponSwitcher : MonoBehaviour
 
     private void ScrollToSelected(int count)
     {
-        // °£´Ü ½ºÅ©·Ñ º¸Á¤: ¼±ÅÃ ÀÌµ¿ ½Ã ¾à°£ ³»·ÁÁÜ
         float itemHeight = 24f;
         float viewCount = 16f;
         float top = scroll.y / itemHeight;
@@ -125,19 +126,19 @@ public class DevWeaponSwitcher : MonoBehaviour
         var entry = sorted[selectedIndex];
         if (entry == null || entry.prefab == null)
         {
-            Debug.LogWarning("[DevWeaponSwitcher] ¼±ÅÃÇÑ Ç×¸ñÀÇ prefabÀÌ ºñ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[DevWeaponSwitcher] ì„ íƒí•œ í•­ëª©ì˜ prefabì´ ë¹„ì–´ ìˆìŠµë‹ˆë‹¤.");
             return;
         }
 
         EnsurePlayer();
         if (targetPlayer == null)
         {
-            Debug.LogWarning("[DevWeaponSwitcher] PlayerWeaponController¸¦ Ã£Áö ¸øÇß½À´Ï´Ù.");
+            Debug.LogWarning("[DevWeaponSwitcher] PlayerWeaponControllerë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
             return;
         }
 
         targetPlayer.EquipWeapon(entry.prefab);
-        Debug.Log($"[DevWeaponSwitcher] ÀåÂø: {entry.displayName}");
+        Debug.Log($"[DevWeaponSwitcher] ì¥ì°©: {entry.displayName}");
     }
 
     private void EnsurePlayer()
@@ -158,7 +159,7 @@ public class DevWeaponSwitcher : MonoBehaviour
         registry = Resources.Load<WeaponRegistrySO>(resourcesPath);
         if (registry == null)
         {
-            Debug.LogWarning($"[DevWeaponSwitcher] ·¹Áö½ºÆ®¸®¸¦ Ã£Áö ¸øÇß½À´Ï´Ù. Resources/{resourcesPath}.asset ¸¦ »ı¼ºÇÏ¼¼¿ä. (Dev/Build Weapon Registry ¸Ş´º)");
+            Debug.LogWarning($"[DevWeaponSwitcher] ë¬´ê¸° ë ˆì§€ìŠ¤íŠ¸ë¦¬ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤. Resources/{resourcesPath}.asset ê²½ë¡œë¥¼ í™•ì¸í•˜ì„¸ìš”.");
             sorted = new List<WeaponRegistrySO.WeaponEntry>();
             return;
         }
@@ -168,12 +169,11 @@ public class DevWeaponSwitcher : MonoBehaviour
         selectedIndex = Mathf.Clamp(selectedIndex, 0, Mathf.Max(0, sorted.Count - 1));
     }
 
-    // GUI °ü·Ã ÃÊ±âÈ­: ¹İµå½Ã OnGUI ³»ºÎ¿¡¼­¸¸ È£Ãâ!
+    // GUI ìŠ¤íƒ€ì¼ ì´ˆê¸°í™” (OnGUI lazy-init)
     private void InitStylesIfNeeded()
     {
         if (rowStyle != null && selRowStyle != null && headerStyle != null) return;
 
-        // ±âº» ½ºÅ¸ÀÏ Æú¹é
         var baseLabel = GUI.skin != null ? GUI.skin.label : new GUIStyle();
         var baseBox = GUI.skin != null ? GUI.skin.box : new GUIStyle();
 
@@ -218,7 +218,6 @@ public class DevWeaponSwitcher : MonoBehaviour
     {
         if (!overlayOpen) return;
 
-        // ¾ÈÀü: ½ºÅ¸ÀÏ lazy-init (OnGUI ³»ºÎ¿¡¼­¸¸ È£Ãâ)
         InitStylesIfNeeded();
 
         const float width = 420f;
@@ -235,17 +234,17 @@ public class DevWeaponSwitcher : MonoBehaviour
             var rStyle = rowStyle ?? GUI.skin.label;
             var sStyle = selRowStyle ?? rStyle;
 
-            GUILayout.Label("Dev Weapon Switcher (BackQuote ` to close)", hStyle);
+            GUILayout.Label("Dev Weapon Switcher (BackQuote ` ë¡œ ë‹«ê¸°/ì—´ê¸°)", hStyle);
             GUILayout.Space(4);
 
             if (registry == null)
             {
-                GUILayout.Label("·¹Áö½ºÆ®¸®°¡ ¾ø½À´Ï´Ù.\n¸Ş´º: Dev/Build Weapon Registry ½ÇÇà ÈÄ ´Ù½Ã ½ÃµµÇÏ¼¼¿ä.", rStyle);
+                GUILayout.Label("ë¬´ê¸° ë ˆì§€ìŠ¤íŠ¸ë¦¬ê°€ ë¹„ì–´ ìˆìŠµë‹ˆë‹¤.\nì˜¤ë¥˜ í•´ê²°: Dev/Build Weapon Registry ë©”ë‰´ë¥¼ ì‹¤í–‰í•˜ì„¸ìš”.", rStyle);
                 return;
             }
 
             int count = sorted != null ? sorted.Count : 0;
-            GUILayout.Label($"¹«±â ¼ö: {count}  |  ¡è/¡é, PageUp/Down, Enter=ÀåÂø, Esc=´İ±â", rStyle);
+            GUILayout.Label($"ë¬´ê¸° ìˆ˜: {count}  |  í™”ì‚´í‘œ/í˜ì´ì§€ì—…/ë‹¤ìš´, Enter=ì¥ì°©, Esc=ë‹«ê¸°", rStyle);
             GUILayout.Space(6);
 
             bool scrollStarted = false;
@@ -256,7 +255,7 @@ public class DevWeaponSwitcher : MonoBehaviour
 
                 if (count == 0)
                 {
-                    GUILayout.Label("µî·ÏµÈ ¹«±â°¡ ¾ø½À´Ï´Ù.", rStyle);
+                    GUILayout.Label("í‘œì‹œí•  í•­ëª©ì´ ì—†ìŠµë‹ˆë‹¤.", rStyle);
                 }
                 else
                 {
@@ -269,7 +268,7 @@ public class DevWeaponSwitcher : MonoBehaviour
 
                         GUILayout.BeginHorizontal(selected ? sStyle : rStyle);
 
-                        if (GUILayout.Button(selected ? "¢º" : " ", GUILayout.Width(24)))
+                        if (GUILayout.Button(selected ? "ì„ íƒ" : " ", GUILayout.Width(48)))
                         {
                             selectedIndex = i;
                             EquipSelected();

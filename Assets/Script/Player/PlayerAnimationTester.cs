@@ -22,7 +22,7 @@ public class PlayerAnimationTester : MonoBehaviour
         // 무기 장착 테스트 (1~9번 키)
         for (int i = 0; i < testWeaponPrefabs.Length; i++)
         {
-            if (Input.GetKeyDown(KeyCode.Alpha1 + i))
+            if (InputManager.Instance != null && InputManager.Instance.GetKeyDown(KeyCode.Alpha1 + i))
             {
                 if (testWeaponPrefabs[i] != null)
                     weaponController.EquipWeapon(testWeaponPrefabs[i]);
@@ -30,11 +30,11 @@ public class PlayerAnimationTester : MonoBehaviour
         }
 
         // 공격 테스트 (0번 키)
-        if (Input.GetKeyDown(KeyCode.Alpha0))
+        if (InputManager.Instance != null && InputManager.Instance.GetKeyDown(KeyCode.Alpha0))
             weaponController.PlayAttack();
 
         // 체력 0 → 사망 테스트 (K키)
-        if (Input.GetKeyDown(KeyCode.K) && health != null)
+        if (InputManager.Instance != null && InputManager.Instance.GetKeyDown(KeyCode.K) && health != null)
         {
             health.SetHealth(0);
             Debug.Log("☠️ 체력을 0으로 설정 → 사망");

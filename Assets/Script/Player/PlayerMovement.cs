@@ -18,6 +18,17 @@ public class PlayerMovement : MonoBehaviour
     [Header("컨트롤 옵션")]
     public bool stopWhenNoInput = true;
 
+    [Header("디버그")]
+    public bool debugLogs = false;
+
+    [Header("Visual sync (navmesh -> transform)")]
+    [Tooltip("Agent의 nextPosition을 LateUpdate에서 직접 적용하여 update 타이밍 문제를 완화합니다.")]
+    public bool visualSyncEnabled = true;
+    [Tooltip("Visual smoothing 사용 여부: true면 transform 위치를 Lerp로 부드럽게 보간합니다.")]
+    public bool visualSmoothingEnabled = true;
+    [Tooltip("Visual smoothing speed (클수록 빠르게 따라감)")]
+    public float visualSmoothingSpeed = 10f;
+
     private NavMeshAgent agent;
     private Rigidbody rb;
     private Camera mainCam;
@@ -48,8 +59,11 @@ public class PlayerMovement : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         mainCam = Camera.main;
 
+        // NavMeshAgent 설정 (명시적)
         agent.updateRotation = false;
         agent.updateUpAxis = true;
+        // 변경: 자동으로 transform을 적용하지 않음. LateUpdate에서 통일적으로 적용.
+        agent.updatePosition = false;
 
         agent.speed = moveSpeed;
         agent.acceleration = acceleration;
@@ -58,8 +72,9 @@ public class PlayerMovement : MonoBehaviour
         agent.autoBraking = autoBraking;
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
 
-        // Rigidbody 표준 설정
-        rb.isKinematic = false;
+        // Rigidbody: NavMeshAgent가 transform을 제어하므로 기본적으로 kinematic으로 둡니다.
+        // (넉백 등 물리적 힘을 줄 필요가 있으면 해당 구간에서 일시적으로 false로 토글)
+        rb.isKinematic = true;
         rb.useGravity = false;
         rb.mass = 1f;
         rb.linearDamping = 5f;
@@ -75,10 +90,14 @@ public class PlayerMovement : MonoBehaviour
             fixedPos.y = hit.position.y + 0.05f;
             transform.position = fixedPos;
             rb.position = fixedPos;
+            // Since we disabled updatePosition, ensure agent nextPosition aligns initially
+            agent.nextPosition = fixedPos;
         }
 
         // PlayerAnimationController 참조 (존재하면 사용)
         anim = GetComponent<PlayerAnimationController>();
+
+        if (debugLogs) Debug.Log("[PlayerMovement] Start() completed - agent.updatePosition set to false; visualSyncEnabled=" + visualSyncEnabled);
     }
 
     void Update()
@@ -122,7 +141,7 @@ public class PlayerMovement : MonoBehaviour
         {
             agent.speed = moveSpeed * finalSpeedMul;
         }
-        // ─────────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────
 
         if (weaponCtrl != null)
         {
@@ -159,17 +178,30 @@ public class PlayerMovement : MonoBehaviour
         Vector2 moveInput = InputManager.Instance.GetMoveInput();
         lastInput = new Vector3(moveInput.x, 0, moveInput.y);
 
-        if (lastInput.magnitude > 0.1f && !agent.enabled)
-            agent.enabled = true;
-
         if (lastInput.magnitude > 0.1f)
         {
             if (CanUseAgent())
             {
                 agent.isStopped = false;
+
                 Vector3 moveDir = CameraRelative(lastInput);
-                Vector3 destination = transform.position + moveDir;
-                agent.SetDestination(destination);
+                if (moveDir.sqrMagnitude > 0.0001f) moveDir.Normalize();
+                else moveDir = Vector3.zero;
+
+                Vector3 displacement = moveDir * agent.speed * Time.deltaTime;
+
+                if (agent.isOnNavMesh)
+                {
+                    // 수동 이동 모드 진입 시 기존 경로 제거
+                    if (agent.hasPath)
+                        agent.ResetPath();
+
+                    agent.Move(displacement);
+                }
+                else
+                {
+                    transform.position += displacement;
+                }
 
                 // --- AR BackStep 판정 로직 ---
                 bool considerARBack = false;
@@ -178,7 +210,6 @@ public class PlayerMovement : MonoBehaviour
 
                 if (considerARBack)
                 {
-                    // facing 기준: AR 고정 전방이면 ARLockedForward, 아니면 transform.forward
                     Vector3 facing;
                     if (weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARIsRotationLocked)
                         facing = weaponCtrl.ARLockedForward;
@@ -193,7 +224,6 @@ public class PlayerMovement : MonoBehaviour
                     float signed = Vector3.SignedAngle(facing, moveDir, Vector3.up);
                     float absAngle = Mathf.Abs(signed);
 
-                    // 히스테리시스: 들어갈 때 enter, 나올 때 exit
                     if (!arBackStepActive && absAngle >= enterBackstepAngle)
                     {
                         arBackStepActive = true;
@@ -204,11 +234,9 @@ public class PlayerMovement : MonoBehaviour
                         arBackStepActive = false;
                         if (anim != null) anim.SetBackStep(false);
                     }
-                    // else unchanged
                 }
                 else
                 {
-                    // AR이 아니면 항상 false
                     if (arBackStepActive)
                     {
                         arBackStepActive = false;
@@ -217,7 +245,6 @@ public class PlayerMovement : MonoBehaviour
                 }
                 // --- /AR BackStep 판정 끝 ---
 
-                // 하체 재생속도(B) 적용: 조건 -> AR 연사 중이고 이동 중일 때만 적용
                 if (weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARAllowMoveWhileFiring && anim != null)
                 {
                     float lowerSpeed = 1f;
@@ -227,13 +254,11 @@ public class PlayerMovement : MonoBehaviour
                 }
                 else
                 {
-                    // 조건 아닐 때는 하체 속도 복구
                     if (anim != null) anim.SetLowerBodyPlaybackSpeed(1f);
                 }
 
-                // AR 연사 중 회전 잠금이면 회전 갱신 금지
                 bool lockRot = weaponCtrl != null && weaponCtrl.IsARFiring && weaponCtrl.ARIsRotationLocked;
-                if (!lockRot)
+                if (!lockRot && moveDir.sqrMagnitude > 0.000001f)
                 {
                     Quaternion rot = Quaternion.LookRotation(moveDir);
                     transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 20f);
@@ -245,18 +270,16 @@ public class PlayerMovement : MonoBehaviour
             if (CanUseAgent())
             {
                 agent.ResetPath();
-                agent.SetDestination(transform.position);
+                agent.isStopped = true;
                 agent.velocity = Vector3.zero;
             }
 
-            // 멈추면 BackStep 파라미터 끄기
             if (arBackStepActive)
             {
                 arBackStepActive = false;
                 if (anim != null) anim.SetBackStep(false);
             }
 
-            // 정지 시 하체 속도 복구
             if (anim != null) anim.SetLowerBodyPlaybackSpeed(1f);
         }
 
@@ -281,17 +304,44 @@ public class PlayerMovement : MonoBehaviour
 
     void LateUpdate()
     {
+        // 1) transform 위치 동기화 (agent.nextPosition 적용)
+        if (visualSyncEnabled && agent != null && agent.isOnNavMesh && agent.enabled && !isKnockbacked)
+        {
+            Vector3 targetPos = agent.nextPosition;
+
+            if (visualSmoothingEnabled)
+            {
+                float t = Mathf.Clamp01(visualSmoothingSpeed * Time.deltaTime);
+                transform.position = Vector3.Lerp(transform.position, targetPos, t);
+            }
+            else
+            {
+                transform.position = targetPos;
+            }
+        }
+
         bool shouldStop = !isKnockbacked && lastInput.magnitude < 0.01f;
 
         if (shouldStop)
         {
-            if (agent.enabled && agent.isOnNavMesh)
+            if (agent != null && agent.isOnNavMesh)
             {
-                agent.enabled = false;
+                // agent.enabled를 끄지 않고 isStopped로 멈춤 처리
+                agent.isStopped = true;
+                agent.ResetPath();
+                agent.velocity = Vector3.zero;
             }
             transform.rotation = Quaternion.Euler(0f, transform.rotation.eulerAngles.y, 0f);
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
+        }
+
+        if (debugLogs && Time.frameCount % 10 == 0) // 10프레임당 한번만 출력
+        {
+            if (agent != null)
+            {
+                Debug.Log($"[PM Debug] frame={Time.frameCount} pos={transform.position.ToString("F3")} nextPos={agent.nextPosition.ToString("F3")} vel={agent.velocity.magnitude:F3} lastInput={lastInput.magnitude:F3}");
+            }
         }
 
         lastPosition = transform.position;
@@ -351,13 +401,10 @@ public class PlayerMovement : MonoBehaviour
     public float GetVelocityMagnitude() => agent != null ? agent.velocity.magnitude : 0f;
     public float GetAnimatorSpeedEstimate()
     {
-        // 우선 NavMeshAgent 기반 속도 사용 (가능하면 정확)
-        if (agent != null && agent.enabled && agent.isOnNavMesh)
-        {
-            return agent.velocity.magnitude;
-        }
-        // fallback: 입력 기반 속도 추정 (lastInput는 normalized 입력이므로 moveSpeed를 곱함)
-        return lastInput.magnitude * moveSpeed;
+        // Modified: use both agent.velocity and input-based estimate to avoid zero-speed when using agent.Move
+        float agentVel = (agent != null && agent.enabled && agent.isOnNavMesh) ? agent.velocity.magnitude : 0f;
+        float inputVel = lastInput.magnitude * moveSpeed;
+        return Mathf.Max(agentVel, inputVel);
     }
     private bool CanUseAgent() => agent.enabled && agent.isOnNavMesh;
 
