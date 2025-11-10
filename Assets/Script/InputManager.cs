@@ -28,6 +28,10 @@ public class InputManager : MonoBehaviour
     private int mobileEvadeDownFrames;
     private int mobileEvadeUpFrames;
 
+    // 새 플래그: 오버레이가 열려있을 때 모바일 입력을 차단하려면 true로 설정
+    [HideInInspector]
+    public bool OverlayInputBlocked = false;
+
     private bool IsMobileRuntimeActive =>
 #if UNITY_EDITOR
         forceMobileInEditor;
@@ -72,7 +76,8 @@ public class InputManager : MonoBehaviour
     /* ───── 이동 입력 ───── */
     public Vector2 GetMoveInput()
     {
-        if (IsMobileRuntimeActive && mobileMove.sqrMagnitude > 0.0001f)
+        // 모바일 런타임이고, 오버레이가 차단중이면 모바일 입력 무시
+        if (IsMobileRuntimeActive && !OverlayInputBlocked && mobileMove.sqrMagnitude > 0.0001f)
             return mobileMove;
 
         float x = 0f, y = 0f;
@@ -107,6 +112,10 @@ public class InputManager : MonoBehaviour
     /* ───── 무기 슬롯 ───── */
     public int GetWeaponSwapInput()
     {
+        // 오버레이가 모바일 입력을 막고 있으면 슬롯 입력 무시
+        if (IsMobileRuntimeActive && OverlayInputBlocked)
+            return -1;
+
         if (GetKeyDown(KeyCode.Alpha1)) return 1;
         if (GetKeyDown(KeyCode.Alpha2)) return 2;
         if (GetKeyDown(KeyCode.Alpha3)) return 3;
@@ -125,21 +134,21 @@ public class InputManager : MonoBehaviour
     public bool GetAttackDown()
     {
         bool kb = GetKeyDown(KeyCode.Alpha0);
-        bool mobile = IsMobileRuntimeActive && mobileAttackDownFrames > 0;
+        bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileAttackDownFrames > 0;
         return kb || mobile;
     }
 
     public bool GetAttack()
     {
         bool kb = GetKey(KeyCode.Alpha0);
-        bool mobile = IsMobileRuntimeActive && mobileAttackPressed;
+        bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileAttackPressed;
         return kb || mobile;
     }
 
     public bool GetAttackUp()
     {
         bool kb = GetKeyUp(KeyCode.Alpha0);
-        bool mobile = IsMobileRuntimeActive && mobileAttackUpFrames > 0;
+        bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileAttackUpFrames > 0;
         return kb || mobile;
     }
 
@@ -147,7 +156,7 @@ public class InputManager : MonoBehaviour
     public bool GetEvadeInput()
     {
         bool kb = GetKeyDown(KeyCode.Space);
-        bool mobile = IsMobileRuntimeActive && mobileEvadeDownFrames > 0;
+        bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileEvadeDownFrames > 0;
         return kb || mobile;
     }
 

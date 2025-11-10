@@ -22,6 +22,9 @@ MonoBehaviour:
   - id: Weapon_03_Gun
     displayName: Weapon_03_Gun
     prefab: {fileID: 38192432513176113, guid: d90c3f245074e2048af3c0061756d414, type: 3}
-  - id: Weapon_Shotgun
-    displayName: Weapon_Shotgun
+  - id: Weapon_04_Shotgun
+    displayName: Weapon_04_Shotgun
     prefab: {fileID: 522649090004456507, guid: 3e0286ade08eaa547bd0a6bce8217b10, type: 3}
+  - id: Weapon_05_AR
+    displayName: Weapon_05_AR
+    prefab: {fileID: 4911667774358884905, guid: b65c1f005bff3494399f619b0ddfe200, type: 3}

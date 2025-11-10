@@ -45,14 +45,14 @@ MonoBehaviour:
   projectileLifetime: 5
   pierceCount: 0
   usesAmmo: 1
-  magazineSize: 10
-  initialReserve: 15
-  infiniteReserve: 0
+  magazineSize: 300
+  initialReserve: 500
+  infiniteReserve: 1
   reloadTime: 1
   consumePerShot: 1
   autoReloadOnEmpty: 1
   autoReloadResumeWhileHeld: 0
   spreadAngle: 0
   spread3D: 1
-  moveSpeedWhileFiring: 0.5
+  moveSpeedWhileFiring: 0.2
   animPlaybackSpeedWhileFiring: 0.5
