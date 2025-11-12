@@ -18,6 +18,10 @@ public class PlayerEvadeController : MonoBehaviour
 
     private NavMeshAgent navAgent;
 
+    [Header("디버그")]
+    [Tooltip("에비드 관련 디버그 로그 켜기 (프레임 샘플링 사용)")]
+    public bool debugLogs = false;
+
     public void Setup(
         EvadeDataSO evadeData,
         PlayerAnimationController animCtrl,
@@ -38,6 +42,8 @@ public class PlayerEvadeController : MonoBehaviour
             navAgent = GetComponent<NavMeshAgent>();
 
         if (data != null) currentGauge = data.maxGauge;
+
+        if (debugLogs) Debug.Log($"[Evade SETUP] maxGauge={currentGauge}, navAgentPresent={(navAgent != null)}");
     }
 
     public void TickRecharge(float dt)
@@ -47,6 +53,8 @@ public class PlayerEvadeController : MonoBehaviour
         {
             currentGauge += data.rechargeRate * dt;
             currentGauge = Mathf.Min(currentGauge, data.maxGauge);
+            if (debugLogs && Time.frameCount % 30 == 0)
+                Debug.Log($"[Evade RECHARGE] gauge={currentGauge:F3}/{data.maxGauge}");
         }
     }
 
@@ -63,16 +71,27 @@ public class PlayerEvadeController : MonoBehaviour
     public void PerformEvade(Vector2 moveInput, Action preEvadeCleanup)
     {
         if (data == null) return;
-        if (!CanEvade()) return;
+        if (!CanEvade())
+        {
+            if (debugLogs) Debug.Log("[Evade] Cannot evade: insufficient gauge");
+            return;
+        }
 
         preEvadeCleanup?.Invoke();
         currentGauge -= data.evadeCost;
 
         Vector3 initialDir;
-        if (moveInput.magnitude > 0.1f)
+        if (moveInput.magnitude > data.minInputMagnitude)
             initialDir = new Vector3(moveInput.x, 0f, moveInput.y);
         else
-            initialDir = transform.forward;
+        {
+            // InputManager에 최근 유효 입력을 캐시해두었다면 그것을 우선 사용
+            Vector2 lastMove = InputManager.Instance.GetMoveInput(); // 이미 0인 경우가 많음 — 대안: InputManager가 최근NonZero를 제공
+            if (lastMove.magnitude > data.minInputMagnitude)
+                initialDir = new Vector3(lastMove.x, 0f, lastMove.y);
+            else
+                initialDir = transform.forward;
+        }
 
         if (Camera.main != null)
         {
@@ -81,6 +100,13 @@ public class PlayerEvadeController : MonoBehaviour
             camF.y = 0f; camR.y = 0f;
             camF.Normalize(); camR.Normalize();
             initialDir = (camF * initialDir.z + camR * initialDir.x).normalized;
+        }
+
+        if (debugLogs)
+        {
+            Debug.Log($"[Evade] PerformEvade called. input={moveInput}, initialDir={initialDir}, gaugeAfter={currentGauge:F3}");
+            if (Camera.main != null)
+                Debug.Log($"[Evade] Camera main forward={Camera.main.transform.forward}, right={Camera.main.transform.right}");
         }
 
         if (evadeRoutine != null) { StopCoroutine(evadeRoutine); evadeRoutine = null; }
@@ -100,13 +126,13 @@ public class PlayerEvadeController : MonoBehaviour
         }
         isInvincible = false;
         anim?.EndEvade();
+        if (debugLogs) Debug.Log("[Evade] CancelEvade called");
     }
 
     private IEnumerator FixedEvadeRoutine(Vector3 fixedDirection)
     {
         changeState?.Invoke(PlayerState.Evade);
-        // minimal log
-        Debug.Log("[Evade] Fixed Start");
+        if (debugLogs) Debug.Log("[Evade] Fixed Start");
 
         float elapsed = 0f;
         Vector3 dir = fixedDirection.normalized;
@@ -134,9 +160,15 @@ public class PlayerEvadeController : MonoBehaviour
                 var s = getState();
                 if (s == PlayerState.Knockback || s == PlayerState.Stun || s == PlayerState.Dead)
                 {
+                    if (debugLogs) Debug.Log($"[Evade] Interrupted by state {s}");
                     evadeRoutine = null;
                     yield break;
                 }
+            }
+
+            if (debugLogs && Time.frameCount % 6 == 0)
+            {
+                Debug.Log($"[Evade LOOP - Fixed] elapsed={elapsed:F3}, dir={dir}, pos={transform.position}, isInv={isInvincible}");
             }
 
             elapsed += Time.deltaTime;
@@ -150,7 +182,7 @@ public class PlayerEvadeController : MonoBehaviour
     private IEnumerator DynamicEvadeRoutine(Vector3 initialDirection)
     {
         changeState?.Invoke(PlayerState.Evade);
-        Debug.Log("[Evade] Dynamic Start");
+        if (debugLogs) Debug.Log("[Evade] Dynamic Start");
 
         float elapsed = 0f;
         Vector3 currentDir = initialDirection.normalized;
@@ -201,9 +233,15 @@ public class PlayerEvadeController : MonoBehaviour
                 var s = getState();
                 if (s == PlayerState.Knockback || s == PlayerState.Stun || s == PlayerState.Dead)
                 {
+                    if (debugLogs) Debug.Log($"[Evade] Interrupted by state {s}");
                     evadeRoutine = null;
                     yield break;
                 }
+            }
+
+            if (debugLogs && Time.frameCount % 6 == 0)
+            {
+                Debug.Log($"[Evade LOOP - Dynamic] elapsed={elapsed:F3}, currentDir={currentDir}, pos={transform.position}, isInv={isInvincible}");
             }
 
             elapsed += Time.deltaTime;
@@ -218,7 +256,7 @@ public class PlayerEvadeController : MonoBehaviour
     {
         isInvincible = false;
         anim?.EndEvade();
-        Debug.Log("[Evade] End");
+        if (debugLogs) Debug.Log("[Evade] End");
 
         if (movement != null && movement.GetVelocityMagnitude() > 0.1f)
             changeState?.Invoke(PlayerState.Move);

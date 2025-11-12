@@ -165,7 +165,17 @@ public class InputManager : MonoBehaviour
     public bool GetHealTestInput() => GetKeyDown(KeyCode.Equals);
 
     // Mobile setters (UI에서 호출)
-    public void SetMobileMove(Vector2 v) => mobileMove = Vector2.ClampMagnitude(v, 1f);
+    public void SetMobileMove(Vector2 v)
+    {
+        // Log raw incoming joystick value for diagnosis
+        Debug.Log($"[InputManager] SetMobileMove called raw={v}");
+
+        // Keep clamping to unit circle (existing behavior) but log the result.
+        // NOTE: we don't change behavior here, only add logs for now.
+        mobileMove = Vector2.ClampMagnitude(v, 1f);
+
+        Debug.Log($"[InputManager] mobileMove stored={mobileMove}");
+    }
     public void MobileAttackDown() { mobileAttackPressed = true; mobileAttackDownFrames = 2; }
     public void MobileAttackUp() { mobileAttackPressed = false; mobileAttackUpFrames = 2; }
     public void MobileEvadeDown() { mobileEvadeDownFrames = 2; }

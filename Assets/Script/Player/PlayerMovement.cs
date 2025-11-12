@@ -89,6 +89,15 @@ public class PlayerMovement : MonoBehaviour
         Vector2 raw = InputManager.Instance.GetMoveInput();
         lastInput = new Vector3(raw.x, 0f, raw.y);
 
+        // 샘플링 로그: 매 10프레임마다 출력 (스팸 방지)
+        if (debugLogs && Time.frameCount % 10 == 0)
+        {
+            Vector2 rawDbg = raw;
+            float lastMag = lastInput.magnitude;
+            float agentSpeedVal = (agent != null) ? agent.speed : 0f;
+            Debug.Log($"[PM DEBUG] raw={rawDbg:F3}, lastInput={lastInput}, inputMag={lastMag:F3}, agentSpeed={agentSpeedVal:F3}, dt={Time.deltaTime:F4}");
+        }
+
         bool isARFiring = weaponCtrl != null && weaponCtrl.IsARFiring;
         bool arAllowMove = weaponCtrl != null && weaponCtrl.ARAllowMoveWhileFiring;
         bool arRotationLocked = weaponCtrl != null && weaponCtrl.ARIsRotationLocked;
@@ -107,7 +116,9 @@ public class PlayerMovement : MonoBehaviour
                 if (arData != null)
                 {
                     // moveSpeedWhileFiring은 배율(예: 0.8)이라고 가정
-                    agent.speed = agentDefaultSpeed * Mathf.Max(0f, arData.moveSpeedWhileFiring);
+                    float newSpeed = agentDefaultSpeed * Mathf.Max(0f, arData.moveSpeedWhileFiring);
+                    if (debugLogs) Debug.Log($"[PM AR] AR firing move speed applied. default={agentDefaultSpeed}, multiplier={arData.moveSpeedWhileFiring}, new={newSpeed}");
+                    agent.speed = newSpeed;
                     // anim playback speed handled separately via anim.SetLowerBodyPlaybackSpeed
                 }
             }
@@ -121,6 +132,7 @@ public class PlayerMovement : MonoBehaviour
             {
                 // 즉시 고정 (요청대로 누르고 있으면 각도 고정)
                 transform.rotation = Quaternion.LookRotation(lockedF.normalized, Vector3.up);
+                if (debugLogs && Time.frameCount % 30 == 0) Debug.Log($"[PM AR ROT] AR rotation locked. forward={lockedF.normalized}");
             }
         }
 
@@ -143,6 +155,7 @@ public class PlayerMovement : MonoBehaviour
                     agent.velocity = Vector3.zero;
                 }
                 anim?.SetLowerBodyPlaybackSpeed(1f);
+                if (debugLogs) Debug.Log($"[PM STATE] Movement blocked by state={weaponCtrl.CurrentState}");
                 return;
             }
         }
@@ -150,6 +163,9 @@ public class PlayerMovement : MonoBehaviour
         // 이동 처리
         if (lastInput.sqrMagnitude > 0.0001f)
         {
+            // 입력 세기(아날로그) 반영: lastInput의 x/z 축을 사용하여 0..1 범위로 계산
+            float inputMag = Mathf.Clamp01(new Vector2(lastInput.x, lastInput.z).magnitude);
+
             Vector3 moveDir = CameraRelative(lastInput);
             moveDir.y = 0f;
             if (moveDir.sqrMagnitude > 0.0001f) moveDir.Normalize();
@@ -165,6 +181,7 @@ public class PlayerMovement : MonoBehaviour
                     agent.velocity = Vector3.zero;
                 }
                 anim?.SetLowerBodyPlaybackSpeed(1f);
+                if (debugLogs) Debug.Log("[PM AR] AR firing and movement not allowed -> early return");
                 return;
             }
 
@@ -180,8 +197,14 @@ public class PlayerMovement : MonoBehaviour
             if (agent != null && agent.isOnNavMesh)
             {
                 agent.isStopped = false;
-                Vector3 displacement = moveDir * agent.speed * Time.deltaTime;
+                // inputMag을 곱해 아날로그 입력에 따라 속도가 달라지도록 함
+                Vector3 displacement = moveDir * agent.speed * inputMag * Time.deltaTime;
                 agent.Move(displacement);
+
+                if (debugLogs && Time.frameCount % 10 == 0)
+                {
+                    Debug.Log($"[PM MOVE] agent.Move disp={displacement}, moveDir={moveDir}, speed={agent.speed}, inputMag={inputMag:F3}");
+                }
 
                 // 회전: AR 고정이 아닐 때만 moveDir 향하도록 설정
                 if (!(isARFiring && arRotationLocked))
@@ -189,7 +212,7 @@ public class PlayerMovement : MonoBehaviour
                     RotateTowardsDir(moveDir, agent.angularSpeed);
                 }
 
-                // Backstep(앞/뒤) 판정 — 항상 수행하도록 변경
+                // Backstep(앞/뒤) 판정 — 동일 로직 유지
                 float signed = Vector3.SignedAngle(facing.normalized, moveDir.normalized, Vector3.up);
                 float absAngle = Mathf.Abs(signed);
 
@@ -197,14 +220,16 @@ public class PlayerMovement : MonoBehaviour
                 {
                     backStepActive = true;
                     anim?.SetBackStep(true);
+                    if (debugLogs) Debug.Log("[PM BACKSTEP] Entered backstep");
                 }
                 else if (backStepActive && absAngle <= BACKSTEP_EXIT_ANGLE)
                 {
                     backStepActive = false;
                     anim?.SetBackStep(false);
+                    if (debugLogs) Debug.Log("[PM BACKSTEP] Exited backstep");
                 }
 
-                // 하체 애니 속도 반영: weapon의 AR 관련 anim playback speed가 있으면 반영
+                // 하체 애니 속도 반영: 기존 로직 유지 (필요하면 inputMag으로 추가 보정 가능)
                 if (anim != null)
                 {
                     float lowerSpeed = 1f;
@@ -218,15 +243,18 @@ public class PlayerMovement : MonoBehaviour
             }
             else
             {
-                // NavMesh 밖 폴백
+                // NavMesh 밖 폴백: 동일하게 inputMag을 곱함
                 float fallbackSpeed = (agent != null) ? Mathf.Max(agent.speed, FALLBACK_MOVE_SPEED) : FALLBACK_MOVE_SPEED;
-                Vector3 disp = moveDir * fallbackSpeed * Time.deltaTime;
+                Vector3 disp = moveDir * fallbackSpeed * inputMag * Time.deltaTime;
                 transform.position += disp;
+
+                if (debugLogs && Time.frameCount % 10 == 0)
+                    Debug.Log($"[PM MOVE FALLBACK] posDelta={disp}, fallbackSpeed={fallbackSpeed}, inputMag={inputMag:F3}");
 
                 if (!(isARFiring && arRotationLocked))
                     RotateTowardsDir(moveDir, (agent != null) ? agent.angularSpeed : 720f);
 
-                // Backstep 판정 (동일 로직, facing은 transform.forward 또는 AR locked)
+                // Backstep 판정 (동일 로직)
                 float signed = Vector3.SignedAngle(facing.normalized, moveDir.normalized, Vector3.up);
                 float absAngle = Mathf.Abs(signed);
 
@@ -234,23 +262,27 @@ public class PlayerMovement : MonoBehaviour
                 {
                     backStepActive = true;
                     anim?.SetBackStep(true);
+                    if (debugLogs) Debug.Log("[PM BACKSTEP] Entered backstep (fallback)");
                 }
                 else if (backStepActive && absAngle <= BACKSTEP_EXIT_ANGLE)
                 {
                     backStepActive = false;
                     anim?.SetBackStep(false);
+                    if (debugLogs) Debug.Log("[PM BACKSTEP] Exited backstep (fallback)");
                 }
             }
         }
-        else if (stopWhenNoInput)
+        else
         {
-            if (agent != null && agent.isOnNavMesh)
+            // 입력이 없는 경우 필요하다면 에이전트 정지 처리
+            if (stopWhenNoInput && agent != null && agent.isOnNavMesh)
             {
-                agent.ResetPath();
-                agent.isStopped = true;
-                agent.velocity = Vector3.zero;
+                if (!agent.isStopped)
+                {
+                    agent.isStopped = true;
+                    if (debugLogs) Debug.Log("[PM] No input -> agent stopped");
+                }
             }
-            anim?.SetLowerBodyPlaybackSpeed(1f);
         }
     }
 
@@ -268,7 +300,17 @@ public class PlayerMovement : MonoBehaviour
 
     private void RotateTowardsDir(Vector3 dir, float angularDegPerSec)
     {
-        if (dir.sqrMagnitude < 0.0001f) return;
+        if (dir.sqrMagnitude < 0.0001f)
+        {
+            if (debugLogs && Time.frameCount % 30 == 0) Debug.Log("[PM ROT] skip rotate: dir too small");
+            return;
+        }
+
+        if (debugLogs && Time.frameCount % 10 == 0)
+        {
+            Debug.Log($"[PM ROT] RotateTowardsDir called. dir={dir}, currentForward={transform.forward}, angularSpeed={angularDegPerSec}");
+        }
+
         Quaternion target = Quaternion.LookRotation(dir, Vector3.up);
         // 즉시 고정 대신 RotateTowards로 부드럽게(하지만 AR locked일때는 Update에서 즉시 고정함)
         float maxDeg = angularDegPerSec * Time.deltaTime;
@@ -283,6 +325,7 @@ public class PlayerMovement : MonoBehaviour
             StopCoroutine(knockbackRoutine);
             knockbackRoutine = null;
         }
+        if (debugLogs) Debug.Log($"[PM KNOCK] ApplyKnockback start dir={dir}, force={force}, duration={duration}");
         knockbackRoutine = StartCoroutine(KnockbackRoutine(dir, force, duration, attacker));
     }
 
@@ -320,6 +363,9 @@ public class PlayerMovement : MonoBehaviour
 
             if (rb != null && rb.isKinematic) rb.position = transform.position;
 
+            if (debugLogs && Time.frameCount % 10 == 0)
+                Debug.Log($"[PM KNOCK] elapsed={elapsed:F3}, currentSpeed={currentSpeed:F3}, delta={delta}");
+
             elapsed += Time.deltaTime;
             yield return null;
         }
@@ -333,6 +379,7 @@ public class PlayerMovement : MonoBehaviour
 
         isKnockbacked = false;
         knockbackRoutine = null;
+        if (debugLogs) Debug.Log("[PM KNOCK] Knockback finished");
     }
 
     public void CancelKnockback()
@@ -350,6 +397,8 @@ public class PlayerMovement : MonoBehaviour
             agent.isStopped = true;
             agent.ResetPath();
         }
+
+        if (debugLogs) Debug.Log("[PM KNOCK] Knockback cancelled");
     }
 
     public bool IsCurrentlyKnockbacked() => isKnockbacked;
