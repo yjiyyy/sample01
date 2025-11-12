@@ -98403,7 +98403,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4fe3e915e2db4c34b9d419a3e4976744, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gamepadDeadzone: 0.15
+  gamepadDeadzone: 0.4
   forceMobileInEditor: 1
   OverlayInputBlocked: 0
 --- !u!4 &493466388

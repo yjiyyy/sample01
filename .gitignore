@@ -71,4 +71,6 @@ Assets/DownloadedAssets/RPG Pack/Materials/Coin.mat
 ProjectSettings/EditorBuildSettings.asset
 ProjectSettings/ShaderGraphSettings.asset
 /.utmp
-/.utmp
+
+# Unity 6 Android build artifacts
+/[Aa]pk*/

@@ -55,4 +55,4 @@ MonoBehaviour:
   spreadAngle: 0
   spread3D: 1
   moveSpeedWhileFiring: 0.2
-  animPlaybackSpeedWhileFiring: 0.5
+  animPlaybackSpeedWhileFiring: 1

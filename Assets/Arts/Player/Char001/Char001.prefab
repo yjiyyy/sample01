@@ -102,7 +102,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   stopWhenNoInput: 1
-  debugLogs: 0
+  debugLogs: 1
 --- !u!114 &7043935488017820867
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -272,6 +272,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   gamepadDeadzone: 0.15
   forceMobileInEditor: 1
+  OverlayInputBlocked: 0
 --- !u!114 &-3391735028938872280
 MonoBehaviour:
   m_ObjectHideFlags: 0

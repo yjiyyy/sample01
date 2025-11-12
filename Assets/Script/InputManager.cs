@@ -24,11 +24,9 @@ public class InputManager : MonoBehaviour
     private int mobileAttackDownFrames;
     private int mobileAttackUpFrames;
 
-    // mobileEvadePressed는 사용하지 않으므로 프레임 펄스만 유지
     private int mobileEvadeDownFrames;
     private int mobileEvadeUpFrames;
 
-    // 새 플래그: 오버레이가 열려있을 때 모바일 입력을 차단하려면 true로 설정
     [HideInInspector]
     public bool OverlayInputBlocked = false;
 
@@ -78,7 +76,7 @@ public class InputManager : MonoBehaviour
     {
         // 모바일 런타임이고, 오버레이가 차단중이면 모바일 입력 무시
         if (IsMobileRuntimeActive && !OverlayInputBlocked && mobileMove.sqrMagnitude > 0.0001f)
-            return mobileMove;
+            return mobileMove; // 이미 ClampMagnitude로 크기 1.0이 보장됨
 
         float x = 0f, y = 0f;
         if (GetKey(KeyCode.A)) x -= 1f;
@@ -88,7 +86,10 @@ public class InputManager : MonoBehaviour
 
         Vector2 wasd = new Vector2(x, y);
         if (wasd.sqrMagnitude > 0.0001f)
-            return wasd;
+        {
+            // [수정] 대각선 입력 시 벡터 크기가 1.0을 초과하므로 정규화(normalized)하여 반환
+            return wasd.normalized;
+        }
 
         bool arrowHeld =
             GetKey(KeyCode.UpArrow) ||
@@ -106,13 +107,13 @@ public class InputManager : MonoBehaviour
         if (gamepad.magnitude < gamepadDeadzone)
             return Vector2.zero;
 
+        // 게임패드 스틱 입력은 이미 단위 원 내의 값을 반환하므로 추가 정규화 불필요
         return gamepad;
     }
 
     /* ───── 무기 슬롯 ───── */
     public int GetWeaponSwapInput()
     {
-        // 오버레이가 모바일 입력을 막고 있으면 슬롯 입력 무시
         if (IsMobileRuntimeActive && OverlayInputBlocked)
             return -1;
 
@@ -167,14 +168,7 @@ public class InputManager : MonoBehaviour
     // Mobile setters (UI에서 호출)
     public void SetMobileMove(Vector2 v)
     {
-        // Log raw incoming joystick value for diagnosis
-        Debug.Log($"[InputManager] SetMobileMove called raw={v}");
-
-        // Keep clamping to unit circle (existing behavior) but log the result.
-        // NOTE: we don't change behavior here, only add logs for now.
         mobileMove = Vector2.ClampMagnitude(v, 1f);
-
-        Debug.Log($"[InputManager] mobileMove stored={mobileMove}");
     }
     public void MobileAttackDown() { mobileAttackPressed = true; mobileAttackDownFrames = 2; }
     public void MobileAttackUp() { mobileAttackPressed = false; mobileAttackUpFrames = 2; }
@@ -188,7 +182,6 @@ public class InputManager : MonoBehaviour
         var kb = Keyboard.current;
         if (kb == null) return false;
 
-        // safe access (some KeyControl properties can be null on some platforms)
         switch (kc)
         {
             case KeyCode.A: return kb.aKey != null && kb.aKey.isPressed;
@@ -329,7 +322,6 @@ public class InputManager : MonoBehaviour
             if (axisName == "Vertical") return gp.leftStick.y.ReadValue();
         }
 
-        // Keyboard fallback using GetKey wrappers (which use Keyboard.current safely)
         float x = 0f, y = 0f;
         if (GetKey(KeyCode.A)) x -= 1f;
         if (GetKey(KeyCode.D)) x += 1f;
