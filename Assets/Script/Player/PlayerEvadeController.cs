@@ -113,10 +113,10 @@ public class PlayerEvadeController : MonoBehaviour
         {
             float t = dur > 0f ? (elapsed / dur) : 1f;
             float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
-            // [핵심 수정 1] 회피 이동량 계산
-            Vector3 evadeDisplacement = dir * (data.evadeSpeed * speedMul) * Time.deltaTime;
+            // 고정 타임스텝을 사용하여 회피 이동량 계산
+            Vector3 evadeDisplacement = dir * (data.evadeSpeed * speedMul) * Time.fixedDeltaTime;
 
-            // [핵심 수정 2] 회피 이동량을 transform.position에 직접 적용
+            // 회피 이동량을 transform.position에 직접 적용
             transform.position += evadeDisplacement;
 
             if (elapsed >= data.invincibilityDuration) isInvincible = false;
@@ -130,8 +130,8 @@ public class PlayerEvadeController : MonoBehaviour
                     yield break;
                 }
             }
-            elapsed += Time.deltaTime;
-            yield return null;
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         FinishEvade();
@@ -157,22 +157,22 @@ public class PlayerEvadeController : MonoBehaviour
             {
                 Vector3 newDir = movement.CameraRelative(new Vector3(input.x, 0, input.y));
 
-                float lerp = data.directionChangeSensitivity * Time.deltaTime;
+                float lerp = data.directionChangeSensitivity * Time.fixedDeltaTime;
                 currentDir = Vector3.Lerp(currentDir, newDir, lerp).normalized;
 
                 if (currentDir.sqrMagnitude > 0.01f)
                 {
                     var agent = movement.GetComponent<NavMeshAgent>();
                     Quaternion target = Quaternion.LookRotation(currentDir, Vector3.up);
-                    transform.rotation = Quaternion.RotateTowards(transform.rotation, target, (agent != null ? agent.angularSpeed : 720f) * Time.deltaTime);
+                    transform.rotation = Quaternion.RotateTowards(transform.rotation, target, (agent != null ? agent.angularSpeed : 720f) * Time.fixedDeltaTime);
                 }
             }
 
             float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
-            // [핵심 수정 3] 회피 이동량 계산
-            Vector3 evadeDisplacement = currentDir * (data.evadeSpeed * speedMul) * Time.deltaTime;
+            // 고정 타임스텝을 사용하여 회피 이동량 계산
+            Vector3 evadeDisplacement = currentDir * (data.evadeSpeed * speedMul) * Time.fixedDeltaTime;
 
-            // [핵심 수정 4] 회피 이동량을 transform.position에 직접 적용
+            // 회피 이동량을 transform.position에 직접 적용
             transform.position += evadeDisplacement;
 
             if (elapsed >= data.invincibilityDuration) isInvincible = false;
@@ -186,8 +186,8 @@ public class PlayerEvadeController : MonoBehaviour
                     yield break;
                 }
             }
-            elapsed += Time.deltaTime;
-            yield return null;
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         FinishEvade();
