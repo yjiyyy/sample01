@@ -45,9 +45,9 @@ public class PlayerRecoil : MonoBehaviour
             {
                 routine = null; yield break;
             }
-            float step = Mathf.Min(Time.deltaTime, delay - waited);
+            float step = Mathf.Min(Time.fixedDeltaTime, delay - waited);
             waited += step;
-            yield return null;
+            yield return new WaitForFixedUpdate();
         }
 
         if (isAttackState != null && !isAttackState())
@@ -76,10 +76,10 @@ public class PlayerRecoil : MonoBehaviour
             float speedMul = 4f * t * (1f - t);      // 0→최대→0
             float currentSpeed = speedAbs * Mathf.Max(0f, speedMul);
 
-            owner.position += dir * currentSpeed * Time.deltaTime;
+            owner.position += dir * currentSpeed * Time.fixedDeltaTime;
 
-            elapsed += Time.deltaTime;
-            yield return null;
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         routine = null;
