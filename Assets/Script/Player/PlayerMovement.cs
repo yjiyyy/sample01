@@ -33,6 +33,12 @@ public class PlayerMovement : MonoBehaviour
     private bool backStepActive = false;
 
     private Vector3 _lastLookDirection;
+    
+    // FixedUpdate용 플래그
+    private bool hasInputForFixedUpdate = false;
+    private bool movementBlockedForFixedUpdate = false;
+    private bool isARFiringForFixedUpdate = false;
+    private bool arAllowMoveForFixedUpdate = false;
 
     void Awake()
     {
@@ -75,7 +81,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (isKnockbacked) return;
 
-        // --- 입력 및 상태 확인 (기존과 동일) ---
+        // --- 입력 및 상태 확인 (Update에서 수집) ---
         Vector2 raw = InputManager.Instance.GetMoveInput();
         lastInput = new Vector3(raw.x, 0f, raw.y);
         bool hasInput = lastInput.sqrMagnitude > EPS;
@@ -104,33 +110,31 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // --- 이동 처리 ---
-        Vector3 moveDisplacement = Vector3.zero;
+        // FixedUpdate용 플래그 저장
+        hasInputForFixedUpdate = hasInput;
+        movementBlockedForFixedUpdate = movementBlocked;
+        isARFiringForFixedUpdate = isARFiring;
+        arAllowMoveForFixedUpdate = arAllowMove;
+
+        // --- 회전 처리 (Update에서 처리하여 부드러운 시각 효과 유지) ---
+        Vector3 moveDir = Vector3.zero;
         if (hasInput && !movementBlocked)
         {
-            Vector3 moveDir = CameraRelative(lastInput); // InputManager에서 이미 정규화됨
+            moveDir = CameraRelative(lastInput);
             if (isARFiring && !arAllowMove)
             {
                 moveDir = Vector3.zero;
             }
-
-            float inputMag = Mathf.Clamp01(lastInput.magnitude);
-            // [핵심 수정 2] 이번 프레임에 이동할 '거리(Displacement)' 계산
-            moveDisplacement = moveDir * agent.speed * inputMag * Time.deltaTime;
         }
 
-        // [핵심 수정 3] 계산된 거리만큼 transform.position에 직접 적용
-        transform.position += moveDisplacement;
-
-        // --- 회전 처리 (기존과 유사) ---
         if (arRotationLocked && isARFiring && weaponCtrl != null)
         {
             Vector3 lockedF = weaponCtrl.ARLockedForward;
             if (lockedF.sqrMagnitude > EPS) _lastLookDirection = lockedF.normalized;
         }
-        else if (hasInput && moveDisplacement.sqrMagnitude > EPS)
+        else if (hasInput && moveDir.sqrMagnitude > EPS)
         {
-            _lastLookDirection = moveDisplacement.normalized;
+            _lastLookDirection = moveDir.normalized;
         }
 
         if (_lastLookDirection.sqrMagnitude > EPS)
@@ -138,8 +142,8 @@ public class PlayerMovement : MonoBehaviour
             transform.rotation = Quaternion.LookRotation(_lastLookDirection, Vector3.up);
         }
 
-        // --- 애니메이션 처리 (기존과 동일) ---
-        Vector3 currentMoveDir = moveDisplacement.normalized;
+        // --- 애니메이션 처리 (Update에서 처리) ---
+        Vector3 currentMoveDir = moveDir.normalized;
         float absAngle = Vector3.Angle(transform.forward, currentMoveDir);
 
         if (hasInput && !movementBlocked)
@@ -174,6 +178,29 @@ public class PlayerMovement : MonoBehaviour
             }
             anim.SetLowerBodyPlaybackSpeed(lowerSpeed);
         }
+    }
+
+    void FixedUpdate()
+    {
+        if (isKnockbacked) return;
+
+        // --- 물리 기반 이동 처리 (FixedUpdate에서 고정 타임스텝 사용) ---
+        Vector3 moveDisplacement = Vector3.zero;
+        if (hasInputForFixedUpdate && !movementBlockedForFixedUpdate)
+        {
+            Vector3 moveDir = CameraRelative(lastInput);
+            if (isARFiringForFixedUpdate && !arAllowMoveForFixedUpdate)
+            {
+                moveDir = Vector3.zero;
+            }
+
+            float inputMag = Mathf.Clamp01(lastInput.magnitude);
+            // 고정 타임스텝을 사용하여 이동량 계산
+            moveDisplacement = moveDir * agent.speed * inputMag * Time.fixedDeltaTime;
+        }
+
+        // 계산된 거리만큼 transform.position에 직접 적용
+        transform.position += moveDisplacement;
     }
 
     void LateUpdate()
@@ -215,10 +242,10 @@ public class PlayerMovement : MonoBehaviour
         {
             float t = 1f - Mathf.Clamp01(elapsed / Mathf.Max(duration, EPS));
             float currentSpeed = force * t;
-            // [핵심 수정 5] 넉백 이동량 계산
-            Vector3 knockDisplacement = knockDir * currentSpeed * Time.deltaTime;
+            // 고정 타임스텝을 사용하여 넉백 이동량 계산
+            Vector3 knockDisplacement = knockDir * currentSpeed * Time.fixedDeltaTime;
 
-            // [핵심 수정 6] 넉백 이동량을 transform.position에 직접 적용
+            // 넉백 이동량을 transform.position에 직접 적용
             transform.position += knockDisplacement;
 
             if (_lastLookDirection.sqrMagnitude > EPS)
@@ -226,8 +253,8 @@ public class PlayerMovement : MonoBehaviour
                 transform.rotation = Quaternion.LookRotation(_lastLookDirection, Vector3.up);
             }
 
-            elapsed += Time.deltaTime;
-            yield return null;
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         isKnockbacked = false;
