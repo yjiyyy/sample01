@@ -7,6 +7,7 @@ using UnityEngine;
 /// - WeaponDataSO.recoilStartDelay / recoilPower(+뒤, -앞) / recoilDuration 사용
 /// - 속도 프로파일: v(t) = 4t(1−t)
 /// - Attack 상태 콜백이 false가 되면 즉시 중단
+/// - FixedUpdate 타이밍과 동기화하여 PC/모바일 일관성 보장
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerRecoil : MonoBehaviour
@@ -36,7 +37,9 @@ public class PlayerRecoil : MonoBehaviour
 
     private IEnumerator RecoilRoutine(WeaponDataSO data, Func<bool> isAttackState, Transform owner)
     {
-        // Start delay
+        // ─────────────────────────────────────────────────────────
+        // Start delay (고정 타임스텝 사용)
+        // ─────────────────────────────────────────────────────────
         float delay = Mathf.Max(0f, data.recoilStartDelay);
         float waited = 0f;
         while (waited < delay)
@@ -45,9 +48,9 @@ public class PlayerRecoil : MonoBehaviour
             {
                 routine = null; yield break;
             }
-            float step = Mathf.Min(Time.deltaTime, delay - waited);
-            waited += step;
-            yield return null;
+
+            waited += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         if (isAttackState != null && !isAttackState())
@@ -55,8 +58,11 @@ public class PlayerRecoil : MonoBehaviour
             routine = null; yield break;
         }
 
-        // 방향 스냅샷(+면 뒤로, -면 앞으로)
-        Vector3 forward = owner.forward; forward.y = 0f;
+        // ─────────────────────────────────────────────────────────
+        // 리코일 실행 (고정 타임스텝으로 일관된 거리 보장)
+        // ─────────────────────────────────────────────────────────
+        Vector3 forward = owner.forward;
+        forward.y = 0f;
         if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
         forward.Normalize();
 
@@ -73,13 +79,14 @@ public class PlayerRecoil : MonoBehaviour
             }
 
             float t = duration > 0f ? (elapsed / duration) : 1f;
-            float speedMul = 4f * t * (1f - t);      // 0→최대→0
+            float speedMul = 4f * t * (1f - t);  // 0→최대→0
             float currentSpeed = speedAbs * Mathf.Max(0f, speedMul);
 
-            owner.position += dir * currentSpeed * Time.deltaTime;
+            // 고정 타임스텝으로 일관된 리코일 거리 보장
+            owner.position += dir * currentSpeed * Time.fixedDeltaTime;
 
-            elapsed += Time.deltaTime;
-            yield return null;
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         routine = null;

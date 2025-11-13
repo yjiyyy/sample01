@@ -44,8 +44,6 @@ public class PlayerMovement : MonoBehaviour
 
         if (agent != null)
         {
-            // [핵심 수정 1] NavMeshAgent가 자동으로 위치를 업데이트하지 않도록 설정
-            // 실제 이동은 이 스크립트가 100% 제어합니다.
             agent.updatePosition = false;
             agent.updateRotation = false;
             agent.updateUpAxis = true;
@@ -73,13 +71,25 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        // ─────────────────────────────────────────────────────────
+        // Update에서는 입력 수집만 담당 (반응성 유지)
+        // ─────────────────────────────────────────────────────────
         if (isKnockbacked) return;
 
-        // --- 입력 및 상태 확인 (기존과 동일) ---
         Vector2 raw = InputManager.Instance.GetMoveInput();
         lastInput = new Vector3(raw.x, 0f, raw.y);
+    }
+
+    void FixedUpdate()
+    {
+        // ─────────────────────────────────────────────────────────
+        // FixedUpdate에서 모든 물리 기반 처리 (일관된 타임스텝)
+        // ─────────────────────────────────────────────────────────
+        if (isKnockbacked) return;
+
         bool hasInput = lastInput.sqrMagnitude > EPS;
 
+        // --- 상태 확인 ---
         bool isARFiring = weaponCtrl != null && weaponCtrl.IsARFiring;
         bool arAllowMove = weaponCtrl != null && weaponCtrl.ARAllowMoveWhileFiring;
         bool arRotationLocked = weaponCtrl != null && weaponCtrl.ARIsRotationLocked;
@@ -98,31 +108,33 @@ public class PlayerMovement : MonoBehaviour
         if (weaponCtrl != null)
         {
             bool isAttackBlocking = weaponCtrl.CurrentState == PlayerState.Attack && !(isARFiring && arAllowMove);
-            if (isAttackBlocking || weaponCtrl.CurrentState == PlayerState.Knockback || weaponCtrl.CurrentState == PlayerState.Stun || weaponCtrl.CurrentState == PlayerState.Dead || weaponCtrl.CurrentState == PlayerState.Evade)
+            if (isAttackBlocking || weaponCtrl.CurrentState == PlayerState.Knockback ||
+                weaponCtrl.CurrentState == PlayerState.Stun || weaponCtrl.CurrentState == PlayerState.Dead ||
+                weaponCtrl.CurrentState == PlayerState.Evade)
             {
                 movementBlocked = true;
             }
         }
 
-        // --- 이동 처리 ---
+        // --- 이동 처리 (고정 타임스텝) ---
         Vector3 moveDisplacement = Vector3.zero;
         if (hasInput && !movementBlocked)
         {
-            Vector3 moveDir = CameraRelative(lastInput); // InputManager에서 이미 정규화됨
+            Vector3 moveDir = CameraRelative(lastInput);
             if (isARFiring && !arAllowMove)
             {
                 moveDir = Vector3.zero;
             }
 
             float inputMag = Mathf.Clamp01(lastInput.magnitude);
-            // [핵심 수정 2] 이번 프레임에 이동할 '거리(Displacement)' 계산
-            moveDisplacement = moveDir * agent.speed * inputMag * Time.deltaTime;
+            // 고정 타임스텝 사용으로 PC/모바일 일관성 보장
+            moveDisplacement = moveDir * agent.speed * inputMag * Time.fixedDeltaTime;
         }
 
-        // [핵심 수정 3] 계산된 거리만큼 transform.position에 직접 적용
+        // 이동 적용
         transform.position += moveDisplacement;
 
-        // --- 회전 처리 (기존과 유사) ---
+        // --- 회전 처리 (이동과 동기화) ---
         if (arRotationLocked && isARFiring && weaponCtrl != null)
         {
             Vector3 lockedF = weaponCtrl.ARLockedForward;
@@ -138,7 +150,7 @@ public class PlayerMovement : MonoBehaviour
             transform.rotation = Quaternion.LookRotation(_lastLookDirection, Vector3.up);
         }
 
-        // --- 애니메이션 처리 (기존과 동일) ---
+        // --- BackStep 애니메이션 처리 (이동과 동기화) ---
         Vector3 currentMoveDir = moveDisplacement.normalized;
         float absAngle = Vector3.Angle(transform.forward, currentMoveDir);
 
@@ -163,9 +175,63 @@ public class PlayerMovement : MonoBehaviour
                 anim?.SetBackStep(false);
             }
         }
+    }
 
-        if (anim != null)
+    void LateUpdate()
+    {
+        // ─────────────────────────────────────────────────────────
+        // LateUpdate에서 동기화 및 애니메이션 파라미터 업데이트
+        // ─────────────────────────────────────────────────────────
+
+        // ✅ 회피/넉백 중에는 동기화 건너뛰기 (이동이 되돌려지는 것 방지)
+        bool skipSync = false;
+        if (weaponCtrl != null)
         {
+            if (weaponCtrl.CurrentState == PlayerState.Evade ||
+                weaponCtrl.CurrentState == PlayerState.Knockback)
+            {
+                skipSync = true;
+
+                // ✅ 디버그 로그
+                if (debugLogs)
+                {
+                    Debug.Log($"[PM LateUpdate] Skipping NavMesh sync during {weaponCtrl.CurrentState}");
+                }
+            }
+        }
+
+        // ✅ 디버그: NavMeshAgent 상태 확인
+        if (debugLogs && agent != null)
+        {
+            Debug.Log($"[PM LateUpdate] State: {weaponCtrl?.CurrentState}, " +
+                     $"skipSync: {skipSync}, " +
+                     $"agent.velocity: {agent.velocity}, " +
+                     $"agent.hasPath: {agent.hasPath}, " +
+                     $"lastInput: {lastInput}, " +
+                     $"transform.position: {transform.position}");
+        }
+
+        if (!skipSync)
+        {
+            // NavMeshAgent 동기화
+            if (agent != null)
+            {
+                agent.nextPosition = transform.position;
+            }
+
+            // Rigidbody 동기화
+            if (rb != null && rb.isKinematic)
+            {
+                rb.position = transform.position;
+            }
+        }
+
+        // 애니메이션 하체 속도 설정
+        if (anim != null && weaponCtrl != null)
+        {
+            bool isARFiring = weaponCtrl.IsARFiring;
+            bool arAllowMove = weaponCtrl.ARAllowMoveWhileFiring;
+
             float lowerSpeed = 1f;
             if (isARFiring && arAllowMove)
             {
@@ -173,20 +239,6 @@ public class PlayerMovement : MonoBehaviour
                 if (arData != null) lowerSpeed = Mathf.Max(0f, arData.animPlaybackSpeedWhileFiring);
             }
             anim.SetLowerBodyPlaybackSpeed(lowerSpeed);
-        }
-    }
-
-    void LateUpdate()
-    {
-        // [핵심 수정 4] 실제 이동한 위치를 NavMeshAgent에게 알려주어 동기화
-        if (agent != null)
-        {
-            agent.nextPosition = transform.position;
-        }
-
-        if (rb != null && rb.isKinematic)
-        {
-            rb.position = transform.position;
         }
     }
 
@@ -215,10 +267,9 @@ public class PlayerMovement : MonoBehaviour
         {
             float t = 1f - Mathf.Clamp01(elapsed / Mathf.Max(duration, EPS));
             float currentSpeed = force * t;
-            // [핵심 수정 5] 넉백 이동량 계산
-            Vector3 knockDisplacement = knockDir * currentSpeed * Time.deltaTime;
 
-            // [핵심 수정 6] 넉백 이동량을 transform.position에 직접 적용
+            // 고정 타임스텝으로 일관된 넉백 거리 보장
+            Vector3 knockDisplacement = knockDir * currentSpeed * Time.fixedDeltaTime;
             transform.position += knockDisplacement;
 
             if (_lastLookDirection.sqrMagnitude > EPS)
@@ -226,8 +277,8 @@ public class PlayerMovement : MonoBehaviour
                 transform.rotation = Quaternion.LookRotation(_lastLookDirection, Vector3.up);
             }
 
-            elapsed += Time.deltaTime;
-            yield return null;
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         isKnockbacked = false;
@@ -248,7 +299,6 @@ public class PlayerMovement : MonoBehaviour
     {
         if (agent != null)
         {
-            // 직접 이동하므로, agent.velocity 대신 입력 크기를 사용
             float maxSpeed = Mathf.Max(agent.speed, EPS);
             return Mathf.Clamp01(lastInput.magnitude * agent.speed / maxSpeed);
         }
@@ -257,12 +307,10 @@ public class PlayerMovement : MonoBehaviour
 
     public float GetVelocityMagnitude()
     {
-        // 직접 이동하므로, agent.velocity 대신 입력 크기를 사용
         if (agent != null) return lastInput.magnitude * agent.speed;
         return lastInput.magnitude * FALLBACK_MOVE_SPEED;
     }
 
-    // InputManager에서 이미 정규화된 값을 사용하므로 CameraRelative는 그대로 둠
     public Vector3 CameraRelative(Vector3 input)
     {
         if (mainCam == null) mainCam = Camera.main;

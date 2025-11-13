@@ -23,6 +23,9 @@ public class GameManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            // 프레임레이트 최적화 설정 (모바일용)
+            InitializeFrameRate();
         }
         else
         {
@@ -34,6 +37,22 @@ public class GameManager : MonoBehaviour
     {
         // 씬에 미리 배치한 HP UI와 현재 씬의 PlayerHealth들을 연결
         AssignExistingPlayerUIs();
+    }
+
+    /// <summary>
+    /// 프레임레이트 최적화 설정
+    /// - VSync OFF: 배터리 절약 및 발열 감소
+    /// - 60fps 제한: 안정적인 성능 유지
+    /// </summary>
+    private void InitializeFrameRate()
+    {
+        // VSync 비활성화 (모바일 최적화)
+        QualitySettings.vSyncCount = 0;
+
+        // 목표 프레임레이트 60fps 설정
+        Application.targetFrameRate = 60;
+
+        Debug.Log("[GameManager] Frame rate initialized: VSync OFF, Target 60fps");
     }
 
     // 씬에 배치된 HPUIControllerBase들을 찾아 현재 씬의 PlayerHealth들과 매칭해서 초기 연결을 수행합니다.

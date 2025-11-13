@@ -16,10 +16,8 @@ public class PlayerEvadeController : MonoBehaviour
     private float currentGauge;
     private bool isInvincible;
 
-    // NavMeshAgent는 더 이상 직접 제어하지 않음
-
     [Header("디버그")]
-    [Tooltip("에비드 관련 디버그 로그 켜기 (프레임 샘플링 사용)")]
+    [Tooltip("회피 관련 디버그 로그 켜기")]
     public bool debugLogs = false;
 
     public void Setup(
@@ -68,17 +66,25 @@ public class PlayerEvadeController : MonoBehaviour
         currentGauge -= data.evadeCost;
 
         Vector3 evadeDir;
-        // InputManager에서 이미 정규화되었으므로, .normalized 호출은 이중 안전장치
+
+        // ✅ 디버그: 입력 확인
+        if (debugLogs) Debug.Log($"[Evade] moveInput: {moveInput}, magnitude: {moveInput.magnitude:F3}, minInputMagnitude: {data.minInputMagnitude}");
+
         if (moveInput.magnitude > data.minInputMagnitude)
             evadeDir = new Vector3(moveInput.x, 0f, moveInput.y).normalized;
         else
-            evadeDir = transform.forward; // 이미 정규화된 단위 벡터
+            evadeDir = transform.forward;
 
-        // PlayerMovement에 있는 CameraRelative를 직접 호출하여 방향 변환
+        // ✅ 디버그: 카메라 변환 전 방향
+        if (debugLogs) Debug.Log($"[Evade] evadeDir BEFORE CameraRelative: {evadeDir}");
+
         if (Camera.main != null && movement != null)
         {
             evadeDir = movement.CameraRelative(evadeDir);
         }
+
+        // ✅ 디버그: 카메라 변환 후 방향
+        if (debugLogs) Debug.Log($"[Evade] evadeDir AFTER CameraRelative: {evadeDir}");
 
         if (evadeRoutine != null) { StopCoroutine(evadeRoutine); }
 
@@ -103,20 +109,52 @@ public class PlayerEvadeController : MonoBehaviour
 
         float elapsed = 0f;
         Vector3 dir = fixedDirection.normalized;
+
+        // ✅ 디버그: 정규화 전후 방향
+        if (debugLogs) Debug.Log($"[Evade] fixedDirection BEFORE normalize: {fixedDirection}");
+
         dir.y = 0f;
+
+        // ✅ 디버그: y=0 후 방향과 크기
+        if (debugLogs) Debug.Log($"[Evade] dir AFTER y=0: {dir}, magnitude: {dir.magnitude:F3}");
+
         isInvincible = true;
 
-        if (dir.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(dir);
+        if (dir.sqrMagnitude > 0.01f)
+        {
+            transform.rotation = Quaternion.LookRotation(dir);
+            if (debugLogs) Debug.Log($"[Evade] Rotation applied to direction: {dir}");
+        }
+        else
+        {
+            Debug.LogWarning($"[Evade] dir too small! sqrMagnitude: {dir.sqrMagnitude:F6} - NO MOVEMENT WILL OCCUR!");
+        }
 
         float dur = Mathf.Max(0f, data.evadeDuration);
+
+        // ✅ 디버그: 회피 시간과 속도
+        if (debugLogs) Debug.Log($"[Evade] Duration: {dur}, Speed: {data.evadeSpeed}, Time.fixedDeltaTime: {Time.fixedDeltaTime:F4}");
+
+        int frameCount = 0;
+        Vector3 startPos = transform.position;
+
         while (elapsed < dur)
         {
+            frameCount++;
             float t = dur > 0f ? (elapsed / dur) : 1f;
             float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
-            // [핵심 수정 1] 회피 이동량 계산
-            Vector3 evadeDisplacement = dir * (data.evadeSpeed * speedMul) * Time.deltaTime;
 
-            // [핵심 수정 2] 회피 이동량을 transform.position에 직접 적용
+            Vector3 evadeDisplacement = dir * (data.evadeSpeed * speedMul) * Time.fixedDeltaTime;
+
+            // ✅ 디버그: 처음 3프레임만 상세 로그
+            if (debugLogs && frameCount <= 3)
+            {
+                Debug.Log($"[Evade Frame {frameCount}] t={t:F3}, speedMul={speedMul:F3}, " +
+                         $"evadeSpeed={data.evadeSpeed}, fixedDeltaTime={Time.fixedDeltaTime:F4}, " +
+                         $"dir={dir}, displacement={evadeDisplacement}, " +
+                         $"currentPos={transform.position}");
+            }
+
             transform.position += evadeDisplacement;
 
             if (elapsed >= data.invincibilityDuration) isInvincible = false;
@@ -130,9 +168,16 @@ public class PlayerEvadeController : MonoBehaviour
                     yield break;
                 }
             }
-            elapsed += Time.deltaTime;
-            yield return null;
+
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
+
+        Vector3 endPos = transform.position;
+        float totalDistance = Vector3.Distance(startPos, endPos);
+
+        // ✅ 디버그: 최종 결과
+        if (debugLogs) Debug.Log($"[Evade] End - Total frames: {frameCount}, Total distance moved: {totalDistance:F2}, StartPos: {startPos}, EndPos: {endPos}");
 
         FinishEvade();
     }
@@ -147,9 +192,17 @@ public class PlayerEvadeController : MonoBehaviour
         currentDir.y = 0f;
         isInvincible = true;
 
+        // PC 회피 문제 해결: 마지막 유효 입력 방향 저장
+        Vector3 lastValidDir = currentDir;
+
         float dur = Mathf.Max(0f, data.evadeDuration);
+
+        int frameCount = 0;
+        Vector3 startPos = transform.position;
+
         while (elapsed < dur)
         {
+            frameCount++;
             float t = dur > 0f ? (elapsed / dur) : 1f;
 
             Vector2 input = InputManager.Instance.GetMoveInput();
@@ -157,22 +210,40 @@ public class PlayerEvadeController : MonoBehaviour
             {
                 Vector3 newDir = movement.CameraRelative(new Vector3(input.x, 0, input.y));
 
-                float lerp = data.directionChangeSensitivity * Time.deltaTime;
+                float lerp = data.directionChangeSensitivity * Time.fixedDeltaTime;
                 currentDir = Vector3.Lerp(currentDir, newDir, lerp).normalized;
+
+                // 유효한 입력이 있으면 저장
+                lastValidDir = currentDir;
 
                 if (currentDir.sqrMagnitude > 0.01f)
                 {
                     var agent = movement.GetComponent<NavMeshAgent>();
                     Quaternion target = Quaternion.LookRotation(currentDir, Vector3.up);
-                    transform.rotation = Quaternion.RotateTowards(transform.rotation, target, (agent != null ? agent.angularSpeed : 720f) * Time.deltaTime);
+                    transform.rotation = Quaternion.RotateTowards(
+                        transform.rotation,
+                        target,
+                        (agent != null ? agent.angularSpeed : 720f) * Time.fixedDeltaTime
+                    );
                 }
+            }
+            else
+            {
+                // 입력이 없으면 마지막 유효 방향 유지 (PC 키보드 대응)
+                currentDir = lastValidDir;
             }
 
             float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
-            // [핵심 수정 3] 회피 이동량 계산
-            Vector3 evadeDisplacement = currentDir * (data.evadeSpeed * speedMul) * Time.deltaTime;
 
-            // [핵심 수정 4] 회피 이동량을 transform.position에 직접 적용
+            Vector3 evadeDisplacement = currentDir * (data.evadeSpeed * speedMul) * Time.fixedDeltaTime;
+
+            // ✅ 디버그: 처음 3프레임만 상세 로그
+            if (debugLogs && frameCount <= 3)
+            {
+                Debug.Log($"[Evade Dynamic Frame {frameCount}] t={t:F3}, speedMul={speedMul:F3}, " +
+                         $"currentDir={currentDir}, displacement={evadeDisplacement}");
+            }
+
             transform.position += evadeDisplacement;
 
             if (elapsed >= data.invincibilityDuration) isInvincible = false;
@@ -186,9 +257,16 @@ public class PlayerEvadeController : MonoBehaviour
                     yield break;
                 }
             }
-            elapsed += Time.deltaTime;
-            yield return null;
+
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
+
+        Vector3 endPos = transform.position;
+        float totalDistance = Vector3.Distance(startPos, endPos);
+
+        // ✅ 디버그: 최종 결과
+        if (debugLogs) Debug.Log($"[Evade Dynamic] End - Total frames: {frameCount}, Total distance moved: {totalDistance:F2}");
 
         FinishEvade();
     }

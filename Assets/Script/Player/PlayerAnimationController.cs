@@ -6,8 +6,8 @@ using UnityEngine;
 /// <summary>
 /// Player 애니메이션 제어기
 /// - UpperBody 레이어 토글/임시 비활성화(넉백 등 CC 시) 로직 포함
-/// - Animator 파라미터가 없을 때 예외가 발생하지 않도록 안전하게 호출하도록 수정됨
-/// - 트리거 안전 호출(SafeSetTrigger) 추가 및 Knockback/Stun 진입시 트리거 사용으로 수정
+/// - Animator 파라미터가 없을 때 예외가 발생하지 않도록 안전하게 호출
+/// - LateUpdate에서 Speed 파라미터 업데이트 (물리 이동과 동기화)
 /// </summary>
 public class PlayerAnimationController : MonoBehaviour
 {
@@ -20,21 +20,16 @@ public class PlayerAnimationController : MonoBehaviour
     private readonly int hashSpeed = Animator.StringToHash("Speed");
     private readonly int hashAttackIndex = Animator.StringToHash("AttackIndex");
     private readonly int hashIsAttacking = Animator.StringToHash("IsAttacking");
-    private readonly int hashIsUpperAttacking = Animator.StringToHash("IsUpperAttacking"); // <-- 상체 전용
-    private readonly int hashIsBackStep = Animator.StringToHash("IsBackStep"); // <-- AR 하체용 BackStep
+    private readonly int hashIsUpperAttacking = Animator.StringToHash("IsUpperAttacking");
+    private readonly int hashIsBackStep = Animator.StringToHash("IsBackStep");
     private readonly int hashIsDead = Animator.StringToHash("IsDead");
-    private readonly int hashKnockback = Animator.StringToHash("Knockback"); // 트리거로 사용
+    private readonly int hashKnockback = Animator.StringToHash("Knockback");
     private readonly int hashKnockbackIndex = Animator.StringToHash("KnockbackIndex");
-    private readonly int hashStun = Animator.StringToHash("Stun"); // 트리거로 사용
-    private readonly int hashIsEvading = Animator.StringToHash("IsEvading"); // ✅ 회피 파라미터 추가
-
-    // Lower-body 재생속도 전용 파라미터
+    private readonly int hashStun = Animator.StringToHash("Stun");
+    private readonly int hashIsEvading = Animator.StringToHash("IsEvading");
     private readonly int hashLowerBodySpeed = Animator.StringToHash("LowerBodySpeed");
 
-    // UpperBody 레이어 요청 플래그:
     private bool upperBodyRequestedEnabled = false;
-
-    // UpperBody 레이어 이름(설정과 일치해야 함)
     private const string upperLayerName = "UpperBody";
 
     void Awake()
@@ -43,8 +38,12 @@ public class PlayerAnimationController : MonoBehaviour
         movement = GetComponent<PlayerMovement>();
     }
 
-    void Update()
+    void LateUpdate()
     {
+        // ─────────────────────────────────────────────────────────
+        // LateUpdate에서 Speed 파라미터 업데이트
+        // FixedUpdate 이동 후 최종 상태를 반영하여 부드러운 애니메이션
+        // ─────────────────────────────────────────────────────────
         if (animator == null) return;
         float speed = (movement != null) ? movement.GetAnimatorSpeedEstimate() : 0f;
         SafeSetFloat(hashSpeed, speed);
@@ -52,7 +51,6 @@ public class PlayerAnimationController : MonoBehaviour
 
     /* ───────── 안전 호출 헬퍼 ───────── */
 
-    // Animator에 해당 해시(파라미터)가 존재하는지 검사
     private bool HasParameter(int hash)
     {
         if (animator == null) return false;
@@ -116,16 +114,14 @@ public class PlayerAnimationController : MonoBehaviour
         }
     }
 
-    /* ───────── 상태별 강제 애니메이션 전환 (블렌드 트리 대응) ───────── */
+    /* ───────── 상태별 강제 애니메이션 전환 ───────── */
 
     public void ForceAnimationByState(PlayerState newState)
     {
         if (animator == null) return;
 
-        // 상태에 맞춰 파라미터 리셋(안전호출)
         ResetAllAnimatorParams(newState);
 
-        // ── UpperBody 레이어: CC 진입 시 임시 비활성, 복귀 시 요청 플래그에 따라 복구
         int upperLayer = GetUpperLayerIndex();
         if (upperLayer >= 0)
         {
@@ -169,22 +165,15 @@ public class PlayerAnimationController : MonoBehaviour
                 break;
 
             case PlayerState.Knockback:
-                // Knockback은 트리거로 알리고, 재생(강제)도 실행
                 float randomKnockbackIndex = UnityEngine.Random.Range(0, 3);
                 SafeSetFloat(hashKnockbackIndex, randomKnockbackIndex);
-
-                // 안전하게 트리거 설정
                 SafeSetTrigger(hashKnockback);
-
-                // 강제 재생 (fallback 혹은 immediate visual)
                 animator.Play("Knockback_Blend Tree", 0, 0f);
                 Debug.Log($"[PlayerAnim] 강제 전환 → Knockback (Index: {randomKnockbackIndex})");
                 break;
 
             case PlayerState.Stun:
-                // Stun은 트리거로 알림
                 SafeSetTrigger(hashStun);
-                // 즉시 재생(보장)
                 animator.Play("Stun", 0, 0f);
                 Debug.Log("[PlayerAnim] 강제 전환 → Stun");
                 break;
@@ -222,11 +211,9 @@ public class PlayerAnimationController : MonoBehaviour
     {
         if (animator == null) return;
 
-        // 트리거 리셋
         SafeResetTrigger(hashKnockback);
         SafeResetTrigger(hashStun);
 
-        // Bool 리셋
         SafeSetBool(hashIsAttacking, false);
         SafeSetBool(hashIsUpperAttacking, false);
         SafeSetBool(hashIsBackStep, false);
@@ -237,7 +224,6 @@ public class PlayerAnimationController : MonoBehaviour
             SafeSetBool(hashIsEvading, false);
         }
 
-        // Float 리셋 (하체 속도는 기본 1으로 복구)
         SafeSetFloat(hashAttackIndex, 0f);
         SafeSetFloat(hashKnockbackIndex, 0f);
         SafeSetFloat(hashLowerBodySpeed, 1f);
@@ -251,7 +237,8 @@ public class PlayerAnimationController : MonoBehaviour
         Debug.Log("[PlayerAnim] 회피 애니메이션 종료");
     }
 
-    /* ───────── 공격 실행 (upperBodyOnly 옵션 포함) ───────── */
+    /* ───────── 공격 실행 ───────── */
+
     public void PlayAttack(WeaponDataSO weaponData, bool upperBodyOnly = false)
     {
         if (animator == null) return;
@@ -260,7 +247,6 @@ public class PlayerAnimationController : MonoBehaviour
 
         if (upperBodyOnly)
         {
-            // 상체 전용 재생: 최초 진입/재시작 로직(이전 구현 유지)
             SafeSetFloat(hashAttackIndex, randomIndex);
             SafeSetBool(hashIsUpperAttacking, true);
 
@@ -311,11 +297,9 @@ public class PlayerAnimationController : MonoBehaviour
         if (animator == null) return;
         SafeSetBool(hashIsAttacking, false);
         SafeSetBool(hashIsUpperAttacking, false);
-        // 하체 속도 복구
         SafeSetFloat(hashLowerBodySpeed, 1f);
         Debug.Log("[PlayerAnim] Attack 종료 (쿨타임 종료)");
 
-        // 애니메이션 종료 시점: pending 전환이 있으면 실행
         var pwc = GetComponentInParent<PlayerWeaponController>();
         if (pwc != null)
         {
@@ -353,14 +337,11 @@ public class PlayerAnimationController : MonoBehaviour
         }
     }
 
-    // 하체 전용 재생속도 설정(외부에서 호출)
     public void SetLowerBodyPlaybackSpeed(float speed)
     {
         SafeSetFloat(hashLowerBodySpeed, speed);
-        //Debug.Log($"[PlayerAnim] LowerBodySpeed -> {speed}");
     }
 
-    // 하체 BackStep 플래그 설정(외부에서 호출)
     public void SetBackStep(bool enabled)
     {
         SafeSetBool(hashIsBackStep, enabled);

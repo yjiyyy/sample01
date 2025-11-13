@@ -15,7 +15,7 @@ MonoBehaviour:
   maxGauge: 50
   evadeCost: 20
   rechargeRate: 5
-  evadeSpeed: 20
+  evadeSpeed: 15
   evadeDuration: 1
   invincibilityDuration: 0.5
   speedCurve:
@@ -29,19 +29,19 @@ MonoBehaviour:
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
-      outWeight: 0
+      outWeight: 0.33333334
     - serializedVersion: 3
-      time: 0.99972534
-      value: 0.9999947
-      inSlope: 0
-      outSlope: 0
+      time: 1
+      value: 0.5
+      inSlope: -0.8665651
+      outSlope: -0.8665651
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.059162915
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
   allowDirectionChangeWhileEvading: 0
   directionChangeSensitivity: 5
-  minInputMagnitude: 0.9
+  minInputMagnitude: 0.1
