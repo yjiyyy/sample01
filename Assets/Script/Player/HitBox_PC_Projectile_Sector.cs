@@ -60,10 +60,11 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
         Destroy(gameObject, cachedLifetime);
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
         if (!initialized) return;
-        lifeTimer += Time.deltaTime;
+        // ✅ FixedUpdate + fixedDeltaTime으로 PC/모바일 일관성 보장
+        lifeTimer += Time.fixedDeltaTime;
 
         if (lifeTimer >= cachedLifetime)
         {
@@ -72,7 +73,7 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
         else
         {
             // 직선 이동
-            transform.position += launchForward * cachedSpeed * Time.deltaTime;
+            transform.position += launchForward * cachedSpeed * Time.fixedDeltaTime;
         }
     }
 
