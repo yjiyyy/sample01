@@ -20,15 +20,17 @@ public class EvadeDataSO : ScriptableObject
     public AnimationCurve speedCurve = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
 
     [Header("🎮 회피 방식 선택")]
-    [Tooltip("체크 시: 회피 중에도 입력에 따라 방향 실시간 변경\n해제 시: 회피 시작 시 방향 고정")]
+    [Tooltip("체크 시: 회피 중에도 입력에 따라 방향 실시간 변경 / 해제 시: 시작 방향 고정")]
     public bool allowDirectionChangeWhileEvading = false;
 
-    [Header("실시간 방향 변경 설정 (위 옵션이 true일 때만 적용)")]
-    [Tooltip("방향 변경 감도 (높을수록 빠르게 방향 전환)")]
-    [Range(0.1f, 5f)]
-    public float directionChangeSensitivity = 2f;
+    [Header("실시간 방향 변경")]
+    [Tooltip("방향 변경 감도 (높을수록 빠르게 전환)")]
+    [Range(0.1f, 5f)] public float directionChangeSensitivity = 2f;
 
-    [Tooltip("최소 입력 크기 (이 값 이하면 방향 변경 무시)")]
-    [Range(0.1f, 0.9f)]
-    public float minInputMagnitude = 0.3f;
+    [Tooltip("빠른 회전으로 간주할 최소 입력 크기 (이 값 이상이면 최대 감도). 0.2 사용.")]
+    [Range(0.05f, 0.9f)] public float minInputMagnitude = 0.2f;
+
+    [Header("회피 중 회전 속도")]
+    [Tooltip("회피 중 초당 회전 가능한 최대 각도(deg)")]
+    public float angularSpeed = 720f;
 }

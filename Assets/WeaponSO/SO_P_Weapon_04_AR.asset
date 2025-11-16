@@ -27,7 +27,7 @@ MonoBehaviour:
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 0
-  usePushInsteadOfKnockback: 0
+  usePushInsteadOfKnockback: 1
   hitstopTime: 0.1
   ragdollImpulse: 5
   upwardImpulse: 3
@@ -52,7 +52,7 @@ MonoBehaviour:
   consumePerShot: 1
   autoReloadOnEmpty: 1
   autoReloadResumeWhileHeld: 0
-  spreadAngle: 0
+  spreadAngle: 24
   spread3D: 1
   moveSpeedWhileFiring: 0.2
   animPlaybackSpeedWhileFiring: 1

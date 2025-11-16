@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: SO_P_Evade
   m_EditorClassIdentifier: 
   maxGauge: 50
-  evadeCost: 20
+  evadeCost: 1
   rechargeRate: 5
   evadeSpeed: 15
   evadeDuration: 1
@@ -42,6 +42,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  allowDirectionChangeWhileEvading: 0
+  allowDirectionChangeWhileEvading: 1
   directionChangeSensitivity: 5
-  minInputMagnitude: 0.1
+  minInputMagnitude: 0.2
+  angularSpeed: 720

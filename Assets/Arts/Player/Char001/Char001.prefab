@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2615380432808219833}
   - component: {fileID: 8452200129812845468}
-  - component: {fileID: 7411503942129186725}
   - component: {fileID: 6783850431051604461}
   - component: {fileID: 7043935488017820867}
   - component: {fileID: 4030254463457412395}
@@ -67,28 +66,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!195 &7411503942129186725
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1981492291339588791}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 0.2
-  m_Speed: 10
-  m_Acceleration: 0
-  avoidancePriority: 50
-  m_AngularSpeed: 3000
-  m_StoppingDistance: 0.1
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
-  m_AutoRepath: 1
-  m_Height: 2
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 0
 --- !u!114 &6783850431051604461
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -101,7 +78,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e4147dd3a22d56642a217ded0f27d36e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  baseMoveSpeed: 10
   stopWhenNoInput: 1
+  rotationSpeedDegPerSec: 720
   debugLogs: 1
 --- !u!114 &7043935488017820867
 MonoBehaviour:
@@ -142,7 +121,7 @@ Rigidbody:
   m_IsKinematic: 1
   m_Interpolate: 1
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 3
 --- !u!65 &1538394728571937080
 BoxCollider:
   m_ObjectHideFlags: 0
