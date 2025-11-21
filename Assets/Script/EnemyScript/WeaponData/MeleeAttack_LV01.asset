@@ -19,10 +19,11 @@ MonoBehaviour:
   range: 1
   cooldown: 1
   attackTime: 1
-  clip: {fileID: 0}
+  clip: {fileID: 7400000, guid: ac8903a0dce77ef4590afb0242e5093d, type: 2}
   knockbackPower: 1
   knockbackDuration: 1
   stunDuration: 2
+  hitboxSpawnDelay: 0.2
   hitBoxLifetime: 0.1
   allowDuplicateHit: 0
   duplicateHitInterval: 0.1

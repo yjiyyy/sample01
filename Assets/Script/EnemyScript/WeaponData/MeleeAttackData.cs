@@ -27,6 +27,8 @@ public class MeleeAttackData : ScriptableObject
     public float stunDuration = 0f;
 
     [Header("히트박스")]
+    [Tooltip("공격 시작 후 히트박스를 생성하기까지의 지연 시간(초). 0이면 즉시 생성")]
+    public float hitboxSpawnDelay = 0f;
     public float hitBoxLifetime = 0.1f;
 
     [Header("중복 데미지")]
@@ -35,4 +37,14 @@ public class MeleeAttackData : ScriptableObject
 
     [Header("패턴 홀드 Override")]
     public float holdOverride = -1f;
+
+    private void OnValidate()
+    {
+        hitboxSpawnDelay = Mathf.Max(0f, hitboxSpawnDelay);
+        hitBoxLifetime = Mathf.Max(0f, hitBoxLifetime);
+        knockbackDuration = Mathf.Max(0f, knockbackDuration);
+        stunDuration = Mathf.Max(0f, stunDuration);
+        range = Mathf.Max(0f, range);
+        cooldown = Mathf.Max(0f, cooldown);
+    }
 }

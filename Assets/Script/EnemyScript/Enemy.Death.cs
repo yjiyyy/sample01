@@ -20,7 +20,9 @@ public class EnemyDeath : MonoBehaviour
 
     public void PlayDeath(Enemy ctx, Vector3 hitDir, WeaponDataSO weapon, float scale)
     {
-        if (ctx.agent) ctx.agent.enabled = false;
+        if (ctx == null) return;
+
+        // Root 컴포넌트 비활성화
         if (ctx.TryGetComponent(out Collider rootCol)) rootCol.enabled = false;
         if (ctx.TryGetComponent(out Rigidbody rootRb)) rootRb.isKinematic = true;
         if (ctx.TryGetComponent(out Animator rootAnim)) rootAnim.enabled = false;
@@ -30,9 +32,11 @@ public class EnemyDeath : MonoBehaviour
             case EnemyDeathType.Ragdoll:
                 PlayRagdoll(hitDir, weapon, scale, ctx);
                 break;
+
             case EnemyDeathType.Slice:
                 SliceBody(ChooseRandomSlicePart(weapon), hitDir, weapon, scale, ctx);
                 break;
+
             default:
                 if (ctx.animator) ctx.animator.SetTrigger("Die");
                 Destroy(ctx.gameObject, 3f);
@@ -47,8 +51,9 @@ public class EnemyDeath : MonoBehaviour
         float torqueBase = weapon ? weapon.torqueImpulse * impactScale : horizBase;
 
         float rand = Random.Range(0.9f, 1.1f);
-        float horiz = horizBase * rand / Mathf.Max(weight, 0.01f);
-        float up = upwardBase * rand / Mathf.Max(weight, 0.01f);
+        float denom = Mathf.Max(weight, 0.01f);
+        float horiz = horizBase * rand / denom;
+        float up = upwardBase * rand / denom;
         float torque = torqueBase * rand;
 
         Vector3 force = hitDir.normalized * horiz;
@@ -71,11 +76,13 @@ public class EnemyDeath : MonoBehaviour
             rb.AddTorque(Random.onUnitSphere * partTorque, ForceMode.Impulse);
         }
 
+        // 자식 콜라이더 활성 및 레이어 전환
+        int ragdollLayer = LayerMask.NameToLayer("Ragdoll");
         foreach (var t in ctx.GetComponentsInChildren<Transform>())
         {
             if (t == ctx.transform) continue;
             if (t.TryGetComponent(out Collider col)) col.enabled = true;
-            t.gameObject.layer = LayerMask.NameToLayer("Ragdoll");
+            if (ragdollLayer >= 0) t.gameObject.layer = ragdollLayer;
         }
 
         Destroy(ctx.gameObject, 5f);
@@ -90,8 +97,9 @@ public class EnemyDeath : MonoBehaviour
         float torqueBase = weapon ? weapon.torqueImpulse * impactScale : horizBase;
 
         float rand = Random.Range(0.9f, 1.1f);
-        float horiz = horizBase * rand / Mathf.Max(weight, 0.01f);
-        float up = upwardBase * rand / Mathf.Max(weight, 0.01f);
+        float denom = Mathf.Max(weight, 0.01f);
+        float horiz = horizBase * rand / denom;
+        float up = upwardBase * rand / denom;
         float torque = torqueBase * rand;
 
         Vector3 force = hitDir.normalized * horiz;
@@ -112,23 +120,29 @@ public class EnemyDeath : MonoBehaviour
             rb.AddTorque(Random.onUnitSphere * torque, ForceMode.Impulse);
         }
 
+        int ragdollLayer = LayerMask.NameToLayer("Ragdoll");
         foreach (var t in ctx.GetComponentsInChildren<Transform>())
         {
             if (t == ctx.transform) continue;
             if (t.TryGetComponent(out Collider col)) col.enabled = true;
-            t.gameObject.layer = LayerMask.NameToLayer("Ragdoll");
+            if (ragdollLayer >= 0) t.gameObject.layer = ragdollLayer;
         }
 
+        // 절단 파트 분리 및 힘 부여
         foreach (Transform bone in excluded)
         {
             if (!bone) continue;
+
             if (bone.TryGetComponent(out Rigidbody rb))
             {
                 if (bone.TryGetComponent(out CharacterJoint joint)) Destroy(joint);
                 rb.isKinematic = false;
-                rb.AddForce((hitDir + Random.insideUnitSphere).normalized *
-                            (weapon ? weapon.sliceForce : 8f), ForceMode.Impulse);
+
+                float sliceForce = weapon ? weapon.sliceForce : 8f;
+                Vector3 blow = (hitDir + Random.insideUnitSphere).normalized * sliceForce;
+                rb.AddForce(blow, ForceMode.Impulse);
             }
+
             bone.SetParent(null);
             Destroy(bone.gameObject, 5f);
         }

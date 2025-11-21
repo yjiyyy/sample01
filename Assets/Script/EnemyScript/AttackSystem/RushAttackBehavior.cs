@@ -2,7 +2,10 @@ using UnityEngine;
 using System.Collections;
 
 /// <summary>
-/// 러시 공격 전용 비헤이비어 (런타임에/컨트롤러 내부 시스템에서 new 로 생성해 주입하는 방식으로 동작)
+/// NavMeshAgent 제거 / 고정 타임스텝 버전 러시 비헤이비어
+/// - 준비/러시 모두 Time.fixedDeltaTime + WaitForFixedUpdate
+/// - 방향 편차: 기존과 비슷하게 directionDeviationAmount * Time.fixedDeltaTime
+/// - Push/Knockback과 누적 허용
 /// </summary>
 public class RushAttackBehavior : EnemyAttackBehaviorBase
 {
@@ -32,10 +35,7 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
 
     public override IEnumerator Execute(Enemy enemy, Transform target, IEnemyAttackCallbacks callbacks)
     {
-        if (data == null)
-        {
-            yield break;
-        }
+        if (data == null) yield break;
 
         executing = true;
         this.enemy = enemy;
@@ -50,21 +50,13 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
             superArmorGranted = true;
         }
 
-        var agent = enemy != null ? enemy.agent : null;
-        if (agent && agent.isOnNavMesh)
-        {
-            agent.isStopped = true;
-            agent.velocity = Vector3.zero;
-            agent.ResetPath();
-        }
-
-        // 준비 모션
+        // 준비
         callbacks.SetAnimatorBool("IsRushPrepare", true);
         callbacks.SetAnimatorBool("IsRush", false);
         callbacks.PlayAnimation("RushPrepare", useTrigger: false);
 
-        float prepEnd = Time.time + data.prepareTime;
-        while (Time.time < prepEnd && executing)
+        float prepElapsed = 0f;
+        while (prepElapsed < data.prepareTime && executing)
         {
             if (cachedTarget != null && enemy != null)
             {
@@ -73,7 +65,9 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
                 if (dir.sqrMagnitude > 0.0001f)
                     enemy.transform.rotation = Quaternion.LookRotation(dir.normalized);
             }
-            yield return null;
+
+            prepElapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         if (!executing)
@@ -82,12 +76,11 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
             yield break;
         }
 
-        // 러시 본 동작
+        // 러시 시작
         callbacks.SetAnimatorBool("IsRushPrepare", false);
         callbacks.SetAnimatorBool("IsRush", true);
         callbacks.PlayAnimation("Rush", useTrigger: false);
 
-        // 히트박스 스폰 (필드: hitBoxPrefab)
         if (data.hitBoxPrefab != null)
         {
             float life = (data.hitBoxLifetime > 0 ? data.hitBoxLifetime : data.rushTime);
@@ -118,23 +111,23 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
         {
             if (enemy == null) break;
 
-            // 진행 중 방향 미세 조정 (allowDirectionDeviation 활성 시)
-            if (data.allowDirectionDeviation && cachedTarget != null)
+            if (data.allowDirectionDeviation && cachedTarget != null && data.directionDeviationAmount > 0f)
             {
                 Vector3 toTarget = cachedTarget.position - enemy.transform.position;
                 toTarget.y = 0f;
                 if (toTarget.sqrMagnitude > 0.0001f)
                 {
                     Vector3 desired = toTarget.normalized;
-                    // directionDeviationAmount 를 '보간 속도'로 사용
-                    rushDir = Vector3.Lerp(rushDir, desired, Mathf.Clamp01(data.directionDeviationAmount * Time.deltaTime));
+                    float stepW = Mathf.Clamp01(data.directionDeviationAmount * Time.fixedDeltaTime);
+                    rushDir = Vector3.Lerp(rushDir, desired, stepW).normalized;
                     enemy.transform.rotation = Quaternion.LookRotation(rushDir);
                 }
             }
 
-            enemy.transform.position += rushDir.normalized * data.rushSpeed * Time.deltaTime;
-            rushElapsed += Time.deltaTime;
-            yield return null;
+            enemy.transform.position += rushDir.normalized * data.rushSpeed * Time.fixedDeltaTime;
+
+            rushElapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         executing = false;
@@ -167,9 +160,6 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
             superArmorGranted = false;
         }
 
-        if (enemy != null && enemy.agent && enemy.agent.isOnNavMesh)
-            enemy.agent.isStopped = false;
-
         callbacks.RequestFinish(this);
         runtimeCallbacks = null;
         enemy = null;
@@ -183,12 +173,8 @@ public class RushAttackBehavior : EnemyAttackBehaviorBase
             superArmorGranted = false;
         }
 
-        if (enemy != null && enemy.agent && enemy.agent.isOnNavMesh)
-            enemy.agent.isStopped = false;
-
         callbacks.RequestCancel(this);
         runtimeCallbacks = null;
         enemy = null;
     }
-
 }

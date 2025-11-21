@@ -31,6 +31,7 @@ public class EnemyAttackController : MonoBehaviour
     private float meleeFreezeStartTime;
     private bool meleeWillFreeze;
     private bool meleeFrozenApplied;
+    private Coroutine meleeHitDelayRoutine; // ← 히트박스 지연 스폰 코루틴
 
     /* Rush */
     public bool IsRushing { get; private set; } = false;
@@ -157,6 +158,7 @@ public class EnemyAttackController : MonoBehaviour
     }
 
     #region AnimationEvent (Melee)
+    // 하위호환: 애니메이션 이벤트를 제거하지 않아도 중복 스폰 방지를 위해 체크함
     public void AttackHit()
     {
         if (!attackInProgress) return;
@@ -164,10 +166,27 @@ public class EnemyAttackController : MonoBehaviour
         if (meleeHitboxSpawned) return;
         SpawnMeleeHitbox(data);
     }
+    #endregion
+
+    #region Melee Hitbox Spawn (Delay via SO)
+    private IEnumerator DelayedMeleeHitbox(MeleeAttackData data)
+    {
+        float delay = (data != null && data.hitboxSpawnDelay > 0f) ? data.hitboxSpawnDelay : 0f;
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        // 방어적 체크: 인터럽트/종료/중복 방지
+        if (!attackInProgress) { meleeHitDelayRoutine = null; yield break; }
+        if (currentAttack != data) { meleeHitDelayRoutine = null; yield break; }
+        if (meleeHitboxSpawned) { meleeHitDelayRoutine = null; yield break; }
+
+        SpawnMeleeHitbox(data);
+        meleeHitDelayRoutine = null;
+    }
 
     private void SpawnMeleeHitbox(MeleeAttackData data)
     {
-        if (data.hitBoxPrefab == null)
+        if (data == null || data.hitBoxPrefab == null)
         {
             Log("MELEE HITBOX prefab null");
             return;
@@ -341,6 +360,13 @@ public class EnemyAttackController : MonoBehaviour
         MarkExecuted();
         ClearHold();
 
+        // 이전 지연 코루틴 정리
+        if (meleeHitDelayRoutine != null)
+        {
+            StopCoroutine(meleeHitDelayRoutine);
+            meleeHitDelayRoutine = null;
+        }
+
         attackInProgress = true;
         meleeHitboxSpawned = false;
 
@@ -375,7 +401,10 @@ public class EnemyAttackController : MonoBehaviour
             enemy.animator.Play(data.attackName, 0, 0f);
         }
 
-        Log($"MELEE START idx={index} req={meleeRequestedDuration:F3}s clip={meleeClipLength:F3}s freeze={(meleeWillFreeze ? "Y" : "N")}");
+        // SO 기반 히트박스 지연 스폰 시작
+        meleeHitDelayRoutine = StartCoroutine(DelayedMeleeHitbox(data));
+
+        Log($"MELEE START idx={index} req={meleeRequestedDuration:F3}s clip={meleeClipLength:F3}s freeze={(meleeWillFreeze ? "Y" : "N")}, hitDelay={(data.hitboxSpawnDelay):F3}s");
     }
 
     private float GetMeleeClipLength(MeleeAttackData data)
@@ -394,6 +423,13 @@ public class EnemyAttackController : MonoBehaviour
     {
         if (enemy?.animator != null)
             enemy.animator.speed = 1f;
+
+        // 지연 스폰 코루틴 정리
+        if (meleeHitDelayRoutine != null)
+        {
+            StopCoroutine(meleeHitDelayRoutine);
+            meleeHitDelayRoutine = null;
+        }
 
         attackInProgress = false;
         if (currentAttack is MeleeAttackData data)
@@ -484,12 +520,7 @@ public class EnemyAttackController : MonoBehaviour
             SafeSetBool("IsRush", true);
             enemy.animator.Play("Rush");
         }
-        if (enemy.agent && enemy.agent.isOnNavMesh)
-        {
-            enemy.agent.isStopped = true;
-            enemy.agent.velocity = Vector3.zero;
-            enemy.agent.ResetPath();
-        }
+        // NavMeshAgent 의존 제거: 남아 있어도 동작엔 영향 없게 null 체크로 우회
 
         SpawnRushHitbox(data);
 

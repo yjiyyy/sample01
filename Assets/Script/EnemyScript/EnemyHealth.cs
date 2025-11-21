@@ -1,9 +1,12 @@
-﻿﻿using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 
 /// <summary>
 /// 적 전용 체력 + 실드 + 슈퍼아머 연동
+/// - NavMeshAgent 비의존
+/// - Rush 중에는 AttackController.StopRushExternally(true)로 즉시 중단(쿨다운 부여 없음)
 /// </summary>
+[DisallowMultipleComponent]
 public class EnemyHealth : MonoBehaviour
 {
     [Header("체력")]
@@ -123,10 +126,12 @@ public class EnemyHealth : MonoBehaviour
         // 상태 전환
         enemy?.SetState(Enemy.EnemyState.ShieldBreak, true);
 
-        // 🚩 애니메이션 강제 재생 (트랜지션 없이)
+        // 애니메이션 강제 재생 (트랜지션 없이)
         if (animator != null)
         {
             animator.Play("ShieldBreak", 0, 0f);
+            // 필요하면 hashIsShieldBreak 파라미터를 사용하는 방식으로도 확장 가능
+            // animator.SetBool(hashIsShieldBreak, true);
         }
 
         if (showShieldLogs)
@@ -146,7 +151,6 @@ public class EnemyHealth : MonoBehaviour
         if (!isShieldBreak) return;
         isShieldBreak = false;
 
-        // 복귀 시 별도 파라미터 필요 없음, 상태만 변경
         if (enemy != null && enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
         {
             enemy.SetState(Enemy.EnemyState.Chase);
@@ -156,14 +160,17 @@ public class EnemyHealth : MonoBehaviour
         {
             Debug.Log($"[ShieldBreak] Exit (→ Chase, wait recharge {shieldRechargeDelay:F2}s)");
         }
+
+        // 필요하면 Animator 파라미터 리셋 추가 가능
+        // animator?.SetBool(hashIsShieldBreak, false);
     }
 
     private IEnumerator ShieldBreakFlow()
     {
-        // 그로기 (공격/AI 정지)
+        // 그로기
         yield return new WaitForSeconds(shieldBreakDuration);
 
-        ExitShieldBreak(); // 파라미터만 꺼주면 자동 복귀
+        ExitShieldBreak();
 
         // 재충전 지연
         if (shieldRechargeDelay > 0f)
