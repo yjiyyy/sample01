@@ -3,9 +3,13 @@
 public class StageManager : MonoBehaviour
 {
     [Header("스테이지 설정")]
-    public StageData stageData;       // ScriptableObject - 시간 설정
-    public StageUI ui;                // UI 캔버스 스크립트
-    public EnemySpawner spawner;     // 몬스터 스포너
+    public StageData stageData;
+    public StageUI ui;
+    public EnemySpawner spawner;
+
+    [Header("낙하 처리")]
+    [Tooltip("플레이어 y가 이 값 이하로 내려가면 낙사 처리")]
+    public float killY = 0f; // NEW
 
     private float timer;
     private int currentLevel = 0;
@@ -20,7 +24,7 @@ public class StageManager : MonoBehaviour
         stageEnded = false;
 
         spawner.SetSpawnLevel(currentLevel);
-        ui.ShowStartText(); // 1초간 START 텍스트 표시
+        ui.ShowStartText();
     }
 
     void Update()
@@ -28,40 +32,41 @@ public class StageManager : MonoBehaviour
         if (stageActive)
         {
             timer += Time.deltaTime;
-
             float timeRemaining = stageData.stageDuration - timer;
             timeRemaining = Mathf.Max(0, timeRemaining);
-
             ui.UpdateTimer(timeRemaining);
 
-            // 스테이지 종료 조건 확인
             if (timer >= stageData.stageDuration)
             {
-                EndStage(); // 종료 처리 분리
+                EndStage();
             }
         }
     }
 
     void EndStage()
     {
-        if (stageEnded) return; // ✅ 이미 종료됐다면 중복 실행 방지
+        if (stageEnded) return;
         stageEnded = true;
         stageActive = false;
 
-        // UI 출력
-        ui.ShowSuccessText(); // "MISSION\nSUCCESS!" 한 번만 출력
+        ui.ShowSuccessText();
 
-        // 스포너 멈춤
         if (spawner != null)
             spawner.enabled = false;
 
-        // 현재 씬 내 모든 적 제거
         GameObject[] allEnemies = GameObject.FindGameObjectsWithTag("Enemy");
         foreach (var enemy in allEnemies)
         {
             Destroy(enemy);
         }
+    }
 
-        // 필요 시: 입력 비활성화, 버튼 활성화 등 추가 가능
+    // 낙사 처리 훅 (플레이어가 killY 이하로 내려갔을 때 호출)
+    public void HandlePlayerFall(GameObject player)
+    {
+        // 실제 게임 디자인에 맞는 처리: 사망 UI, 재시작, HP 0 등
+        Debug.Log($"[StageManager] Player fell below killY ({killY}).");
+        // TODO: 플레이어 Health 컴포넌트가 있다면 Die() 호출 등으로 연결
+        // 임시: 위치 리셋 또는 씬 리로드 등 (여기서는 로그만)
     }
 }

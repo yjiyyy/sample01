@@ -3,29 +3,64 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 플레이어 자기 반동(리코일) 전담 컴포넌트
-/// - WeaponDataSO.recoilStartDelay / recoilPower(+뒤, -앞) / recoilDuration 사용
-/// - 속도 프로파일: v(t) = 4t(1−t)
-/// - Attack 상태 콜백이 false가 되면 즉시 중단
-/// - FixedUpdate 타이밍과 동기화하여 PC/모바일 일관성 보장
+/// Recoil helper: 기존 호출 시그니처와 호환성 유지 (StartRecoil overloads, Cancel).
+/// 실제 이동은 PlayerMovement.MoveFilteredDisplacement 또는 MovePhysicsDisplacement 를 통해 수행.
 /// </summary>
-[DisallowMultipleComponent]
 public class PlayerRecoil : MonoBehaviour
 {
+    [SerializeField] private Transform owner;
+    [SerializeField] private float recoilDistance = 0.3f;
+    [SerializeField] private float recoilDuration = 0.15f;
+
     private Coroutine routine;
+    private PlayerMovement movement;
+    private Func<bool> keepCondition;
+    private const float EPS = 0.0001f;
 
-    public bool IsActive => routine != null;
-
-    public void StartRecoil(WeaponDataSO data, Func<bool> isAttackState, Transform owner)
+    void Awake()
     {
-        if (data == null) return;
-        if (data.recoilDuration <= 0f) return;
-        if (Mathf.Approximately(data.recoilPower, 0f)) return;
-
-        Cancel();
-        routine = StartCoroutine(RecoilRoutine(data, isAttackState, owner ? owner : transform));
+        if (owner == null) owner = transform;
+        movement = owner.GetComponent<PlayerMovement>();
     }
 
+    // 기존 호출: StartRecoil(Vector3 dir)
+    public void StartRecoil(Vector3 dir)
+    {
+        TriggerRecoil(dir, null);
+    }
+
+    // 기존 호출: StartRecoil(Vector3 dir, float distance, float duration)
+    public void StartRecoil(Vector3 dir, float distance, float duration)
+    {
+        if (distance > EPS) recoilDistance = distance;
+        if (duration > EPS) recoilDuration = duration;
+        TriggerRecoil(dir, null);
+    }
+
+    // 기존 호출(현재 PlayerWeaponController에서 사용하는 시그니처):
+    // StartRecoil(WeaponDataSO data, Func<bool> keep, Transform ownerTransform)
+    public void StartRecoil(WeaponDataSO data, Func<bool> keep, Transform ownerTransform)
+    {
+        if (data == null) return;
+        if (Mathf.Approximately(data.recoilDuration, 0f)) return;
+        if (Mathf.Approximately(data.recoilPower, 0f)) return;
+
+        recoilDistance = data.recoilPower;
+        recoilDuration = data.recoilDuration;
+
+        if (ownerTransform != null)
+        {
+            owner = ownerTransform;
+            movement = owner.GetComponent<PlayerMovement>();
+        }
+
+        Vector3 dir = owner != null ? -owner.forward : -transform.forward;
+        dir.y = 0f;
+
+        TriggerRecoil(dir, keep);
+    }
+
+    // Cancel existing recoil
     public void Cancel()
     {
         if (routine != null)
@@ -33,62 +68,56 @@ public class PlayerRecoil : MonoBehaviour
             StopCoroutine(routine);
             routine = null;
         }
+        keepCondition = null;
     }
 
-    private IEnumerator RecoilRoutine(WeaponDataSO data, Func<bool> isAttackState, Transform owner)
+    // Internal trigger
+    private void TriggerRecoil(Vector3 dir, Func<bool> keep)
     {
-        // ─────────────────────────────────────────────────────────
-        // Start delay (고정 타임스텝 사용)
-        // ─────────────────────────────────────────────────────────
-        float delay = Mathf.Max(0f, data.recoilStartDelay);
-        float waited = 0f;
-        while (waited < delay)
-        {
-            if (isAttackState != null && !isAttackState())
-            {
-                routine = null; yield break;
-            }
+        if (dir.sqrMagnitude <= EPS) return;
+        keepCondition = keep;
 
-            waited += Time.fixedDeltaTime;
-            yield return new WaitForFixedUpdate();
-        }
+        if (routine != null) StopCoroutine(routine);
+        routine = StartCoroutine(RecoilRoutine(dir.normalized));
+    }
 
-        if (isAttackState != null && !isAttackState())
-        {
-            routine = null; yield break;
-        }
-
-        // ─────────────────────────────────────────────────────────
-        // 리코일 실행 (고정 타임스텝으로 일관된 거리 보장)
-        // ─────────────────────────────────────────────────────────
-        Vector3 forward = owner.forward;
-        forward.y = 0f;
-        if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
-        forward.Normalize();
-
-        Vector3 dir = (data.recoilPower >= 0f ? -forward : forward);
-        float speedAbs = Mathf.Abs(data.recoilPower);
-        float duration = Mathf.Max(0f, data.recoilDuration);
-
+    private IEnumerator RecoilRoutine(Vector3 n)
+    {
         float elapsed = 0f;
-        while (elapsed < duration)
+        float dur = Mathf.Max(recoilDuration, EPS);
+
+        while (elapsed < dur)
         {
-            if (isAttackState != null && !isAttackState())
+            if (keepCondition != null && !keepCondition())
+                break;
+
+            float t = Mathf.Clamp01(elapsed / dur);
+            float speedMul = 4f * t * (1f - t);
+            float currentSpeed = recoilDistance * speedMul / dur;
+            Vector3 disp = n * currentSpeed * Time.fixedDeltaTime;
+
+            if (movement != null)
             {
-                routine = null; yield break;
+                // prefer MoveFilteredDisplacement if available; if not, fallback to MovePhysicsDisplacement
+                try
+                {
+                    movement.MoveFilteredDisplacement(disp);
+                }
+                catch (MissingMethodException)
+                {
+                    movement.MovePhysicsDisplacement(disp);
+                }
             }
-
-            float t = duration > 0f ? (elapsed / duration) : 1f;
-            float speedMul = 4f * t * (1f - t);  // 0→최대→0
-            float currentSpeed = speedAbs * Mathf.Max(0f, speedMul);
-
-            // 고정 타임스텝으로 일관된 리코일 거리 보장
-            owner.position += dir * currentSpeed * Time.fixedDeltaTime;
+            else
+            {
+                owner.position += disp;
+            }
 
             elapsed += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
 
         routine = null;
+        keepCondition = null;
     }
 }

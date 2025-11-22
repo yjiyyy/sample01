@@ -1,21 +1,17 @@
 ﻿using System.Linq;
 using UnityEngine;
 
-// GameManager는 UI의 위치(anchoredPosition 등)를 건드리지 않습니다(C2).
-// 대신 hudCanvas 아래에 미리 배치한 HPUIControllerBase들을 찾아서 PlayerHealth를 할당합니다.
-// 플레이어가 런타임에 추가되면 RegisterPlayerHealth를 호출하여 빈 슬롯에 할당해 줍니다.
-
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
     [Header("플레이어 관련")]
-    // 기존 playerTransform은 유지(호환성). 여러 플레이어를 지원하려면 PlayerHealth 컴포넌트들을 사용합니다.
     public Transform playerTransform;
-
-    [Tooltip("HUD로 사용할 Canvas (예: 가상패드가 있는 Canvas). " +
-             "HUD 아래에 미리 배치한 HP UI(HPUIControllerBase)를 넣어두세요.")]
     public Canvas hudCanvas;
+
+    [Header("디버그 설정")]
+    [Tooltip("디버그 로그 출력 여부. 모바일 빌드에서는 자동으로 꺼집니다.")]
+    public bool isDebugMode = false; // 기본 false
 
     void Awake()
     {
@@ -24,7 +20,10 @@ public class GameManager : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // 프레임레이트 최적화 설정 (모바일용)
+#if !UNITY_EDITOR
+            // 에디터가 아닌 빌드에서는 자동 OFF (혹시 Inspector에서 켜놨더라도 비활성화)
+            isDebugMode = false;
+#endif
             InitializeFrameRate();
         }
         else
@@ -35,40 +34,31 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // 씬에 미리 배치한 HP UI와 현재 씬의 PlayerHealth들을 연결
         AssignExistingPlayerUIs();
     }
 
-    /// <summary>
-    /// 프레임레이트 최적화 설정
-    /// - VSync OFF: 배터리 절약 및 발열 감소
-    /// - 60fps 제한: 안정적인 성능 유지
-    /// </summary>
     private void InitializeFrameRate()
     {
-        // VSync 비활성화 (모바일 최적화)
+        // 모바일 환경 목표: VSync OFF + 60fps (Unity6에서도 동일 개념)
         QualitySettings.vSyncCount = 0;
-
-        // 목표 프레임레이트 60fps 설정
         Application.targetFrameRate = 60;
 
-        Debug.Log("[GameManager] Frame rate initialized: VSync OFF, Target 60fps");
+        if (isDebugMode)
+        {
+            Debug.Log("[GameManager] Frame rate initialized: VSync OFF, Target 60fps");
+        }
     }
 
-    // 씬에 배치된 HPUIControllerBase들을 찾아 현재 씬의 PlayerHealth들과 매칭해서 초기 연결을 수행합니다.
-    // 매칭 기준: 발견 순서(필요시 이 부분을 이름 기반 매칭 등으로 변경 가능)
     public void AssignExistingPlayerUIs()
     {
         if (hudCanvas == null)
         {
-            Debug.LogWarning("[GameManager] hudCanvas가 설정되지 않았습니다. 씬에 배치한 HP UI를 자동으로 연결할 수 없습니다.");
+            // 설정 누락 경고는 항상 출력
+            Debug.LogWarning("[GameManager] hudCanvas가 설정되지 않았습니다. HP UI 자동 연결 불가.");
             return;
         }
 
-        // HUD 아래에 있는 HPUIControllerBase 컴포넌트들(비활성 오브젝트 포함)을 가져옵니다.
         var uiControllers = hudCanvas.GetComponentsInChildren<HPUIControllerBase>(true);
-
-        // 씬에 존재하는 PlayerHealth들을 찾아서 연결합니다.
         var players = UnityEngine.Object.FindObjectsByType<PlayerHealth>(UnityEngine.FindObjectsSortMode.InstanceID);
 
         int count = Mathf.Min(uiControllers.Length, players.Length);
@@ -82,40 +72,41 @@ public class GameManager : MonoBehaviour
 
         if (players.Length > uiControllers.Length)
         {
-            Debug.LogWarning($"[GameManager] 플레이어({players.Length}) 수가 HP UI({uiControllers.Length}) 슬롯보다 많습니다. 남은 플레이어는 수동 또는 동적 생성으로 처리하세요.");
+            // 슬롯 부족은 경고 (항상 알려주는 것이 운영에 유리)
+            Debug.LogWarning($"[GameManager] 플레이어({players.Length}) 수가 HP UI 슬롯({uiControllers.Length})보다 많습니다. 남은 플레이어는 수동/동적 처리 필요.");
         }
-        else if (uiControllers.Length > players.Length)
+        else if (uiControllers.Length > players.Length && isDebugMode)
         {
-            Debug.Log($"[GameManager] HP UI 슬롯({uiControllers.Length})이 플레이어({players.Length})보다 많습니다. 남은 UI는 비어있습니다.");
+            // 남는 슬롯 정보는 디버그 모드일 때만
+            Debug.Log($"[GameManager] UI 슬롯({uiControllers.Length})이 플레이어({players.Length})보다 많습니다. 일부 슬롯은 비어 있음.");
         }
     }
 
-    // 런타임에 플레이어가 추가될 때 호출하세요. 빈 UI 슬롯이 있으면 그 슬롯에 할당합니다.
-    // 반환값: 할당 성공 여부
     public bool RegisterPlayerHealth(PlayerHealth playerHealth)
     {
-        if (playerHealth == null)
-            return false;
+        if (playerHealth == null) return false;
 
         if (hudCanvas == null)
         {
-            Debug.LogWarning("[GameManager] hudCanvas가 설정되지 않아 HP UI를 자동 연결할 수 없습니다.");
+            Debug.LogWarning("[GameManager] hudCanvas 미설정: HP UI 자동 연결 불가.");
             return false;
         }
 
         var uiControllers = hudCanvas.GetComponentsInChildren<HPUIControllerBase>(true);
-        // 첫 번째로 health가 null인(아직 할당되지 않은) UI를 찾아 초기화
         foreach (var ui in uiControllers)
         {
-            // 내부 필드가 protected, 그래서 체크는 reflection 없이 public 'health'를 사용 (public으로 남아있음)
             if (ui != null && ui.health == null)
             {
                 ui.Initialize(playerHealth);
+                if (isDebugMode)
+                {
+                    Debug.Log($"[GameManager] 새 플레이어 Health를 빈 UI 슬롯에 할당: {playerHealth.name}");
+                }
                 return true;
             }
         }
 
-        Debug.LogWarning("[GameManager] 빈 HP UI 슬롯이 없습니다. 필요하면 HP UI 프리팹을 동적으로 생성하도록 변경하세요.");
+        Debug.LogWarning("[GameManager] 빈 HP UI 슬롯이 없습니다. 필요 시 동적 생성 로직 추가하세요.");
         return false;
     }
 }

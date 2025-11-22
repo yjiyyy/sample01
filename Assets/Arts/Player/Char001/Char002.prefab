@@ -9,9 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4859891124178544}
-  - component: {fileID: -4965756105879192978}
   - component: {fileID: 6999148452361792748}
-  - component: {fileID: -1054589306648874860}
+  - component: {fileID: 6323811690027771068}
   m_Layer: 6
   m_Name: Char002
   m_TagString: Player
@@ -35,28 +34,6 @@ Transform:
   - {fileID: 4808512868423278}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
---- !u!195 &-4965756105879192978
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1010126792893640}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 0.5
-  m_Speed: 3.5
-  m_Acceleration: 8
-  avoidancePriority: 50
-  m_AngularSpeed: 120
-  m_StoppingDistance: 0
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
-  m_AutoRepath: 1
-  m_Height: 2
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
 --- !u!54 &6999148452361792748
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -79,34 +56,32 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 116
+  m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &-1054589306648874860
-MonoBehaviour:
+--- !u!65 &6323811690027771068
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1010126792893640}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d65f8f2cd2db402408998e541a1279bd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  characterId: 002
-  moveSpeed: 10
-  acceleration: 100
-  angularSpeed: 720
-  stoppingDistance: 0.01
-  autoBraking: 1
-  visualSyncEnabled: 1
-  visualSmoothingEnabled: 1
-  visualSmoothingSpeed: 10
-  stopWhenNoInput: 1
-  inputDeadzone: 0.05
+  serializedVersion: 3
+  m_Size: {x: 0.7, y: 1.2, z: 1.2}
+  m_Center: {x: 0, y: 0.5, z: 0.01}
 --- !u!1 &1052906235292198
 GameObject:
   m_ObjectHideFlags: 0

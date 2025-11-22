@@ -18,6 +18,17 @@ public class PlayerEvadeController : MonoBehaviour
     [Header("디버그")]
     public bool debugLogs = false;
 
+    [Header("충돌(회피 차단) 설정")]
+    [Tooltip("Evade 이동을 막을 레이어(현재 Ground).")]
+    [SerializeField] private LayerMask evadeBlockMask;
+    [Tooltip("짧은 프리캐스트 및 메인 캐스트에서 사용하는 skin 거리")]
+    [SerializeField] private float collisionSkin = 0.02f;
+    [Tooltip("벽에 겹치거나 너무 붙어 있을 때 살짝 밀어낼 거리")]
+    [SerializeField] private float smallPushDistance = 0.01f;
+
+    // 분류 임계값(경사 바닥과 벽 구분)
+    private const float floorThreshold = 0.75f;      // penDir.y 또는 hit.normal.y가 이 이상이면 바닥으로 간주
+    private const float horizThreshold = 0.2f;       // 침투 방향 수평 성분 크기(벽 판단 최소값)
     private const float TinyInputThreshold = 0.05f;
 
     public void Setup(
@@ -35,6 +46,18 @@ public class PlayerEvadeController : MonoBehaviour
 
         if (data != null) currentGauge = data.maxGauge;
         if (debugLogs) Debug.Log($"[Evade SETUP] maxGauge={currentGauge}, minInputMag={data?.minInputMagnitude}");
+    }
+
+    private void OnValidate()
+    {
+        if (collisionSkin < 0f) collisionSkin = 0f;
+        if (smallPushDistance < 0f) smallPushDistance = 0f;
+
+        if (evadeBlockMask == 0)
+        {
+            int g = LayerMask.NameToLayer("Ground");
+            if (g >= 0) evadeBlockMask = 1 << g;
+        }
     }
 
     public void TickRecharge(float dt)
@@ -87,70 +110,88 @@ public class PlayerEvadeController : MonoBehaviour
     {
         if (evadeRoutine != null) StopCoroutine(evadeRoutine);
         isInvincible = false;
+        if (movement != null) movement.SetSuspendFalling(false);
         anim?.EndEvade();
         if (debugLogs) Debug.Log("[Evade] CancelEvade called");
     }
 
+    // ─────────────────────────────────────────────────────────
+    // 고정 방향 Evade
+    // ─────────────────────────────────────────────────────────
     private IEnumerator FixedEvadeRoutine(Vector3 fixedDirection)
     {
         changeState?.Invoke(PlayerState.Evade);
-        float elapsed = 0f;
-        Vector3 dir = fixedDirection.normalized;
-        dir.y = 0f;
+        if (movement != null) movement.SetSuspendFalling(true);
 
+        float elapsed = 0f;
+        Vector3 dir = fixedDirection.normalized; dir.y = 0f;
         isInvincible = true;
 
         if (dir.sqrMagnitude > 0.01f)
-        {
             transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
-        }
 
         float dur = Mathf.Max(0f, data.evadeDuration);
-        Vector3 startPos = transform.position;
 
         while (elapsed < dur)
         {
             float t = dur > 0f ? elapsed / dur : 1f;
             float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
             Vector3 disp = dir * (data.evadeSpeed * speedMul) * Time.fixedDeltaTime;
-            transform.position += disp;
+
+            disp = CapsuleCastEvadeAdjustment(disp, out Vector3 pushOut);
+
+            if (movement != null)
+            {
+                if (pushOut.sqrMagnitude > 0f) movement.MovePhysicsDisplacement(pushOut);
+                if (disp.sqrMagnitude > 0f) movement.MovePhysicsDisplacement(disp);
+            }
+            else
+            {
+                if (pushOut.sqrMagnitude > 0f) transform.position += pushOut;
+                if (disp.sqrMagnitude > 0f) transform.position += disp;
+            }
 
             if (elapsed >= data.invincibilityDuration) isInvincible = false;
 
-            // 인터럽트
             if (getState != null)
             {
                 var s = getState();
                 if (s == PlayerState.Knockback || s == PlayerState.Stun || s == PlayerState.Dead)
+                {
+                    if (movement != null) movement.SetSuspendFalling(false);
                     yield break;
+                }
             }
 
             elapsed += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
 
+        if (movement != null) movement.SetSuspendFalling(false);
         FinishEvade();
     }
 
+    // ─────────────────────────────────────────────────────────
+    // 방향 변경 허용 Evade
+    // ─────────────────────────────────────────────────────────
     private IEnumerator DynamicEvadeRoutine(Vector3 initialDirection)
     {
         changeState?.Invoke(PlayerState.Evade);
+        if (movement != null) movement.SetSuspendFalling(true);
+
         float elapsed = 0f;
         float dur = Mathf.Max(0f, data.evadeDuration);
 
-        Vector3 currentDir = initialDirection.normalized;
-        currentDir.y = 0f;
+        Vector3 currentDir = initialDirection.normalized; currentDir.y = 0f;
         Vector3 lastValidDir = currentDir;
-
         isInvincible = true;
-        Vector3 startPos = transform.position;
 
         while (elapsed < dur)
         {
             float t = dur > 0f ? elapsed / dur : 1f;
             Vector2 input = InputManager.Instance.GetMoveInput();
-
             bool hasInput = input.magnitude >= TinyInputThreshold;
+
             if (hasInput)
             {
                 Vector3 raw = new Vector3(input.x, 0f, input.y);
@@ -167,15 +208,13 @@ public class PlayerEvadeController : MonoBehaviour
                 {
                     float lerp = (data.directionChangeSensitivity * 0.25f) * Time.fixedDeltaTime;
                     currentDir = Vector3.Lerp(currentDir, camDir, lerp).normalized;
-                    // lastValidDir 갱신 안 함
                 }
             }
             else
             {
-                currentDir = lastValidDir; // 입력 없음 → 유지
+                currentDir = lastValidDir;
             }
 
-            // 회전(항상)
             if (currentDir.sqrMagnitude > 0.01f)
             {
                 Quaternion target = Quaternion.LookRotation(currentDir, Vector3.up);
@@ -184,7 +223,19 @@ public class PlayerEvadeController : MonoBehaviour
 
             float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
             Vector3 disp = currentDir * (data.evadeSpeed * speedMul) * Time.fixedDeltaTime;
-            transform.position += disp;
+
+            disp = CapsuleCastEvadeAdjustment(disp, out Vector3 pushOut);
+
+            if (movement != null)
+            {
+                if (pushOut.sqrMagnitude > 0f) movement.MovePhysicsDisplacement(pushOut);
+                if (disp.sqrMagnitude > 0f) movement.MovePhysicsDisplacement(disp);
+            }
+            else
+            {
+                if (pushOut.sqrMagnitude > 0f) transform.position += pushOut;
+                if (disp.sqrMagnitude > 0f) transform.position += disp;
+            }
 
             if (elapsed >= data.invincibilityDuration) isInvincible = false;
 
@@ -192,13 +243,17 @@ public class PlayerEvadeController : MonoBehaviour
             {
                 var s = getState();
                 if (s == PlayerState.Knockback || s == PlayerState.Stun || s == PlayerState.Dead)
+                {
+                    if (movement != null) movement.SetSuspendFalling(false);
                     yield break;
+                }
             }
 
             elapsed += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
 
+        if (movement != null) movement.SetSuspendFalling(false);
         FinishEvade();
     }
 
@@ -212,5 +267,86 @@ public class PlayerEvadeController : MonoBehaviour
             changeState?.Invoke(PlayerState.Move);
         else
             changeState?.Invoke(PlayerState.Idle);
+    }
+
+    // 이동 조정: desiredDisp → (전진 이동) / pushOut(겹침 해소)
+    private Vector3 CapsuleCastEvadeAdjustment(Vector3 desiredDisp, out Vector3 pushOut)
+    {
+        pushOut = Vector3.zero;
+        if (movement == null || desiredDisp.sqrMagnitude <= 0f || evadeBlockMask == 0)
+            return desiredDisp;
+
+        CapsuleCollider cap = movement.GetComponent<CapsuleCollider>();
+        if (cap == null) return desiredDisp;
+
+        Vector3 dir = desiredDisp.normalized;
+        float dist = desiredDisp.magnitude;
+
+        Vector3 centerWorld = cap.transform.TransformPoint(cap.center);
+        float radius = cap.radius;
+        float halfLine = Mathf.Max(cap.height * 0.5f - radius, 0f);
+        Vector3 p0 = centerWorld + Vector3.up * halfLine;
+        Vector3 p1 = centerWorld - Vector3.up * halfLine;
+
+        // 1) Overlap 검사 (벽만 차단)
+        Collider[] overlaps = Physics.OverlapCapsule(p0, p1, radius, evadeBlockMask, QueryTriggerInteraction.Ignore);
+        if (overlaps != null && overlaps.Length > 0)
+        {
+            foreach (var other in overlaps)
+            {
+                if (Physics.ComputePenetration(
+                        cap, cap.transform.position, cap.transform.rotation,
+                        other, other.transform.position, other.transform.rotation,
+                        out Vector3 penDir, out float penDist))
+                {
+                    float penUp = penDir.y;
+                    float horizMag = new Vector2(penDir.x, penDir.z).magnitude;
+
+                    // 바닥이면 무시
+                    if (penUp >= floorThreshold) continue;
+
+                    // 벽 판단
+                    if (horizMag >= horizThreshold)
+                    {
+                        float resolve = Mathf.Min(penDist + collisionSkin, smallPushDistance);
+                        pushOut = penDir * resolve;
+                        if (debugLogs)
+                            Debug.Log($"[EvadeCollision] Overlap WALL: push={resolve:F3}, penDir={penDir}");
+                        return Vector3.zero;
+                    }
+                }
+            }
+        }
+
+        // 2) 프리캐스트 (벽만 차단)
+        if (Physics.CapsuleCast(p0, p1, radius, dir, out RaycastHit preHit, collisionSkin, evadeBlockMask, QueryTriggerInteraction.Ignore))
+        {
+            if (preHit.normal.y < floorThreshold) // 벽으로 간주
+            {
+                pushOut = preHit.normal * smallPushDistance;
+                if (debugLogs)
+                    Debug.Log($"[EvadeCollision] PreCast WALL @ {preHit.collider.name}, push={smallPushDistance:F3}");
+                return Vector3.zero;
+            }
+            // 바닥이면 통과
+        }
+
+        // 3) 메인 캐스트 (벽만 제한)
+        float castDistance = dist + collisionSkin;
+        if (Physics.CapsuleCast(p0, p1, radius, dir, out RaycastHit mainHit, castDistance, evadeBlockMask, QueryTriggerInteraction.Ignore))
+        {
+            if (mainHit.normal.y < floorThreshold)
+            {
+                float allowed = mainHit.distance - collisionSkin;
+                if (allowed < 0f) allowed = 0f;
+                if (allowed < dist && debugLogs)
+                    Debug.Log($"[EvadeCollision] MainCast clip: allowed={allowed:F3}/{dist:F3} hit={mainHit.collider.name}");
+                return dir * allowed;
+            }
+            // floor hit → 무시
+        }
+
+        // 정상 이동
+        return desiredDisp;
     }
 }

@@ -5,6 +5,7 @@ using UnityEngine;
 /// NavMeshAgent 제거 버전 Enemy
 /// - 이동/회전은 AI가 RequestMove/RequestLook로 지시 → FixedUpdate에서 적용
 /// - 모든 강제 이동(Knockback/Push/Rush)은 Transform 기반 + Time.fixedDeltaTime
+/// - 좁은 공간 진입 차단 필터 + 낮은 천장(Headroom) 클램프를 함께 적용
 /// </summary>
 [RequireComponent(typeof(EnemyAnimationController))]
 [RequireComponent(typeof(EnemyAttackController))]
@@ -50,6 +51,27 @@ public class Enemy : MonoBehaviour
     private const float ROT_SPEED_DEG_PER_SEC = 720f;
     private const float EPS = 0.0001f;
 
+    // ---------------- 좁은 공간(진입 차단) ----------------
+    [Header("좁은 공간 차단")]
+    [SerializeField] private LayerMask blockingMask;
+    [SerializeField, Range(1, 4)] private int overlapIterations = 2;
+    [SerializeField, Range(0f, 0.2f)] private float minFactorThreshold = 0.05f;
+    [SerializeField, Range(0f, 0.01f)] private float tinyDispThreshold = 0.001f;
+
+    // ---------------- Headroom(낮은 천장) 충돌 관련 ----------------
+    [Header("Headroom(낮은 천장) 충돌")]
+    [Tooltip("Enemy 머리 공간을 막는 레이어 (Ground 레이어 할당)")]
+    [SerializeField] private LayerMask headBlockMask;
+    [Tooltip("Enemy 머리 검사 영역 비율(상단 cylindrical 40%)")]
+    [SerializeField, Range(0.2f, 0.6f)] private float headPortion = 0.4f;
+    [Tooltip("머리 캡슐 반경 감소량")]
+    [SerializeField, Range(0f, 0.05f)] private float headMargin = 0.01f;
+    [SerializeField, Range(1, 3)] private int headClampIterations = 2;
+
+    private Rigidbody rb;
+    private CapsuleCollider capsule;
+    // --------------------------------------------------------------
+
     private void Awake()
     {
         animCtrl = GetComponent<EnemyAnimationController>();
@@ -62,6 +84,29 @@ public class Enemy : MonoBehaviour
 
         player = GameObject.FindWithTag("Player")?.transform;
         SetState(EnemyState.Chase, true);
+
+        // Rigidbody / Capsule 초기화
+        rb = GetComponent<Rigidbody>();
+        capsule = GetComponent<CapsuleCollider>();
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.useGravity = true;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        }
+
+        // 기본 레이어 자동 할당
+        if (blockingMask == 0)
+        {
+            int g = LayerMask.NameToLayer("Ground");
+            if (g >= 0) blockingMask = 1 << g;
+        }
+        if (headBlockMask == 0)
+        {
+            int g = LayerMask.NameToLayer("Ground");
+            if (g >= 0) headBlockMask = 1 << g;
+        }
     }
 
 #if UNITY_EDITOR
@@ -74,6 +119,17 @@ public class Enemy : MonoBehaviour
         ai = GetComponent<EnemyAI>();
         impact = GetComponent<EnemyImpact>();
         death = GetComponent<EnemyDeath>();
+
+        if (blockingMask == 0)
+        {
+            int g = LayerMask.NameToLayer("Ground");
+            if (g >= 0) blockingMask = 1 << g;
+        }
+        if (headBlockMask == 0)
+        {
+            int g = LayerMask.NameToLayer("Ground");
+            if (g >= 0) headBlockMask = 1 << g;
+        }
     }
 #endif
 
@@ -101,7 +157,46 @@ public class Enemy : MonoBehaviour
             Vector3 dir = desiredMoveDir;
             dir.y = 0f;
             float speed = moveSpeed * Mathf.Clamp01(desiredSpeed01);
-            transform.position += dir.normalized * speed * dt;
+            Vector3 disp = dir.normalized * speed * dt;
+
+            if (rb != null)
+            {
+                // 1) 좁은 공간 진입 차단 필터 (Overlap 기반 경계 탐색)
+                if (capsule != null)
+                {
+                    disp = NarrowSpaceSimpleUtil.FilterCapsuleDisplacement(
+                        capsule,
+                        rb.position,
+                        disp,
+                        blockingMask,
+                        overlapIterations,
+                        minFactorThreshold,
+                        tinyDispThreshold
+                    );
+                }
+
+                // 2) 낮은 천장 진입 클램프 (머리 영역만)
+                if (capsule != null && headClampIterations > 0 && headPortion > 0f)
+                {
+                    disp = NarrowSpaceUtil.ClampHeadroomHorizontal(
+                        capsule,
+                        rb.position,
+                        disp,
+                        headBlockMask,
+                        headClampIterations,
+                        headPortion,
+                        headMargin
+                    );
+                }
+
+                if (disp.sqrMagnitude > EPS)
+                    rb.MovePosition(rb.position + disp);
+            }
+            else
+            {
+                // Rigidbody 없으면 Transform 이동
+                transform.position += disp;
+            }
         }
 
         // 회전
