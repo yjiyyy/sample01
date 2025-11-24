@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// NavMeshAgent 제거 버전 Enemy
-/// - 이동/회전은 AI가 RequestMove/RequestLook로 지시 → FixedUpdate에서 적용
-/// - 모든 강제 이동(Knockback/Push/Rush)은 Transform 기반 + Time.fixedDeltaTime
-/// - 좁은 공간 진입 차단 필터 + 낮은 천장(Headroom) 클램프를 함께 적용
+/// Enemy (MovementSettings-required)
+/// - Uses MovementSettings for all movement/headroom/narrow-space tuning.
+/// - If MovementSettings is not assigned, this component disables itself at Awake and logs an error.
+/// - Reuses overlapBuffer and selfColliderIds for non-alloc checks.
 /// </summary>
 [RequireComponent(typeof(EnemyAnimationController))]
 [RequireComponent(typeof(EnemyAttackController))]
@@ -28,19 +29,23 @@ public class Enemy : MonoBehaviour
     public EnemyImpact impact;
     public EnemyDeath death;
 
-    [Header("공통 파라미터")]
-    [Tooltip("기본 이동 속도(m/s)")]
+    [Header("Common params")]
+    [Tooltip("Base move speed (m/s)")]
     public float moveSpeed = 3.5f;
     public bool debugMode = true;
 
+    [Header("Optional shared settings")]
+    [Tooltip("MovementSettings asset (REQUIRED). If not assigned this component will be disabled.")]
+    [SerializeField] private MovementSettings movementSettings;
+
     private Transform player;
 
-    [SerializeField, Tooltip("디버그 확인용 슈퍼아머 마스크")]
+    [SerializeField, Tooltip("Super armor flags")]
     private SuperArmorSource superArmorMask = SuperArmorSource.None;
     public bool HasSuperArmor => superArmorMask != SuperArmorSource.None;
     public bool HasSuperArmorSource(SuperArmorSource src) => (superArmorMask & src) != 0;
 
-    // 이동/회전 버퍼
+    // movement requests (from AI)
     private Vector3 desiredMoveDir = Vector3.zero;
     private float desiredSpeed01 = 0f;
     private bool hasMoveRequest = false;
@@ -51,26 +56,17 @@ public class Enemy : MonoBehaviour
     private const float ROT_SPEED_DEG_PER_SEC = 720f;
     private const float EPS = 0.0001f;
 
-    // ---------------- 좁은 공간(진입 차단) ----------------
-    [Header("좁은 공간 차단")]
+    // Headroom/local masks - kept only for inspector assignment but NOT used when MovementSettings is present.
+    [Header("Headroom overrides (not used when MovementSettings assigned)")]
     [SerializeField] private LayerMask blockingMask;
-    [SerializeField, Range(1, 4)] private int overlapIterations = 2;
-    [SerializeField, Range(0f, 0.2f)] private float minFactorThreshold = 0.05f;
-    [SerializeField, Range(0f, 0.01f)] private float tinyDispThreshold = 0.001f;
-
-    // ---------------- Headroom(낮은 천장) 충돌 관련 ----------------
-    [Header("Headroom(낮은 천장) 충돌")]
-    [Tooltip("Enemy 머리 공간을 막는 레이어 (Ground 레이어 할당)")]
     [SerializeField] private LayerMask headBlockMask;
-    [Tooltip("Enemy 머리 검사 영역 비율(상단 cylindrical 40%)")]
-    [SerializeField, Range(0.2f, 0.6f)] private float headPortion = 0.4f;
-    [Tooltip("머리 캡슐 반경 감소량")]
-    [SerializeField, Range(0f, 0.05f)] private float headMargin = 0.01f;
-    [SerializeField, Range(1, 3)] private int headClampIterations = 2;
 
     private Rigidbody rb;
     private CapsuleCollider capsule;
-    // --------------------------------------------------------------
+
+    // reuse buffers
+    private Collider[] overlapBuffer;
+    private HashSet<int> selfColliderIds;
 
     private void Awake()
     {
@@ -85,7 +81,6 @@ public class Enemy : MonoBehaviour
         player = GameObject.FindWithTag("Player")?.transform;
         SetState(EnemyState.Chase, true);
 
-        // Rigidbody / Capsule 초기화
         rb = GetComponent<Rigidbody>();
         capsule = GetComponent<CapsuleCollider>();
         if (rb != null)
@@ -96,7 +91,15 @@ public class Enemy : MonoBehaviour
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
 
-        // 기본 레이어 자동 할당
+        // MovementSettings required
+        if (movementSettings == null)
+        {
+            Debug.LogError($"[{nameof(Enemy)}] MovementSettings not assigned on GameObject '{gameObject.name}'. Disabling component. Assign a MovementSettings asset to enable movement.");
+            this.enabled = false;
+            return;
+        }
+
+        // default masks if inspector provided them (but MovementSettings is source of truth)
         if (blockingMask == 0)
         {
             int g = LayerMask.NameToLayer("Ground");
@@ -107,7 +110,18 @@ public class Enemy : MonoBehaviour
             int g = LayerMask.NameToLayer("Ground");
             if (g >= 0) headBlockMask = 1 << g;
         }
+
+        // init overlap buffer & self collider ids using MovementSettings
+        int bufSize = Mathf.Max(1, movementSettings.overlapBufferSize);
+        overlapBuffer = new Collider[Mathf.Max(1, bufSize)];
+        var cols = GetComponentsInChildren<Collider>();
+        selfColliderIds = new HashSet<int>(cols.Length);
+        for (int i = 0; i < cols.Length; ++i)
+            if (cols[i] != null) selfColliderIds.Add(cols[i].GetInstanceID());
     }
+
+    private LayerMask GetBlockingMask() => movementSettings != null ? movementSettings.obstacleMask : blockingMask;
+    private LayerMask GetHeadBlockMask() => movementSettings != null ? movementSettings.headMask : headBlockMask;
 
 #if UNITY_EDITOR
     private void OnValidate()
@@ -119,28 +133,14 @@ public class Enemy : MonoBehaviour
         ai = GetComponent<EnemyAI>();
         impact = GetComponent<EnemyImpact>();
         death = GetComponent<EnemyDeath>();
-
-        if (blockingMask == 0)
-        {
-            int g = LayerMask.NameToLayer("Ground");
-            if (g >= 0) blockingMask = 1 << g;
-        }
-        if (headBlockMask == 0)
-        {
-            int g = LayerMask.NameToLayer("Ground");
-            if (g >= 0) headBlockMask = 1 << g;
-        }
     }
 #endif
 
     private void Update()
     {
-        if (player == null)
-            player = GameObject.FindWithTag("Player")?.transform;
-
+        if (player == null) player = GameObject.FindWithTag("Player")?.transform;
         if (CurrentState == EnemyState.Dead || player == null) return;
         if (CurrentState == EnemyState.ShieldBreak) return;
-
         ai?.Tick(this, player);
     }
 
@@ -150,7 +150,6 @@ public class Enemy : MonoBehaviour
 
         float dt = Time.fixedDeltaTime;
 
-        // 이동
         if (hasMoveRequest && desiredMoveDir.sqrMagnitude > EPS && desiredSpeed01 > 0f &&
             CurrentState == EnemyState.Chase)
         {
@@ -161,54 +160,53 @@ public class Enemy : MonoBehaviour
 
             if (rb != null)
             {
-                // 1) 좁은 공간 진입 차단 필터 (Overlap 기반 경계 탐색)
+                // 1) Narrow-space filtering (MovementSettings is the source of tuning)
                 if (capsule != null)
                 {
                     disp = NarrowSpaceSimpleUtil.FilterCapsuleDisplacement(
                         capsule,
                         rb.position,
                         disp,
-                        blockingMask,
-                        overlapIterations,
-                        minFactorThreshold,
-                        tinyDispThreshold
+                        GetBlockingMask(),
+                        Mathf.Max(1, movementSettings.overlapIterations),
+                        movementSettings.minFactorThreshold,
+                        movementSettings.tinyDispThreshold
                     );
                 }
 
-                // 2) 낮은 천장 진입 클램프 (머리 영역만)
-                if (capsule != null && headClampIterations > 0 && headPortion > 0f)
+                // 2) Headroom clamp: use MovementSettings head values
+                if (capsule != null && movementSettings.headClampIterations > 0 && movementSettings.headPortion > 0f)
                 {
-                    disp = NarrowSpaceUtil.ClampHeadroomHorizontal(
+                    disp = StepChecker.ClampHeadroomHorizontal(
                         capsule,
                         rb.position,
                         disp,
-                        headBlockMask,
-                        headClampIterations,
-                        headPortion,
-                        headMargin
+                        GetHeadBlockMask(),
+                        Mathf.Max(1, movementSettings.headClampIterations),
+                        movementSettings.headPortion,
+                        movementSettings.headMargin,
+                        overlapBuffer,
+                        selfColliderIds
                     );
                 }
 
-                if (disp.sqrMagnitude > EPS)
-                    rb.MovePosition(rb.position + disp);
+                if (disp.sqrMagnitude > EPS) rb.MovePosition(rb.position + disp);
             }
             else
             {
-                // Rigidbody 없으면 Transform 이동
                 transform.position += disp;
             }
         }
 
-        // 회전
+        // rotation
         if (hasLookRequest && desiredLookDir.sqrMagnitude > EPS)
         {
-            Vector3 ld = desiredLookDir;
-            ld.y = 0f;
+            Vector3 ld = desiredLookDir; ld.y = 0f;
             Quaternion target = Quaternion.LookRotation(ld.normalized, Vector3.up);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, target, ROT_SPEED_DEG_PER_SEC * dt);
         }
 
-        // 요청 플래그 리셋
+        // reset requests
         hasMoveRequest = false;
         hasLookRequest = false;
         desiredMoveDir = Vector3.zero;
@@ -219,10 +217,7 @@ public class Enemy : MonoBehaviour
     public void SetState(EnemyState newState, bool force = false)
     {
         if (!force && CurrentState == newState) return;
-
-        if (debugMode)
-            Debug.Log($"[Enemy] State {CurrentState} → {newState}");
-
+        if (debugMode) Debug.Log($"[Enemy] State {CurrentState} → {newState}");
         CurrentState = newState;
 
         switch (newState)
@@ -260,14 +255,12 @@ public class Enemy : MonoBehaviour
     public void ApplyKnockback(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (CurrentState == EnemyState.Dead) return;
-
         bool allowInterrupt = !HasSuperArmor && CurrentState != EnemyState.ShieldBreak;
         if (allowInterrupt)
         {
             attackCtrl?.InterruptCooldown();
             ai?.InterruptAttack();
         }
-
         impact?.ApplyKnockback(this, hitDir, weapon, impactScale);
     }
 
@@ -285,24 +278,10 @@ public class Enemy : MonoBehaviour
         death?.PlayDeath(this, hitDir, weapon, impactScale);
     }
 
-    public void SetAttackState() => SetState(EnemyState.Attack);
-    public void SetChaseState() => SetState(EnemyState.Chase);
-
-    public bool IsShieldBreaking()
-    {
-        if (TryGetComponent(out EnemyHealth h)) return h.IsShieldBreak();
-        return false;
-    }
-
-    // 이동/회전 요청 API (AI 사용)
     public void RequestMove(Vector3 dir, float speed01)
     {
         dir.y = 0f;
-        if (dir.sqrMagnitude <= EPS || speed01 <= 0f)
-        {
-            hasMoveRequest = false;
-            return;
-        }
+        if (dir.sqrMagnitude <= EPS || speed01 <= 0f) { hasMoveRequest = false; return; }
         desiredMoveDir = dir.normalized;
         desiredSpeed01 = Mathf.Clamp01(speed01);
         hasMoveRequest = true;
@@ -311,28 +290,25 @@ public class Enemy : MonoBehaviour
     public void RequestLook(Vector3 dir)
     {
         dir.y = 0f;
-        if (dir.sqrMagnitude <= EPS)
-        {
-            hasLookRequest = false;
-            return;
-        }
+        if (dir.sqrMagnitude <= EPS) { hasLookRequest = false; return; }
         desiredLookDir = dir.normalized;
         hasLookRequest = true;
     }
 
-    // SuperArmor 관리
     public void AddSuperArmor(SuperArmorSource src)
     {
         if (src == SuperArmorSource.None) return;
         superArmorMask |= src;
         if (debugMode) Debug.Log($"[Enemy] AddSuperArmor: {src} => {superArmorMask}");
     }
+
     public void RemoveSuperArmor(SuperArmorSource src)
     {
         if (src == SuperArmorSource.None) return;
         superArmorMask &= ~src;
         if (debugMode) Debug.Log($"[Enemy] RemoveSuperArmor: {src} => {superArmorMask}");
     }
+
     public void ClearAllSuperArmor()
     {
         superArmorMask = SuperArmorSource.None;

@@ -1,23 +1,23 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
-/// 낮아지는 천장(Headroom) 진입 시 캡슐 머리 부분이 천장에 박혀 바닥을 뚫거나 관통하는 문제를 줄이기 위한 간단한 수평 이동 클램프.
-/// 조건:
-/// - 현재 머리 부분은 겹치지 않는데 목표 위치 머리 부분은 겹치는 경우만 이동량 축소(반감 탐색).
-/// - 이미 머리 부분 겹침 상태라면 제한 없이 이동(좁은 곳 탈출 허용).
-/// 성능:
-/// - 최대 검사 횟수: 현재(1) + 목표(1) + iterations(2) = 4회 OverlapCapsule.
-/// - 모바일에서도 부담 미미.
+/// 머리 공간(headroom) 검사 유틸리티 (향상: NonAlloc 사용 및 외부 버퍼/self id 필터 지원)
+/// - 목적: capsule 의 상단(머리) 부분만 별도 검사하여 좁은 머리공간에서 이동을 제한 또는 클램프
+/// - 변경: CheckHeadOverlap 및 ClampHeadroomHorizontal에 optional tempBuffer/selfIds 파라미터를 추가하여
+///         호출측(예: PlayerMovement)에서 재사용 버퍼를 전달하도록 지원.
 /// </summary>
 public static class NarrowSpaceUtil
 {
-    /// <param name="cap">플레이어/적 CapsuleCollider</param>
-    /// <param name="origin">현재 기준 위치(rb.position)</param>
-    /// <param name="disp">원하는 수평 이동량</param>
-    /// <param name="mask">머리 공간을 막는 레이어(Ground 등)</param>
-    /// <param name="iterations">반감 탐색 횟수(2 추천)</param>
-    /// <param name="headPortion">상단 cylindrical 영역 비율(0.4 → 윗부분 40%)</param>
-    /// <param name="headMargin">머리 부분 캡슐 반경 감소(오검출 완화)</param>
+    /// <param name="cap">체크 대상 CapsuleCollider</param>
+    /// <param name="origin">현재 원점(rb.position)</param>
+    /// <param name="disp">시도할 이동량</param>
+    /// <param name="mask">머리 충돌 검사 레이어</param>
+    /// <param name="iterations">이진탐색 반복 횟수</param>
+    /// <param name="headPortion">머리 원통 부분 비율</param>
+    /// <param name="headMargin">머리 반경 마진</param>
+    /// <param name="tempBuffer">(optional) 외부에서 할당한 Collider[] 버퍼 (NonAlloc 용)</param>
+    /// <param name="selfIds">(optional) 자기 콜라이더 인스턴스ID 집합(필터링용)</param>
     public static Vector3 ClampHeadroomHorizontal(
         CapsuleCollider cap,
         Vector3 origin,
@@ -25,52 +25,44 @@ public static class NarrowSpaceUtil
         LayerMask mask,
         int iterations,
         float headPortion,
-        float headMargin)
+        float headMargin,
+        Collider[] tempBuffer = null,
+        HashSet<int> selfIds = null)
     {
         if (cap == null) return disp;
         if (disp.sqrMagnitude <= 0f) return disp;
         if (mask == 0) return disp;
 
-        // 캡슐 기본 데이터
         float height = cap.height;
         float radius = cap.radius;
         if (height < radius * 2f)
         {
-            // 비정상 설정 경고 (1회만 표시 가능하도록 원한다면 static flag)
-            Debug.LogWarning($"[NarrowSpaceUtil] Capsule height({height}) < 2*radius({radius}) : headroom 검사 신뢰도 낮음.");
+            Debug.LogWarning($"[NarrowSpaceUtil] Capsule height({height}) < 2*radius({radius}) : headroom check may be incorrect.");
         }
 
-        // 월드 기준 중심(현재 위치)
-        // transform.TransformPoint(center) + (origin - transform.position) 로 가상 위치 캡슐 중심 보정
         Transform t = cap.transform;
-        Vector3 worldCenterAtCurrent = t.TransformPoint(cap.center);
-        Vector3 worldCenterAtOrigin = worldCenterAtCurrent + (origin - t.position);
+        Vector3 worldCenterAtCurrent = t.TransformPoint(cap.center) + (origin - t.position);
 
-        // 수평 이동이므로 Up 방향(transform.up) 이용
         Vector3 up = t.up;
 
-        // 캡슐 cylindrical 부분 길이
         float cylLen = Mathf.Max(height - 2f * radius, 0f);
         float headCylLen = cylLen * Mathf.Clamp01(headPortion);
-        // 상단 구 중심 local (height/2 - radius) 위
         float topLine = (height * 0.5f) - radius;
 
         float usedRadius = Mathf.Max(radius - headMargin, radius * 0.5f);
 
-        // 현재 위치 머리 부분 Overlap 검사
-        bool currentHeadOverlap = CheckHeadOverlap(
-            worldCenterAtOrigin, up,
-            topLine, headCylLen, usedRadius, mask);
+        // current
+        Vector3 topSphereNow = worldCenterAtCurrent + up * topLine;
+        Vector3 bottomHeadNow = topSphereNow - up * headCylLen;
+        bool currentHeadOverlap = CheckHeadOverlap(topSphereNow, bottomHeadNow, usedRadius, mask, tempBuffer, selfIds);
 
-        // 목표 위치 머리 부분 Overlap 검사
+        // target
         Vector3 targetOrigin = origin + disp;
         Vector3 worldCenterAtTarget = worldCenterAtCurrent + (targetOrigin - t.position);
+        Vector3 topSphereTarget = worldCenterAtTarget + up * topLine;
+        Vector3 bottomHeadTarget = topSphereTarget - up * headCylLen;
+        bool targetHeadOverlap = CheckHeadOverlap(topSphereTarget, bottomHeadTarget, usedRadius, mask, tempBuffer, selfIds);
 
-        bool targetHeadOverlap = CheckHeadOverlap(
-            worldCenterAtTarget, up,
-            topLine, headCylLen, usedRadius, mask);
-
-        // 새로 겹치려는 상황에서만 제한 (현재 미겹침 -> 목표 겹침)
         if (!currentHeadOverlap && targetHeadOverlap)
         {
             float low = 0f;
@@ -81,59 +73,75 @@ public static class NarrowSpaceUtil
                 Vector3 midPos = origin + disp * mid;
                 Vector3 worldCenterAtMid = worldCenterAtCurrent + (midPos - t.position);
 
-                bool midOverlap = CheckHeadOverlap(
-                    worldCenterAtMid, up,
-                    topLine, headCylLen, usedRadius, mask);
+                Vector3 topSphereMid = worldCenterAtMid + up * topLine;
+                Vector3 bottomHeadMid = topSphereMid - up * headCylLen;
+
+                bool midOverlap = CheckHeadOverlap(topSphereMid, bottomHeadMid, usedRadius, mask, tempBuffer, selfIds);
 
                 if (midOverlap)
                 {
-                    // 줄여야 함
                     high = mid;
                 }
                 else
                 {
-                    // 아직 안 겹침 → 더 전진 가능
                     low = mid;
                 }
             }
 
-            // 허용 비율 low
             if (low < 0.05f)
             {
-                // 사실상 이동 불가
                 return Vector3.zero;
             }
             return disp * low;
         }
 
-        // 이미 내부거나 애초에 겹침 없음 → 그대로 이동
         return disp;
     }
 
     /// <summary>
-    /// 머리 영역 OverlapCapsule 검사
+    /// topSphere / bottomHead 를 주고 Overlap 검사 (NonAlloc 옵션 지원)
     /// </summary>
-    private static bool CheckHeadOverlap(
-        Vector3 worldCenter,
-        Vector3 up,
-        float topLine,
-        float headCylLen,
+    public static bool CheckHeadOverlap(
+        Vector3 topSphere,
+        Vector3 bottomHead,
         float radius,
-        LayerMask mask)
+        LayerMask mask,
+        Collider[] tempBuffer = null,
+        HashSet<int> selfIds = null)
     {
-        // 상단 구 중심
-        Vector3 topSphere = worldCenter + up * topLine;
-        // 머리 cylindrical 부분 시작점(아래쪽) : topSphere - up * headCylLen
-        Vector3 bottomHead = topSphere - up * headCylLen;
+        if (tempBuffer != null && tempBuffer.Length > 0)
+        {
+            int cnt = Physics.OverlapCapsuleNonAlloc(bottomHead, topSphere, radius, tempBuffer, mask, QueryTriggerInteraction.Ignore);
+            if (cnt == tempBuffer.Length)
+            {
+                // buffer full -> safe fallback to allocating API
+                Collider[] hits = Physics.OverlapCapsule(bottomHead, topSphere, radius, mask, QueryTriggerInteraction.Ignore);
+                if (hits == null || hits.Length == 0) return false;
+                if (selfIds == null || selfIds.Count == 0) return hits.Length > 0;
+                for (int i = 0; i < hits.Length; ++i)
+                {
+                    if (hits[i] == null) continue;
+                    if (selfIds.Contains(hits[i].GetInstanceID())) continue;
+                    return true;
+                }
+                return false;
+            }
 
-        // QueryTriggerInteraction.Ignore 로 트리거 무시
-        Collider[] hits = Physics.OverlapCapsule(
-            bottomHead,
-            topSphere,
-            radius,
-            mask,
-            QueryTriggerInteraction.Ignore);
-
-        return hits != null && hits.Length > 0;
+            if (cnt == 0) return false;
+            if (selfIds == null || selfIds.Count == 0) return cnt > 0;
+            for (int i = 0; i < cnt; ++i)
+            {
+                var c = tempBuffer[i];
+                if (c == null) continue;
+                if (selfIds.Contains(c.GetInstanceID())) continue;
+                return true;
+            }
+            return false;
+        }
+        else
+        {
+            Collider[] hits = Physics.OverlapCapsule(bottomHead, topSphere, radius, mask, QueryTriggerInteraction.Ignore);
+            return hits != null && hits.Length > 0;
+        }
     }
 }

@@ -8,6 +8,7 @@ using UnityEngine;
 /// - UpperBody 레이어 토글/임시 비활성화(넉백 등 CC 시) 로직 포함
 /// - Animator 파라미터가 없을 때 예외가 발생하지 않도록 안전하게 호출
 /// - LateUpdate에서 Speed 파라미터 업데이트 (물리 이동과 동기화)
+/// - 성능 개선: 파라미터 존재 여부 캐시 및 누적 로그 방지
 /// </summary>
 public class PlayerAnimationController : MonoBehaviour
 {
@@ -32,34 +33,41 @@ public class PlayerAnimationController : MonoBehaviour
     private bool upperBodyRequestedEnabled = false;
     private const string upperLayerName = "UpperBody";
 
+    // 캐시된 파라미터 존재 여부
+    private HashSet<int> existingParamHashes;
+    // 이미 경고를 남긴 파라미터(중복 로그 방지)
+    private HashSet<int> warnedMissingParams = new HashSet<int>();
+
     void Awake()
     {
         animator = GetComponent<Animator>();
         movement = GetComponent<PlayerMovement>();
+
+        // 캐시: animator parameter 존재 여부 확인 (한 번만)
+        existingParamHashes = new HashSet<int>();
+        if (animator != null)
+        {
+            var pars = animator.parameters;
+            for (int i = 0; i < pars.Length; ++i)
+            {
+                existingParamHashes.Add(pars[i].nameHash);
+            }
+        }
     }
 
     void LateUpdate()
     {
-        // ─────────────────────────────────────────────────────────
-        // LateUpdate에서 Speed 파라미터 업데이트
-        // FixedUpdate 이동 후 최종 상태를 반영하여 부드러운 애니메이션
-        // ─────────────────────────────────────────────────────────
         if (animator == null) return;
         float speed = (movement != null) ? movement.GetAnimatorSpeedEstimate() : 0f;
         SafeSetFloat(hashSpeed, speed);
     }
 
-    /* ───────── 안전 호출 헬퍼 ───────── */
+    /* ───────── 안전 호출 헬퍼 (캐시 사용) ───────── */
 
     private bool HasParameter(int hash)
     {
         if (animator == null) return false;
-        var pars = animator.parameters;
-        for (int i = 0; i < pars.Length; ++i)
-        {
-            if (pars[i].nameHash == hash) return true;
-        }
-        return false;
+        return existingParamHashes != null && existingParamHashes.Contains(hash);
     }
 
     private void SafeSetBool(int hash, bool value)
@@ -71,7 +79,11 @@ public class PlayerAnimationController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[PlayerAnim] SetBool skipped — parameter not found (hash:{hash})");
+            if (!warnedMissingParams.Contains(hash))
+            {
+                Debug.LogWarning($"[PlayerAnim] SetBool skipped — parameter not found (hash:{hash})");
+                warnedMissingParams.Add(hash);
+            }
         }
     }
 
@@ -84,7 +96,11 @@ public class PlayerAnimationController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[PlayerAnim] ResetTrigger skipped — parameter not found (hash:{hash})");
+            if (!warnedMissingParams.Contains(hash))
+            {
+                Debug.LogWarning($"[PlayerAnim] ResetTrigger skipped — parameter not found (hash:{hash})");
+                warnedMissingParams.Add(hash);
+            }
         }
     }
 
@@ -97,7 +113,11 @@ public class PlayerAnimationController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[PlayerAnim] SetTrigger skipped — parameter not found (hash:{hash})");
+            if (!warnedMissingParams.Contains(hash))
+            {
+                Debug.LogWarning($"[PlayerAnim] SetTrigger skipped — parameter not found (hash:{hash})");
+                warnedMissingParams.Add(hash);
+            }
         }
     }
 
@@ -110,7 +130,11 @@ public class PlayerAnimationController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[PlayerAnim] SetFloat skipped — parameter not found (hash:{hash})");
+            if (!warnedMissingParams.Contains(hash))
+            {
+                Debug.LogWarning($"[PlayerAnim] SetFloat skipped — parameter not found (hash:{hash})");
+                warnedMissingParams.Add(hash);
+            }
         }
     }
 

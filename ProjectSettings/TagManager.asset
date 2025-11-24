@@ -18,9 +18,9 @@ TagManager:
   - Ragdoll
   - Ground
   - Projectile_Enemy
-  - 
-  - 
-  - 
+  - Wall
+  - Floor
+  - Prop
   - 
   - 
   - 
