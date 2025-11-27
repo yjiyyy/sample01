@@ -15,8 +15,8 @@ MonoBehaviour:
   maxGauge: 50
   evadeCost: 1
   rechargeRate: 5
-  evadeSpeed: 15
-  evadeDuration: 1
+  evadeSpeed: 10
+  evadeDuration: 0.8
   invincibilityDuration: 0.5
   speedCurve:
     serializedVersion: 2

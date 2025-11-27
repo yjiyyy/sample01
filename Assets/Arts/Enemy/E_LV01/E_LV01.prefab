@@ -83,22 +83,16 @@ MonoBehaviour:
   ai: {fileID: 8923165420331746604}
   impact: {fileID: 4454959871274099026}
   death: {fileID: 6950063031955005865}
-  moveSpeed: 10
+  moveSpeed: 5
   debugMode: 0
   movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
   superArmorMask: 0
-  overlapIterations_local: 2
-  minFactorThreshold_local: 0.05
-  tinyDispThreshold_local: 0.001
   blockingMask:
     serializedVersion: 2
     m_Bits: 4096
   headBlockMask:
     serializedVersion: 2
     m_Bits: 8192
-  headPortion: 0.4
-  headMargin: 0.01
-  headClampIterations: 2
 --- !u!114 &631336349894415364
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -203,7 +197,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   backstepDistance: 5
   backstepSpeedMultiplier: 1
-  forwardSpeedNormalizeTime: 0.25
+  forwardSpeedNormalizeTime: 0.894
+  detectionRadius: 8
+  findDuration: 0.8
+  roamRadius: 3
+  peaceMoveSpeedMultiplier: 0.2
+  idleMin: 0.5
+  idleMax: 3
 --- !u!114 &4454959871274099026
 MonoBehaviour:
   m_ObjectHideFlags: 0

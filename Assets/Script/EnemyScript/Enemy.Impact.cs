@@ -1,11 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-/// <summary>
-/// 피격 반응(넉백 / 스턴 / SoftKnock / Push)
-/// - NavMeshAgent 제거 버전: 모두 Transform.position 사용
-/// - 이동은 Time.fixedDeltaTime + WaitForFixedUpdate
-/// </summary>
 [DisallowMultipleComponent]
 public class EnemyImpact : MonoBehaviour
 {
@@ -15,6 +10,7 @@ public class EnemyImpact : MonoBehaviour
     private const float SOFT_KNOCK_DURATION = 0.12f;
     private const float SOFT_KNOCK_POWER_RATIO = 0.5f;
     private const float FACE_ANGLE_THRESHOLD = 30f;
+    private const float EPS = 0.0001f;
 
     public void ApplyKnockback(Enemy ctx, Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
@@ -26,6 +22,7 @@ public class EnemyImpact : MonoBehaviour
             impactRoutine = null;
         }
 
+        // Interpret weapon.knockbackPower as initial speed (m/s) and knockbackDuration as duration
         float knockbackPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
         float knockbackDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
         float stunDuration = weapon != null ? weapon.stunDuration * impactScale : 0f;
@@ -51,6 +48,7 @@ public class EnemyImpact : MonoBehaviour
             pushRoutine = null;
         }
 
+        // Interpret push as initial speed (m/s)
         float pushPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
         float pushDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
         float hitstop = weapon != null ? weapon.hitstopTime : 0f;
@@ -83,11 +81,19 @@ public class EnemyImpact : MonoBehaviour
         dir.y = 0f;
         float elapsed = 0f;
 
-        while (elapsed < duration && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
+        // Interpret 'power' as initial speed (m/s) scaled by SOFT_KNOCK_POWER_RATIO
+        float initialSpeed = Mathf.Abs(power) * SOFT_KNOCK_POWER_RATIO;
+        float dur = Mathf.Max(duration, EPS);
+
+        while (elapsed < dur && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
         {
-            float t = elapsed / Mathf.Max(duration, 0.0001f);
-            float current = Mathf.Lerp(power * SOFT_KNOCK_POWER_RATIO, 0f, t);
-            ctx.transform.position += dir * current * Time.fixedDeltaTime;
+            float t = Mathf.Clamp01(elapsed / dur);
+            // linear decay: start at initialSpeed, decay to 0
+            float currentSpeed = initialSpeed * (1f - t);
+            Vector3 disp = dir * currentSpeed * Time.fixedDeltaTime;
+
+            // Use movement-aware helper to avoid tunneling / respect headroom/etc.
+            ctx.MoveWithGroundCheck(disp);
 
             elapsed += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
@@ -107,11 +113,17 @@ public class EnemyImpact : MonoBehaviour
         Vector3 knockDir = hitDir.normalized;
         knockDir.y = 0f;
 
-        while (timer < knockDuration && ctx.CurrentState == Enemy.EnemyState.Knockback)
+        // Interpret 'power' as initial speed (m/s)
+        float initialSpeed = Mathf.Abs(power);
+        float dur = Mathf.Max(knockDuration, EPS);
+
+        while (timer < dur && ctx.CurrentState == Enemy.EnemyState.Knockback)
         {
-            float t = Mathf.Clamp01(timer / Mathf.Max(knockDuration, 0.0001f));
-            float currentSpeed = power * (1f - t);
-            ctx.transform.position += knockDir * currentSpeed * Time.fixedDeltaTime;
+            float t = Mathf.Clamp01(timer / dur);
+            float currentSpeed = initialSpeed * (1f - t); // linear decay (fast -> slow)
+            Vector3 disp = knockDir * currentSpeed * Time.fixedDeltaTime;
+
+            ctx.MoveWithGroundCheck(disp);
 
             timer += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
@@ -154,7 +166,7 @@ public class EnemyImpact : MonoBehaviour
         Vector3 dir = hitDir.normalized;
         dir.y = 0f;
 
-        // Hitstop
+        // Hitstop handling (freeze animation)
         float prevAnimSpeed = 1f;
         bool hitstopActive = hitstop > 0f;
         float hitstopEndTime = hitstopActive ? Time.time + hitstop : -1f;
@@ -164,11 +176,16 @@ public class EnemyImpact : MonoBehaviour
             ctx.animCtrl.Animator.speed = 0f;
         }
 
-        while (timer < duration && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
+        float dur = Mathf.Max(duration, EPS);
+        float initialSpeed = Mathf.Abs(power);
+
+        while (timer < dur && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
         {
-            float t = Mathf.Clamp01(timer / Mathf.Max(duration, 0.0001f));
-            float currentSpeed = power * (1f - t);
-            ctx.transform.position += dir * currentSpeed * Time.fixedDeltaTime;
+            float t = Mathf.Clamp01(timer / dur);
+            float currentSpeed = initialSpeed * (1f - t); // linear decay
+            Vector3 disp = dir * currentSpeed * Time.fixedDeltaTime;
+
+            ctx.MoveWithGroundCheck(disp);
 
             if (hitstopActive && Time.time >= hitstopEndTime)
             {

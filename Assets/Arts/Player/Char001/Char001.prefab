@@ -78,34 +78,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e4147dd3a22d56642a217ded0f27d36e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
   baseMoveSpeed: 10
   stopWhenNoInput: 1
   rotationSpeedDegPerSec: 720
   debugLogs: 0
-  headMask:
-    serializedVersion: 2
-    m_Bits: 8192
-  headPortion: 0.4
-  headMargin: 0.02
-  headClampIterations: 2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4096
-  floorMask:
-    serializedVersion: 2
-    m_Bits: 8192
-  movementBlockMask_fallback:
-    serializedVersion: 2
-    m_Bits: 0
-  collisionSkin: 0.03
-  floorThreshold: 0.75
-  slideIterations: 1
-  tinyDispThreshold: 0.002
-  maxStepHeight: 0.6
-  stepSearchIterations: 5
-  floorCheckDepth: 0.15
-  strictHeadroomBlock: 1
-  enableGizmos: 0
 --- !u!114 &7043935488017820867
 MonoBehaviour:
   m_ObjectHideFlags: 0

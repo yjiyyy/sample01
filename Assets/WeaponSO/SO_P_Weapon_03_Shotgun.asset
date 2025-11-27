@@ -37,8 +37,8 @@ MonoBehaviour:
   possibleSliceParts: 
   chargeSlot: {fileID: 0}
   recoilStartDelay: 0.15
-  recoilPower: 5
-  recoilDuration: 0.15
+  recoilPower: 3
+  recoilDuration: 0.2
   shotgunRadius: 60
   shotgunAngle: 60
   shotgunUseDistanceFalloff: 1

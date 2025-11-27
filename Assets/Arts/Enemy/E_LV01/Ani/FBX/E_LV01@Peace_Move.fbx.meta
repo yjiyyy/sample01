@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 68e15a1524915874da325f8c3f8ca01f
+guid: 0d1f67b400c3d70409bf844f62c25b7c
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -31,18 +31,18 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: Evade
-      takeName: char001@Evade
-      internalID: -5403035865221416279
+      name: Peace_Move
+      takeName: E_LV01@Peace_Move
+      internalID: 4332056910258243503
       firstFrame: 0
-      lastFrame: 24
+      lastFrame: 32
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
       cycleOffset: 0
       loop: 0
       hasAdditiveReferencePose: 0
-      loopTime: 0
+      loopTime: 1
       loopBlend: 0
       loopBlendOrientation: 1
       loopBlendPositionY: 1
@@ -109,7 +109,7 @@ ModelImporter:
   humanDescription:
     serializedVersion: 3
     human:
-    - boneName: Bip001 Pelvis
+    - boneName: Bip001
       humanName: Hips
       limit:
         min: {x: 0, y: 0, z: 0}
@@ -270,23 +270,23 @@ ModelImporter:
         length: 0
         modified: 0
     skeleton:
-    - name: char001(Clone)
+    - name: E_LV01(Clone)
       parentName: 
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0.0000015819433, z: 0, w: 1}
       scale: {x: 1, y: 1, z: 1}
-    - name: Body_02_blackTshirt
-      parentName: char001(Clone)
+    - name: Body_01_tanktop
+      parentName: E_LV01(Clone)
       position: {x: -0, y: 0, z: 0}
       rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071068}
       scale: {x: 2.54, y: 2.54, z: 2.54}
-    - name: head_28_cap_A
-      parentName: char001(Clone)
-      position: {x: -0.0000016816783, y: 1.2369127, z: 0.02810838}
+    - name: Z_head_02
+      parentName: E_LV01(Clone)
+      position: {x: -0.0000012941052, y: 1.2369127, z: 0.02810838}
       rotation: {x: -0.7071063, y: 0.00000050576125, z: 0.0000005057631, w: 0.70710725}
       scale: {x: 2.539999, y: 2.54, z: 2.54}
     - name: Root_dummy
-      parentName: char001(Clone)
+      parentName: E_LV01(Clone)
       position: {x: -0, y: 0, z: 0}
       rotation: {x: 0.00000008146034, y: 0, z: -0, w: 1}
       scale: {x: 1, y: 1, z: 1}
@@ -319,27 +319,22 @@ ModelImporter:
       parentName: Bip001 Neck
       position: {x: 0.043156434, y: 0.00005599022, z: -0.08314758}
       rotation: {x: 0.7071068, y: -0.000000030908623, z: 0.7071068, w: -0.000000030908623}
-      scale: {x: 1.0000004, y: 1.0000001, z: 1.0000001}
+      scale: {x: 1.0000006, y: 1.0000004, z: 1.0000004}
     - name: Bip001 R UpperArm
       parentName: Bip001 R Clavicle
       position: {x: -0.24628533, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 1}
-      scale: {x: 1.0000002, y: 1, z: 1.0000002}
+      scale: {x: 1.0000004, y: 1.0000002, z: 1.0000004}
     - name: Bip001 R Forearm
       parentName: Bip001 R UpperArm
       position: {x: -0.20366669, y: -0.000000009536743, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 1}
-      scale: {x: 1.0000001, y: 1.0000002, z: 0.9999998}
+      scale: {x: 1.0000004, y: 1.0000005, z: 1.0000001}
     - name: Bip001 R Hand
       parentName: Bip001 R Forearm
       position: {x: -0.13481967, y: 0, z: 0}
       rotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-      scale: {x: 1.0000001, y: 1.0000004, z: 0.9999999}
-    - name: R_Hand_Weapon
-      parentName: Bip001 R Hand
-      position: {x: -0.060478017, y: 0.029661408, z: 0.017214403}
-      rotation: {x: 0, y: 0, z: 0, w: 1}
-      scale: {x: 1, y: 1, z: 1}
+      scale: {x: 1, y: 1.0000001, z: 0.9999997}
     - name: Bip001 L Clavicle
       parentName: Bip001 Neck
       position: {x: 0.043156434, y: 0.00005553007, z: 0.08314758}
@@ -409,7 +404,7 @@ ModelImporter:
       parentName: Bip001 L Calf
       position: {x: -0.1970156, y: -0.0000000047683715, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 1}
-      scale: {x: 1.0000002, y: 1.0000001, z: 1.0000001}
+      scale: {x: 0.9999998, y: 0.99999994, z: 0.9999998}
     - name: Bip001 L Toe0
       parentName: Bip001 L Foot
       position: {x: -0.07807217, y: 0.2174809, z: 0}
@@ -432,7 +427,7 @@ ModelImporter:
     hasTranslationDoF: 1
     hasExtraRoot: 1
     skeletonHasParents: 1
-  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: b9a91ee47d9af7448bd32f17b8bf54b9, type: 3}
+  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: 6b65cd28f5af9aa43a80ca14e1316eff, type: 3}
   autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 3
   humanoidOversampling: 1

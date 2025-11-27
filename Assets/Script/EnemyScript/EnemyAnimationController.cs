@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿// 기존 파일에 PlayFind() 메서드 추가한 버전
+using UnityEngine;
 
 [RequireComponent(typeof(Animator))]
 public class EnemyAnimationController : MonoBehaviour
@@ -78,5 +79,15 @@ public class EnemyAnimationController : MonoBehaviour
             Animator.CrossFadeInFixedTime("Run", fadeDuration);
         else
             Animator.Play("Run", 0, 0f);
+    }
+
+    // ----------------- 추가된 메서드 -----------------
+    /// <summary>
+    /// Find 애니메이션을 재생하기 위한 트리거 호출.
+    /// - Animator에 trigger "Find"가 있어야 합니다.
+    /// </summary>
+    public void PlayFind()
+    {
+        Animator?.SetTrigger("Find");
     }
 }

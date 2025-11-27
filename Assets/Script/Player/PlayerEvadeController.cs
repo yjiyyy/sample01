@@ -1,4 +1,5 @@
-﻿using System;
+﻿// 수정: evade 중 gravity 일시중지 동작을 옵션화(evadeSuspendFalling).
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -25,6 +26,10 @@ public class PlayerEvadeController : MonoBehaviour
     [SerializeField] private float collisionSkin = 0.02f;
     [Tooltip("벽에 겹치거나 너무 붙어 있을 때 살짝 밀어낼 거리")]
     [SerializeField] private float smallPushDistance = 0.01f;
+
+    [Header("Evade 동작 옵션")]
+    [Tooltip("체크하면 회피 시작 시 중력을 일시적으로 끕니다(기존 동작). 기본적으로는 중력을 유지합니다(권장).")]
+    [SerializeField] private bool evadeSuspendFalling = false;
 
     // 분류 임계값(경사 바닥과 벽 구분)
     private const float floorThreshold = 0.75f;      // penDir.y 또는 hit.normal.y가 이 이상이면 바닥으로 간주
@@ -121,7 +126,9 @@ public class PlayerEvadeController : MonoBehaviour
     private IEnumerator FixedEvadeRoutine(Vector3 fixedDirection)
     {
         changeState?.Invoke(PlayerState.Evade);
-        if (movement != null) movement.SetSuspendFalling(true);
+        // 이전: if (movement != null) movement.SetSuspendFalling(true);
+        // 옵션에 따라 회피 중 중력 일시정지 여부 결정
+        if (evadeSuspendFalling && movement != null) movement.SetSuspendFalling(true);
 
         float elapsed = 0f;
         Vector3 dir = fixedDirection.normalized; dir.y = 0f;
@@ -177,7 +184,8 @@ public class PlayerEvadeController : MonoBehaviour
     private IEnumerator DynamicEvadeRoutine(Vector3 initialDirection)
     {
         changeState?.Invoke(PlayerState.Evade);
-        if (movement != null) movement.SetSuspendFalling(true);
+        // 이전: if (movement != null) movement.SetSuspendFalling(true);
+        if (evadeSuspendFalling && movement != null) movement.SetSuspendFalling(true);
 
         float elapsed = 0f;
         float dur = Mathf.Max(0f, data.evadeDuration);
