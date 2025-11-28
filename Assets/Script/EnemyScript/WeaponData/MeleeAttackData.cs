@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-[CreateAssetMenu(fileName = "MeleeAttack", menuName = "Enemy/Attack/MeleeAttackData")]
+[CreateAssetMenu(menuName = "Enemy/MeleeAttackData", fileName = "MeleeAttackData_SO")]
 public class MeleeAttackData : ScriptableObject
 {
     [Header("공격 기본 정보")]
@@ -18,25 +18,22 @@ public class MeleeAttackData : ScriptableObject
     public float attackTime = 0f;
 
     [Header("애니메이션 클립 (선택)")]
-    [Tooltip("여기에 지정하면 실제 클립 길이를 정확히 사용할 수 있습니다. 비워두면 Animator에서 attackName과 같은 이름의 클립을 탐색합니다.")]
     public AnimationClip clip;
 
-    [Header("넉백")]
-    public float knockbackPower = 5f;
-    public float knockbackDuration = 0.2f;
-    public float stunDuration = 0f;
-
-    [Header("히트박스")]
-    [Tooltip("공격 시작 후 히트박스를 생성하기까지의 지연 시간(초). 0이면 즉시 생성")]
+    [Header("히트박스 타이밍 및 지속")]
     public float hitboxSpawnDelay = 0f;
-    public float hitBoxLifetime = 0.1f;
+    public float hitBoxLifetime = 0.2f;
+
+    [Header("넉백 / 저크")]
+    public float knockbackPower = 4f;
+    public float knockbackDuration = 0.25f;
+    public float stunDuration = 0f;
 
     [Header("중복 데미지")]
     public bool allowDuplicateHit = false;
     public float duplicateHitInterval = 0.1f;
 
-    [Header("패턴 홀드 Override")]
-    public float holdOverride = -1f;
+    // 패턴 홀드 Override 필드 완전 삭제 (이제 defaultPatternHoldDuration 만 사용)
 
     private void OnValidate()
     {

@@ -1,10 +1,11 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
+using UnityEngine;
 
 /// <summary>
-/// 적 전용 체력 + 실드 + 슈퍼아머 연동
-/// - NavMeshAgent 비의존
-/// - Rush 중에는 AttackController.StopRushExternally(true)로 즉시 중단(쿨다운 부여 없음)
+/// EnemyHealth
+/// - Manages HP and optional shield.
+/// - Shield now entirely manages the "super-armor" state: HasSuperArmor == (currentShield > 0).
+/// - Exposes compatibility API used by HitBox and UI code (ApplyDamage, GetCurrentHP/GetMaxHP, UseShield()).
 /// </summary>
 [DisallowMultipleComponent]
 public class EnemyHealth : MonoBehaviour
@@ -16,6 +17,7 @@ public class EnemyHealth : MonoBehaviour
     [Header("실드 사용")]
     public bool useShield = false;
     public float maxShield = 150f;
+    private float currentShield = 0f;
 
     [Tooltip("실드 브레이크(그로기) 지속 시간")]
     public float shieldBreakDuration = 2f;
@@ -24,55 +26,50 @@ public class EnemyHealth : MonoBehaviour
     public float shieldRechargeDelay = 3f;
 
     [Header("디버그")]
-    public bool showShieldLogs = true;
+    public bool showShieldLogs = false;
 
-    private float currentShield;
-    private bool isShieldBreak = false;
-    private Coroutine shieldBreakRoutine;
-
+    // Cached refs
     private Enemy enemy;
     private Animator animator;
 
-    private readonly int hashIsShieldBreak = Animator.StringToHash("IsShieldBreak");
-    private readonly int hashShieldCharged = Animator.StringToHash("ShieldCharged");
+    // Animator parameter hashes (optional - existing project may use them)
+    private int hashShieldCharged;
 
-    void Awake()
+    // shield break state
+    private bool isShieldBreak = false;
+    private Coroutine shieldRechargeRoutine;
+
+    // Public read-only property to indicate super-armor state: shield > 0 => super-armor
+    public bool HasSuperArmor => useShield && currentShield > 0f;
+
+    private void Awake()
     {
         currentHP = maxHP;
         currentShield = useShield ? maxShield : 0f;
         enemy = GetComponent<Enemy>();
         animator = enemy != null ? enemy.animator : GetComponent<Animator>();
 
-        // 초기 실드가 있다면 슈퍼아머 부여
-        if (useShield && currentShield > 0f && enemy != null)
+        if (useShield && currentShield > 0f)
         {
-            enemy.AddSuperArmor(SuperArmorSource.Shield);
+            if (showShieldLogs) Debug.Log($"[EnemyHealth] Starting with shield ({currentShield}/{maxShield}) - super-armor active.");
         }
     }
 
-    private void OnDisable()
-    {
-        if (shieldBreakRoutine != null)
-        {
-            StopCoroutine(shieldBreakRoutine);
-            shieldBreakRoutine = null;
-        }
-    }
-
-    public bool IsShieldBreak() => isShieldBreak;
-
-    // -------------- 피해 처리 --------------
+    // -------------------------------------------------------
+    // Public compatibility API (used by existing HitBox/UI code)
+    // -------------------------------------------------------
     public void ApplyDamage(float amount) => ApplyDamage(amount, Vector3.zero, null, 1f);
     public void ApplyDamage(float amount, WeaponDataSO weapon) => ApplyDamage(amount, Vector3.zero, weapon, 1f);
     public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon) => ApplyDamage(amount, hitDir, weapon, 1f);
 
+    // Main damage entry point (preserves existing behavior: shield absorbs first, shieldBreak triggers, then HP)
     public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon, float impactScale)
     {
         if (amount <= 0f || currentHP <= 0f) return;
 
         float remaining = amount;
 
-        // 실드 흡수 (브레이크 중이 아닐 때만)
+        // Shield absorption (when not shield broken)
         if (useShield && currentShield > 0f && !isShieldBreak)
         {
             float absorb = Mathf.Min(currentShield, remaining);
@@ -89,130 +86,92 @@ public class EnemyHealth : MonoBehaviour
 
             if (remaining <= 0f)
             {
-                // HP에 피해 없음
+                // all absorbed by shield
                 return;
             }
         }
 
-        // 실드 없거나 남은 데미지 HP 적용
+        // Apply remaining damage to HP
         currentHP -= remaining;
         if (showShieldLogs)
             Debug.Log($"{gameObject.name} HP -{remaining:F1} → {currentHP:F1}/{maxHP:F1}");
 
         if (currentHP <= 0f)
         {
+            currentHP = 0f;
             Die(hitDir, weapon, impactScale);
         }
     }
 
-    // -------------- 실드 브레이크 --------------
+    // -------------- Shield / Shield-break logic --------------
     private void TriggerShieldBreak(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
     {
+        if (!useShield) return;
         if (isShieldBreak) return;
-        if (enemy != null && enemy.CurrentState == Enemy.EnemyState.Dead) return;
 
         isShieldBreak = true;
-        currentShield = 0f;
+        if (showShieldLogs) Debug.Log("[Shield] Break started. Super-armor disabled.");
 
-        // Rush 중단 & 쿨다운 미부여 (실패 처리)
-        if (enemy != null && enemy.attackCtrl != null && enemy.attackCtrl.IsRushing)
-        {
-            enemy.attackCtrl.StopRushExternally(noCooldown: true);
-        }
+        if (shieldRechargeRoutine != null) StopCoroutine(shieldRechargeRoutine);
+        shieldRechargeRoutine = StartCoroutine(ShieldRechargeCoroutine());
 
-        // Shield SuperArmor 제거
-        enemy?.RemoveSuperArmor(SuperArmorSource.Shield);
-
-        // 상태 전환
-        enemy?.SetState(Enemy.EnemyState.ShieldBreak, true);
-
-        // 애니메이션 강제 재생 (트랜지션 없이)
-        if (animator != null)
-        {
-            animator.Play("ShieldBreak", 0, 0f);
-            // 필요하면 hashIsShieldBreak 파라미터를 사용하는 방식으로도 확장 가능
-            // animator.SetBool(hashIsShieldBreak, true);
-        }
-
-        if (showShieldLogs)
-        {
-            Debug.Log($"[ShieldBreak] Enter (Groggy {shieldBreakDuration:F2}s, RechargeDelay {shieldRechargeDelay:F2}s)");
-        }
-
-        if (shieldBreakRoutine != null)
-        {
-            StopCoroutine(shieldBreakRoutine);
-        }
-        shieldBreakRoutine = StartCoroutine(ShieldBreakFlow());
+        // Optionally, you might want to also interrupt enemy actions on shield break:
+        // enemy?.SetState(Enemy.EnemyState.ShieldBreak, true);
     }
 
-    private void ExitShieldBreak()
+    private IEnumerator ShieldRechargeCoroutine()
     {
-        if (!isShieldBreak) return;
+        // Wait additional delay before full recharge
+        yield return new WaitForSeconds(shieldRechargeDelay);
+
+        // End shield break state
         isShieldBreak = false;
 
-        if (enemy != null && enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
-        {
-            enemy.SetState(Enemy.EnemyState.Chase);
-        }
-
-        if (showShieldLogs)
-        {
-            Debug.Log($"[ShieldBreak] Exit (→ Chase, wait recharge {shieldRechargeDelay:F2}s)");
-        }
-
-        // 필요하면 Animator 파라미터 리셋 추가 가능
-        // animator?.SetBool(hashIsShieldBreak, false);
-    }
-
-    private IEnumerator ShieldBreakFlow()
-    {
-        // 그로기
-        yield return new WaitForSeconds(shieldBreakDuration);
-
-        ExitShieldBreak();
-
-        // 재충전 지연
-        if (shieldRechargeDelay > 0f)
-            yield return new WaitForSeconds(shieldRechargeDelay);
-
-        FullyRechargeShield();
-        shieldBreakRoutine = null;
-    }
-
-    private void FullyRechargeShield()
-    {
-        if (!useShield) return;
+        // Fully recharge shield
         currentShield = maxShield;
-        enemy?.AddSuperArmor(SuperArmorSource.Shield);
 
-        if (animator != null)
-        {
-            animator.SetTrigger(hashShieldCharged);
-        }
+        if (showShieldLogs) Debug.Log("[Shield] Recharged after break. Super-armor re-enabled.");
 
-        if (showShieldLogs)
-            Debug.Log($"[ShieldCharged] Full ({currentShield}/{maxShield})");
+        shieldRechargeRoutine = null;
     }
 
-    // -------------- 사망 처리 --------------
+    // Public helper: reduce shield (e.g., external effects)
+    public void ReduceShield(float amount)
+    {
+        if (!useShield || isShieldBreak || amount <= 0f) return;
+
+        float prev = currentShield;
+        currentShield = Mathf.Max(0f, currentShield - amount);
+
+        if (showShieldLogs)
+            Debug.Log($"[Shield] Reduced {amount:F1} ({prev:F1} -> {currentShield:F1})");
+
+        if (currentShield <= 0f)
+        {
+            TriggerShieldBreak(Vector3.zero, null, 1f);
+        }
+    }
+
     private void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
-        if (showShieldLogs) Debug.Log($"{gameObject.name} 사망");
-        if (shieldBreakRoutine != null)
-        {
-            StopCoroutine(shieldBreakRoutine);
-            shieldBreakRoutine = null;
-        }
-        enemy?.Die(hitDir, weapon, impactScale);
+        if (enemy != null)
+            enemy.Die(hitDir, weapon, impactScale);
     }
 
-    // -------------- 유틸 / Getter --------------
-    public void SetHealth(float value) => currentHP = Mathf.Clamp(value, 0f, maxHP);
-    public float GetCurrentHP() => currentHP;
-    public float GetMaxHP() => maxHP;
-
+    // Optional helper: expose current shield value (read-only)
     public float GetCurrentShield() => currentShield;
     public float GetMaxShield() => maxShield;
+
+    // Compatibility methods expected by UI / other code
+    public float GetCurrentHP() => currentHP;
+    public float GetMaxHP() => maxHP;
     public bool UseShield() => useShield;
+
+    // Optional: force set shield (editor/test)
+    public void SetShield(float v)
+    {
+        if (!useShield) return;
+        currentShield = Mathf.Clamp(v, 0f, maxShield);
+        if (showShieldLogs) Debug.Log($"[Shield] Set to {currentShield}/{maxShield}");
+    }
 }

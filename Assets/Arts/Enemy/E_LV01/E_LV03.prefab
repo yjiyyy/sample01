@@ -79,7 +79,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 7399305759280598723}
-  agent: {fileID: 0}
   animCtrl: {fileID: 0}
   attackCtrl: {fileID: 0}
   ai: {fileID: 8923165420331746604}
@@ -87,7 +86,7 @@ MonoBehaviour:
   death: {fileID: 6950063031955005865}
   moveSpeed: 3
   debugMode: 0
-  superArmorMask: 0
+  movementSettings: {fileID: 0}
 --- !u!195 &3287521263448462925
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -237,6 +236,12 @@ MonoBehaviour:
   backstepDistance: 5
   backstepSpeedMultiplier: 1
   forwardSpeedNormalizeTime: 0.25
+  detectionRadius: 8
+  findDuration: 0.8
+  roamRadius: 3
+  peaceMoveSpeedMultiplier: 0.6
+  idleMin: 1
+  idleMax: 3
 --- !u!114 &4454959871274099026
 MonoBehaviour:
   m_ObjectHideFlags: 0

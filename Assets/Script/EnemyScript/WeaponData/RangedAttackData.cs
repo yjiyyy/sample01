@@ -80,6 +80,4 @@ public class RangedAttackData : ScriptableObject
     [Tooltip("Ω∫«… º”µµ(µµ/√ )")]
     public float spinSpeed = 360f;
 
-    [Header("∆–≈œ »¶µÂ Override")]
-    public float holdOverride = -1f;
 }

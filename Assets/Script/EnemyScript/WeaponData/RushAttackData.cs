@@ -37,7 +37,5 @@ public class RushAttackData : ScriptableObject
     public bool allowDuplicateHit = true;
     public float duplicateHitInterval = 0.1f;
 
-    [Header("패턴 홀드 Override")]
-    [Tooltip("0보다 크면 AttackController의 defaultPatternHoldDuration 대신 사용")]
-    public float holdOverride = -1f;
+   
 }

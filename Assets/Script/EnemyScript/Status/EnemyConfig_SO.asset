@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dc3491976d90564db1812b88ae1fd44, type: 3}
+  m_Name: EnemyConfig_SO
+  m_EditorClassIdentifier: 
+  displayName: LV01_SO
+  tagName: Enemy
+  layer:
+    serializedVersion: 2
+    m_Bits: 128
+  maxHealth: 150
+  useShield: 1
+  maxShield: 10
+  shieldBreakDuration: 2
+  shieldRechargeDelay: 3
+  shieldRechargeRate: 10
+  baseMoveSpeed: 10
+  movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
+  detectionRadius: 5
+  findDuration: 0.8
+  backstepDistance: 5
+  backstepSpeedMultiplier: 1
+  forwardSpeedNormalizeTime: 0.25
+  roamRadius: 3
+  peaceMoveSpeedMultiplier: 0.5
+  idleMin: 1
+  idleMax: 3
+  attackPatterns:
+  - {fileID: 11400000, guid: 4b203a2b38263dd4294224c2d5d56871, type: 2}
+  globalPatternCooldown: 0
+  defaultPatternHoldDuration: 1
+  enablePerPatternHoldOverride: 0
+  ragdollMass: 1
+  ragdollImpulse: 5
+  ragdollUpwardImpulse: 3
+  ragdollTorque: 6
+  overrideController: {fileID: 0}
+  editorAutoApplyDefault: 1

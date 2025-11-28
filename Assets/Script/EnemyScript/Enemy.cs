@@ -1,12 +1,13 @@
-﻿// Enemy.cs - 전체 파일 (수정됨: MovePhysicsDisplacement / MoveFilteredDisplacement 포함)
-//
-// 주의: 이 파일은 PlayerMovement의 해당 함수들과 동일한 로직을 재사용하도록 구성되어 있습니다.
-// Unity6(6000.0.42f1) 환경, FixedUpdate 기반이며 MovementSettings를 사용합니다.
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Enemy (MovementSettings-required)
+/// - MovementSettings SO is the source of truth for movement/headroom/obstacle masks.
+/// - Super-armor/state related to shield is now handled by EnemyHealth (currentShield > 0f).
+/// - If movementSettings is not assigned, this component will be disabled in Awake() and an error logged.
+/// </summary>
 [RequireComponent(typeof(EnemyAnimationController))]
 [RequireComponent(typeof(EnemyAttackController))]
 [RequireComponent(typeof(EnemyAI))]
@@ -33,16 +34,11 @@ public class Enemy : MonoBehaviour
     public float moveSpeed = 3.5f;
     public bool debugMode = true;
 
-    [Header("Optional shared settings")]
+    [Header("Optional shared settings (REQUIRED)")]
     [Tooltip("MovementSettings asset (REQUIRED). If not assigned this component will be disabled.")]
     [SerializeField] private MovementSettings movementSettings;
 
     private Transform player;
-
-    [SerializeField, Tooltip("Super armor flags")]
-    private SuperArmorSource superArmorMask = SuperArmorSource.None;
-    public bool HasSuperArmor => superArmorMask != SuperArmorSource.None;
-    public bool HasSuperArmorSource(SuperArmorSource src) => (superArmorMask & src) != 0;
 
     // movement requests (from AI)
     private Vector3 desiredMoveDir = Vector3.zero;
@@ -55,35 +51,12 @@ public class Enemy : MonoBehaviour
     private const float ROT_SPEED_DEG_PER_SEC = 720f;
     private const float EPS = 0.0001f;
 
-    // Headroom/local masks - inspector assignment but MovementSettings is source of truth
-    [Header("Headroom overrides (not used when MovementSettings assigned)")]
-    [SerializeField] private LayerMask blockingMask;
-    [SerializeField] private LayerMask headBlockMask;
-
     private Rigidbody rb;
     private CapsuleCollider capsule;
 
-    // reuse buffers (initialized based on movementSettings)
+    // reuse buffers
     private Collider[] overlapBuffer;
     private HashSet<int> selfColliderIds;
-
-    // -------------- Impact / ground-correction settings --------------
-    [Header("Impact / Ground correction")]
-    [Tooltip("한 프레임에 허용되는 최대 상승량 (m). 계단/경사를 부드럽게 오르기 위한 제한.")]
-    public float impactMaxStepUp = 0.5f;
-    [Tooltip("지면 검출용 Raycast 높이 (m)")]
-    public float impactRaycastHeight = 1.0f;
-    [Tooltip("지면 레이어 마스크(0이면 MovementSettings.floorMask 사용, 그래도 0이면 전체)")]
-    public LayerMask impactGroundLayers = 0;
-    [Tooltip("한 프레임에 허용되는 최대 하강량 (m). 음수값이면 하강 제한 없음(권장: 2.0)")]
-    public float impactMaxDropLimit = 2.0f;
-    [Tooltip("디버그 기즈모 표시")]
-    public bool impactDebugGizmos = false;
-
-    // debug helpers
-    private Vector3 lastImpactCandidate = Vector3.zero;
-    private Vector3 lastImpactHitPoint = Vector3.zero;
-    private bool lastImpactHadHit = false;
 
     private void Awake()
     {
@@ -111,21 +84,9 @@ public class Enemy : MonoBehaviour
         // MovementSettings required
         if (movementSettings == null)
         {
-            Debug.LogError($"[{nameof(Enemy)}] MovementSettings not assigned on GameObject '{gameObject.name}'. Disabling component. Assign a MovementSettings asset to enable movement.");
+            Debug.LogError($"[{nameof(Enemy)}] MovementSettings not assigned on GameObject '{gameObject.name}'. Disabling Enemy component. Assign a MovementSettings asset to enable movement.");
             this.enabled = false;
             return;
-        }
-
-        // default masks if inspector provided them (but MovementSettings is source of truth)
-        if (blockingMask == 0)
-        {
-            int g = LayerMask.NameToLayer("Ground");
-            if (g >= 0) blockingMask = 1 << g;
-        }
-        if (headBlockMask == 0)
-        {
-            int g = LayerMask.NameToLayer("Ground");
-            if (g >= 0) headBlockMask = 1 << g;
         }
 
         // init overlap buffer & self collider ids using MovementSettings
@@ -136,9 +97,6 @@ public class Enemy : MonoBehaviour
         for (int i = 0; i < cols.Length; ++i)
             if (cols[i] != null) selfColliderIds.Add(cols[i].GetInstanceID());
     }
-
-    private LayerMask GetBlockingMask() => movementSettings != null ? movementSettings.obstacleMask : blockingMask;
-    private LayerMask GetHeadBlockMask() => movementSettings != null ? movementSettings.headMask : headBlockMask;
 
 #if UNITY_EDITOR
     private void OnValidate()
@@ -184,21 +142,21 @@ public class Enemy : MonoBehaviour
                         capsule,
                         rb.position,
                         disp,
-                        GetBlockingMask(),
+                        movementSettings.obstacleMask,
                         Mathf.Max(1, movementSettings.overlapIterations),
                         movementSettings.minFactorThreshold,
                         movementSettings.tinyDispThreshold
                     );
                 }
 
-                // 2) Headroom clamp: use MovementSettings head values
+                // 2) Headroom clamp: rely on MovementSettings head values
                 if (capsule != null && movementSettings.headClampIterations > 0 && movementSettings.headPortion > 0f)
                 {
                     disp = StepChecker.ClampHeadroomHorizontal(
                         capsule,
                         rb.position,
                         disp,
-                        GetHeadBlockMask(),
+                        movementSettings.headMask,
                         Mathf.Max(1, movementSettings.headClampIterations),
                         movementSettings.headPortion,
                         movementSettings.headMargin,
@@ -263,7 +221,6 @@ public class Enemy : MonoBehaviour
                 break;
             case EnemyState.Dead:
                 ai?.ForceClearBackstep();
-                ClearAllSuperArmor();
                 animCtrl?.SetSignedSpeed(0f);
                 break;
         }
@@ -272,7 +229,12 @@ public class Enemy : MonoBehaviour
     public void ApplyKnockback(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (CurrentState == EnemyState.Dead) return;
-        bool allowInterrupt = !HasSuperArmor && CurrentState != EnemyState.ShieldBreak;
+
+        // Determine super-armor from EnemyHealth (shield presence), not from Enemy itself
+        var health = GetComponent<EnemyHealth>();
+        bool hasSuperArmor = health != null && health.HasSuperArmor;
+
+        bool allowInterrupt = !hasSuperArmor && CurrentState != EnemyState.ShieldBreak;
         if (allowInterrupt)
         {
             attackCtrl?.InterruptCooldown();
@@ -312,31 +274,13 @@ public class Enemy : MonoBehaviour
         hasLookRequest = true;
     }
 
-    public void AddSuperArmor(SuperArmorSource src)
-    {
-        if (src == SuperArmorSource.None) return;
-        superArmorMask |= src;
-        if (debugMode) Debug.Log($"[Enemy] AddSuperArmor: {src} => {superArmorMask}");
-    }
+    public void AddSuperArmor(SuperArmorSource src) { /* no-op: kept for compatibility, should be removed in future refactor */ }
 
-    public void RemoveSuperArmor(SuperArmorSource src)
-    {
-        if (src == SuperArmorSource.None) return;
-        superArmorMask &= ~src;
-        if (debugMode) Debug.Log($"[Enemy] RemoveSuperArmor: {src} => {superArmorMask}");
-    }
+    public void RemoveSuperArmor(SuperArmorSource src) { /* no-op: kept for compatibility, should be removed in future refactor */ }
 
-    public void ClearAllSuperArmor()
-    {
-        superArmorMask = SuperArmorSource.None;
-        if (debugMode) Debug.Log("[Enemy] ClearAllSuperArmor");
-    }
+    public void ClearAllSuperArmor() { /* no-op: kept for compatibility, should be removed in future refactor */ }
 
     // ------------------- Movement helpers (PlayerMovement-parity) -------------------
-    // These largely mirror PlayerMovement.MovePhysicsDisplacement & MoveFilteredDisplacement
-    // so Enemy movement/impact uses the same collision/step/headroom semantics as Player.
-
-    // Apply final position via rb.MovePosition
     private void MoveCapsuleDirect(Vector3 newPosition)
     {
         if (rb != null)
@@ -345,11 +289,8 @@ public class Enemy : MonoBehaviour
             transform.position = newPosition;
     }
 
-    // Simpler physics displacement path (uses movementSettings parameters).
     public void MovePhysicsDisplacement(Vector3 disp)
     {
-        // mirrored from PlayerMovement.MovePhysicsDisplacement
-        // preserves lastAttempt variables in PlayerMovement for gizmos; here we skip those debug fields.
         if (rb == null || disp.sqrMagnitude <= EPS) return;
 
         var ms = movementSettings;
@@ -363,7 +304,6 @@ public class Enemy : MonoBehaviour
 
         float collisionSkin = ms.collisionSkin;
         float floorThreshold = ms.floorThreshold;
-        int slideIterations = Mathf.Clamp(ms.slideIterations, 0, 4);
         float tinyDispThreshold = ms.tinyDispThreshold;
 
         float maxStepHeight = ms.maxStepHeight;
@@ -404,7 +344,6 @@ public class Enemy : MonoBehaviour
 
             if (!currentHeadOverlap && targetHeadOverlap)
             {
-                // blocked by headroom -> abort movement
                 if (debugMode) Debug.Log("[EnemyMovement] Movement blocked by strict headroom (target head overlap).");
                 return;
             }
@@ -455,7 +394,6 @@ public class Enemy : MonoBehaviour
                     ms.pushableMassMultiplier
                 );
 
-                // all external pushable -> evaluate crowd
                 if (summary.externalCount > 0 && !summary.anyUnpushable)
                 {
                     bool crowdBlocks = false;
@@ -469,7 +407,6 @@ public class Enemy : MonoBehaviour
                     }
                     else
                     {
-                        // allow movement and optionally push impulse to overlapped bodies
                         MoveCapsuleDirect(rb.position + disp);
 
                         if (ms.pushImpulseFactor > 0f)
@@ -481,7 +418,6 @@ public class Enemy : MonoBehaviour
                     }
                 }
 
-                // some external and at least one unpushable -> try step then block
                 bool foundAnyExternal = summary.externalCount > 0;
                 if (foundAnyExternal)
                 {
@@ -513,7 +449,7 @@ public class Enemy : MonoBehaviour
                             {
                                 Vector3 steppedCenter = capsule.transform.TransformPoint(capsule.center) + (steppedOrigin - capsule.transform.position);
                                 Vector3 steppedBottom = steppedCenter - up * halfLine;
-                                if (Physics.Raycast(steppedBottom + up * 0.01f, Vector3.down, out RaycastHit floorHit, floorCheckDepth + 0.01f, ms.floorMask, QueryTriggerInteraction.Ignore))
+                                if (Physics.Raycast(steppedBottom + up * 0.01f, Vector3.down, out RaycastHit floorHit, ms.floorCheckDepth + 0.01f, ms.floorMask, QueryTriggerInteraction.Ignore))
                                 {
                                     if (floorHit.normal.y >= ms.floorThreshold)
                                     {
@@ -535,12 +471,10 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        // final apply
         if (disp.sqrMagnitude <= EPS) return;
         MoveCapsuleDirect(rb.position + disp);
     }
 
-    // Slide + capsulecast movement - mirrors PlayerMovement.MoveFilteredDisplacement
     public void MoveFilteredDisplacement(Vector3 disp)
     {
         if (rb == null || disp.sqrMagnitude <= EPS)
@@ -550,10 +484,7 @@ public class Enemy : MonoBehaviour
         }
 
         var ms = movementSettings;
-        LayerMask obsMask = ms.obstacleMask;
         float tinyDispThreshold = ms.tinyDispThreshold;
-        float collisionSkin = ms.collisionSkin;
-        float floorThreshold = ms.floorThreshold;
 
         if (disp.sqrMagnitude <= tinyDispThreshold * tinyDispThreshold)
         {
@@ -596,8 +527,8 @@ public class Enemy : MonoBehaviour
                 radius,
                 dir,
                 out hit,
-                dist + collisionSkin,
-                obsMask,
+                dist + ms.collisionSkin,
+                ms.obstacleMask,
                 QueryTriggerInteraction.Ignore);
 
             if (!h)
@@ -607,16 +538,14 @@ public class Enemy : MonoBehaviour
                 break;
             }
 
-            // treat gentle slope as floor
-            if (hit.normal.y >= floorThreshold)
+            if (hit.normal.y >= ms.floorThreshold)
             {
                 totalMove += remaining;
                 remaining = Vector3.zero;
                 break;
             }
 
-            // attempt step near hit point
-            if (hit.normal.y < floorThreshold)
+            if (hit.normal.y < ms.floorThreshold)
             {
                 Vector3 probeOrigin = hit.point - dir * 0.02f + Vector3.up * 0.02f;
                 float probeDist = Mathf.Max(ms.minStepProbeDistance, 0.02f);
@@ -630,7 +559,7 @@ public class Enemy : MonoBehaviour
                     Mathf.Max(1, ms.stepSearchIterations),
                     overlapBuffer,
                     selfColliderIds,
-                    obsMask,
+                    ms.obstacleMask,
                     ms.headMask,
                     out bool canStep);
 
@@ -644,7 +573,7 @@ public class Enemy : MonoBehaviour
                         Mathf.Max(1, ms.stepSearchIterations),
                         overlapBuffer,
                         selfColliderIds,
-                        obsMask,
+                        ms.obstacleMask,
                         ms.headMask,
                         out canStep);
                 }
@@ -653,7 +582,7 @@ public class Enemy : MonoBehaviour
                 {
                     Vector3 targetOrigin = rb.position + disp;
                     Vector3 steppedOrigin = targetOrigin + Vector3.up * foundStep;
-                    if (!StepChecker.WouldCapsuleOverlap(capsule, steppedOrigin, obsMask, overlapBuffer, selfColliderIds))
+                    if (!StepChecker.WouldCapsuleOverlap(capsule, steppedOrigin, ms.obstacleMask, overlapBuffer, selfColliderIds))
                     {
                         if (ms.floorMask != 0)
                         {
@@ -672,8 +601,7 @@ public class Enemy : MonoBehaviour
                 }
             }
 
-            // slide logic
-            float allowed = Mathf.Max(hit.distance - collisionSkin, 0f);
+            float allowed = Mathf.Max(hit.distance - ms.collisionSkin, 0f);
             Vector3 allowedPart = dir * allowed;
             totalMove += allowedPart;
 
@@ -697,73 +625,5 @@ public class Enemy : MonoBehaviour
         }
 
         if (totalMove.sqrMagnitude > EPS) MovePhysicsDisplacement(totalMove);
-    }
-
-    /// <summary>
-    /// Unified helper used by EnemyImpact: decide whether to use filtered path or simple physics path.
-    /// This ensures headroom/step/slide logic is applied for large displacements.
-    /// </summary>
-    public void MoveWithGroundCheck(Vector3 disp, float maxStepUp = -1f, float raycastHeight = -1f)
-    {
-        if (disp.sqrMagnitude <= EPS) return;
-
-        // Prefer using MoveFilteredDisplacement for larger displacements (so capsule cast + slide + step works)
-        var ms = movementSettings;
-        float tiny = (ms != null) ? ms.tinyDispThreshold : 0.01f;
-        if (disp.sqrMagnitude <= tiny * tiny)
-        {
-            MovePhysicsDisplacement(disp);
-            return;
-        }
-
-        // If capsule or movementSettings missing, fallback to simple projection.
-        if (rb == null || capsule == null || movementSettings == null)
-        {
-            // fallback with basic ground-projection + clamp like earlier implementation
-            float stepUp = (maxStepUp > 0f) ? maxStepUp : Mathf.Max(0f, impactMaxStepUp);
-            float rcHeight = (raycastHeight > 0f) ? raycastHeight : Mathf.Max(0.01f, impactRaycastHeight);
-
-            LayerMask layers = impactGroundLayers;
-            if (layers == 0 && movementSettings != null) layers = movementSettings.floorMask;
-            if (layers == 0) layers = ~0;
-
-            Vector3 currentPos = rb != null ? rb.position : transform.position;
-            Vector3 candidate = currentPos + disp;
-
-            Vector3 castOrigin = candidate + Vector3.up * rcHeight;
-            if (Physics.Raycast(castOrigin, Vector3.down, out RaycastHit hit, rcHeight * 2f, layers, QueryTriggerInteraction.Ignore))
-            {
-                float targetY = hit.point.y;
-                float deltaY = targetY - currentPos.y;
-                if (deltaY > stepUp) targetY = currentPos.y + stepUp;
-                if (deltaY < -impactMaxDropLimit) targetY = currentPos.y - impactMaxDropLimit;
-                candidate.y = targetY;
-            }
-            else
-            {
-                candidate.y = currentPos.y + disp.y;
-            }
-
-            MoveCapsuleDirect(candidate);
-            return;
-        }
-
-        // Use filtered displacement pipeline (same semantics as PlayerMovement)
-        MoveFilteredDisplacement(disp);
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        if (!impactDebugGizmos) return;
-
-        Gizmos.color = lastImpactHadHit ? Color.green : Color.red;
-        Gizmos.DrawSphere(lastImpactCandidate, 0.05f);
-
-        if (lastImpactHadHit)
-        {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawSphere(lastImpactHitPoint, 0.06f);
-            Gizmos.DrawLine(lastImpactCandidate + Vector3.up * 0.2f, lastImpactHitPoint + Vector3.up * 0.2f);
-        }
     }
 }

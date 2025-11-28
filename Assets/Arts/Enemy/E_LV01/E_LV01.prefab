@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: 4454959871274099026}
   - component: {fileID: 6950063031955005865}
   - component: {fileID: 7856093987966683212}
+  - component: {fileID: -4056504230904401563}
   m_Layer: 7
   m_Name: E_LV01
   m_TagString: Enemy
@@ -83,16 +84,9 @@ MonoBehaviour:
   ai: {fileID: 8923165420331746604}
   impact: {fileID: 4454959871274099026}
   death: {fileID: 6950063031955005865}
-  moveSpeed: 5
+  moveSpeed: 0
   debugMode: 0
   movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
-  superArmorMask: 0
-  blockingMask:
-    serializedVersion: 2
-    m_Bits: 4096
-  headBlockMask:
-    serializedVersion: 2
-    m_Bits: 8192
 --- !u!114 &631336349894415364
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -148,7 +142,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4b203a2b38263dd4294224c2d5d56871, type: 2}
   "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0
   defaultPatternHoldDuration: 1
-  enablePerPatternHoldOverride: 0
   debugDecisionLogs: 1
 --- !u!114 &-6019980081282909286
 MonoBehaviour:
@@ -177,9 +170,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90f57cf5d1527454180d348f1dd64aad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHP: 110
-  useShield: 0
-  maxShield: 150
+  maxHP: 150
+  useShield: 1
+  maxShield: 10
   shieldBreakDuration: 2
   shieldRechargeDelay: 3
   showShieldLogs: 1
@@ -197,12 +190,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   backstepDistance: 5
   backstepSpeedMultiplier: 1
-  forwardSpeedNormalizeTime: 0.894
-  detectionRadius: 8
+  forwardSpeedNormalizeTime: 0.25
+  detectionRadius: 5
   findDuration: 0.8
   roamRadius: 3
-  peaceMoveSpeedMultiplier: 0.2
-  idleMin: 0.5
+  peaceMoveSpeedMultiplier: 0.5
+  idleMin: 1
   idleMax: 3
 --- !u!114 &4454959871274099026
 MonoBehaviour:
@@ -228,7 +221,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0961030aa6fe41047b0a2eb7368be31d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  weight: 3
+  weight: 1
 --- !u!136 &7856093987966683212
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -252,6 +245,22 @@ CapsuleCollider:
   m_Height: 1.5
   m_Direction: 1
   m_Center: {x: 0, y: 0.75, z: 0}
+--- !u!114 &-4056504230904401563
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4758100800114042528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aaa64412d32813b4387ecfcd229cf98b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  config: {fileID: 11400000, guid: 71512268fe4cd9841b8e8abe17aa1a38, type: 2}
+  autoSync: 1
+  targetEnemy: {fileID: 6477108829187293228, guid: 61efb80f574c188449dc777729297d44, type: 3}
+  extraTargets: []
 --- !u!1001 &8862513175375928873
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -36,9 +36,8 @@ MonoBehaviour:
   destroyOnObstacle: 1
   obstacleLayers:
     serializedVersion: 2
-    m_Bits: 1024
+    m_Bits: 29760
   faceToMovement: 0
   spinWhileFlying: 1
   spinAxis: {x: 360, y: 90, z: 0}
   spinSpeed: 360
-  holdOverride: -1

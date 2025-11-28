@@ -22,12 +22,15 @@ public class EnemyImpact : MonoBehaviour
             impactRoutine = null;
         }
 
-        // Interpret weapon.knockbackPower as initial speed (m/s) and knockbackDuration as duration
         float knockbackPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
         float knockbackDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
         float stunDuration = weapon != null ? weapon.stunDuration * impactScale : 0f;
 
-        if (ctx.HasSuperArmor)
+        // Super-armor check: delegated to EnemyHealth (shield-based)
+        var health = ctx.GetComponent<EnemyHealth>();
+        bool hasSuperArmor = health != null && health.HasSuperArmor;
+
+        if (hasSuperArmor)
         {
             float softDuration = SOFT_KNOCK_DURATION * Mathf.Max(impactScale, 0f);
             impactRoutine = StartCoroutine(SoftKnockRoutine(ctx, hitDir, knockbackPower, softDuration));
@@ -48,7 +51,6 @@ public class EnemyImpact : MonoBehaviour
             pushRoutine = null;
         }
 
-        // Interpret push as initial speed (m/s)
         float pushPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
         float pushDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
         float hitstop = weapon != null ? weapon.hitstopTime : 0f;
@@ -58,7 +60,7 @@ public class EnemyImpact : MonoBehaviour
 
     private void FaceHit(Enemy ctx, Vector3 hitDir)
     {
-        if (ctx == null || ctx.CurrentState == Enemy.EnemyState.Dead || ctx.HasSuperArmor) return;
+        if (ctx == null || ctx.CurrentState == Enemy.EnemyState.Dead) return;
 
         Vector3 look = -hitDir;
         look.y = 0f;
@@ -92,8 +94,8 @@ public class EnemyImpact : MonoBehaviour
             float currentSpeed = initialSpeed * (1f - t);
             Vector3 disp = dir * currentSpeed * Time.fixedDeltaTime;
 
-            // Use movement-aware helper to avoid tunneling / respect headroom/etc.
-            ctx.MoveWithGroundCheck(disp);
+            // Use movement-aware helper on Enemy: use MoveFilteredDisplacement for consistent checks
+            ctx.MoveFilteredDisplacement(disp);
 
             elapsed += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
@@ -123,7 +125,7 @@ public class EnemyImpact : MonoBehaviour
             float currentSpeed = initialSpeed * (1f - t); // linear decay (fast -> slow)
             Vector3 disp = knockDir * currentSpeed * Time.fixedDeltaTime;
 
-            ctx.MoveWithGroundCheck(disp);
+            ctx.MoveFilteredDisplacement(disp);
 
             timer += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
@@ -185,7 +187,7 @@ public class EnemyImpact : MonoBehaviour
             float currentSpeed = initialSpeed * (1f - t); // linear decay
             Vector3 disp = dir * currentSpeed * Time.fixedDeltaTime;
 
-            ctx.MoveWithGroundCheck(disp);
+            ctx.MoveFilteredDisplacement(disp);
 
             if (hitstopActive && Time.time >= hitstopEndTime)
             {

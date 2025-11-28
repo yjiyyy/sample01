@@ -57,7 +57,7 @@ public class EnemyAttackController : MonoBehaviour
 
     [Header("패턴 홀드")]
     public float defaultPatternHoldDuration = 1.0f;
-    public bool enablePerPatternHoldOverride = true;
+    // Per-pattern override removed — all patterns use defaultPatternHoldDuration
 
     private bool holdActive = false;
     private float holdExpireTime;
@@ -309,24 +309,10 @@ public class EnemyAttackController : MonoBehaviour
         holdActive = true;
         pendingExecuted = false;
 
-        float hold = ComputeHoldDuration(index);
+        // Always use defaultPatternHoldDuration (per-pattern override removed)
+        float hold = defaultPatternHoldDuration;
         holdExpireTime = Time.time + hold;
         Log($"[AttackFlow] SELECT idx={index} hold={hold:F2}s");
-    }
-
-    private float ComputeHoldDuration(int index)
-    {
-        if (!enablePerPatternHoldOverride) return defaultPatternHoldDuration;
-        if (attackPatterns == null || index < 0 || index >= attackPatterns.Length) return defaultPatternHoldDuration;
-
-        var so = attackPatterns[index];
-        var f = so.GetType().GetField("holdOverride");
-        if (f != null && f.FieldType == typeof(float))
-        {
-            float ov = (float)f.GetValue(so);
-            if (ov > 0f) return ov;
-        }
-        return defaultPatternHoldDuration;
     }
 
     private void MarkExecuted()
@@ -881,25 +867,6 @@ public class EnemyAttackController : MonoBehaviour
             rangedRoutine = null;
         }
     }
-
-    private void FaceTarget(Transform t)
-    {
-        if (t == null) return;
-        Vector3 dir = t.position - transform.position;
-        dir.y = 0f;
-        if (dir.sqrMagnitude > 0.0001f)
-            transform.rotation = Quaternion.LookRotation(dir.normalized);
-    }
-
-    private Transform FindChildRecursive(Transform root, string name)
-    {
-        if (root == null || string.IsNullOrEmpty(name)) return null;
-        foreach (var t in root.GetComponentsInChildren<Transform>(true))
-        {
-            if (t.name == name) return t;
-        }
-        return null;
-    }
     #endregion
 
     #region 쿨타임 & 인터럽트
@@ -981,6 +948,28 @@ public class EnemyAttackController : MonoBehaviour
         return enemy != null &&
                (enemy.CurrentState == Enemy.EnemyState.Stunned ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak);
+    }
+
+    // FaceTarget: 안전하게 대상 바라보기 (수평만)
+    private void FaceTarget(Transform t)
+    {
+        if (t == null) return;
+        Vector3 dir = t.position - transform.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.0001f) return;
+        transform.rotation = Quaternion.LookRotation(dir.normalized);
+    }
+
+    // FindChildRecursive: 이름으로 하위 Transform 검색 (활용: firePointName)
+    private Transform FindChildRecursive(Transform root, string name)
+    {
+        if (root == null || string.IsNullOrEmpty(name)) return null;
+        foreach (var tr in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (tr == null) continue;
+            if (tr.name == name) return tr;
+        }
+        return null;
     }
 
     private bool HasParam(string p)
