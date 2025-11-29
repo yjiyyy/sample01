@@ -826,10 +826,10 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 2
     m_Resolution: 3
     m_CustomResolution: -1
-    m_Strength: 1
+    m_Strength: 0.2
     m_Bias: 0.123
     m_NormalBias: 0
     m_NearPlane: 0.1
@@ -882,13 +882,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 190857408}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
+  m_LocalRotation: {x: 0.46193978, y: 0.33141357, z: -0.19134171, w: 0.8001032}
   m_LocalPosition: {x: 10.91, y: 25.99, z: -18.89}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+  m_LocalEulerAnglesHint: {x: 60, y: 45, z: 0}
 --- !u!114 &190857411
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -911,7 +911,7 @@ MonoBehaviour:
   m_ShadowRenderingLayers: 1
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
-  m_SoftShadowQuality: 0
+  m_SoftShadowQuality: 1
 --- !u!1001 &199788624
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4919,7 +4919,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c8ca97f2e8fc144c95840b4bc2c43f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 1981492291339588791, guid: 177890585e2564349aaaff5915da8e41, type: 3}
+  playerPrefab: {fileID: 1981492291339588791, guid: 216c6d4d726fa5e47acddd85ac41f066, type: 3}
   followCamera: {fileID: 1661507712}
 --- !u!1 &1914551070
 GameObject:
@@ -5136,7 +5136,7 @@ MonoBehaviour:
   spawnPoints:
   - {fileID: 1171404612}
   enemyPrefabsByLevel:
-  - {fileID: 4758100800114042528, guid: ab4ebce5cf2e84c40b7a4a65a7744c78, type: 3}
+  - {fileID: 4758100800114042528, guid: 1e6955f1566fb3e44b479a2adbb9af48, type: 3}
   hpuiPrefab: {fileID: 5425390646291263780, guid: c221514702d57b44bac940471d983478, type: 3}
   spawnInterval: 50
   jitterRadius: 0.5

@@ -21,8 +21,10 @@ GameObject:
   - component: {fileID: -3391735028938872280}
   - component: {fileID: -4674434038375394502}
   - component: {fileID: 4257991530131573243}
+  - component: {fileID: 4334977632541756716}
+  - component: {fileID: 5963420850293031168}
   m_Layer: 6
-  m_Name: Char001
+  m_Name: Char001_SO
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -157,11 +159,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f293c8830d1707e4c9ea95213b4bde86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  weaponSocket: {fileID: 7245750648237609498}
   animationController: {fileID: 7043935488017820867}
   enemyDetector: {fileID: -4674434038375394502}
-  defaultWeaponPrefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
-  evadeData: {fileID: 11400000, guid: eb54fb9932698344bb40ac36fb164e65, type: 2}
   debugMode: 0
   enableChargeMessages: 0
 --- !u!33 &-1541331493322818118
@@ -244,13 +243,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3843984e48da68946a7e53e281970d85, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHP: 100
+  maxHP: 1
   weight: 1
-  level: 1
-  experience: 0
-  expToNextLevel: 100
-  maxHPBonus: 0
-  weightBonus: 0
 --- !u!114 &-4674434038375394502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -269,10 +263,6 @@ MonoBehaviour:
   height: 0.8
   weaponBehavior: {fileID: 0}
   usePhysicsScan: 1
-  enemyLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  sortByCenterBias: 1
 --- !u!136 &4257991530131573243
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -296,6 +286,42 @@ CapsuleCollider:
   m_Height: 1.6
   m_Direction: 1
   m_Center: {x: 0, y: 0.8, z: 0}
+--- !u!114 &4334977632541756716
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981492291339588791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 012edd4d1854a5d45b8b3d58911d11d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  config: {fileID: 11400000, guid: 15f4f3285d266a843852f3203221d34a, type: 2}
+  autoSync: 1
+  targetPlayer: {fileID: 0}
+  extraTargets: []
+--- !u!114 &5963420850293031168
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981492291339588791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e509e4d6259d96748881e1385e0543af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 1
+  currentHealth: 1
+  massMultiplier: 1
+  baseMoveSpeed: 10
+  rotationSpeedDegPerSec: 1080
+  level: 1
+  experience: 0
+  expToNextLevel: 100
 --- !u!1001 &1539374675181935779
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -485,10 +511,5 @@ PrefabInstance:
 --- !u!4 &1357356317409213256 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b9a91ee47d9af7448bd32f17b8bf54b9, type: 3}
-  m_PrefabInstance: {fileID: 1539374675181935779}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &7245750648237609498 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -1021500387163517255, guid: b9a91ee47d9af7448bd32f17b8bf54b9, type: 3}
   m_PrefabInstance: {fileID: 1539374675181935779}
   m_PrefabAsset: {fileID: 0}

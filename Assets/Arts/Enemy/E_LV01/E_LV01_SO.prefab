@@ -84,7 +84,7 @@ MonoBehaviour:
   ai: {fileID: 8923165420331746604}
   impact: {fileID: 4454959871274099026}
   death: {fileID: 6950063031955005865}
-  moveSpeed: 10
+  moveSpeed: 5
   debugMode: 0
   movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
 --- !u!114 &631336349894415364
@@ -141,7 +141,7 @@ MonoBehaviour:
   attackPatterns:
   - {fileID: 11400000, guid: 4b203a2b38263dd4294224c2d5d56871, type: 2}
   "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0
-  defaultPatternHoldDuration: 1
+  defaultPatternHoldDuration: 0
   debugDecisionLogs: 0
 --- !u!114 &-6019980081282909286
 MonoBehaviour:
@@ -171,7 +171,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHP: 150
-  useShield: 1
+  useShield: 0
   maxShield: 10
   shieldBreakDuration: 2
   shieldRechargeDelay: 3
@@ -191,7 +191,7 @@ MonoBehaviour:
   backstepDistance: 5
   backstepSpeedMultiplier: 1
   forwardSpeedNormalizeTime: 0.25
-  detectionRadius: 5
+  detectionRadius: 10
   findDuration: 0.8
   roamRadius: 3
   peaceMoveSpeedMultiplier: 0.5
@@ -1229,7 +1229,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6785858595698569292}
   serializedVersion: 4
-  m_Mass: 0.5
+  m_Mass: 0.8
   m_Drag: 0
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 059b03d1523188f4baabbfd720d70ca4, type: 3}
+  m_Name: PlayerConfig_SO
+  m_EditorClassIdentifier: 
+  displayName: Player
+  tagName: Player
+  layer:
+    serializedVersion: 2
+    m_Bits: 64
+  maxHealth: 1
+  mass: 1
+  useAbsoluteMass: 1
+  baseMoveSpeed: 10
+  rotationSpeedDegPerSec: 1080
+  movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
+  stopWhenNoInput: 1
+  overrideController: {fileID: 0}
+  defaultWeaponPrefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
+  evadeData: {fileID: 11400000, guid: eb54fb9932698344bb40ac36fb164e65, type: 2}
+  detectorViewAngle: 45
+  detectorViewDistance: 10
+  editorAutoApplyDefault: 1

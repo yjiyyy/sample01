@@ -20,22 +20,25 @@ MonoBehaviour:
   cooldown: 0.5
   damage: 30
   range: 2.5
-  hitboxSpawnDelay: 0.1
+  hitboxSpawnDelay: 0.15
   hitBoxLifetime: 0.1
   knockbackDuration: 1
-  knockbackPower: 3
+  knockbackPower: 10
   jerkIntensity: 1
   jerkDuration: 0.2
-  stunDuration: 0
+  stunDuration: 5
   usePushInsteadOfKnockback: 0
   hitstopTime: 0
-  ragdollImpulse: 70
-  upwardImpulse: 50
+  ragdollImpulse: 20
+  upwardImpulse: 20
   torqueImpulse: 6
-  sliceForce: 8
-  deathType: 1
-  possibleSliceParts: 
+  sliceForce: 15
+  deathType: 2
+  possibleSliceParts: 06000000
   chargeSlot: {fileID: 0}
   recoilStartDelay: 0
   recoilPower: 0
   recoilDuration: 0
+  socketNames:
+  - R_Hand_Weapon
+  - Bip001 L Hand

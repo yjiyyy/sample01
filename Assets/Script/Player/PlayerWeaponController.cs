@@ -1,11 +1,14 @@
-﻿// NavMeshAgent 의존 제거 버전
-// - 이동/속도는 PlayerMovement 내부 baseMoveSpeed / AR 비율 사용
-// - agent 필드 및 using UnityEngine.AI 삭제
-
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// PlayerWeaponController (호환성 보존)
+/// - 기존 API(외부 호출되던 멤버)를 유지/복원합니다.
+/// - 내부적으로는 PlayerEquipmentController(장착), PlayerChargeController, PlayerEvadeController 등을 사용합니다.
+/// - 넉백 강제 적용(ForceApplyKnockback)은 movement.ApplyKnockback를 이용해 처리하고,
+///   이 컨트롤러는 상태 전환(스테이트 머신)도 관리합니다.
+/// </summary>
 public enum PlayerState
 {
     Idle,
@@ -19,20 +22,11 @@ public enum PlayerState
 
 public class PlayerWeaponController : MonoBehaviour
 {
-    [Header("무기 부착 위치")]
-    [SerializeField] private Transform weaponSocket;
-
     [Header("애니메이션 컨트롤러")]
     [SerializeField] private PlayerAnimationController animationController;
 
     [Header("플레이어 감지기 (EnemyDetector)")]
     public EnemyDetector enemyDetector;
-
-    [Header("기본 무기 (Weapon_None 프리팹)")]
-    [SerializeField] private GameObject defaultWeaponPrefab;
-
-    [Header("회피 설정")]
-    [SerializeField] private EvadeDataSO evadeData;
 
     [Header("디버그 모드")]
     [SerializeField] private bool debugMode = true;
@@ -41,8 +35,6 @@ public class PlayerWeaponController : MonoBehaviour
     [Tooltip("체크 시: 1초에 '차지 시작', SO 시간에 '차지 성공' 메시지 출력")]
     [SerializeField] private bool enableChargeMessages = true;
 
-    private PlayerMovement movement;
-
     // v3 컴포넌트들
     private PlayerRecoil recoilComp;
     private PlayerEquipmentController equipComp;
@@ -50,76 +42,104 @@ public class PlayerWeaponController : MonoBehaviour
     private PlayerEvadeController evadeComp;
     private PlayerStateMachine fsm;
 
+    private PlayerMovement movement;
     private PlayerState state = PlayerState.Idle;
     public PlayerState CurrentState => state;
 
+    // runtime flags / state
     private bool chargeInvincible = false;
     private float lastAttackTime = -999f;
-
     private Coroutine attackRoutine;
     private Coroutine knockbackRoutine;
     private Coroutine arFireRoutine;
 
-    // AR 상태 플래그
+    // AR 상태 플래그 (호환성 API 지원)
     private bool arRotationLocked = false;
     private Vector3 arLockedForward;
     private bool arAllowMoveWhileFiringFlag = false;
     private bool arAutoResumeWhileHeld = false;
 
     private Transform meleeSpawnPointCache;
-
     private float lastReloadMsgTime = -999f;
     private const float RELOAD_MSG_COOLDOWN = 0.3f;
 
     private bool pendingSwitchToDefault = false;
 
-    public void RequestSwitchToDefault()
+    // Evade data applied by PlayerFacade
+    private EvadeDataSO appliedEvadeData = null;
+
+    // ------------------ Public compatibility APIs ------------------
+
+    // Invincibility check used by enemy hitboxes
+    public bool IsInvincible() => (evadeComp?.IsInvincible() ?? false) || chargeInvincible;
+
+    // Force apply knockback (compat API). Matches original signature used by enemies.
+    public void ForceApplyKnockback(Vector3 dir, float power, float duration, float stun)
     {
-        pendingSwitchToDefault = true;
-        if (debugMode) Debug.Log("[PlayerWeaponController] RequestSwitchToDefault() → 보류");
+        // Stop attacking / cancel states & invoke local knockback behavior
+        if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
+        evadeComp?.CancelEvade();
+        chargeComp?.CancelAll();
+        chargeInvincible = false;
+        CancelRecoil();
+
+        equipComp?.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
+        equipComp?.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
+
+        if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
+        EndARFireState();
+
+        if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
+        knockbackRoutine = StartCoroutine(KnockbackRoutine_Internal(dir, power, duration, stun));
     }
 
-    public void ExecutePendingSwitchIfAnyImmediate()
+    // Expose AR-related flags/properties expected by PlayerMovement
+    public bool IsARFiring => arFireRoutine != null;
+    public bool ARAllowMoveWhileFiring => arAllowMoveWhileFiringFlag && IsARFiring;
+    public bool ARIsRotationLocked => arRotationLocked && IsARFiring;
+    public Vector3 ARLockedForward => arLockedForward;
+
+    // Evade gauges expected by UI
+    public float GetEvadeGauge() => evadeComp != null ? evadeComp.GetEvadeGauge() : 0f;
+    public float GetMaxEvadeGauge() => evadeComp != null ? evadeComp.GetMaxEvadeGauge() : 0f;
+
+    // Weapon data accessor expected by movement/other systems
+    public WeaponDataSO GetCurrentWeaponData() => equipComp != null ? equipComp.CurrentWeaponData : null;
+
+    // Expose enemies detection for WeaponBehavior compatibility
+    public List<Transform> DetectEnemies()
     {
-        if (!pendingSwitchToDefault) return;
-        pendingSwitchToDefault = false;
+        if (enemyDetector == null) return new List<Transform>();
+        return enemyDetector.GetEnemiesInRange(enemyDetector.viewDistance);
+    }
 
-        var wb = equipComp != null ? equipComp.WeaponBehavior : null;
-        bool shouldSwitch = true;
-
-        if (wb != null)
+    // For PlayerFacade to apply evade data at runtime/editor
+    public void ApplyEvadeData(EvadeDataSO data)
+    {
+        appliedEvadeData = data;
+        if (evadeComp != null)
         {
-            var gunAmmo = wb.GetComponent<WeaponAmmoRuntime>();
-            var arAmmo = wb.GetComponent<WeaponAmmoRuntime_AR>();
-            if (gunAmmo != null)
-            {
-                shouldSwitch = gunAmmo.IsMagazineEmpty() && !gunAmmo.HasAnyReserveOrInfinite();
-            }
-            else if (arAmmo != null)
-            {
-                shouldSwitch = arAmmo.IsMagazineEmpty() && !arAmmo.HasAnyReserveOrInfinite();
-            }
-        }
-
-        if (shouldSwitch)
-        {
-            if (debugMode) Debug.Log("[PlayerWeaponController] 보류 전환 실행 → 기본 무기로");
-            EquipWeapon(null);
-        }
-        else
-        {
-            if (debugMode) Debug.Log("[PlayerWeaponController] ammo 회복됨 → 전환 취소");
+            evadeComp.Setup(appliedEvadeData, animationController, movement, () => state, s => ChangeState(s));
         }
     }
 
-    public void CancelPendingSwitch()
+    // Cancel recoil wrapper
+    public void CancelRecoil()
     {
-        if (pendingSwitchToDefault)
-        {
-            pendingSwitchToDefault = false;
-            if (debugMode) Debug.Log("[PlayerWeaponController] Pending switch 취소");
-        }
+        recoilComp?.Cancel();
     }
+
+    // Start recoil helper (used by attack flow)
+    public void StartRecoilIfNeeded(WeaponDataSO data)
+    {
+        if (recoilComp == null || data == null) return;
+        if (data.recoilDuration <= 0f) return;
+        if (Mathf.Approximately(data.recoilPower, 0f)) return;
+
+        recoilComp.StartRecoil(data, () => state == PlayerState.Attack, transform);
+    }
+
+    // ------------------ End compatibility APIs ------------------
 
     private void Awake()
     {
@@ -132,7 +152,7 @@ public class PlayerWeaponController : MonoBehaviour
         fsm = GetComponent<PlayerStateMachine>() ?? gameObject.AddComponent<PlayerStateMachine>();
         fsm.Init(PlayerState.Idle);
 
-        // Root_dummy 탐색
+        // Root_dummy 탐색 (melee spawn point)
         Transform[] all = GetComponentsInChildren<Transform>(true);
         foreach (var t in all)
         {
@@ -144,8 +164,8 @@ public class PlayerWeaponController : MonoBehaviour
         }
         if (meleeSpawnPointCache == null) meleeSpawnPointCache = transform;
 
-        // 서브 컴포넌트 세팅
-        equipComp.Setup(weaponSocket, animationController);
+        // Setup subcomponents - we provide backward-compatible Setup overloads in equipComp
+        equipComp.Setup(animationController);
 
         chargeComp.Setup(
             animationController,
@@ -158,17 +178,14 @@ public class PlayerWeaponController : MonoBehaviour
             debugMode
         );
 
-        evadeComp.Setup(
-            evadeData,
-            animationController,
-            movement,
-            () => state,
-            s => ChangeState(s)
-        );
+        // Evade comp: apply data (may be null)
+        if (evadeComp != null)
+            evadeComp.Setup(appliedEvadeData, animationController, movement, () => state, s => ChangeState(s));
     }
 
     private void Start()
     {
+        // Equip default weapon if equipment controller has one configured by PlayerFacade
         EquipWeapon(null);
         ChangeState(PlayerState.Idle);
     }
@@ -181,7 +198,7 @@ public class PlayerWeaponController : MonoBehaviour
         evadeComp?.TickRecharge(Time.deltaTime);
         AutoResumeReloadIfNeeded();
 
-        // 회피 입력
+        // Evade input (same as before)
         if (InputManager.Instance.GetEvadeInput() && (evadeComp?.CanEvade() ?? false) && state != PlayerState.Evade)
         {
             Vector2 currentMoveInput = InputManager.Instance.GetMoveInput();
@@ -198,7 +215,6 @@ public class PlayerWeaponController : MonoBehaviour
                 CancelRecoil();
                 equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
                 equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
-                // 차지 유지 정책: chargeComp.CancelAll() 호출하지 않음
             };
 
             evadeComp.PerformEvade(currentMoveInput, preEvadeCleanup);
@@ -242,7 +258,6 @@ public class PlayerWeaponController : MonoBehaviour
     private void ChangeState(PlayerState newState)
     {
         if (state == newState) return;
-        var prev = state;
         state = newState;
         fsm?.Set(newState);
 
@@ -262,30 +277,67 @@ public class PlayerWeaponController : MonoBehaviour
         animationController?.ForceAnimationByState(newState);
     }
 
-    public void EquipWeapon(GameObject weaponPrefab)
+    public void RequestSwitchToDefault()
     {
-        chargeComp?.CancelAll();
-        if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
-        EndARFireState();
+        pendingSwitchToDefault = true;
+        if (debugMode) Debug.Log("[PlayerWeaponController] RequestSwitchToDefault() → queued");
+    }
 
-        equipComp.Equip(weaponPrefab, defaultWeaponPrefab, debugLogs: debugMode);
+    public void ExecutePendingSwitchIfAnyImmediate()
+    {
+        if (!pendingSwitchToDefault) return;
+        pendingSwitchToDefault = false;
 
-        if (enemyDetector != null && equipComp.WeaponBehavior != null)
-            enemyDetector.weaponBehavior = equipComp.WeaponBehavior;
+        var wb = equipComp != null ? equipComp.WeaponBehavior : null;
+        bool shouldSwitch = true;
 
-        var curData = equipComp.CurrentWeaponData;
-        bool isAR = curData is WeaponDataSO_AR;
-        if (isAR)
+        if (wb != null)
         {
-            animationController?.SetUpperBodyLayerEnabled(true);
+            var gunAmmo = wb.GetComponent<WeaponAmmoRuntime>();
+            var arAmmo = wb.GetComponent<WeaponAmmoRuntime_AR>();
+            if (gunAmmo != null)
+            {
+                shouldSwitch = gunAmmo.IsMagazineEmpty() && !gunAmmo.HasAnyReserveOrInfinite();
+            }
+            else if (arAmmo != null)
+            {
+                shouldSwitch = arAmmo.IsMagazineEmpty() && !arAmmo.HasAnyReserveOrInfinite();
+            }
+        }
+
+        if (shouldSwitch)
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] pending switch → default weapon");
+            EquipWeapon(null);
         }
         else
         {
-            animationController?.SetUpperBodyLayerEnabled(false);
-            animationController?.EndAttack();
+            if (debugMode) Debug.Log("[PlayerWeaponController] ammo replenished → cancel pending");
         }
     }
 
+    public void CancelPendingSwitch()
+    {
+        if (pendingSwitchToDefault)
+        {
+            pendingSwitchToDefault = false;
+            if (debugMode) Debug.Log("[PlayerWeaponController] Pending switch canceled");
+        }
+    }
+
+    public void EquipWeapon(GameObject weaponPrefab)
+    {
+        // null -> equip default prefab via equipComp
+        if (weaponPrefab == null)
+        {
+            equipComp?.EquipDefault(this.transform.root);
+            return;
+        }
+
+        equipComp?.EquipPrefab(weaponPrefab, this.transform.root);
+    }
+
+    // The PlayAttack / Fire logic remains compatible with existing systems.
     public void PlayAttack()
     {
         var data = equipComp.CurrentWeaponData;
@@ -303,7 +355,6 @@ public class PlayerWeaponController : MonoBehaviour
             return;
         }
 
-        // 탄약 검사 (Gun / Shotgun)
         var sg = data as WeaponDataSO_Shotgun;
         var wb = equipComp.WeaponBehavior;
         var ammoShotgun = wb != null ? wb.GetComponent<WeaponAmmoRuntime>() : null;
@@ -314,7 +365,7 @@ public class PlayerWeaponController : MonoBehaviour
                 if (Time.time - lastReloadMsgTime >= RELOAD_MSG_COOLDOWN)
                 {
                     float remain = ammoShotgun.GetReloadRemaining();
-                    Debug.Log($"[Ammo] 리로드 중… ({remain:F2}s)");
+                    Debug.Log($"[Ammo] Reloading… ({remain:F2}s)");
                     lastReloadMsgTime = Time.time;
                 }
                 return;
@@ -323,7 +374,7 @@ public class PlayerWeaponController : MonoBehaviour
             {
                 if (!ammoShotgun.HasAnyReserveOrInfinite())
                 {
-                    Debug.Log("[Ammo] Shotgun 탄약 없음 → 기본 무기 전환");
+                    Debug.Log("[Ammo] Shotgun out of ammo → switch to default");
                     if (state == PlayerState.Attack) RequestSwitchToDefault(); else EquipWeapon(null);
                     return;
                 }
@@ -341,7 +392,7 @@ public class PlayerWeaponController : MonoBehaviour
                 if (Time.time - lastReloadMsgTime >= RELOAD_MSG_COOLDOWN)
                 {
                     float remain = ammoGun.GetReloadRemaining();
-                    Debug.Log($"[Ammo] 리로드 중… ({remain:F2}s)");
+                    Debug.Log($"[Ammo] Reloading… ({remain:F2}s)");
                     lastReloadMsgTime = Time.time;
                 }
                 return;
@@ -350,7 +401,7 @@ public class PlayerWeaponController : MonoBehaviour
             {
                 if (!ammoGun.HasAnyReserveOrInfinite())
                 {
-                    Debug.Log("[Ammo] Gun 탄약 없음 → 기본 무기 전환");
+                    Debug.Log("[Ammo] Gun out of ammo → switch to default");
                     if (state == PlayerState.Attack) RequestSwitchToDefault(); else EquipWeapon(null);
                     return;
                 }
@@ -431,31 +482,8 @@ public class PlayerWeaponController : MonoBehaviour
         }
     }
 
-    #region Knockback / CC
-    public void ForceApplyKnockback(Vector3 dir, float power, float duration, float stun)
-    {
-        if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
-        evadeComp?.CancelEvade();
-        chargeComp?.CancelAll();
-        chargeInvincible = false;
-        CancelRecoil();
-
-        equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
-        equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
-
-        if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
-        EndARFireState();
-
-        if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
-        knockbackRoutine = StartCoroutine(KnockbackRoutine(dir, power, duration, stun));
-    }
-
-    public void ApplyKnockback(Vector3 dir, float power, float duration, float stun)
-    {
-        ForceApplyKnockback(dir, power, duration, stun);
-    }
-
-    private IEnumerator KnockbackRoutine(Vector3 dir, float power, float duration, float stun)
+    #region Knockback / CC (internal coroutine used by ForceApplyKnockback)
+    private IEnumerator KnockbackRoutine_Internal(Vector3 dir, float power, float duration, float stun)
     {
         ChangeState(PlayerState.Knockback);
 
@@ -463,8 +491,10 @@ public class PlayerWeaponController : MonoBehaviour
         if (knockDir.sqrMagnitude > 0.01f)
             transform.rotation = Quaternion.LookRotation(-knockDir);
 
+        // Apply knockback on movement component (movement.ApplyKnockback handles physics)
         movement?.ApplyKnockback(knockDir, power, duration, null);
 
+        // Wait for knockback duration (movement.ApplyKnockback also runs its own movement routine)
         yield return new WaitForSeconds(duration);
 
         if (stun > 0f)
@@ -478,39 +508,9 @@ public class PlayerWeaponController : MonoBehaviour
     }
     #endregion
 
-    public bool IsInvincible() => (evadeComp?.IsInvincible() ?? false) || chargeInvincible;
-    public float GetEvadeGauge() => evadeComp != null ? evadeComp.GetEvadeGauge() : 0f;
-    public float GetMaxEvadeGauge() => evadeComp != null ? evadeComp.GetMaxEvadeGauge() : (evadeData != null ? evadeData.maxGauge : 100f);
-    public bool CanPerformEvade() => evadeComp != null && evadeComp.CanEvade();
+    public bool IsInvinciblePublic() => IsInvincible(); // helper if any code uses different name
 
-    public List<Transform> DetectEnemies()
-    {
-        if (enemyDetector == null) return new List<Transform>();
-        return enemyDetector.GetEnemiesInRange(enemyDetector.viewDistance);
-    }
-
-    public WeaponDataSO GetCurrentWeaponData() => equipComp.CurrentWeaponData;
-
-    private void StartRecoilIfNeeded(WeaponDataSO data)
-    {
-        if (recoilComp == null || data == null) return;
-        if (data.recoilDuration <= 0f) return;
-        if (Mathf.Approximately(data.recoilPower, 0f)) return;
-
-        recoilComp.StartRecoil(data, () => state == PlayerState.Attack, transform);
-    }
-
-    private void CancelRecoil()
-    {
-        recoilComp?.Cancel();
-    }
-
-    /* ───────── AR 전용 상태 ───────── */
-    public bool IsARFiring => arFireRoutine != null;
-    public bool ARAllowMoveWhileFiring => arAllowMoveWhileFiringFlag && IsARFiring;
-    public bool ARIsRotationLocked => arRotationLocked && IsARFiring;
-    public Vector3 ARLockedForward => arLockedForward;
-
+    // Expose AR start/end for assault rifle behavior
     private void BeginARFireState(WeaponDataSO_AR arData)
     {
         arAllowMoveWhileFiringFlag = arData.allowMoveWhileFiring;
@@ -538,7 +538,7 @@ public class PlayerWeaponController : MonoBehaviour
         var wb = equipComp.WeaponBehavior;
         if (wb == null)
         {
-            Debug.LogWarning("[AR] WeaponBehavior 없음");
+            Debug.LogWarning("[AR] WeaponBehavior missing");
             ChangeState(PlayerState.Idle);
             EndARFireState();
             yield break;
@@ -594,7 +594,7 @@ public class PlayerWeaponController : MonoBehaviour
                         if (ammo.IsMagazineEmpty() && !ammo.HasAnyReserveOrInfinite())
                         {
                             RequestSwitchToDefault();
-                            if (debugMode) Debug.Log("[AR] 탄창 비어 있음 → 기본 무기 전환 요청");
+                            if (debugMode) Debug.Log("[AR] magazine empty → request default switch");
                         }
 
                         nextTime += interval;
@@ -618,7 +618,7 @@ public class PlayerWeaponController : MonoBehaviour
                     {
                         if (!ammo.HasAnyReserveOrInfinite())
                         {
-                            Debug.Log("[Ammo] AR 탄약 고갈 → 기본 무기 전환 요청");
+                            Debug.Log("[Ammo] AR out of ammo → default switch");
                             RequestSwitchToDefault();
                         }
                     }

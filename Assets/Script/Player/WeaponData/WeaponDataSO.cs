@@ -86,6 +86,10 @@ public class WeaponDataSO : ScriptableObject
     [Tooltip("리코일 지속 시간(초)")]
     public float recoilDuration = 0f;
 
+    [Header("Mount / Socket names (priority order)")]
+    [Tooltip("플레이어 프리팹에서 찾을 소켓 이름 목록(우선순위). 예: L_Hand_Weapon, R_Hand_Weapon, Root_dummy")]
+    public List<string> socketNames = new List<string>() { "R_Hand_Weapon" };
+
 #if UNITY_EDITOR
     private void OnValidate()
     {
@@ -113,7 +117,6 @@ public class WeaponDataSO : ScriptableObject
         // id 기본값 경고(에셋 생성 후 고유 id 설정 권장)
         if (string.IsNullOrEmpty(id))
         {
-            // 에디터에서만 경고 출력 (실행 중 잦은 로그 방지)
             Debug.LogWarning($"WeaponDataSO '{name}' has empty id. Please set a unique id for inventory/DB usage.");
         }
     }

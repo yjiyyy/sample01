@@ -84,7 +84,12 @@ public class EnemyImpact : MonoBehaviour
         float elapsed = 0f;
 
         // Interpret 'power' as initial speed (m/s) scaled by SOFT_KNOCK_POWER_RATIO
-        float initialSpeed = Mathf.Abs(power) * SOFT_KNOCK_POWER_RATIO;
+        // Apply mass scaling so heavier enemies move less
+        float massMul = 1f;
+        var facade = ctx.GetComponent<EnemyFacade>();
+        if (facade != null && facade.config != null) massMul = Mathf.Max(0.0001f, facade.config.mass);
+
+        float initialSpeed = Mathf.Abs(power) * SOFT_KNOCK_POWER_RATIO / massMul;
         float dur = Mathf.Max(duration, EPS);
 
         while (elapsed < dur && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
@@ -116,7 +121,11 @@ public class EnemyImpact : MonoBehaviour
         knockDir.y = 0f;
 
         // Interpret 'power' as initial speed (m/s)
-        float initialSpeed = Mathf.Abs(power);
+        float massMul = 1f;
+        var facade = ctx.GetComponent<EnemyFacade>();
+        if (facade != null && facade.config != null) massMul = Mathf.Max(0.0001f, facade.config.mass);
+
+        float initialSpeed = Mathf.Abs(power) / massMul;
         float dur = Mathf.Max(knockDuration, EPS);
 
         while (timer < dur && ctx.CurrentState == Enemy.EnemyState.Knockback)
@@ -168,6 +177,14 @@ public class EnemyImpact : MonoBehaviour
         Vector3 dir = hitDir.normalized;
         dir.y = 0f;
 
+        // Apply mass scaling to push speed
+        float massMul = 1f;
+        var facade = ctx.GetComponent<EnemyFacade>();
+        if (facade != null && facade.config != null) massMul = Mathf.Max(0.0001f, facade.config.mass);
+
+        float dur = Mathf.Max(duration, EPS);
+        float initialSpeed = Mathf.Abs(power) / massMul;
+
         // Hitstop handling (freeze animation)
         float prevAnimSpeed = 1f;
         bool hitstopActive = hitstop > 0f;
@@ -177,9 +194,6 @@ public class EnemyImpact : MonoBehaviour
             prevAnimSpeed = ctx.animCtrl.Animator.speed;
             ctx.animCtrl.Animator.speed = 0f;
         }
-
-        float dur = Mathf.Max(duration, EPS);
-        float initialSpeed = Mathf.Abs(power);
 
         while (timer < dur && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
         {

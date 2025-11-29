@@ -46,26 +46,47 @@ public class EnemyDeath : MonoBehaviour
 
     private void PlayRagdoll(Vector3 hitDir, WeaponDataSO weapon, float impactScale, Enemy ctx)
     {
+        if (ctx == null) return;
+
+        if (ctx.TryGetComponent(out Collider rootCol)) rootCol.enabled = false;
+        if (ctx.TryGetComponent(out Rigidbody rootRb)) rootRb.isKinematic = true;
+        if (ctx.TryGetComponent(out Animator rootAnim)) rootAnim.enabled = false;
+
+        // Gather rigidbodies (child bones)
+        var rigidbodies = ctx.GetComponentsInChildren<Rigidbody>();
+        if (rigidbodies == null || rigidbodies.Length == 0) return;
+
+        // Apply mass multiplier (weight is set via EnemyFacade -> config.mass)
+        float massMul = Mathf.Max(weight, 0.0001f);
+        foreach (var rb in rigidbodies)
+        {
+            if (rb == null) continue;
+            if (rb.transform == ctx.transform) continue; // skip root
+            rb.mass = Mathf.Max(0.0001f, rb.mass * massMul);
+        }
+
+        // Determine force/torque bases (do NOT divide by weight; mass has been applied above)
         float horizBase = weapon ? weapon.ragdollImpulse * impactScale : 0f;
         float upwardBase = weapon ? weapon.upwardImpulse * impactScale : 0f;
         float torqueBase = weapon ? weapon.torqueImpulse * impactScale : horizBase;
 
         float rand = Random.Range(0.9f, 1.1f);
-        float denom = Mathf.Max(weight, 0.01f);
-        float horiz = horizBase * rand / denom;
-        float up = upwardBase * rand / denom;
+
+        // Use the (updated) masses to pick a pelvis/body main mass for stronger torque
+        Rigidbody pelvisRB = rigidbodies.Where(rb => rb != null && rb.transform != ctx.transform)
+                                        .OrderByDescending(rb => rb.mass)
+                                        .FirstOrDefault();
+
+        float horiz = horizBase * rand;
+        float up = upwardBase * rand;
         float torque = torqueBase * rand;
 
         Vector3 force = hitDir.normalized * horiz;
         force.y += up;
 
-        var rigidbodies = ctx.GetComponentsInChildren<Rigidbody>();
-        Rigidbody pelvisRB = rigidbodies.Where(rb => rb.transform != ctx.transform)
-                                        .OrderByDescending(rb => rb.mass)
-                                        .FirstOrDefault();
-
         foreach (var rb in rigidbodies)
         {
+            if (rb == null) continue;
             if (rb.transform == ctx.transform) continue;
             rb.isKinematic = false;
             rb.linearVelocity = Vector3.zero;
@@ -76,7 +97,7 @@ public class EnemyDeath : MonoBehaviour
             rb.AddTorque(Random.onUnitSphere * partTorque, ForceMode.Impulse);
         }
 
-        // 자식 콜라이더 활성 및 레이어 전환
+        // Enable child colliders & set layer
         int ragdollLayer = LayerMask.NameToLayer("Ragdoll");
         foreach (var t in ctx.GetComponentsInChildren<Transform>())
         {
@@ -97,16 +118,30 @@ public class EnemyDeath : MonoBehaviour
         float torqueBase = weapon ? weapon.torqueImpulse * impactScale : horizBase;
 
         float rand = Random.Range(0.9f, 1.1f);
-        float denom = Mathf.Max(weight, 0.01f);
-        float horiz = horizBase * rand / denom;
-        float up = upwardBase * rand / denom;
-        float torque = torqueBase * rand;
 
-        Vector3 force = hitDir.normalized * horiz;
-        force.y += up;
+        float massMul = Mathf.Max(weight, 0.0001f);
+
+        Vector3 force = hitDir.normalized;
+        // We'll compute final horiz/up/torque after mass applied
 
         var excluded = new HashSet<Transform>(GetSliceTransforms(ctx, sliceType));
         var rigidbodies = ctx.GetComponentsInChildren<Rigidbody>();
+
+        // Apply mass scaling to included bodies
+        foreach (var rb in rigidbodies)
+        {
+            if (rb == null) continue;
+            if (rb.transform == ctx.transform) continue;
+            if (excluded.Contains(rb.transform)) continue;
+            rb.mass = Mathf.Max(0.0001f, rb.mass * massMul);
+        }
+
+        float horiz = horizBase * rand;
+        float up = upwardBase * rand;
+        float torque = torqueBase * rand;
+
+        force = hitDir.normalized * horiz;
+        force.y += up;
 
         foreach (var rb in rigidbodies)
         {
@@ -128,7 +163,7 @@ public class EnemyDeath : MonoBehaviour
             if (ragdollLayer >= 0) t.gameObject.layer = ragdollLayer;
         }
 
-        // 절단 파트 분리 및 힘 부여
+        // Separate slice bones
         foreach (Transform bone in excluded)
         {
             if (!bone) continue;

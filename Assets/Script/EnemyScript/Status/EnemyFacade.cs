@@ -253,14 +253,14 @@ public class EnemyFacade : MonoBehaviour
 #endif
         }
 
-        // 8) EnemyDeath - map ragdoll mass -> weight
+        // 8) EnemyDeath - map mass -> weight
         var deathComp = FindComponentByTypeName("EnemyDeath");
         if (deathComp != null)
         {
 #if UNITY_EDITOR
-            TrySetSerializedFloat(deathComp, "weight", config.ragdollMass);
+            TrySetSerializedFloat(deathComp, "weight", config.mass);
 #else
-            TrySetPublicPropertyOrField(deathComp, "weight", config.ragdollMass);
+            TrySetPublicPropertyOrField(deathComp, "weight", config.mass);
 #endif
         }
 

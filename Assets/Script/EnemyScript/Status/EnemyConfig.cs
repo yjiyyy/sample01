@@ -11,6 +11,10 @@ public class EnemyConfig : ScriptableObject
     [Header("Stats")]
     public float maxHealth = 100f;
 
+    // NEW: Mass multiplier used for ragdoll and knockback scaling
+    [Tooltip("Mass multiplier applied to ragdoll rigidbodies and used to scale knockback distance (1 = default).")]
+    public float mass = 1f;
+
     [Header("Shield / Health (optional)")]
     [Tooltip("Enable shield behavior on this enemy (if EnemyHealth supports shields).")]
     public bool useShield = false;
@@ -72,14 +76,7 @@ public class EnemyConfig : ScriptableObject
     [Header("Animation keys")]
     // animation key strings removed from config — control animation keys through animation controller or dedicated controller script.
 
-    [Header("Death / Ragdoll")]
-    [Tooltip("Ragdoll mass scaling applied on death (if EnemyDeath supports it).")]
-    public float ragdollMass = 1f;
-    [Tooltip("Ragdoll impulse on death (optional, for death effects).")]
-    public float ragdollImpulse = 5f;
-    public float ragdollUpwardImpulse = 3f;
-    public float ragdollTorque = 6f;
-
+    // Removed the old Death / Ragdoll fields (we keep weapon SO impulses).
     [Header("References")]
     public AnimatorOverrideController overrideController = null;
 
@@ -104,9 +101,8 @@ public class EnemyConfig : ScriptableObject
         idleMax = Mathf.Max(idleMin, idleMax);
         globalPatternCooldown = Mathf.Max(0f, globalPatternCooldown);
         defaultPatternHoldDuration = Mathf.Max(0f, defaultPatternHoldDuration);
-        ragdollMass = Mathf.Max(0f, ragdollMass);
-        ragdollImpulse = Mathf.Max(0f, ragdollImpulse);
-        ragdollUpwardImpulse = Mathf.Max(0f, ragdollUpwardImpulse);
-        ragdollTorque = Mathf.Max(0f, ragdollTorque);
+
+        // NEW: clamp mass to a safe positive minimum
+        mass = Mathf.Max(0.0001f, mass);
     }
 }
