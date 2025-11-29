@@ -36,9 +36,10 @@ public class HitBox_PC_Projectile : MonoBehaviour
             Debug.Log($"🛡️ Pierce Enabled │ count:{remainingPierce}");
     }
 
-    void Update()
+    void FixedUpdate()
     {
-        transform.position += moveDir * speed * Time.deltaTime;
+        // ✅ FixedUpdate + fixedDeltaTime으로 PC/모바일 일관성 보장
+        transform.position += moveDir * speed * Time.fixedDeltaTime;
     }
 
     private void OnTriggerEnter(Collider other)
