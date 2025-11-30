@@ -53,9 +53,9 @@ public class EnemyImpact : MonoBehaviour
 
         float pushPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
         float pushDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
-        float hitstop = weapon != null ? weapon.hitstopTime : 0f;
+        float animationHoldDuration = weapon != null ? weapon.animationHoldDuration : 0f;
 
-        pushRoutine = StartCoroutine(PushRoutine(ctx, hitDir, pushPower, pushDuration, hitstop));
+        pushRoutine = StartCoroutine(PushRoutine(ctx, hitDir, pushPower, pushDuration, animationHoldDuration));
     }
 
     private void FaceHit(Enemy ctx, Vector3 hitDir)
@@ -169,7 +169,7 @@ public class EnemyImpact : MonoBehaviour
         impactRoutine = null;
     }
 
-    private IEnumerator PushRoutine(Enemy ctx, Vector3 hitDir, float power, float duration, float hitstop)
+    private IEnumerator PushRoutine(Enemy ctx, Vector3 hitDir, float power, float duration, float animationHoldDuration)
     {
         if (ctx == null) yield break;
 
@@ -185,15 +185,9 @@ public class EnemyImpact : MonoBehaviour
         float dur = Mathf.Max(duration, EPS);
         float initialSpeed = Mathf.Abs(power) / massMul;
 
-        // Hitstop handling (freeze animation)
-        float prevAnimSpeed = 1f;
-        bool hitstopActive = hitstop > 0f;
-        float hitstopEndTime = hitstopActive ? Time.time + hitstop : -1f;
-        if (hitstopActive && ctx.animCtrl?.Animator != null)
-        {
-            prevAnimSpeed = ctx.animCtrl.Animator.speed;
-            ctx.animCtrl.Animator.speed = 0f;
-        }
+        // --- 중앙관리로 변경: animCtrl에 홀드 요청만 전달 ---
+        if (animationHoldDuration > 0f)
+            ctx.animCtrl?.StartAnimationHold(animationHoldDuration);
 
         while (timer < dur && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
         {
@@ -203,19 +197,11 @@ public class EnemyImpact : MonoBehaviour
 
             ctx.MoveFilteredDisplacement(disp);
 
-            if (hitstopActive && Time.time >= hitstopEndTime)
-            {
-                if (ctx.animCtrl?.Animator != null)
-                    ctx.animCtrl.Animator.speed = prevAnimSpeed;
-                hitstopActive = false;
-            }
-
             timer += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
 
-        if (hitstopActive && ctx != null && ctx.animCtrl?.Animator != null)
-            ctx.animCtrl.Animator.speed = prevAnimSpeed;
+        // 이제 복원은 animCtrl이 관리하므로 여기서 animator.speed를 만질 필요 없음.
 
         pushRoutine = null;
     }

@@ -19,6 +19,9 @@ public class PlayerMovement : MonoBehaviour
     private const float BACKSTEP_ENTER_ANGLE = 120f;
     private const float BACKSTEP_EXIT_ANGLE = 100f;
 
+    // FACE angle threshold to match EnemyImpact behavior
+    private const float FACE_ANGLE_THRESHOLD = 30f;
+
     [Header("Core")]
     [Tooltip("MovementSettings asset (REQUIRED). If not assigned this component will be disabled.")]
     [SerializeField] private MovementSettings movementSettings;
@@ -692,6 +695,9 @@ public class PlayerMovement : MonoBehaviour
     // Knockback (mass-aware)
     public void ApplyKnockback(Vector3 dir, float force, float duration, Transform attacker = null)
     {
+        // Ensure facing matches knockback (same semantics as EnemyImpact.FaceHit)
+        FaceKnockback(dir);
+
         if (knockbackRoutine != null) StopCoroutine(knockbackRoutine);
         if (debugLogs) Debug.Log($"[PM KNOCK] start dir={dir}, force={force}, dur={duration}, rb.mass={(rb != null ? rb.mass : -1f)}");
         knockbackRoutine = StartCoroutine(KnockbackRoutine(dir, force, duration, attacker));
@@ -703,12 +709,8 @@ public class PlayerMovement : MonoBehaviour
         Vector3 knockDir = dir.normalized; knockDir.y = 0f;
         float elapsed = 0f;
 
-        if (attacker != null)
-        {
-            Vector3 lookDir = attacker.position - transform.position;
-            lookDir.y = 0f;
-            if (lookDir.sqrMagnitude > EPS) _lastLookDirection = lookDir.normalized;
-        }
+        // Note: we intentionally do NOT change _lastLookDirection here.
+        // FaceKnockback has already set transform.rotation and _lastLookDirection to the knockback-facing direction.
 
         // Read mass from Rigidbody (if present). Use a safe minimum to avoid div by zero.
         float massVal = 1f;
@@ -721,12 +723,6 @@ public class PlayerMovement : MonoBehaviour
             float currentSpeed = (force / massVal) * t;
             Vector3 disp = knockDir * currentSpeed * Time.fixedDeltaTime;
             MovePhysicsDisplacement(disp);
-
-            if (_lastLookDirection.sqrMagnitude > EPS)
-            {
-                Quaternion target = Quaternion.LookRotation(_lastLookDirection, Vector3.up);
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, target, rotationSpeedDegPerSec * Time.fixedDeltaTime);
-            }
 
             elapsed += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
@@ -742,6 +738,28 @@ public class PlayerMovement : MonoBehaviour
         if (knockbackRoutine != null) StopCoroutine(knockbackRoutine);
         isKnockbacked = false;
         if (debugLogs) Debug.Log("[PM KNOCK] cancelled");
+    }
+
+    // Public-facing FaceKnockback: same semantics as EnemyImpact.FaceHit
+    public void FaceKnockback(Vector3 hitDir)
+    {
+        // Only apply when meaningful
+        Vector3 look = -hitDir;
+        look.y = 0f;
+        if (look.sqrMagnitude < 0.0001f) return;
+        look.Normalize();
+
+        Vector3 currentFwd = transform.forward;
+        currentFwd.y = 0f;
+        if (currentFwd.sqrMagnitude < 0.0001f) currentFwd = Vector3.forward;
+
+        float angle = Vector3.Angle(currentFwd, look);
+        if (angle < FACE_ANGLE_THRESHOLD) return;
+
+        transform.rotation = Quaternion.LookRotation(look, Vector3.up);
+
+        // Make sure other rotation logic uses this facing (so we don't snap back)
+        _lastLookDirection = look;
     }
 
     // Debug gizmos and other helpers remain unchanged...

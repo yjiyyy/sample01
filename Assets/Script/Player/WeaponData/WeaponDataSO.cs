@@ -1,5 +1,12 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.Serialization;
+
+/// <summary>
+/// Weapon data ScriptableObject (common for most weapons)
+/// - Keeps original layout from the project but renames hitstopTime -> animationHoldDuration
+///   and preserves existing serialized values using [FormerlySerializedAs("hitstopTime")].
+/// </summary>
 
 /// <summary>
 /// 폭발/프로젝타일 등에서 데미지 판정 대상을 구분하기 위한 옵션
@@ -57,8 +64,10 @@ public class WeaponDataSO : ScriptableObject
     [Tooltip("체크하면 이 무기 히트는 상태 변화(넉백) 대신 단순히 뒤로 밀림(Push)으로 동작합니다.")]
     public bool usePushInsteadOfKnockback = false;
 
-    [Tooltip("피격 대상만 멈추는 히트스탑(초). 0이면 비활성")]
-    public float hitstopTime = 0f;
+    // renamed from hitstopTime -> animationHoldDuration, keep FormerlySerializedAs to preserve existing asset values
+    [FormerlySerializedAs("hitstopTime")]
+    [Tooltip("피격 대상만 애니메이션을 잠깐 멈추는 시간(초). 0이면 비활성")]
+    public float animationHoldDuration = 0f;
 
     [Header("랙돌/슬라이스 연출")]
     public float ragdollImpulse = 5f;
@@ -93,6 +102,7 @@ public class WeaponDataSO : ScriptableObject
 #if UNITY_EDITOR
     private void OnValidate()
     {
+        // keep same validation behavior as original project (Unity editor only)
         cooldown = Mathf.Max(0f, cooldown);
         hitboxSpawnDelay = Mathf.Max(0f, hitboxSpawnDelay);
         hitBoxLifetime = Mathf.Max(0.01f, hitBoxLifetime);
@@ -107,14 +117,14 @@ public class WeaponDataSO : ScriptableObject
         torqueImpulse = Mathf.Max(0f, torqueImpulse);
         sliceForce = Mathf.Max(0f, sliceForce);
 
-        // 리코일: 시간은 0 이상, 파워는 부호 허용
+        // recoil validation
         recoilStartDelay = Mathf.Max(0f, recoilStartDelay);
         recoilDuration = Mathf.Max(0f, recoilDuration);
 
-        // 새 필드 검증
-        hitstopTime = Mathf.Max(0f, hitstopTime);
+        // new field validation
+        animationHoldDuration = Mathf.Max(0f, animationHoldDuration);
 
-        // id 기본값 경고(에셋 생성 후 고유 id 설정 권장)
+        // id default warning
         if (string.IsNullOrEmpty(id))
         {
             Debug.LogWarning($"WeaponDataSO '{name}' has empty id. Please set a unique id for inventory/DB usage.");

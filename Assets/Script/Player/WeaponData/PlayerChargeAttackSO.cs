@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Player/ChargeAttack")]
 public class PlayerChargeAttackSO : ScriptableObject
@@ -33,8 +34,9 @@ public class PlayerChargeAttackSO : ScriptableObject
     [Tooltip("체크하면 이 차지 공격은 상태 변화(넉백) 대신 단순 Push로 동작합니다.")]
     public bool usePushInsteadOfKnockback = false;
 
-    [Tooltip("피격 대상만 멈추는 히트스탑(초). 0이면 비활성")]
-    public float hitstopTime = 0f;
+    [FormerlySerializedAs("hitstopTime")]
+    [Tooltip("피격 대상만 애니메이션을 잠깐 멈추는 시간(초). 0이면 비활성")]
+    public float animationHoldDuration = 0f;
 
     [Header("발동 무적 (A안: 차지 성공 즉시부터 적용)")]
     public float invincibilityDuration = 0.3f;
@@ -55,7 +57,6 @@ public class PlayerChargeAttackSO : ScriptableObject
     [Tooltip("틱 주기(초)")]
     public float dotTickInterval = 0.2f;
 
-    /* ───────── 처치 연출/랙돌/슬라이스 (WeaponDataSO와 동일 스펙) ───────── */
     [Header("처치 연출")]
     public EnemyDeathType deathType = EnemyDeathType.Default;
 
@@ -88,6 +89,6 @@ public class PlayerChargeAttackSO : ScriptableObject
         sliceForce = Mathf.Max(0f, sliceForce);
 
         // Push 관련
-        hitstopTime = Mathf.Max(0f, hitstopTime);
+        animationHoldDuration = Mathf.Max(0f, animationHoldDuration);
     }
 }

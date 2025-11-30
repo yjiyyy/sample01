@@ -1,6 +1,11 @@
-﻿// 기존 파일에 PlayFind() 메서드 추가한 버전
-using UnityEngine;
+﻿using UnityEngine;
+using System.Collections;
 
+/// <summary>
+/// EnemyAnimationController
+/// - Animator 캐시 및 안전한 파라미터 설정 헬퍼 제공
+/// - 이제 animation hold(애니메이션 일시정지) 요청을 카운팅 방식으로 안전하게 관리합니다.
+/// </summary>
 [RequireComponent(typeof(Animator))]
 public class EnemyAnimationController : MonoBehaviour
 {
@@ -79,6 +84,70 @@ public class EnemyAnimationController : MonoBehaviour
             Animator.CrossFadeInFixedTime("Run", fadeDuration);
         else
             Animator.Play("Run", 0, 0f);
+    }
+
+    // ----------------- 추가된 메서드 -----------------
+
+    // Animation hold (centralized) 구현:
+    // - 여러 요청이 겹쳐 들어와도 복원 실패가 발생하지 않도록 카운팅 방식으로 관리.
+    // - 최초 요청 시 현재 Animator.speed를 savedAnimSpeed에 저장하고 speed=0으로 설정.
+    // - 각 요청은 내부에서 duration 후 ReleaseAnimationHold()을 호출.
+    // - 모든 요청이 완료되면 savedAnimSpeed로 복원.
+    private int animationHoldCount = 0;
+    private float savedAnimSpeed = 1f;
+
+    /// <summary>
+    /// 요청: 애니메이터를 duration 초간 일시정지 요청.
+    /// - duration <= 0 : 즉시 일시정지(복원 요청은 별도 ReleaseAnimationHold 호출 혹은 후속 Start가 복원될 때까지 유지)
+    /// </summary>
+    public void StartAnimationHold(float duration)
+    {
+        if (Animator == null) return;
+
+        if (animationHoldCount == 0)
+        {
+            // 최초 요청 시 현재 속도 저장
+            savedAnimSpeed = Animator.speed;
+        }
+
+        animationHoldCount = Mathf.Max(0, animationHoldCount) + 1;
+        Animator.speed = 0f;
+
+        if (duration > 0f)
+        {
+            // 내부에서 복원 처리하는 코루틴은 animCtrl이 관리하므로
+            // PushRoutine이 중단되더라도 복원은 보장됩니다.
+            StartCoroutine(AnimationHoldCoroutine(duration));
+        }
+    }
+
+    private IEnumerator AnimationHoldCoroutine(float duration)
+    {
+        float end = Time.time + duration;
+        while (Time.time < end)
+        {
+            yield return null;
+        }
+        ReleaseAnimationHold();
+    }
+
+    /// <summary>
+    /// 요청 해제: 이전 StartAnimationHold에 대응하여 카운트를 줄이고,
+    /// 카운트가 0이 되면 저장된 속도로 복원합니다.
+    /// </summary>
+    public void ReleaseAnimationHold()
+    {
+        if (animationHoldCount <= 0) return;
+
+        animationHoldCount--;
+        if (animationHoldCount <= 0)
+        {
+            animationHoldCount = 0;
+            if (Animator != null)
+            {
+                Animator.speed = savedAnimSpeed;
+            }
+        }
     }
 
     // ----------------- 추가된 메서드 -----------------

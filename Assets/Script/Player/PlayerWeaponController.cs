@@ -5,9 +5,7 @@ using UnityEngine;
 /// <summary>
 /// PlayerWeaponController (호환성 보존)
 /// - 기존 API(외부 호출되던 멤버)를 유지/복원합니다.
-/// - 내부적으로는 PlayerEquipmentController(장착), PlayerChargeController, PlayerEvadeController 등을 사용합니다.
-/// - 넉백 강제 적용(ForceApplyKnockback)은 movement.ApplyKnockback를 이용해 처리하고,
-///   이 컨트롤러는 상태 전환(스테이트 머신)도 관리합니다.
+/// - ForceApplyKnockback는 movement.ApplyKnockback를 사용하여 처리합니다.
 /// </summary>
 public enum PlayerState
 {
@@ -22,7 +20,7 @@ public enum PlayerState
 
 public class PlayerWeaponController : MonoBehaviour
 {
-    [Header("애니메이션 컨트롤러")]
+    [Header("애니메이션 컴포넌트")]
     [SerializeField] private PlayerAnimationController animationController;
 
     [Header("플레이어 감지기 (EnemyDetector)")]
@@ -31,7 +29,7 @@ public class PlayerWeaponController : MonoBehaviour
     [Header("디버그 모드")]
     [SerializeField] private bool debugMode = true;
 
-    [Header("차지 메시지 옵션")]
+    [Header("차지 메시지 설정")]
     [Tooltip("체크 시: 1초에 '차지 시작', SO 시간에 '차지 성공' 메시지 출력")]
     [SerializeField] private bool enableChargeMessages = true;
 
@@ -53,7 +51,7 @@ public class PlayerWeaponController : MonoBehaviour
     private Coroutine knockbackRoutine;
     private Coroutine arFireRoutine;
 
-    // AR 상태 플래그 (호환성 API 지원)
+    // AR 관련 플래그
     private bool arRotationLocked = false;
     private Vector3 arLockedForward;
     private bool arAllowMoveWhileFiringFlag = false;
@@ -152,7 +150,7 @@ public class PlayerWeaponController : MonoBehaviour
         fsm = GetComponent<PlayerStateMachine>() ?? gameObject.AddComponent<PlayerStateMachine>();
         fsm.Init(PlayerState.Idle);
 
-        // Root_dummy 탐색 (melee spawn point)
+        // Root_dummy 타겟 캐시 (melee spawn point)
         Transform[] all = GetComponentsInChildren<Transform>(true);
         foreach (var t in all)
         {
@@ -488,8 +486,18 @@ public class PlayerWeaponController : MonoBehaviour
         ChangeState(PlayerState.Knockback);
 
         Vector3 knockDir = dir.normalized; knockDir.y = 0f;
-        if (knockDir.sqrMagnitude > 0.01f)
-            transform.rotation = Quaternion.LookRotation(-knockDir);
+
+        // Instead of rotating here directly, use movement.FaceKnockback to match EnemyImpact.FaceHit behavior.
+        if (movement != null)
+        {
+            movement.FaceKnockback(dir);
+        }
+        else
+        {
+            // fallback: previous behavior
+            if (knockDir.sqrMagnitude > 0.01f)
+                transform.rotation = Quaternion.LookRotation(-knockDir);
+        }
 
         // Apply knockback on movement component (movement.ApplyKnockback handles physics)
         movement?.ApplyKnockback(knockDir, power, duration, null);

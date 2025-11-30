@@ -28,7 +28,7 @@ MonoBehaviour:
   jerkDuration: 0.2
   stunDuration: 5
   usePushInsteadOfKnockback: 0
-  hitstopTime: 0
+  animationHoldDuration: 0.1
   ragdollImpulse: 20
   upwardImpulse: 20
   torqueImpulse: 6

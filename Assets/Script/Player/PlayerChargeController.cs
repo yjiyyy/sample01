@@ -3,11 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// 플레이어 차지(홀드→성공→발사/유지/무적/스폰) 전담
-/// - Tick()에서 InputManager를 읽어 동작
-/// - 상태 조회/변경/무적 토글/스폰 포인트/애니 컨트롤러를 주입받아 동작
-/// </summary>
 [DisallowMultipleComponent]
 public class PlayerChargeController : MonoBehaviour
 {
@@ -320,6 +315,9 @@ public class PlayerChargeController : MonoBehaviour
         chargeWeaponProxy.knockbackPower = slot.knockbackPower;
         chargeWeaponProxy.knockbackDuration = slot.knockbackDuration;
         chargeWeaponProxy.stunDuration = slot.stunDuration;
+
+        // --- animationHoldDuration(구 hitstopTime) 복사 ---
+        chargeWeaponProxy.animationHoldDuration = slot.animationHoldDuration;
 
         // 처치 연출 파라미터
         chargeWeaponProxy.deathType = slot.deathType;
