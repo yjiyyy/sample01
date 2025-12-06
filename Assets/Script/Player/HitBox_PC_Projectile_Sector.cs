@@ -119,12 +119,14 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
             float t = Mathf.Clamp01(distance / cachedRadius);
             float finalDamage = Mathf.Lerp(cachedDamage * cachedEdgeMul, cachedDamage, 1f - t);
 
+            // 1) 데미지 먼저 적용
             if (target.TryGetComponent(out PlayerHealth playerHP))
             {
                 Vector3 hitDir = (target.transform.position - transform.position).normalized;
                 float impactScale = 1f;
                 playerHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale);
                 Debug.Log($"✅ [Explosion] PlayerHealth에 {finalDamage} 데미지!");
+                // 플레이어는 넉백/푸시가 Enemy 로직과 다를 수 있으므로 여기서는 데미지만
             }
             else if (target.TryGetComponent(out EnemyHealth enemyHP))
             {
@@ -133,9 +135,9 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
                 enemyHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale);
                 Debug.Log($"✅ [Explosion] EnemyHealth에 {finalDamage} 데미지!");
 
-                // 넉백/푸시 분기 (weaponData 기준)
+                // 2) 살아있으면만 넉백/푸시 분기
                 var enemy = target.GetComponentInParent<Enemy>();
-                if (enemy != null)
+                if (enemy != null && enemy.CurrentState != Enemy.EnemyState.Dead)
                 {
                     if (weaponData != null && weaponData.usePushInsteadOfKnockback)
                     {

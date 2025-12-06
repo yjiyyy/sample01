@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 4543117870112094164}
   - component: {fileID: -4220895376239304872}
   - component: {fileID: -4746959452908669852}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: PC_Gun_Projectile_Sector
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -151,3 +151,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponData: {fileID: 0}
   debugDrawGizmos: 1
+  damageLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295

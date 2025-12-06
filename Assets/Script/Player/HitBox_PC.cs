@@ -127,25 +127,29 @@ public class HitBox_PC : MonoBehaviour
         if (dir.sqrMagnitude < 0.0001f) dir = Vector3.forward;
         dir.Normalize();
 
-        // 데미지
+        // 1) 데미지 먼저 적용
         hp.ApplyDamage(damage, dir, weapon);
+        Debug.Log($"✅ [HitBox_PC] {hp.name} hit │ dmg:{damage}, dup:{duplicateEnabled}");
 
-        // 넉백/스턴 vs Push 분기(WeaponDataSO의 옵션 사용)
+        // 2) 사망 여부 확인 후 넉백/푸시 분기
         var enemy = hp.GetComponent<Enemy>() ?? hp.GetComponentInParent<Enemy>();
-        if (enemy != null)
+        if (enemy == null) return;
+
+        if (enemy.CurrentState == Enemy.EnemyState.Dead)
         {
-            if (weapon != null && weapon.usePushInsteadOfKnockback)
-            {
-                // Push: 상태 변화 없음, 대상만 잠깐 밀기 (Enemy.ApplyPush가 구현되어 있음)
-                enemy.ApplyPush(dir, weapon);
-            }
-            else
-            {
-                // 기존 넉백 동작(상태 변화, 스턴 등)
-                enemy.ApplyKnockback(dir, weapon);
-            }
+            // 치명타(사망)면 방향 전환/넉백/푸시 적용하지 않음
+            return;
         }
 
-        Debug.Log($"✅ [HitBox_PC] {hp.name} hit │ dmg:{damage}, dup:{duplicateEnabled}");
+        if (weapon != null && weapon.usePushInsteadOfKnockback)
+        {
+            // Push: 상태 변화 없음, 대상만 잠깐 밀기
+            enemy.ApplyPush(dir, weapon);
+        }
+        else
+        {
+            // 기존 넉백 동작(상태 변화, 스턴 등)
+            enemy.ApplyKnockback(dir, weapon);
+        }
     }
 }

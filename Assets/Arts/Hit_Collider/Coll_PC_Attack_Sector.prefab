@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3418492209101645809}
   - component: {fileID: 8917993783039439850}
   - component: {fileID: 6055769825025616755}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Coll_PC_Attack_Sector
   m_TagString: Untagged
   m_Icon: {fileID: 0}

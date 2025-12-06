@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 7214271674746107563}
   - component: {fileID: 9089393359550916346}
   - component: {fileID: -4833410554368424018}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: Coll_PC_Attack_Bat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -118,6 +118,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 3f99af08762502540803aa477e2cd189, type: 3}
       propertyPath: m_Name
       value: Coll_PC_Attack_Bat
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 3f99af08762502540803aa477e2cd189, type: 3}
+      propertyPath: m_Layer
+      value: 11
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

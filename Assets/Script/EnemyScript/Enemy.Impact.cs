@@ -1,7 +1,6 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
+using UnityEngine;
 
-[DisallowMultipleComponent]
 public class EnemyImpact : MonoBehaviour
 {
     private Coroutine impactRoutine;
@@ -37,6 +36,8 @@ public class EnemyImpact : MonoBehaviour
             return;
         }
 
+        // 데미지 단계에서 lethal이면 Dead로 이미 전환됐으므로 FaceHit가 호출되지 않음.
+        // 여기서는 기존 흐름 유지(비치명 때만 회전)
         FaceHit(ctx, hitDir);
         impactRoutine = StartCoroutine(KnockbackThenStunRoutine(ctx, hitDir, knockbackPower, knockbackDuration, stunDuration));
     }
@@ -62,6 +63,9 @@ public class EnemyImpact : MonoBehaviour
     {
         if (ctx == null || ctx.CurrentState == Enemy.EnemyState.Dead) return;
 
+        // 여기서 추가적으로 EnemyHealth의 치명 여부를 볼 필요는 없음.
+        // HitBox에서 '데미지 먼저 → Dead면 회전/넉백을 호출하지 않음'으로 방지했기 때문.
+
         Vector3 look = -hitDir;
         look.y = 0f;
         if (look.sqrMagnitude < 0.0001f) return;
@@ -74,6 +78,7 @@ public class EnemyImpact : MonoBehaviour
         float angle = Vector3.Angle(currentFwd, look);
         if (angle < FACE_ANGLE_THRESHOLD) return;
 
+        // 비치명 데미지에서는 기존처럼 방향 전환 유지
         ctx.transform.rotation = Quaternion.LookRotation(look, Vector3.up);
     }
 
@@ -83,8 +88,6 @@ public class EnemyImpact : MonoBehaviour
         dir.y = 0f;
         float elapsed = 0f;
 
-        // Interpret 'power' as initial speed (m/s) scaled by SOFT_KNOCK_POWER_RATIO
-        // Apply mass scaling so heavier enemies move less
         float massMul = 1f;
         var facade = ctx.GetComponent<EnemyFacade>();
         if (facade != null && facade.config != null) massMul = Mathf.Max(0.0001f, facade.config.mass);
@@ -95,11 +98,8 @@ public class EnemyImpact : MonoBehaviour
         while (elapsed < dur && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
         {
             float t = Mathf.Clamp01(elapsed / dur);
-            // linear decay: start at initialSpeed, decay to 0
             float currentSpeed = initialSpeed * (1f - t);
             Vector3 disp = dir * currentSpeed * Time.fixedDeltaTime;
-
-            // Use movement-aware helper on Enemy: use MoveFilteredDisplacement for consistent checks
             ctx.MoveFilteredDisplacement(disp);
 
             elapsed += Time.fixedDeltaTime;
@@ -120,7 +120,6 @@ public class EnemyImpact : MonoBehaviour
         Vector3 knockDir = hitDir.normalized;
         knockDir.y = 0f;
 
-        // Interpret 'power' as initial speed (m/s)
         float massMul = 1f;
         var facade = ctx.GetComponent<EnemyFacade>();
         if (facade != null && facade.config != null) massMul = Mathf.Max(0.0001f, facade.config.mass);
@@ -131,9 +130,8 @@ public class EnemyImpact : MonoBehaviour
         while (timer < dur && ctx.CurrentState == Enemy.EnemyState.Knockback)
         {
             float t = Mathf.Clamp01(timer / dur);
-            float currentSpeed = initialSpeed * (1f - t); // linear decay (fast -> slow)
+            float currentSpeed = initialSpeed * (1f - t); // 60fps/30fps 동일한 이동량
             Vector3 disp = knockDir * currentSpeed * Time.fixedDeltaTime;
-
             ctx.MoveFilteredDisplacement(disp);
 
             timer += Time.fixedDeltaTime;
@@ -177,7 +175,6 @@ public class EnemyImpact : MonoBehaviour
         Vector3 dir = hitDir.normalized;
         dir.y = 0f;
 
-        // Apply mass scaling to push speed
         float massMul = 1f;
         var facade = ctx.GetComponent<EnemyFacade>();
         if (facade != null && facade.config != null) massMul = Mathf.Max(0.0001f, facade.config.mass);
@@ -185,23 +182,19 @@ public class EnemyImpact : MonoBehaviour
         float dur = Mathf.Max(duration, EPS);
         float initialSpeed = Mathf.Abs(power) / massMul;
 
-        // --- 중앙관리로 변경: animCtrl에 홀드 요청만 전달 ---
         if (animationHoldDuration > 0f)
             ctx.animCtrl?.StartAnimationHold(animationHoldDuration);
 
         while (timer < dur && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
         {
             float t = Mathf.Clamp01(timer / dur);
-            float currentSpeed = initialSpeed * (1f - t); // linear decay
+            float currentSpeed = initialSpeed * (1f - t);
             Vector3 disp = dir * currentSpeed * Time.fixedDeltaTime;
-
             ctx.MoveFilteredDisplacement(disp);
 
             timer += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
-
-        // 이제 복원은 animCtrl이 관리하므로 여기서 animator.speed를 만질 필요 없음.
 
         pushRoutine = null;
     }

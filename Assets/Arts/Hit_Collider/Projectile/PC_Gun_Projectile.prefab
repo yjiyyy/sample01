@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 7455225530196303665}
   - component: {fileID: 4543117870112094164}
   - component: {fileID: -8507332555204913107}
-  m_Layer: 0
+  m_Layer: 11
   m_Name: PC_Gun_Projectile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -121,7 +121,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55f0cd4a9f90f434583e3d26b78513a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damageMask:
-    serializedVersion: 2
-    m_Bits: 128
-  destroyOnHit: 1

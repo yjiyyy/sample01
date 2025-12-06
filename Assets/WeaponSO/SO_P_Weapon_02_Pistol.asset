@@ -18,7 +18,7 @@ MonoBehaviour:
   category: 0
   overrideController: {fileID: 22100000, guid: c4ecbdf1ac950334a81e5c66d1b9e96d, type: 2}
   cooldown: 0.5
-  damage: 10
+  damage: 50
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.2
@@ -27,13 +27,13 @@ MonoBehaviour:
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 2
-  usePushInsteadOfKnockback: 1
+  usePushInsteadOfKnockback: 0
   animationHoldDuration: 0.1
-  ragdollImpulse: 20
-  upwardImpulse: 20
-  torqueImpulse: 6
-  sliceForce: 0
-  deathType: 2
+  ragdollImpulse: 10
+  upwardImpulse: 10
+  torqueImpulse: 2
+  sliceForce: 5
+  deathType: 1
   possibleSliceParts: 06000000
   chargeSlot: {fileID: 0}
   recoilStartDelay: 0
@@ -45,7 +45,7 @@ MonoBehaviour:
   projectileSpeed: 20
   pierceCount: 1
   aimScanAngle: 90
-  aimScanDistance: 10
+  aimScanDistance: 15
   usesAmmo: 1
   magazineSize: 7
   initialReserve: 10

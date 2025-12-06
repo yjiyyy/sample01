@@ -101,25 +101,30 @@ public class HitBox_PC_Sector : MonoBehaviour
                 continue;
             }
 
-            // 데미지
+            // 1) 데미지 먼저 적용
             hp.ApplyDamage(finalDmg, dir, weapon, weight);
             Debug.Log($"✅ [Shotgun] EnemyHealth에 {finalDmg} 데미지 적용!(w={weight:F2})");
 
-            // 넉백/푸시 분기
+            // 2) 사망 여부 확인 후 넉백/푸시 분기
             var enemy = col.GetComponentInParent<Enemy>();
-            if (enemy != null)
+            if (enemy == null) continue;
+
+            if (enemy.CurrentState == Enemy.EnemyState.Dead)
             {
-                if (weapon != null && weapon.usePushInsteadOfKnockback)
-                {
-                    // Push: 상태 변화 없음
-                    enemy.ApplyPush(dir, weapon, weight);
-                }
-                else
-                {
-                    // 기존 넉백(상태 변화)
-                    Vector3 knockDir = dir; knockDir.y = 0f;
-                    enemy.ApplyKnockback(knockDir, weapon, weight);
-                }
+                // 치명타면 방향 전환/넉백/푸시 적용하지 않음
+                continue;
+            }
+
+            if (weapon != null && weapon.usePushInsteadOfKnockback)
+            {
+                // Push: 상태 변화 없음
+                enemy.ApplyPush(dir, weapon, weight);
+            }
+            else
+            {
+                // 기존 넉백(상태 변화)
+                Vector3 knockDir = dir; knockDir.y = 0f;
+                enemy.ApplyKnockback(knockDir, weapon, weight);
             }
         }
     }

@@ -144,35 +144,36 @@ public class HitBox_PC_Projectile : MonoBehaviour
         if (hitSet.Contains(hp))
             return;
 
-        // 넉백 / Push 분기 처리
+        // 1) 데미지 먼저 적용(치명타 여부 판정 선행)
+        Vector3 damageDir = moveDir;
+        damageDir.y = 0f;
+        if (damageDir.sqrMagnitude < 0.0001f) damageDir = Vector3.back;
+        damageDir = damageDir.normalized;
+
+        hp.ApplyDamage(damage, damageDir, weapon);
+        Debug.Log($"✅ [Projectile] EnemyHealth에 {damage} 데미지 적용!");
+
+        // 2) 살아있으면만 넉백/푸시/회전 적용
         if (other.GetComponentInParent<Enemy>() is Enemy enemy)
         {
-            Vector3 knockbackDir = moveDir;
-            knockbackDir.y = 0f;
-            if (knockbackDir.sqrMagnitude < 0.0001f) knockbackDir = Vector3.back;
-            knockbackDir = knockbackDir.normalized;
-
-            if (weapon != null && weapon.usePushInsteadOfKnockback)
+            if (enemy.CurrentState != Enemy.EnemyState.Dead)
             {
-                enemy.ApplyPush(knockbackDir, weapon);
-                Debug.Log($"💥 Projectile 충돌 │ Push 방향: {knockbackDir}");
-            }
-            else
-            {
-                enemy.ApplyKnockback(knockbackDir, weapon);
-                Debug.Log($"💥 Projectile 충돌 │ 넉백 방향: {knockbackDir}");
-            }
-        }
+                Vector3 knockbackDir = moveDir;
+                knockbackDir.y = 0f;
+                if (knockbackDir.sqrMagnitude < 0.0001f) knockbackDir = Vector3.back;
+                knockbackDir = knockbackDir.normalized;
 
-        // 데미지 1회 적용(Projectile 기준)
-        {
-            Vector3 damageDir = moveDir;
-            damageDir.y = 0f;
-            if (damageDir.sqrMagnitude < 0.0001f) damageDir = Vector3.back;
-            damageDir = damageDir.normalized;
-
-            hp.ApplyDamage(damage, damageDir, weapon);
-            Debug.Log($"✅ [Projectile] EnemyHealth에 {damage} 데미지 적용!");
+                if (weapon != null && weapon.usePushInsteadOfKnockback)
+                {
+                    enemy.ApplyPush(knockbackDir, weapon);
+                    Debug.Log($"💥 Projectile 충돌 │ Push 방향: {knockbackDir}");
+                }
+                else
+                {
+                    enemy.ApplyKnockback(knockbackDir, weapon);
+                    Debug.Log($"💥 Projectile 충돌 │ 넉백 방향: {knockbackDir}");
+                }
+            }
         }
 
         // 관통 처리(단순화)
