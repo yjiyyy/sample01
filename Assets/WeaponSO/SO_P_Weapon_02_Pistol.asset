@@ -18,7 +18,7 @@ MonoBehaviour:
   category: 0
   overrideController: {fileID: 22100000, guid: c4ecbdf1ac950334a81e5c66d1b9e96d, type: 2}
   cooldown: 0.5
-  damage: 50
+  damage: 200
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.2
@@ -29,12 +29,6 @@ MonoBehaviour:
   stunDuration: 2
   usePushInsteadOfKnockback: 0
   animationHoldDuration: 0.1
-  ragdollImpulse: 10
-  upwardImpulse: 10
-  torqueImpulse: 2
-  sliceForce: 5
-  deathType: 1
-  possibleSliceParts: 06000000
   chargeSlot: {fileID: 0}
   recoilStartDelay: 0
   recoilPower: 0

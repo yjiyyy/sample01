@@ -4,8 +4,7 @@ using UnityEngine.Serialization;
 
 /// <summary>
 /// Weapon data ScriptableObject (common for most weapons)
-/// - Keeps original layout from the project but renames hitstopTime -> animationHoldDuration
-///   and preserves existing serialized values using [FormerlySerializedAs("hitstopTime")].
+/// - Simplified: removed death/ragdoll/slice fields per request.
 /// </summary>
 
 /// <summary>
@@ -69,15 +68,9 @@ public class WeaponDataSO : ScriptableObject
     [Tooltip("피격 대상만 애니메이션을 잠깐 멈추는 시간(초). 0이면 비활성")]
     public float animationHoldDuration = 0f;
 
-    [Header("랙돌/슬라이스 연출")]
-    public float ragdollImpulse = 5f;
-    public float upwardImpulse = 3f;
-    public float torqueImpulse = 6f;
-    public float sliceForce = 8f;
-
-    [Header("처치 연출")]
-    public EnemyDeathType deathType = EnemyDeathType.Default;
-    public List<BodySliceType> possibleSliceParts = new();
+    [Header("처치 연출 (기본)")]
+    // 기존에 있던 deathType/ragdoll/slice 관련 파라미터는 삭제되었습니다.
+    // 죽음 연출은 엔진 상에서 단순 애니메이터 트리거 + Destroy 로 대체됩니다.
 
     /* ───────── Per-Weapon Charge Attack Slot ───────── */
     [Header("Charge Attack (무기별 선택 적용)")]
@@ -112,11 +105,6 @@ public class WeaponDataSO : ScriptableObject
 
         stunDuration = Mathf.Max(0f, stunDuration);
 
-        ragdollImpulse = Mathf.Max(0f, ragdollImpulse);
-        upwardImpulse = Mathf.Max(0f, upwardImpulse);
-        torqueImpulse = Mathf.Max(0f, torqueImpulse);
-        sliceForce = Mathf.Max(0f, sliceForce);
-
         // recoil validation
         recoilStartDelay = Mathf.Max(0f, recoilStartDelay);
         recoilDuration = Mathf.Max(0f, recoilDuration);
@@ -131,24 +119,6 @@ public class WeaponDataSO : ScriptableObject
         }
     }
 #endif
-}
-
-public enum EnemyDeathType
-{
-    Default,
-    Ragdoll,
-    Slice,
-}
-
-public enum BodySliceType
-{
-    None,
-    Head,
-    LeftArm,
-    RightArm,
-    LeftLeg,
-    RightLeg,
-    All,
 }
 
 public enum WeaponCategory

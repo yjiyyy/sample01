@@ -319,18 +319,7 @@ public class PlayerChargeController : MonoBehaviour
         // --- animationHoldDuration(구 hitstopTime) 복사 ---
         chargeWeaponProxy.animationHoldDuration = slot.animationHoldDuration;
 
-        // 처치 연출 파라미터
-        chargeWeaponProxy.deathType = slot.deathType;
-        chargeWeaponProxy.ragdollImpulse = slot.ragdollImpulse;
-        chargeWeaponProxy.upwardImpulse = slot.upwardImpulse;
-        chargeWeaponProxy.torqueImpulse = slot.torqueImpulse;
-        chargeWeaponProxy.sliceForce = slot.sliceForce;
-
-        // 리스트 복사
-        if (slot.possibleSliceParts != null && slot.possibleSliceParts.Count > 0)
-            chargeWeaponProxy.possibleSliceParts = new List<BodySliceType>(slot.possibleSliceParts);
-        else
-            chargeWeaponProxy.possibleSliceParts = new List<BodySliceType>();
+        // 처치 연출 파라미터 관련 필드 제거됨 - 더 이상 복사하지 않음
     }
 
     private IEnumerator EndInvincibleLater(float duration)
