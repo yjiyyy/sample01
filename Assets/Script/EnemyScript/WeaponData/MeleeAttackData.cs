@@ -33,7 +33,31 @@ public class MeleeAttackData : ScriptableObject
     public bool allowDuplicateHit = false;
     public float duplicateHitInterval = 0.1f;
 
-    // 패턴 홀드 Override 필드 완전 삭제 (이제 defaultPatternHoldDuration 만 사용)
+    // -----------------------------
+    // Moving attack 간소화된 필드
+    // -----------------------------
+    [Header("이동 공격 옵션")]
+    [Tooltip("이동을 수행하는 공격인지 여부")]
+    public bool isMovingAttack = false;
+
+    [Tooltip("임펄스(힘) 크기. Rigidbody에 단발로 적용하는 초기 속도/힘에 해당.")]
+    public float moveForce = 4f;
+
+    [Tooltip("이동 감쇠 지속시간(초). 임펄스 이후 속도를 감쇠하여 정지시키는 시간.")]
+    public float moveDuration = 0.3f;
+
+    public enum MovementLockTiming
+    {
+        OnAnimationStart,    // 공격 애니메이션 시작 직후 위치를 고정
+        JustBeforeImpulse    // 실제 힘을 주기 직전까지 위치를 계속 추적하고, 힘을 주는 순간 위치를 고정
+    }
+
+    [Tooltip("목표 위치 고정 타이밍")]
+    public MovementLockTiming lockTiming = MovementLockTiming.JustBeforeImpulse;
+
+    // 단일 커스텀 필드: 애니메이션 시작 기준으로 몇 초 후에 힘을 적용할지(0이면 즉시)
+    [Tooltip("애니메이션 시작 기준으로 힘을 적용할 시간(초). 0이면 즉시 적용.")]
+    public float forceApplyTime = 0f;
 
     private void OnValidate()
     {
@@ -43,5 +67,12 @@ public class MeleeAttackData : ScriptableObject
         stunDuration = Mathf.Max(0f, stunDuration);
         range = Mathf.Max(0f, range);
         cooldown = Mathf.Max(0f, cooldown);
+
+        // 이동 공격값 검증
+        moveForce = Mathf.Max(0f, moveForce);
+        moveDuration = Mathf.Max(0f, moveDuration);
+
+        // forceApplyTime 검증
+        forceApplyTime = Mathf.Max(0f, forceApplyTime);
     }
 }
