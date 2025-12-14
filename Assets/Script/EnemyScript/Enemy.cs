@@ -6,6 +6,7 @@ using UnityEngine;
 /// Enemy (MovementSettings-required)
 /// - MovementSettings SO is the source of truth for movement/headroom/obstacle masks.
 /// - Super-armor/state related to shield is now handled by EnemyHealth (currentShield > 0f).
+/// - Death logic is delegated to EnemyDie component.
 /// </summary>
 [DisallowMultipleComponent]
 public class Enemy : MonoBehaviour
@@ -21,7 +22,7 @@ public class Enemy : MonoBehaviour
     [Header("Sub-components")]
     public EnemyAI ai;
     public EnemyImpact impact;
-    // EnemyDeath component removed per request.
+    public EnemyDie dieCtrl; // death handler (new)
 
     [Header("Common params")]
     [Tooltip("Base move speed (m/s)")]
@@ -60,7 +61,7 @@ public class Enemy : MonoBehaviour
 
         ai = GetComponent<EnemyAI>() ?? gameObject.AddComponent<EnemyAI>();
         impact = GetComponent<EnemyImpact>() ?? gameObject.AddComponent<EnemyImpact>();
-        // EnemyDeath component intentionally removed.
+        dieCtrl = GetComponent<EnemyDie>() ?? gameObject.AddComponent<EnemyDie>();
 
         player = GameObject.FindWithTag("Player")?.transform;
         SetState(EnemyState.Chase, true);
@@ -73,6 +74,15 @@ public class Enemy : MonoBehaviour
             rb.useGravity = true;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        }
+
+        // hook EnemyDie references to avoid duplicate collisions on ragdoll
+        if (dieCtrl != null)
+        {
+            dieCtrl.animator = animator;
+            dieCtrl.rootRb = rb;
+            dieCtrl.rootCollider = capsule != null ? (Collider)capsule : GetComponent<Collider>();
+            dieCtrl.excludeRoot = this.transform;
         }
 
         // MovementSettings required
@@ -98,8 +108,10 @@ public class Enemy : MonoBehaviour
         if (animator == null) animator = GetComponent<Animator>();
         if (GetComponent<EnemyAI>() == null) gameObject.AddComponent<EnemyAI>();
         if (GetComponent<EnemyImpact>() == null) gameObject.AddComponent<EnemyImpact>();
+        if (GetComponent<EnemyDie>() == null) gameObject.AddComponent<EnemyDie>();
         ai = GetComponent<EnemyAI>();
         impact = GetComponent<EnemyImpact>();
+        dieCtrl = GetComponent<EnemyDie>();
         // EnemyDeath usage removed in this aggressive cleanup.
     }
 #endif
@@ -219,18 +231,21 @@ public class Enemy : MonoBehaviour
         if (CurrentState == EnemyState.Dead) return;
         SetState(EnemyState.Dead, true);
 
-        // Simplified death behavior (per request):
-        if (animator != null)
+        // Delegate death presentation to EnemyDie
+        if (dieCtrl != null)
         {
-            // trigger Die animation if present
-            animator.SetTrigger("Die");
+            dieCtrl.Die(hitDir, weapon, impactScale);
         }
-
-        // destroy gameobject after a short delay for animation to play
-        Destroy(this.gameObject, 3f);
+        else
+        {
+            // Fallback: animation death + 7s destroy
+            animator?.SetTrigger("Die");
+            animator?.SetBool("IsDead", true);
+            Destroy(this.gameObject, 7f);
+        }
     }
 
-public void RequestMove(Vector3 dir, float speed01)
+    public void RequestMove(Vector3 dir, float speed01)
     {
         dir.y = 0f;
         if (dir.sqrMagnitude <= EPS || speed01 <= 0f) { hasMoveRequest = false; return; }

@@ -4,13 +4,9 @@ using UnityEngine.Serialization;
 
 /// <summary>
 /// Weapon data ScriptableObject (common for most weapons)
-/// - Simplified: removed death/ragdoll/slice fields per request.
+/// - DeathMode 및 Ragdoll/Slice 필드 추가.
 /// </summary>
 
-/// <summary>
-/// 폭발/프로젝타일 등에서 데미지 판정 대상을 구분하기 위한 옵션
-/// (Launcher 전용 데이터에서 사용)
-/// </summary>
 public enum DamageTargetType
 {
     EnemyOnly,
@@ -18,24 +14,34 @@ public enum DamageTargetType
     Both
 }
 
+// 죽음 방식 선택
+public enum DeathMode
+{
+    Animation,
+    Ragdoll
+}
+
+// 새로 추가: 슬라이스 타겟(본 그룹)
+public enum SliceTarget
+{
+    Head,       // Bip001 Head
+    LeftArm,    // Bip001 L UpperArm
+    RightArm,   // Bip001 R UpperArm
+    LeftLeg,    // Bip001 L Thigh
+    RightLeg,   // Bip001 R Thigh
+    All         // 위 모든 파트 전체 분리
+}
+
 [CreateAssetMenu(menuName = "Weapon/WeaponDataSO")]
 public class WeaponDataSO : ScriptableObject
 {
     [Header("식별/표시")]
-    [Tooltip("고유 ID (예: \"grenade\", \"pistol_01\"). Inventory/DB에서 이 id로 참조합니다.")]
     public string id;
-
-    [Tooltip("에디터에서 표시할 무기 이름")]
     public string weaponName = "NewWeapon";
-
-    [Tooltip("UI에 표시할 아이콘 스프라이트")]
     public Sprite icon;
-
-    [Tooltip("무기 분류(특수/투척 등 처리를 위해 사용)")]
     public WeaponCategory category = WeaponCategory.Primary;
 
     [Header("애니메이션 세트 (Animator Override Controller 방식)")]
-    [Tooltip("무기별 애니메이션을 교체하려면 여기에 AOC를 등록")]
     public AnimatorOverrideController overrideController;
 
     [Header("전투 관련")]
@@ -44,7 +50,6 @@ public class WeaponDataSO : ScriptableObject
     public float range = 2.5f;
 
     [Header("히트박스 타이밍 및 지속")]
-    [Tooltip("공격 시작 후 몇 초 뒤 히트박스가 생성되는지")]
     public float hitboxSpawnDelay = 0f;
     public float hitBoxLifetime = 0.2f;
 
@@ -55,64 +60,70 @@ public class WeaponDataSO : ScriptableObject
     public float jerkDuration = 0.2f;
 
     [Header("스턴")]
-    [Tooltip("0이면 스턴 없음, 값이 있으면 스턴 지속 시간 (초)")]
     public float stunDuration = 0f;
 
-    /* ───────── 🆕 Push(밀림) 옵션 ───────── */
     [Header("Push(밀림) 옵션")]
-    [Tooltip("체크하면 이 무기 히트는 상태 변화(넉백) 대신 단순히 뒤로 밀림(Push)으로 동작합니다.")]
     public bool usePushInsteadOfKnockback = false;
 
-    // renamed from hitstopTime -> animationHoldDuration, keep FormerlySerializedAs to preserve existing asset values
+    // renamed from hitstopTime -> animationHoldDuration
     [FormerlySerializedAs("hitstopTime")]
-    [Tooltip("피격 대상만 애니메이션을 잠깐 멈추는 시간(초). 0이면 비활성")]
     public float animationHoldDuration = 0f;
 
-    [Header("처치 연출 (기본)")]
-    // 기존에 있던 deathType/ragdoll/slice 관련 파라미터는 삭제되었습니다.
-    // 죽음 연출은 엔진 상에서 단순 애니메이터 트리거 + Destroy 로 대체됩니다.
+    [Header("처치 연출 선택")]
+    [Tooltip("죽음 방식 선택: Animation(애니메이션) 또는 Ragdoll(물리 랙돌)")]
+    public DeathMode deathMode = DeathMode.Animation;
 
-    /* ───────── Per-Weapon Charge Attack Slot ───────── */
+    [Header("Ragdoll 임펄스(죽음이 Ragdoll일 때만 사용)")]
+    [Tooltip("수평(히트 방향) 속도 변화(m/s). ForceMode.VelocityChange로 적용.")]
+    public float ragdollImpulse = 5f;
+
+    [Tooltip("위로 띄우는 속도 변화(m/s). ForceMode.VelocityChange로 추가.")]
+    public float ragdollUpImpulse = 0f;
+
+    [Tooltip("회전 토크(ForceMode.VelocityChange). 전체 분배 기준값(힙=1.0, 머리=0.8, 기타=0.5).")]
+    public float ragdollSpinTorque = 0f;
+
+    /* ───────── Slice(본 분리) 옵션 ───────── */
+    [Header("Slice(본 분리)")]
+    [Tooltip("슬라이스 대상 본 목록. 여러 개 지정 시 균등 확률로 하나를 선택합니다. All을 지정하면 전체 분리합니다.")]
+    public List<SliceTarget> sliceTargets = new List<SliceTarget>();
+
+    [Tooltip("슬라이스된 파츠(선택된 본과 모든 하위 본)에만 적용할 힘(단일 값). 거리와 높이 모두 이 값 하나로 사용합니다. ForceMode.VelocityChange로 적용.")]
+    public float sliceImpulse = 0f;
+
     [Header("Charge Attack (무기별 선택 적용)")]
-    [Tooltip("이 무기에 사용할 플레이어 차지 공격 SO. 비어있으면 이 무기는 차지 비활성.")]
     public PlayerChargeAttackSO chargeSlot;
 
-    /* ───────── 🆕 리코일(자기 반동) ───────── */
     [Header("리코일(자기 반동)")]
-    [Tooltip("공격 시작 후 리코일이 시작되기까지의 지연 시간(초)")]
     public float recoilStartDelay = 0f;
-
-    [Tooltip("리코일 파워 (+면 뒤로, -면 앞으로). 단위: m/s")]
     public float recoilPower = 0f;
-
-    [Tooltip("리코일 지속 시간(초)")]
     public float recoilDuration = 0f;
 
     [Header("Mount / Socket names (priority order)")]
-    [Tooltip("플레이어 프리팹에서 찾을 소켓 이름 목록(우선순위). 예: L_Hand_Weapon, R_Hand_Weapon, Root_dummy")]
     public List<string> socketNames = new List<string>() { "R_Hand_Weapon" };
 
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        // keep same validation behavior as original project (Unity editor only)
         cooldown = Mathf.Max(0f, cooldown);
         hitboxSpawnDelay = Mathf.Max(0f, hitboxSpawnDelay);
         hitBoxLifetime = Mathf.Max(0.01f, hitBoxLifetime);
 
         knockbackDuration = Mathf.Max(0f, knockbackDuration);
         jerkDuration = Mathf.Max(0f, jerkDuration);
-
         stunDuration = Mathf.Max(0f, stunDuration);
 
-        // recoil validation
         recoilStartDelay = Mathf.Max(0f, recoilStartDelay);
         recoilDuration = Mathf.Max(0f, recoilDuration);
 
-        // new field validation
         animationHoldDuration = Mathf.Max(0f, animationHoldDuration);
 
-        // id default warning
+        ragdollImpulse = Mathf.Max(0f, ragdollImpulse);
+        ragdollUpImpulse = Mathf.Max(0f, ragdollUpImpulse);
+        ragdollSpinTorque = Mathf.Max(0f, ragdollSpinTorque);
+
+        sliceImpulse = Mathf.Max(0f, sliceImpulse);
+
         if (string.IsNullOrEmpty(id))
         {
             Debug.LogWarning($"WeaponDataSO '{name}' has empty id. Please set a unique id for inventory/DB usage.");
