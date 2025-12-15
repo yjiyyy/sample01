@@ -31,7 +31,7 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: Attack_End
+      name: Attack_Rush_End
       takeName: E_LV02@Attack_End
       internalID: -2341748306902204784
       firstFrame: 0

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class HitBox_Enemy : MonoBehaviour
@@ -8,10 +9,14 @@ public class HitBox_Enemy : MonoBehaviour
     private float knockbackDuration;
     private float stunDuration;
 
-    // 중복 데미지 옵션
-    private bool allowDuplicateHit = false;
-    private float duplicateHitInterval = 0f;
-    private Dictionary<GameObject, float> lastHitTimes = new();
+    // 드릴형 중복 히트 옵션
+    private bool duplicateEnabled = false;
+    private float duplicateInterval = 0.2f;
+
+    // 겹침/히트 관리 (멀티 콜라이더 보호를 위해 PlayerHealth 기준)
+    private readonly HashSet<PlayerHealth> overlapping = new();
+    private readonly HashSet<PlayerHealth> alreadyHit = new();
+    private Coroutine dupRoutine;
 
     public void Initialize(
         float dmg, float rng, float kbPower, float kbDuration, float lifetime, float stun = 0f,
@@ -22,70 +27,117 @@ public class HitBox_Enemy : MonoBehaviour
         knockbackDuration = kbDuration;
         stunDuration = stun;
 
-        allowDuplicateHit = allowDup;
-        duplicateHitInterval = dupInterval;
+        duplicateEnabled = allowDup;
+        duplicateInterval = Mathf.Max(0.01f, dupInterval);
 
-        Debug.Log($"[HitBox_Enemy] Init │ dmg:{damage}, kbPower:{knockbackPower}, kbDur:{knockbackDuration}, stun:{stunDuration}, allowDup:{allowDuplicateHit}, dupInterval:{duplicateHitInterval}");
+        Debug.Log($"[HitBox_Enemy] Init │ dmg:{damage}, kbPower:{knockbackPower}, kbDur:{knockbackDuration}, stun:{stunDuration}, allowDup:{duplicateEnabled}, dupInterval:{duplicateInterval}");
         Destroy(gameObject, lifetime);
+
+        // 드릴형(중복 히트)이면 주기 타이머 시작
+        if (duplicateEnabled)
+        {
+            if (dupRoutine != null) StopCoroutine(dupRoutine);
+            dupRoutine = StartCoroutine(DuplicateTickRoutine());
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (dupRoutine != null)
+        {
+            StopCoroutine(dupRoutine);
+            dupRoutine = null;
+        }
+        overlapping.Clear();
+        alreadyHit.Clear();
     }
 
     private void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag("Player")) return;
 
-        GameObject playerGO = other.gameObject;
-        float now = Time.time;
+        // PlayerHealth 기준으로 동일 대상 중복 방지
+        var hp = other.GetComponentInParent<PlayerHealth>() ?? other.GetComponent<PlayerHealth>();
+        if (hp == null) return;
 
-        if (!allowDuplicateHit)
+        if (!duplicateEnabled)
         {
-            if (lastHitTimes.ContainsKey(playerGO)) return;
+            // 즉발 1회: 동일 대상 중복 방지(멀티 콜라이더 보호)
+            if (alreadyHit.Contains(hp)) return;
+            alreadyHit.Add(hp);
+            ApplyHit(hp);
+            return;
         }
-        else
+
+        // 드릴형: 진입 즉시 1회 + 겹침 등록
+        ApplyHit(hp);
+        overlapping.Add(hp);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!duplicateEnabled) return;
+        if (!other.CompareTag("Player")) return;
+
+        var hp = other.GetComponentInParent<PlayerHealth>() ?? other.GetComponent<PlayerHealth>();
+        if (hp != null)
+            overlapping.Remove(hp);
+    }
+
+    private IEnumerator DuplicateTickRoutine()
+    {
+        while (true)
         {
-            if (lastHitTimes.TryGetValue(playerGO, out float lastTime))
+            yield return new WaitForSeconds(duplicateInterval);
+
+            if (overlapping.Count == 0) continue;
+
+            // 스냅샷 순회(집합 변경 안전)
+            var snapshot = new List<PlayerHealth>(overlapping);
+            foreach (var hp in snapshot)
             {
-                if (now - lastTime < duplicateHitInterval)
-                    return;
+                if (hp == null) continue;
+                ApplyHit(hp);
             }
         }
-        lastHitTimes[playerGO] = now;
+    }
 
-        // ✅ 무적 상태 체크 (회피 중 무적)
-        if (other.TryGetComponent(out PlayerWeaponController weaponController))
+    private void ApplyHit(PlayerHealth hp)
+    {
+        if (hp == null) return;
+
+        // 무적 상태(회피 무적) 체크
+        var weaponController = hp.GetComponent<PlayerWeaponController>() ?? hp.GetComponentInParent<PlayerWeaponController>();
+        if (weaponController != null && weaponController.IsInvincible())
         {
-            if (weaponController.IsInvincible())
-            {
-                Debug.Log("[HitBox_Enemy] 플레이어 무적 상태 - 공격 무시됨");
-                return;
-            }
+            Debug.Log("[HitBox_Enemy] 플레이어 무적 상태 - 공격 무시됨");
+            return;
         }
 
-        // 🔧 Health → PlayerHealth로 변경
-        if (other.TryGetComponent(out PlayerHealth hp))
-        {
-            hp.ApplyDamage(damage);
-            Debug.Log($"✅ [HitBox_Enemy] PlayerHealth에 {damage} 데미지 적용!");
-        }
-        else
-        {
-            Debug.LogWarning($"❌ [HitBox_Enemy] {other.name}에서 PlayerHealth를 찾을 수 없습니다!");
-        }
+        // 1) 데미지 적용
+        hp.ApplyDamage(damage);
+        Debug.Log($"✅ [HitBox_Enemy] PlayerHealth에 {damage} 데미지 적용! (dup:{duplicateEnabled})");
 
-        // 🔧 PlayerWeaponController에서 넉백+스턴 처리 (최우선)
-        if (other.TryGetComponent(out PlayerWeaponController weaponController2))
-        {
-            Vector3 hitDir = (other.transform.position - transform.position).normalized;
-            hitDir.y = 0f;
+        // 2) 넉백/스턴 처리
+        Vector3 hitDir = (hp.transform.position - transform.position);
+        hitDir.y = 0f;
+        if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
+        hitDir.Normalize();
 
+        if (weaponController != null)
+        {
             Debug.Log($"[HitBox_Enemy] 플레이어 공격! 넉백: {knockbackPower}, 스턴: {stunDuration}");
-            weaponController2.ForceApplyKnockback(hitDir, knockbackPower, knockbackDuration, stunDuration);
+            weaponController.ForceApplyKnockback(hitDir, knockbackPower, knockbackDuration, stunDuration);
         }
-        else if (other.TryGetComponent(out PlayerMovement playerMove))
+        else
         {
-            // ✅ PlayerMovement 넉백 (백업용)
-            Vector3 hitDir = (other.transform.position - transform.position).normalized;
-            playerMove.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
-            Debug.Log("[HitBox_Enemy] PlayerMovement 백업 넉백 실행");
+            // 백업: PlayerMovement가 있을 경우 밀기
+            var playerMove = hp.GetComponent<PlayerMovement>() ?? hp.GetComponentInChildren<PlayerMovement>();
+            if (playerMove != null)
+            {
+                playerMove.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
+                Debug.Log("[HitBox_Enemy] PlayerMovement 백업 넉백 실행");
+            }
         }
     }
 }

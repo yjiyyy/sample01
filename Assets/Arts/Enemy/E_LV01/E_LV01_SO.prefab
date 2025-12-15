@@ -139,7 +139,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackPatterns:
-  - {fileID: 11400000, guid: 4442699513e905642bc08e634f8e3dc1, type: 2}
+  - {fileID: 11400000, guid: bc52024f2e566dd40b2b55ddabfb562a, type: 2}
   "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0
   defaultPatternHoldDuration: 0
   debugDecisionLogs: 1

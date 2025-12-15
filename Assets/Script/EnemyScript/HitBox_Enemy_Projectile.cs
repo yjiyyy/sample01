@@ -1,57 +1,62 @@
-using UnityEngine;
+ï»¿using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 
 /// <summary>
-/// Àû ¿ø°Å¸® Åõ»çÃ¼
-/// - ÀÌµ¿: Straight(µî¼Ó Á÷¼±) / Parabolic(°£ÀÌ º£Áö¾î, t=1 ÀÌÈÄ ¸¶Áö¸· Á¢¼± ¹æÇâ Á÷Áø)
-/// - Ãæµ¹: Player ÅÂ±×¿¡ ÀûÁß ½Ã µ¥¹ÌÁö/³Ë¹é/½ºÅÏ Àû¿ë ÈÄ ÆÄ±«
-/// - Àå¾Ö¹°: SO ¿É¼Ç¿¡ µû¶ó ·¹ÀÌ¾î ¶Ç´Â ºñTrigger Ãæµ¹ ½Ã ÆÄ±«
-/// - È¸Àü: faceToMovement(ÀÌµ¿ ¹æÇâ Á¤¸é), spinWhileFlying(·ÎÄÃÃà ½ºÇÉ)
+/// ì  ì›ê±°ë¦¬ ë°œì‚¬ì²´
+/// - ì´ë™: Straight(ì§ì„ ) / Parabolic(í¬ë¬¼ì„ , t=1 ì´í›„ ì ‘ì„  ë°©í–¥ ì§ì„  ìœ ì§€)
+/// - í”¼ê²©: Player íƒœê·¸ì™€ ì¶©ëŒ ì‹œ ë°ë¯¸ì§€/ë„‰ë°±/ìŠ¤í„´ ì ìš© í›„ ì²˜ë¦¬
+/// - íŒŒê´´: SO ì˜µì…˜ì— ë”°ë¼ ì¥ì• ë¬¼ / ë¹„Trigger ì¶©ëŒ ì‹œ íŒŒê´´
+/// - íšŒì „: faceToMovement(ì´ë™ ë°©í–¥ ì •ë©´), spinWhileFlying(ìì „ íšŒì „)
+/// - ì¤‘ë³µ íˆíŠ¸: allowDuplicateHit=trueë©´ ê²¹ì¹˜ëŠ” ë™ì•ˆ duplicateHitIntervalë§ˆë‹¤ ë°˜ë³µ íƒ€ê²©
 /// </summary>
 [RequireComponent(typeof(Collider))]
 [RequireComponent(typeof(Rigidbody))]
 public class HitBox_Enemy_Projectile : MonoBehaviour
 {
-    // SO¿¡¼­ ÁÖÀÔµÇ´Â ÀüÅõ ÆÄ¶ó¹ÌÅÍ
+    // SOì—ì„œ ì£¼ì…ë˜ëŠ” ì „íˆ¬ íŒŒë¼ë¯¸í„°
     private float damage;
     private float knockbackPower;
     private float knockbackDuration;
     private float stunDuration;
 
-    private bool allowDuplicateHit;
-    private float duplicateHitInterval;
+    // ì¤‘ë³µ íˆíŠ¸ ì˜µì…˜
+    private bool duplicateEnabled;
+    private float duplicateInterval;
 
-    // ÀÌµ¿/¼ö¸í
+    // ì´ë™/ìˆ˜ëª…
     private float speed;
     private float lifetime;
     private float lifeTimer;
 
     private RangedProjectileMovementType movementType;
     private Vector3 startPos;
-    private Vector3 targetPos; // ¹ß»ç ½ÃÁ¡ÀÇ ÇÃ·¹ÀÌ¾î À§Ä¡ ½º³À
+    private Vector3 targetPos; // ë°œì‚¬ ì‹œì ì˜ í”Œë ˆì´ì–´ ìœ„ì¹˜ ìŠ¤ëƒ…
     private float arcHeight;
 
-    // Parabolic ¿ë
-    private float t;                   // 0~1 º£Áö¾î ÆÄ¶ó¹ÌÅÍ
+    // Parabolic ìš©
+    private float t;                   // 0~1 ì§„í–‰ë„
     private float approxPathLen;
-    private Vector3 p0, p1, p2;        // º£Áö¾î Á¦¾îÁ¡
-    private Vector3 lastTangent;       // t¡æ1 Á¾·á ½Ã Á¢¼±
+    private Vector3 p0, p1, p2;        // í¬ë¬¼ì„  ì œì–´ì 
+    private Vector3 lastTangent;       // t>=1 ì´í›„ ì§ì§„ ë°©í–¥
 
-    // Straight/¿¬¼Ó ÀÌµ¿¿ë °íÁ¤ moveDir
+    // Straight/ì§ì„  ì´ë™ì—ì„œ ì“°ëŠ” moveDir
     private Vector3 moveDir;
 
-    // È¸Àü ¿É¼Ç
+    // íšŒì „ ì˜µì…˜
     private bool faceToMovement;
     private bool spinWhileFlying;
     private Vector3 spinAxisNormalized = Vector3.up;
     private float spinSpeed;
 
-    // Àå¾Ö¹° Ã³¸®
+    // ì¥ì• ë¬¼ ì²˜ë¦¬
     private bool destroyOnObstacle;
     private LayerMask obstacleLayers;
 
-    // Áßº¹ È÷Æ® °ü¸®(ÇöÀç´Â ÇÃ·¹ÀÌ¾î È÷Æ® ½Ã ÆÄ±«µÇ¹Ç·Î ¹æ¾îÀû¸¸ ³²±è)
-    private GameObject lastHitObj;
-    private float lastHitTime;
+    // ë“œë¦´í˜• ì¤‘ë³µ íˆíŠ¸ ê´€ë¦¬(í”Œë ˆì´ì–´ ë‹¨ìœ„ë¡œ ê´€ë¦¬; ë©€í‹° ì½œë¼ì´ë” ë³´í˜¸)
+    private readonly HashSet<PlayerHealth> overlapping = new();
+    private readonly HashSet<PlayerHealth> alreadyHit = new();
+    private Coroutine dupRoutine;
 
     private Rigidbody rb;
     private Collider col;
@@ -61,7 +66,7 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         col = GetComponent<Collider>();
         rb = GetComponent<Rigidbody>();
 
-        // Trigger + Kinematic ±ÇÀå ¼³Á¤
+        // Trigger + Kinematic ê¸°ë³¸ ì„¸íŒ…
         if (col) col.isTrigger = true;
         if (rb)
         {
@@ -84,7 +89,7 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         Vector3 start,
         Vector3 target,
         float arcH,
-        // È¸Àü/Àå¾Ö¹° ¿É¼Ç
+        // íšŒì „/ì¥ì• ë¬¼ ì˜µì…˜
         bool faceMove, bool spin, Vector3 spinAxis, float spinSpd,
         bool destroyObstacle, LayerMask obstacleMask
     )
@@ -96,8 +101,8 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         knockbackDuration = kbDuration;
         stunDuration = stun;
 
-        allowDuplicateHit = allowDup;
-        duplicateHitInterval = dupInterval;
+        duplicateEnabled = allowDup;
+        duplicateInterval = Mathf.Max(0.01f, dupInterval);
 
         movementType = moveType;
         startPos = start;
@@ -120,7 +125,7 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
             case RangedProjectileMovementType.Straight:
                 moveDir = (targetPos - startPos);
                 if (moveDir.sqrMagnitude < 0.0001f) moveDir = Vector3.forward;
-                moveDir.y = 0f; // »ó¸é¿¡¼­ ¿î¿µ
+                moveDir.y = 0f; // ìˆ˜í‰ë§Œ ìš´ìš©
                 moveDir.Normalize();
                 break;
 
@@ -129,7 +134,7 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
                 p2 = targetPos;
                 p1 = (p0 + p2) * 0.5f + Vector3.up * arcHeight;
 
-                // ±Ù»ç °æ·Î ±æÀÌ: µÎ ¼±ºĞ ÇÕ
+                // ëŒ€ëµ ê¸¸ì´: ì„ ë¶„ í•©
                 approxPathLen = Vector3.Distance(p0, p1) + Vector3.Distance(p1, p2);
                 lastTangent = (p2 - p1);
                 if (lastTangent.sqrMagnitude < 0.0001f) lastTangent = (p2 - p0);
@@ -138,11 +143,18 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
                 break;
         }
 
-        // ½ºÆù Áï½Ã 1È¸ Á¤·Ä(¿É¼Ç Ãß°¡ ¾øÀÌ)
+        // ìŠ¤í° ì§í›„ 1íšŒ ì •ë©´ ì •ë ¬(ì˜µì…˜)
         SetInitialFacingAtSpawn();
 
-        // ¼ö¸í ³¡¿¡ ÆÄ±«
+        // ìˆ˜ëª… íƒ€ì´ë¨¸ íŒŒê´´ ì˜ˆì•½
         Destroy(gameObject, lifetime);
+
+        // ë“œë¦´í˜•ì´ë©´ ì£¼ê¸° ì½”ë£¨í‹´ ì‹œì‘
+        if (duplicateEnabled)
+        {
+            if (dupRoutine != null) StopCoroutine(dupRoutine);
+            dupRoutine = StartCoroutine(DuplicateTickRoutine());
+        }
     }
 
     private void Update()
@@ -167,7 +179,7 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
                 {
                     if (t < 1f)
                     {
-                        // t°¡ ½ÇÁ¦ °æ·Î ±æÀÌ¿¡ ºñ·ÊÇÏµµ·Ï µî¼Ó ±Ù»ç
+                        // t ì¦ê°€ëŸ‰ì„ ì†ë„/ê²½ë¡œê¸¸ì´ì— ë¹„ë¡€í•˜ë„ë¡ ê³„ì‚°(í”„ë ˆì„ ë…ë¦½)
                         float dt = (speed / Mathf.Max(approxPathLen, 0.01f)) * Time.deltaTime;
                         t = Mathf.Clamp01(t + dt);
 
@@ -183,7 +195,7 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
                     }
                     else
                     {
-                        // ¸ñÇ¥Á¡ Áö³­ µÚ¿£ ¸¶Áö¸· Á¢¼± ¹æÇâÀ¸·Î °è¼Ó Á÷Áø
+                        // ëª©í‘œì  í†µê³¼ í›„ ì ‘ì„  ë°©í–¥ ì§ì„  ìœ ì§€
                         transform.position += lastTangent * speed * Time.deltaTime;
                         ApplyFacing(lastTangent);
                     }
@@ -191,11 +203,22 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
                 break;
         }
 
-        // ½ºÇÉ
+        // ìì „ íšŒì „
         if (spinWhileFlying && spinSpeed != 0f)
         {
             transform.Rotate(spinAxisNormalized, spinSpeed * Time.deltaTime, Space.Self);
         }
+    }
+
+    private void OnDisable()
+    {
+        if (dupRoutine != null)
+        {
+            StopCoroutine(dupRoutine);
+            dupRoutine = null;
+        }
+        overlapping.Clear();
+        alreadyHit.Clear();
     }
 
     private void SetInitialFacingAtSpawn()
@@ -226,61 +249,46 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         if (!faceToMovement) return;
         if (dir.sqrMagnitude < 0.0001f) return;
 
-        // "È­»ìÃ³·³" ¡æ °æ·Î Á¢¼± ¹æÇâÀ» ¹Ù¶óº¸°Ô. ¼öÆò¸¸ ¾²·Á¸é y=0 Ã³¸®.
+        // "í™”ë©´ì¢Œí‘œ" ì”¬ ê¸°ì¤€ ìœ„ìª½ì€ Vector3.up. ìˆ˜í‰ ì •ë ¬ì„ ìœ„í•´ y=0 ì²˜ë¦¬.
         Quaternion look = Quaternion.LookRotation(dir.normalized, Vector3.up);
         transform.rotation = look;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // ÇÃ·¹ÀÌ¾î ÇÇ°İ
+        // í”Œë ˆì´ì–´ í”¼ê²©
         if (other.CompareTag("Player"))
         {
-            // Áßº¹ È÷Æ® ¹æÁö
-            if (!allowDuplicateHit)
-            {
-                if (lastHitObj == other.gameObject) return;
-            }
-            else
-            {
-                if (lastHitObj == other.gameObject && Time.time - lastHitTime < duplicateHitInterval)
-                    return;
-            }
-            lastHitObj = other.gameObject;
-            lastHitTime = Time.time;
+            var hp = other.GetComponentInParent<PlayerHealth>() ?? other.GetComponent<PlayerHealth>();
+            if (hp == null) return;
 
-            // ¹«Àû Ã¼Å©
-            if (other.TryGetComponent(out PlayerWeaponController pwc) && pwc.IsInvincible())
+            // íšŒí”¼ ë¬´ì  ì²´í¬
+            var pwcInv = other.GetComponentInParent<PlayerWeaponController>() ?? other.GetComponent<PlayerWeaponController>();
+            if (pwcInv != null && pwcInv.IsInvincible())
             {
+                // ê¸°ì¡´ ë™ì‘ ìœ ì§€: ë¬´ì ì´ë©´ íŒŒê´´
                 Destroy(gameObject);
                 return;
             }
 
-            // µ¥¹ÌÁö
-            if (other.TryGetComponent(out PlayerHealth hp))
+            if (!duplicateEnabled)
             {
-                hp.ApplyDamage(damage);
+                // ì¦‰ë°œ 1íšŒ: ê°™ì€ PlayerHealth ì¤‘ë³µ ë°©ì§€(ë©€í‹° ì½œë¼ì´ë” ë³´í˜¸)
+                if (alreadyHit.Contains(hp)) return;
+                alreadyHit.Add(hp);
+
+                ApplyHit(hp);
+                Destroy(gameObject);
+                return;
             }
 
-            // ³Ë¹é/½ºÅÏ
-            Vector3 hitDir = (other.transform.position - transform.position);
-            hitDir.y = 0f;
-            if (hitDir.sqrMagnitude > 0.0001f) hitDir.Normalize();
-
-            if (other.TryGetComponent(out PlayerWeaponController pwc2))
-            {
-                pwc2.ForceApplyKnockback(hitDir, knockbackPower, knockbackDuration, stunDuration);
-            }
-            else if (other.TryGetComponent(out PlayerMovement move))
-            {
-                move.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
-            }
-
-            Destroy(gameObject);
+            // ë“œë¦´í˜•: ì§„ì… ì¦‰ì‹œ 1íšŒ + ê²¹ì¹¨ ë“±ë¡(ë§ˆë¬´ë¦¬ëŠ” ìˆ˜ëª…/ì¥ì• ë¬¼ì—ì„œ)
+            ApplyHit(hp);
+            overlapping.Add(hp);
             return;
         }
 
-        // Àå¾Ö¹° Ã³¸®
+        // ì¥ì• ë¬¼ ì²˜ë¦¬
         if (destroyOnObstacle)
         {
             bool layerMatched = (obstacleLayers.value != 0) &&
@@ -288,7 +296,7 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
 
             bool fallbackObstacle =
                 (obstacleLayers.value == 0) &&
-                (other.isTrigger == false) && // ºñTrigger Ãæµ¹À» Àå¾Ö¹°·Î °£ÁÖ
+                (other.isTrigger == false) && // ë¹„Trigger ì¶©ëŒë§Œ ì¥ì• ë¬¼ë¡œ ê°„ì£¼
                 !other.CompareTag("Enemy") &&
                 !other.CompareTag("Player");
 
@@ -296,6 +304,69 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
             {
                 Destroy(gameObject);
                 return;
+            }
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!duplicateEnabled) return;
+        if (!other.CompareTag("Player")) return;
+
+        var hp = other.GetComponentInParent<PlayerHealth>() ?? other.GetComponent<PlayerHealth>();
+        if (hp != null)
+            overlapping.Remove(hp);
+    }
+
+    private IEnumerator DuplicateTickRoutine()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(duplicateInterval);
+
+            if (overlapping.Count == 0) continue;
+
+            // ìŠ¤ëƒ…ìƒ· ìˆœíšŒ(ì§‘í•© ë³€ê²½ ì•ˆì „)
+            var snapshot = new List<PlayerHealth>(overlapping);
+            foreach (var hp in snapshot)
+            {
+                if (hp == null) continue;
+                ApplyHit(hp);
+            }
+        }
+    }
+
+    private void ApplyHit(PlayerHealth hp)
+    {
+        if (hp == null) return;
+
+        // íˆíŠ¸ ì‹œì  ë¬´ì  ì¬í™•ì¸(íšŒí”¼ ì¤‘ í‹±ì´ë©´ ìŠ¤í‚µ)
+        var pwc = hp.GetComponent<PlayerWeaponController>() ?? hp.GetComponentInParent<PlayerWeaponController>();
+        if (pwc != null && pwc.IsInvincible())
+        {
+            return;
+        }
+
+        // 1) ë°ë¯¸ì§€
+        hp.ApplyDamage(damage);
+        // Debug.Log($"âœ… [EnemyProjectile] PlayerHealthì— {damage} ë°ë¯¸ì§€ ì ìš©! (dup:{duplicateEnabled})");
+
+        // 2) ë„‰ë°±/ìŠ¤í„´
+        Vector3 hitDir = (hp.transform.position - transform.position);
+        hitDir.y = 0f;
+        if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
+        hitDir.Normalize();
+
+        if (pwc != null)
+        {
+            pwc.ForceApplyKnockback(hitDir, knockbackPower, knockbackDuration, stunDuration);
+        }
+        else
+        {
+            var move = hp.GetComponent<PlayerMovement>() ?? hp.GetComponentInChildren<PlayerMovement>();
+            if (move != null)
+            {
+                move.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
             }
         }
     }

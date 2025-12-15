@@ -54,7 +54,9 @@ public class PlayerMovement : MonoBehaviour
 
     // debug state
     private Vector3 lastAttemptedDisp = Vector3.zero;
+#pragma warning disable CS0414
     private bool lastAttemptedBlocked = false; // assigned in movement checks; kept for debug use
+#pragma warning restore CS0414
     private float lastAttemptedStepH = 0f;
 
     // non-alloc caches (created in Awake after verifying movementSettings)

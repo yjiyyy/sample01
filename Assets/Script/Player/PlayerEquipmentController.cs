@@ -104,15 +104,6 @@ public class PlayerEquipmentController : MonoBehaviour
         if (CurrentWeapon != null)
             Destroy(CurrentWeapon);
 
-        // instantiate and parent correctly to ensure Awake runs with correct hierarchy
-        Transform mount = null;
-        if (playerRoot != null)
-        {
-            // Determine mount using weaponData.socketNames after instantiation? We can try to find mount on playerRoot using the prefab's SO,
-            // but to avoid extra disk access we instantiate first and then find using its WeaponBehavior.data.
-            // However we can try to find soon: instantiate temporarily under playerRoot if needed.
-        }
-
         GameObject inst = null;
 
         // We need CurrentWeaponData to decide socketNames. But WeaponBehavior (on the prefab) will be setup in Awake.

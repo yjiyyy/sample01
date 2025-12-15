@@ -2,16 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// EnemyAttackController
-/// 실행(Executed) 개념 추가:
-///  - 패턴이 선택(SELECT)되면 holdActive = true, holdExpireTime = now + holdDuration
-///  - StartMelee / StartRush / StartRanged 진입 순간 MarkExecuted() → pendingExecuted = true
-/// 랜덤 선택:
-///  - 모든 Ready 후보 수집 후 균등 랜덤
-/// 쿨다운:
-///  - 성공 종료 시 개별+글로벌 적용
-/// </summary>
 public class EnemyAttackController : MonoBehaviour
 {
     [Header("패턴 배열 (MeleeAttackData / RushAttackData / RangedAttackData)")]
@@ -31,8 +21,8 @@ public class EnemyAttackController : MonoBehaviour
     private float meleeFreezeStartTime;
     private bool meleeWillFreeze;
     private bool meleeFrozenApplied;
-    private Coroutine meleeHitDelayRoutine; // ← 히트박스 지연 스폰 코루틴
-    private Coroutine meleeMoveRoutine; // 이동 공격 코루틴
+    private Coroutine meleeHitDelayRoutine;
+    private Coroutine meleeMoveRoutine;
 
     /* Rush */
     public bool IsRushing { get; private set; } = false;
@@ -41,6 +31,8 @@ public class EnemyAttackController : MonoBehaviour
     private GameObject spawnedRushHitbox;
     private int runningRushIndex = -1;
     private Transform rushTarget;
+    // 마지막 돌진 방향(마무리 감속에 사용)
+    private Vector3 lastRushDir = Vector3.forward;
 
     /* Ranged */
     private Coroutine rangedRoutine;
@@ -58,7 +50,6 @@ public class EnemyAttackController : MonoBehaviour
 
     [Header("패턴 홀드")]
     public float defaultPatternHoldDuration = 1.0f;
-    // Per-pattern override removed — all patterns use defaultPatternHoldDuration
 
     private bool holdActive = false;
     private float holdExpireTime;
@@ -150,7 +141,7 @@ public class EnemyAttackController : MonoBehaviour
             }
         }
 
-        // Hold 만료 (실행 안됐고, 공격 수행 중 아님)
+        // Hold 만료
         if (holdActive && !IsAttackExecuting && !pendingExecuted && Time.time >= holdExpireTime)
         {
             Log($"[AttackFlow] HOLD TIMEOUT idx={pendingAttackIndex}");
@@ -159,7 +150,6 @@ public class EnemyAttackController : MonoBehaviour
     }
 
     #region AnimationEvent (Melee)
-    // 하위호환: 애니메이션 이벤트를 제거하지 않아도 중복 스폰 방지를 위해 체크함
     public void AttackHit()
     {
         if (!attackInProgress) return;
@@ -176,7 +166,6 @@ public class EnemyAttackController : MonoBehaviour
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
-        // 방어적 체크: 인터럽트/종료/중복 방지
         if (!attackInProgress) { meleeHitDelayRoutine = null; yield break; }
         if (currentAttack != data) { meleeHitDelayRoutine = null; yield break; }
         if (meleeHitboxSpawned) { meleeHitDelayRoutine = null; yield break; }
@@ -244,16 +233,14 @@ public class EnemyAttackController : MonoBehaviour
     {
         if (IsAttackExecuting || IsGlobalCooling()) return -1;
 
-        // 기존 hold 유지 중 (아직 실행 안됨)
         if (pendingAttackIndex >= 0 && holdActive && !pendingExecuted)
         {
             float pr = GetAttackRange(pendingAttackIndex);
             if (distance <= pr && IsOffCooldown(pendingAttackIndex))
                 return pendingAttackIndex;
-            return -1; // 사거리 밖 → 계속 추격
+            return -1;
         }
 
-        // 새로운 선택 (Ready 후보 수집)
         List<int> candidates = null;
         for (int i = 0; i < AttackCount; i++)
         {
@@ -279,7 +266,6 @@ public class EnemyAttackController : MonoBehaviour
         if (IsAttackExecuting || IsGlobalCooling() || !IsOffCooldown(index)) return false;
         if (attackPatterns == null || index < 0 || index >= attackPatterns.Length) return false;
 
-        // 다른 패턴이 갑자기 사거리 안에서 직접 호출될 수 있으므로 pending 동기화
         if (pendingAttackIndex != index)
             PreparePending(index);
 
@@ -310,7 +296,6 @@ public class EnemyAttackController : MonoBehaviour
         holdActive = true;
         pendingExecuted = false;
 
-        // Always use defaultPatternHoldDuration (per-pattern override removed)
         float hold = defaultPatternHoldDuration;
         holdExpireTime = Time.time + hold;
         Log($"[AttackFlow] SELECT idx={index} hold={hold:F2}s");
@@ -329,7 +314,7 @@ public class EnemyAttackController : MonoBehaviour
             Log("HOLD CLEARED");
         holdActive = false;
         pendingAttackIndex = -1;
-        pendingExecuted = false; // 다음 사이클 초기화
+        pendingExecuted = false;
     }
 
     private void CancelPendingHold()
@@ -343,18 +328,15 @@ public class EnemyAttackController : MonoBehaviour
     #region Melee
     private void StartMelee(MeleeAttackData data, int index)
     {
-        // 실행 순간 표시 (Hold 성공 판정)
         MarkExecuted();
         ClearHold();
 
-        // 이전 지연 코루틴 정리
         if (meleeHitDelayRoutine != null)
         {
             StopCoroutine(meleeHitDelayRoutine);
             meleeHitDelayRoutine = null;
         }
 
-        // 이전 이동 코루틴 정리 (안전)
         if (meleeMoveRoutine != null)
         {
             StopCoroutine(meleeMoveRoutine);
@@ -393,28 +375,23 @@ public class EnemyAttackController : MonoBehaviour
             SafeSetBool("IsRushPrepare", false);
             enemy.animator.speed = 1f;
 
-            // SO에서 지정한 애니메이션 클립이 있으면 우선 재생 (없으면 기존 이름 사용)
             if (data.clip != null)
                 enemy.animator.Play(data.clip.name, 0, 0f);
             else
                 enemy.animator.Play(data.attackName, 0, 0f);
 
-            // lockTiming == OnAnimationStart일 경우 이 시점에 회전 고정 (공격 지속시간만큼 유지)
             if (data.lockTiming == MeleeAttackData.MovementLockTiming.OnAnimationStart)
             {
                 Transform playerT = GameObject.FindWithTag("Player")?.transform;
                 Vector3 dirToTarget = playerT != null ? (playerT.position - transform.position) : transform.forward;
                 dirToTarget.y = 0f;
                 if (dirToTarget.sqrMagnitude < 1e-6f) dirToTarget = transform.forward;
-                // meleeRequestedDuration은 StartMelee에서 계산한 공격 지속 시간
                 enemy.LockLookDirection(dirToTarget.normalized, meleeRequestedDuration);
             }
         }
 
-        // SO 기반 히트박스 지연 스폰 시작
         meleeHitDelayRoutine = StartCoroutine(DelayedMeleeHitbox(data));
 
-        // 이동 공격이면 이동 코루틴 시작 (forceApplyTime 시점에 임펄스 적용)
         if (data.isMovingAttack)
         {
             meleeMoveRoutine = StartCoroutine(MeleeMovingRoutine(data));
@@ -440,14 +417,12 @@ public class EnemyAttackController : MonoBehaviour
         if (enemy?.animator != null)
             enemy.animator.speed = 1f;
 
-        // 지연 스폰 코루틴 정리
         if (meleeHitDelayRoutine != null)
         {
             StopCoroutine(meleeHitDelayRoutine);
             meleeHitDelayRoutine = null;
         }
 
-        // 이동 코루틴 정리
         if (meleeMoveRoutine != null)
         {
             StopCoroutine(meleeMoveRoutine);
@@ -487,13 +462,10 @@ public class EnemyAttackController : MonoBehaviour
     #region Melee moving attack coroutine
     private IEnumerator MeleeMovingRoutine(MeleeAttackData data)
     {
-        // 안전 체크
         if (data == null) yield break;
 
-        // 대상(플레이어) 찾기
         Transform playerT = GameObject.FindWithTag("Player")?.transform;
 
-        // 타겟 포지션 초기화: 애니 시작 시 고정이면 즉시 저장
         Vector3 targetPos = playerT != null ? playerT.position : transform.position + transform.forward * 1f;
         if (data.lockTiming == MeleeAttackData.MovementLockTiming.OnAnimationStart)
         {
@@ -502,7 +474,6 @@ public class EnemyAttackController : MonoBehaviour
 
         float applyAt = Time.time + Mathf.Max(0f, data.forceApplyTime);
 
-        // 기다리는 동안(JustBeforeImpulse이면 계속 추적)
         while (Time.time < applyAt)
         {
             if (!attackInProgress) yield break;
@@ -517,26 +488,22 @@ public class EnemyAttackController : MonoBehaviour
             yield return null;
         }
 
-        // 임펄스 직전 최종 타겟 고정(이미 위에서 갱신됨)
         Vector3 dir = targetPos - transform.position;
         dir.y = 0f;
         if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
         dir.Normalize();
 
-        // MovementLockTiming.JustBeforeImpulse: 이 시점 계산된 공격 각도를 남은 공격시간 동안 고정
         if (data.lockTiming == MeleeAttackData.MovementLockTiming.JustBeforeImpulse)
         {
             float remaining = Mathf.Max(0f, attackEndTime - Time.time);
             enemy.LockLookDirection(dir, remaining);
         }
 
-        // 락이 아직 걸리지 않았다면 즉시 그 방향을 바라보게 1회 회전
         if (enemy == null || !enemy.IsLookLocked)
         {
             transform.rotation = Quaternion.LookRotation(dir);
         }
 
-        // 초기 속도 산정: moveForce / mass
         float massMul = 1f;
         Rigidbody rb = enemy.GetComponent<Rigidbody>();
         if (rb != null) massMul = Mathf.Max(0.0001f, rb.mass);
@@ -545,7 +512,6 @@ public class EnemyAttackController : MonoBehaviour
         float dur = Mathf.Max(0f, data.moveDuration);
         float elapsed = 0f;
 
-        // 감쇠 이동: 선형 감쇠 (initial -> 0) over duration, FixedUpdate 기반
         while (elapsed < dur)
         {
             if (!attackInProgress) break;
@@ -555,15 +521,12 @@ public class EnemyAttackController : MonoBehaviour
             float currentSpeed = initialSpeed * (1f - t);
             Vector3 disp = dir * currentSpeed * Time.fixedDeltaTime;
 
-            // 이동 시엔 Enemy의 안전한 이동 API 사용 (슬라이드/충돌/헤드룸 고려)
             enemy.MoveFilteredDisplacement(disp);
 
             elapsed += Time.fixedDeltaTime;
             yield return new WaitForFixedUpdate();
         }
 
-        // 루틴 종료(정상 종료/중단 모두) 직전에는 방향 락을 해제하지 않음.
-        // 락은 FinishMelee에서 공격 종료 시점에만 해제.
         meleeMoveRoutine = null;
     }
     #endregion
@@ -571,7 +534,6 @@ public class EnemyAttackController : MonoBehaviour
     #region Rush
     private void StartRush(RushAttackData data, Transform target, int index)
     {
-        // 실행 표시
         MarkExecuted();
         ClearHold();
 
@@ -584,20 +546,30 @@ public class EnemyAttackController : MonoBehaviour
         else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
         rushPrepareCoroutine = StartCoroutine(RushPrepareRoutine(data));
-        Log($"RUSH PREPARE START idx={index} prep={data.prepareTime:F2}");
+        Log($"RUSH PREPARE START idx={index} prep={data.prepareDuration:F2}");
     }
 
     private IEnumerator RushPrepareRoutine(RushAttackData data)
     {
         if (enemy.animator)
         {
-            SafeSetBool("IsRushPrepare", true);
-            SafeSetBool("IsRush", false);
-            enemy.animator.Play("RushPrepare");
+            // 파라미터가 없어도 Play만으로 동작하도록
+            if (data.prepareClip != null)
+            {
+                enemy.animator.speed = 1f;
+                enemy.animator.Play(data.prepareClip.name, 0, 0f);
+            }
+            else
+            {
+                // 클립 미지정 시 폴백(있으면): "RushPrepare"
+                SafeSetBool("IsRushPrepare", true);
+                SafeSetBool("IsRush", false);
+                enemy.animator.Play("RushPrepare");
+            }
         }
 
         float elapsed = 0f;
-        while (elapsed < data.prepareTime)
+        while (elapsed < data.prepareDuration)
         {
             if (rushTarget != null)
             {
@@ -605,7 +577,6 @@ public class EnemyAttackController : MonoBehaviour
                 dir.y = 0f;
                 if (dir.sqrMagnitude > 0.0001f)
                 {
-                    // 락 중이면 회전 적용하지 않음
                     if (enemy == null || !enemy.IsLookLocked)
                         transform.rotation = Quaternion.LookRotation(dir.normalized);
                 }
@@ -628,17 +599,23 @@ public class EnemyAttackController : MonoBehaviour
     private IEnumerator RushAttackRoutine(RushAttackData data)
     {
         IsRushing = true;
+
         if (enemy.animator)
         {
-            SafeSetBool("IsRushPrepare", false);
-            SafeSetBool("IsRush", true);
-            enemy.animator.Play("Rush");
+            // 공격 클립 우선, 없으면 attackName, 그도 없으면 "Rush"
+            enemy.animator.speed = 1f;
+            if (data.attackClip != null)
+                enemy.animator.Play(data.attackClip.name, 0, 0f);
+            else if (!string.IsNullOrEmpty(data.attackName))
+                enemy.animator.Play(data.attackName, 0, 0f);
+            else
+                enemy.animator.Play("Rush", 0, 0f);
         }
-        // NavMeshAgent 의존 제거: 남아 있어도 동작엔 영향 없게 null 체크로 우회
 
         SpawnRushHitbox(data);
 
         float elapsed = 0f;
+        // 초기 돌진 방향
         Vector3 rushDir = transform.forward;
         rushDir.y = 0f;
         if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
@@ -651,7 +628,8 @@ public class EnemyAttackController : MonoBehaviour
             baseWeight = Mathf.Clamp01(data.directionDeviationAmount);
         }
 
-        while (elapsed < data.rushTime)
+        // FixedUpdate 기반 이동(플랫폼/프레임 독립)
+        while (elapsed < data.attackDuration)
         {
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
@@ -670,7 +648,8 @@ public class EnemyAttackController : MonoBehaviour
                 if (desired.sqrMagnitude > 0.0001f)
                 {
                     desired.Normalize();
-                    float dtWeight = 1f - Mathf.Pow(1f - baseWeight, Time.deltaTime * 60f);
+                    // 고정 프레임 기반 가중치
+                    float dtWeight = 1f - Mathf.Pow(1f - baseWeight, Time.fixedDeltaTime * 60f);
                     rushDir = Vector3.Slerp(rushDir, desired, dtWeight).normalized;
 
                     if (rushDir.sqrMagnitude > 0.0001f)
@@ -678,10 +657,66 @@ public class EnemyAttackController : MonoBehaviour
                 }
             }
 
-            transform.position += rushDir * data.rushSpeed * Time.deltaTime;
+            Vector3 disp = rushDir * data.rushSpeed * Time.fixedDeltaTime;
+            enemy.MoveFilteredDisplacement(disp);
 
-            elapsed += Time.deltaTime;
-            yield return null;
+            elapsed += Time.fixedDeltaTime;
+            lastRushDir = rushDir;
+            yield return new WaitForFixedUpdate();
+        }
+
+        // 공격 구간 종료 → 마무리 감속으로 넘어감 (히트박스는 공격 구간까지만)
+        DespawnRushHitbox();
+
+        // 마무리 루틴 실행(계속 IsRushing 유지)
+        rushCoroutine = StartCoroutine(RushFinishRoutine(data, lastRushDir));
+    }
+
+    private IEnumerator RushFinishRoutine(RushAttackData data, Vector3 dir)
+    {
+        // 마무리 클립(선택) 재생
+        if (enemy.animator && data.finishClip != null)
+        {
+            enemy.animator.speed = 1f;
+            enemy.animator.Play(data.finishClip.name, 0, 0f);
+        }
+
+        float dur = Mathf.Max(0f, data.finishDuration);
+        float elapsed = 0f;
+
+        // 선형 감속: rushSpeed → 0
+        float initialSpeed = Mathf.Max(0f, data.rushSpeed);
+
+        Vector3 finishDir = dir;
+        finishDir.y = 0f;
+        if (finishDir.sqrMagnitude < 0.0001f) finishDir = transform.forward;
+        finishDir.Normalize();
+
+        while (elapsed < dur)
+        {
+            if (enemy.CurrentState != Enemy.EnemyState.Attack ||
+                enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
+            {
+                Log("RUSH FINISH INTERRUPT noCooldown");
+                StopRushCoroutines();
+                IsRushing = false;
+                CancelRushNoCooldown();
+                yield break;
+            }
+
+            float t = Mathf.Clamp01(elapsed / dur);
+            float currentSpeed = initialSpeed * (1f - t);
+            Vector3 disp = finishDir * currentSpeed * Time.fixedDeltaTime;
+
+            // 마무리 중에는 방향 보정 없이 감속만
+            enemy.MoveFilteredDisplacement(disp);
+
+            // 시선은 마지막 방향 유지
+            if (finishDir.sqrMagnitude > 0.0001f)
+                transform.rotation = Quaternion.LookRotation(finishDir);
+
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
 
         IsRushing = false;
@@ -702,6 +737,7 @@ public class EnemyAttackController : MonoBehaviour
         }
 
         enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+
         if (enemy.animator && !IsHardCrowdControlled())
         {
             SafeSetBool("IsRush", false);
@@ -709,7 +745,6 @@ public class EnemyAttackController : MonoBehaviour
         }
 
         runningRushIndex = -1;
-        DespawnRushHitbox();
 
         if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
             enemy.SetState(Enemy.EnemyState.Chase);
@@ -747,7 +782,7 @@ public class EnemyAttackController : MonoBehaviour
 
         if (spawnedRushHitbox.TryGetComponent<HitBox_Enemy>(out var hb))
         {
-            float life = data.hitBoxLifetime > 0f ? data.hitBoxLifetime : data.rushTime;
+            float life = data.hitBoxLifetime > 0f ? data.hitBoxLifetime : data.attackDuration;
             hb.Initialize(
                 data.damage,
                 data.range,
@@ -772,7 +807,6 @@ public class EnemyAttackController : MonoBehaviour
     #region Ranged
     private void StartRanged(RangedAttackData data, Transform target, int index)
     {
-        // 실행 표시
         MarkExecuted();
         ClearHold();
 
@@ -795,6 +829,7 @@ public class EnemyAttackController : MonoBehaviour
 
     private IEnumerator RangedRoutine(RangedAttackData data)
     {
+        // (기존 로직 유지)
         // PREPARE
         if (data.prepareTime > 0f)
         {
@@ -823,7 +858,7 @@ public class EnemyAttackController : MonoBehaviour
 
                 if (willFreeze && !freezed && enemy.animator != null && elapsed >= prepClipLen)
                 {
-                    enemy.animator.speed = 0f; // 마지막 프레임 고정
+                    enemy.animator.speed = 0f;
                     freezed = true;
                 }
 
@@ -831,7 +866,7 @@ public class EnemyAttackController : MonoBehaviour
                 yield return null;
             }
 
-            if (enemy.animator) enemy.animator.speed = 1f; // 복구
+            if (enemy.animator) enemy.animator.speed = 1f;
         }
 
         // ATTACK
@@ -874,7 +909,7 @@ public class EnemyAttackController : MonoBehaviour
 
             if (atkWillFreeze && !atkFreezed && enemy.animator != null && atkElapsed >= atkClipLen)
             {
-                enemy.animator.speed = 0f; // 마지막 프레임 고정
+                enemy.animator.speed = 0f;
                 atkFreezed = true;
             }
 
@@ -907,14 +942,11 @@ public class EnemyAttackController : MonoBehaviour
             return;
         }
 
-        // firePointName 사용 (없으면 자기 transform)
         Transform firePoint = FindChildRecursive(transform, data.firePointName);
         if (firePoint == null) firePoint = transform;
 
-        // 발사 순간 타겟 위치 스냅
         Vector3 targetPos = rangedTarget != null ? rangedTarget.position : (firePoint.position + transform.forward * 5f);
 
-        // 직선 기준 방향(수평)
         Vector3 shootDir = (targetPos - firePoint.position);
         if (shootDir.sqrMagnitude < 0.0001f) shootDir = transform.forward;
         shootDir.y = 0f;
@@ -1078,12 +1110,9 @@ public class EnemyAttackController : MonoBehaviour
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak);
     }
 
-    // FaceTarget: 안전하게 대상 바라보기 (수평만)
     private void FaceTarget(Transform t)
     {
         if (t == null) return;
-
-        // 락 되어있으면 외부 회전 무시(초기 고정 각도 유지)
         if (enemy != null && enemy.IsLookLocked) return;
 
         Vector3 dir = t.position - transform.position;
@@ -1092,7 +1121,6 @@ public class EnemyAttackController : MonoBehaviour
         transform.rotation = Quaternion.LookRotation(dir.normalized);
     }
 
-    // FindChildRecursive: 이름으로 하위 Transform 검색 (활용: firePointName)
     private Transform FindChildRecursive(Transform root, string name)
     {
         if (root == null || string.IsNullOrEmpty(name)) return null;

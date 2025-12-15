@@ -1,180 +1,246 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
-/// <summary>
-/// NavMeshAgent 제거 / 고정 타임스텝 버전 러시 비헤이비어
-/// - 준비/러시 모두 Time.fixedDeltaTime + WaitForFixedUpdate
-/// - 방향 편차: 기존과 비슷하게 directionDeviationAmount * Time.fixedDeltaTime
-/// - Push/Knockback과 누적 허용
-/// </summary>
-public class RushAttackBehavior : EnemyAttackBehaviorBase
+[RequireComponent(typeof(Enemy))]
+public class RushAttackBehavior : MonoBehaviour
 {
-    private readonly RushAttackData data;
-    private Transform cachedTarget;
-    private IEnemyAttackCallbacks runtimeCallbacks;
+    [SerializeField] private RushAttackData data;
+
     private Enemy enemy;
+    private Transform target;
 
-    private bool superArmorGranted = false;
+    private Coroutine rushRoutine;
+    private GameObject spawnedHitbox;
 
-    public RushAttackBehavior(int id, RushAttackData d) : base(id)
+    // 마지막 돌진 방향(마무리 감속 때 사용)
+    private Vector3 lastRushDir = Vector3.forward;
+
+    private void Awake()
     {
-        data = d;
+        enemy = GetComponent<Enemy>();
     }
 
-    public override string AttackName => data.attackName;
-    public override float Range => data.range;
-    public override float BaseCooldown => data.cooldown;
-    public override bool GrantsSuperArmor => data.grantSuperArmor;
-    public override float AttackTime => data.prepareTime + data.rushTime;
+    public void SetTarget(Transform t) => target = t;
 
-    public override bool CanExecute(Enemy enemy, Transform target, float distance)
+    public void StartRush()
     {
-        if (data == null) return false;
-        return distance <= Range;
+        if (data == null || enemy == null) return;
+        if (rushRoutine != null) StopCoroutine(rushRoutine);
+
+        rushRoutine = StartCoroutine(RushFlow());
     }
 
-    public override IEnumerator Execute(Enemy enemy, Transform target, IEnemyAttackCallbacks callbacks)
+    private IEnumerator RushFlow()
     {
-        if (data == null) yield break;
+        // 상태 전환 및 슈퍼아머
+        enemy.SetState(Enemy.EnemyState.Attack);
+        if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack);
+        else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
-        executing = true;
-        this.enemy = enemy;
-        cachedTarget = target;
-        runtimeCallbacks = callbacks;
+        // 1) 준비 단계
+        yield return StartCoroutine(PreparePhase());
 
-        callbacks.OnBehaviorStarted(this);
+        // 2) 공격(돌진) 단계
+        yield return StartCoroutine(AttackPhase());
 
-        if (GrantsSuperArmor && enemy != null)
+        // 3) 마무리(감속) 단계
+        yield return StartCoroutine(FinishPhase());
+
+        // 종료 정리
+        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        if (enemy.CurrentState == Enemy.EnemyState.Attack)
+            enemy.SetState(Enemy.EnemyState.Chase);
+
+        rushRoutine = null;
+    }
+
+    private IEnumerator PreparePhase()
+    {
+        // 애니메이션: 준비 클립 우선 재생
+        if (enemy.animCtrl?.Animator != null && data.prepareClip != null)
         {
-            enemy.AddSuperArmor(SuperArmorSource.Attack);
-            superArmorGranted = true;
+            enemy.animCtrl.Animator.speed = 1f;
+            enemy.animCtrl.Animator.Play(data.prepareClip.name, 0, 0f);
+        }
+        else if (enemy.animCtrl?.Animator != null)
+        {
+            // 폴백: 컨트롤러에 준비 상태가 있다면 이름으로 재생
+            enemy.animCtrl.Animator.Play("RushPrepare", 0, 0f);
         }
 
-        // 준비
-        callbacks.SetAnimatorBool("IsRushPrepare", true);
-        callbacks.SetAnimatorBool("IsRush", false);
-        callbacks.PlayAnimation("RushPrepare", useTrigger: false);
-
-        float prepElapsed = 0f;
-        while (prepElapsed < data.prepareTime && executing)
+        float elapsed = 0f;
+        while (elapsed < data.prepareDuration)
         {
-            if (cachedTarget != null && enemy != null)
+            // 중단 조건
+            if (enemy.CurrentState != Enemy.EnemyState.Attack ||
+                enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
-                Vector3 dir = cachedTarget.position - enemy.transform.position;
-                dir.y = 0f;
-                if (dir.sqrMagnitude > 0.0001f)
-                    enemy.transform.rotation = Quaternion.LookRotation(dir.normalized);
+                CancelNoCooldown();
+                yield break;
             }
 
-            prepElapsed += Time.fixedDeltaTime;
-            yield return new WaitForFixedUpdate();
-        }
+            // 타겟 바라보기(루트 모션 없음, 수평 회전만)
+            if (target != null)
+            {
+                Vector3 dir = target.position - transform.position;
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.0001f)
+                    transform.rotation = Quaternion.LookRotation(dir.normalized);
+            }
 
-        if (!executing)
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    private IEnumerator AttackPhase()
+    {
+        // 공격 애니
+        if (enemy.animCtrl?.Animator != null)
         {
-            CancelNoCooldown(callbacks);
-            yield break;
+            enemy.animCtrl.Animator.speed = 1f;
+            if (data.attackClip != null)
+                enemy.animCtrl.Animator.Play(data.attackClip.name, 0, 0f);
+            else if (!string.IsNullOrEmpty(data.attackName))
+                enemy.animCtrl.Animator.Play(data.attackName, 0, 0f);
+            else
+                enemy.animCtrl.Animator.Play("Rush", 0, 0f);
         }
 
-        // 러시 시작
-        callbacks.SetAnimatorBool("IsRushPrepare", false);
-        callbacks.SetAnimatorBool("IsRush", true);
-        callbacks.PlayAnimation("Rush", useTrigger: false);
+        // 히트박스 스폰(수명: attackDuration 또는 지정값)
+        SpawnHitbox();
 
-        if (data.hitBoxPrefab != null)
-        {
-            float life = (data.hitBoxLifetime > 0 ? data.hitBoxLifetime : data.rushTime);
-            callbacks.SpawnHitbox(
-                data.hitBoxPrefab,
-                life,
-                hb =>
-                {
-                    hb.Initialize(
-                        data.damage,
-                        data.range,
-                        data.knockbackPower,
-                        data.knockbackDuration,
-                        life,
-                        data.stunDuration,
-                        data.allowDuplicateHit,
-                        data.duplicateHitInterval
-                    );
-                });
-        }
-
-        float rushElapsed = 0f;
-        Vector3 rushDir = (enemy != null ? enemy.transform.forward : Vector3.forward);
+        // 초기 방향
+        Vector3 rushDir = transform.forward;
         rushDir.y = 0f;
         if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
 
-        while (rushElapsed < data.rushTime && executing)
-        {
-            if (enemy == null) break;
+        bool useDeviation = data.allowDirectionDeviation;
+        float baseWeight = Mathf.Clamp01(data.directionDeviationAmount);
 
-            if (data.allowDirectionDeviation && cachedTarget != null && data.directionDeviationAmount > 0f)
+        float elapsed = 0f;
+        while (elapsed < data.attackDuration)
+        {
+            if (enemy.CurrentState != Enemy.EnemyState.Attack ||
+                enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
-                Vector3 toTarget = cachedTarget.position - enemy.transform.position;
-                toTarget.y = 0f;
-                if (toTarget.sqrMagnitude > 0.0001f)
+                DespawnHitbox();
+                CancelNoCooldown();
+                yield break;
+            }
+
+            // 방향 보정(스무스하게 타겟을 따라감)
+            if (useDeviation && baseWeight > 0f && target != null)
+            {
+                Vector3 desired = target.position - transform.position;
+                desired.y = 0f;
+                if (desired.sqrMagnitude > 0.0001f)
                 {
-                    Vector3 desired = toTarget.normalized;
-                    float stepW = Mathf.Clamp01(data.directionDeviationAmount * Time.fixedDeltaTime);
-                    rushDir = Vector3.Lerp(rushDir, desired, stepW).normalized;
-                    enemy.transform.rotation = Quaternion.LookRotation(rushDir);
+                    desired.Normalize();
+                    // Fixed timestep 기준 가중치(60fps 체감 유지)
+                    float dtWeight = 1f - Mathf.Pow(1f - baseWeight, Time.fixedDeltaTime * 60f);
+                    rushDir = Vector3.Slerp(rushDir, desired, dtWeight).normalized;
+
+                    if (rushDir.sqrMagnitude > 0.0001f)
+                        transform.rotation = Quaternion.LookRotation(rushDir);
                 }
             }
 
-            enemy.transform.position += rushDir.normalized * data.rushSpeed * Time.fixedDeltaTime;
+            // 이동: FixedUpdate 기반, FPS 독립
+            Vector3 disp = rushDir * data.rushSpeed * Time.fixedDeltaTime;
+            enemy.MoveFilteredDisplacement(disp);
 
-            rushElapsed += Time.fixedDeltaTime;
+            elapsed += Time.fixedDeltaTime;
+            lastRushDir = rushDir;
             yield return new WaitForFixedUpdate();
         }
 
-        executing = false;
-
-        callbacks.SetAnimatorBool("IsRush", false);
-        FinishSuccess(callbacks);
+        // 공격 구간 종료 → 히트박스 제거(마무리 동안 비활성)
+        DespawnHitbox();
     }
 
-    public override void Interrupt(bool hard)
+    private IEnumerator FinishPhase()
     {
-        if (!executing) return;
-
-        base.Interrupt(hard);
-        executing = false;
-
-        if (runtimeCallbacks != null)
+        // 마무리 애니 재생(있을 때만)
+        if (enemy.animCtrl?.Animator != null && data.finishClip != null)
         {
-            runtimeCallbacks.SetAnimatorBool("IsRushPrepare", false);
-            runtimeCallbacks.SetAnimatorBool("IsRush", false);
-            runtimeCallbacks.PlayAnimation("ResetToM", useTrigger: true);
-            CancelNoCooldown(runtimeCallbacks);
+            enemy.animCtrl.Animator.speed = 1f;
+            enemy.animCtrl.Animator.Play(data.finishClip.name, 0, 0f);
+        }
+
+        float dur = Mathf.Max(0f, data.finishDuration);
+        float elapsed = 0f;
+
+        // rushSpeed → 0 선형 감속
+        float initialSpeed = Mathf.Max(0f, data.rushSpeed);
+
+        Vector3 dir = lastRushDir;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
+        dir.Normalize();
+
+        while (elapsed < dur)
+        {
+            if (enemy.CurrentState != Enemy.EnemyState.Attack ||
+                enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
+            {
+                CancelNoCooldown();
+                yield break;
+            }
+
+            float t = Mathf.Clamp01(elapsed / dur);
+            float currentSpeed = initialSpeed * (1f - t);
+
+            Vector3 disp = dir * currentSpeed * Time.fixedDeltaTime;
+            enemy.MoveFilteredDisplacement(disp);
+
+            // 시선은 마지막 방향 유지
+            if (dir.sqrMagnitude > 0.0001f)
+                transform.rotation = Quaternion.LookRotation(dir);
+
+            elapsed += Time.fixedDeltaTime;
+            yield return new WaitForFixedUpdate();
         }
     }
 
-    private void FinishSuccess(IEnemyAttackCallbacks callbacks)
+    private void SpawnHitbox()
     {
-        if (superArmorGranted && enemy != null)
-        {
-            enemy.RemoveSuperArmor(SuperArmorSource.Attack);
-            superArmorGranted = false;
-        }
+        if (data.hitBoxPrefab == null || spawnedHitbox != null) return;
 
-        callbacks.RequestFinish(this);
-        runtimeCallbacks = null;
-        enemy = null;
+        spawnedHitbox = Instantiate(data.hitBoxPrefab, transform.position, transform.rotation, transform);
+
+        if (spawnedHitbox.TryGetComponent<HitBox_Enemy>(out var hb))
+        {
+            float life = data.hitBoxLifetime > 0f ? data.hitBoxLifetime : data.attackDuration;
+            hb.Initialize(
+                data.damage,
+                data.range,
+                data.knockbackPower,
+                data.knockbackDuration,
+                life,
+                data.stunDuration,
+                data.allowDuplicateHit,
+                data.duplicateHitInterval
+            );
+        }
     }
 
-    private void CancelNoCooldown(IEnemyAttackCallbacks callbacks)
+    private void DespawnHitbox()
     {
-        if (superArmorGranted && enemy != null)
-        {
-            enemy.RemoveSuperArmor(SuperArmorSource.Attack);
-            superArmorGranted = false;
-        }
+        if (spawnedHitbox != null)
+            Destroy(spawnedHitbox);
+        spawnedHitbox = null;
+    }
 
-        callbacks.RequestCancel(this);
-        runtimeCallbacks = null;
-        enemy = null;
+    private void CancelNoCooldown()
+    {
+        enemy.RemoveSuperArmor(SuperArmorSource.Attack);
+        DespawnHitbox();
+
+        // 애니메이터는 파라미터 없이 클립만 재생하므로 추가 해제 불필요
+        if (enemy.CurrentState == Enemy.EnemyState.Attack)
+            enemy.SetState(Enemy.EnemyState.Chase);
+
+        rushRoutine = null;
     }
 }

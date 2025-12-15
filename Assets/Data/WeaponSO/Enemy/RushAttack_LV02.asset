@@ -14,11 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackName: Rush_Attack
   grantSuperArmor: 0
-  range: 5
+  range: 10
   cooldown: 1
   damage: 1
-  prepareTime: 1
-  rushTime: 1
+  prepareDuration: 1
+  attackDuration: 3
+  finishDuration: 1
   rushSpeed: 5
   allowDirectionDeviation: 1
   directionDeviationAmount: 1
@@ -29,4 +30,6 @@ MonoBehaviour:
   hitBoxLifetime: 5
   allowDuplicateHit: 1
   duplicateHitInterval: 0.1
-  holdOverride: -1
+  prepareClip: {fileID: 1827226128182048838, guid: 59c1d881e1ecc404c9c84dd33426d3e0, type: 3}
+  attackClip: {fileID: 1827226128182048838, guid: 0b03ce1535eeda149ae4b809a52ba031, type: 3}
+  finishClip: {fileID: -2341748306902204784, guid: d70dd3821b73cad4daddc9ac206e2bdb, type: 3}
