@@ -98,6 +98,7 @@ public class EnemyFacade : MonoBehaviour
 #if UNITY_EDITOR
                 TrySetSerializedObjectField(enemy, "movementSettings", config.movementSettings);
 #else
+                // 필드/프로퍼티로 모두 시도 (private 필드도 리플렉션으로 설정)
                 TrySetPublicPropertyOrField(enemy, "movementSettings", config.movementSettings);
                 var f = enemy.GetType().GetField("movementSettings", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 if (f != null) f.SetValue(enemy, config.movementSettings);
@@ -228,8 +229,10 @@ public class EnemyFacade : MonoBehaviour
 #else
             try
             {
-                var ac = attackComp as dynamic;
-                try { ac.attackPatterns = config.attackPatterns; } catch { }
+                // attackPatterns 배열 설정(필드/프로퍼티 모두 시도)
+                TrySetPublicPropertyOrField(attackComp, "attackPatterns", config.attackPatterns);
+
+                // 나머지 기본값/쿨다운 반영
                 TrySetPublicPropertyOrField(attackComp, "defaultPatternHoldDuration", config.defaultPatternHoldDuration);
                 TrySetPublicPropertyOrField(attackComp, "enablePerPatternHoldOverride", config.enablePerPatternHoldOverride);
                 TrySetPublicPropertyOrField(attackComp, "글로벌쿨타임", config.globalPatternCooldown);

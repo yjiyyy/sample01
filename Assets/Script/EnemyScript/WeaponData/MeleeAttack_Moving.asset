@@ -12,18 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c55a14bd6d57f04c9dcd658e386f567, type: 3}
   m_Name: MeleeAttack_Moving
   m_EditorClassIdentifier: 
-  attackName: Attack
+  attackName: Attack_Moving
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   grantSuperArmor: 0
   damage: 10
-  range: 1
+  range: 5
   cooldown: 3
-  attackTime: 0.7
-  clip: {fileID: 7400000, guid: ac8903a0dce77ef4590afb0242e5093d, type: 2}
-  hitboxSpawnDelay: 0.2
-  hitBoxLifetime: 0.1
+  attackTime: 5
+  clip: {fileID: 3700658901771414680, guid: 3a9935da68c61ab429ab904c9474c217, type: 3}
+  hitboxSpawnDelay: 1
+  hitBoxLifetime: 0.4
   knockbackPower: 10
   knockbackDuration: 1
   stunDuration: 0
   allowDuplicateHit: 0
   duplicateHitInterval: 0.1
+  isMovingAttack: 1
+  moveForce: 10
+  moveDuration: 0.5
+  lockTiming: 1
+  forceApplyTime: 1

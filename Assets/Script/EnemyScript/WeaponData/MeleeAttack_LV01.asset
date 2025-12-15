@@ -27,3 +27,8 @@ MonoBehaviour:
   stunDuration: 0
   allowDuplicateHit: 0
   duplicateHitInterval: 0.1
+  isMovingAttack: 0
+  moveForce: 4
+  moveDuration: 0.3
+  lockTiming: 1
+  forceApplyTime: 0

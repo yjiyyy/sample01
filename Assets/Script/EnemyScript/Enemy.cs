@@ -46,10 +46,8 @@ public class Enemy : MonoBehaviour
     private bool lookLockActive = false;
     private Vector3 lockedLookDir = Vector3.forward;
 
-    // 추가: 락 만료 시간 필드 (필드 블록에 추가)
     private float lookLockExpireTime = -1f;
 
-    // 수동으로 부여되는 SuperArmor 소스들 (Add/Remove 호환성)
     private HashSet<SuperArmorSource> manualSuperArmor = new HashSet<SuperArmorSource>();
 
     private const float ROT_SPEED_DEG_PER_SEC = 720f;
@@ -58,7 +56,6 @@ public class Enemy : MonoBehaviour
     private Rigidbody rb;
     private CapsuleCollider capsule;
 
-    // reuse buffers
     private Collider[] overlapBuffer;
     private HashSet<int> selfColliderIds;
 
@@ -85,7 +82,6 @@ public class Enemy : MonoBehaviour
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
 
-        // hook EnemyDie references to avoid duplicate collisions on ragdoll
         if (dieCtrl != null)
         {
             dieCtrl.animator = animator;
@@ -94,7 +90,6 @@ public class Enemy : MonoBehaviour
             dieCtrl.excludeRoot = this.transform;
         }
 
-        // MovementSettings required
         if (movementSettings == null)
         {
             Debug.LogError($"[{nameof(Enemy)}] MovementSettings not assigned on GameObject '{gameObject.name}'. Disabling Enemy component. Assign a MovementSettings asset to enable movement.");
@@ -102,7 +97,6 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        // init overlap buffer & self collider ids using MovementSettings
         int bufSize = Mathf.Max(1, movementSettings.overlapBufferSize);
         overlapBuffer = new Collider[Mathf.Max(1, bufSize)];
         var cols = GetComponentsInChildren<Collider>();
@@ -121,7 +115,6 @@ public class Enemy : MonoBehaviour
         ai = GetComponent<EnemyAI>();
         impact = GetComponent<EnemyImpact>();
         dieCtrl = GetComponent<EnemyDie>();
-        // EnemyDeath usage removed in this aggressive cleanup.
     }
 #endif
 
@@ -157,19 +150,13 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        // rotation: lookLockActive이면 즉시 고정(덮어쓰기 방지)
         if (lookLockActive)
         {
             Quaternion lockedQ = Quaternion.LookRotation(lockedLookDir, Vector3.up);
             if (rb != null)
-            {
-                // 물리 루프에선 MoveRotation으로 강제
                 rb.MoveRotation(lockedQ);
-            }
             else
-            {
                 transform.rotation = lockedQ;
-            }
         }
         else if (hasLookRequest && desiredLookDir.sqrMagnitude > EPS)
         {
@@ -178,7 +165,6 @@ public class Enemy : MonoBehaviour
             transform.rotation = Quaternion.RotateTowards(transform.rotation, target, ROT_SPEED_DEG_PER_SEC * dt);
         }
 
-        // reset requests
         hasMoveRequest = false;
         hasLookRequest = false;
         desiredMoveDir = Vector3.zero;
@@ -198,28 +184,66 @@ public class Enemy : MonoBehaviour
                 animCtrl?.SetSignedSpeed(0f);
                 animCtrl?.PlayRun(crossFade: false, restart: false);
                 break;
+
             case EnemyState.Attack:
                 ai?.ForceClearBackstep();
                 animCtrl?.SetSignedSpeed(0f);
                 ai?.OnAttackStarted(this);
                 break;
+
             case EnemyState.Knockback:
+                attackCtrl?.InterruptCooldown();
+                if (animator) animator.speed = 1f;
                 ai?.ForceClearBackstep();
                 animCtrl?.SetSignedSpeed(0f);
                 break;
+
             case EnemyState.Stunned:
+                attackCtrl?.InterruptCooldown();
+                if (animator)
+                {
+                    animator.speed = 1f;
+                    animator.Play("Stun", 0, 0f);
+                }
                 ai?.ForceClearBackstep();
-                animator?.Play("Stun", 0, 0f);
                 animCtrl?.SetSignedSpeed(0f);
                 break;
+
             case EnemyState.ShieldBreak:
+                attackCtrl?.InterruptCooldown();
+                if (animator) animator.speed = 1f;
                 ai?.ForceClearBackstep();
                 animCtrl?.SetSignedSpeed(0f);
                 break;
+
             case EnemyState.Dead:
-                ai?.ForceClearBackstep();
-                animCtrl?.SetSignedSpeed(0f);
-                break;
+                {
+                    // 1) 공격 즉시 취소 및 프리즈 해제
+                    attackCtrl?.InterruptCooldown();
+                    if (animator) animator.speed = 1f;
+
+                    // 2) 방향 락 해제
+                    UnlockLookDirection();
+
+                    // 3) 플레이어를 향해 즉시 회전(수평만)
+                    Transform playerT = player != null ? player : GameObject.FindWithTag("Player")?.transform;
+                    if (playerT != null)
+                    {
+                        Vector3 dir = playerT.position - transform.position;
+                        dir.y = 0f;
+                        if (dir.sqrMagnitude > EPS)
+                        {
+                            Quaternion faceQ = Quaternion.LookRotation(dir.normalized, Vector3.up);
+                            if (rb != null) rb.MoveRotation(faceQ);
+                            else transform.rotation = faceQ;
+                        }
+                    }
+
+                    // 4) 이후 죽음 연출은 EnemyDie가 처리(첫 프레임부터 플레이어를 향함)
+                    ai?.ForceClearBackstep();
+                    animCtrl?.SetSignedSpeed(0f);
+                    break;
+                }
         }
     }
 
@@ -228,7 +252,6 @@ public class Enemy : MonoBehaviour
         if (CurrentState == EnemyState.Dead) return;
 
         var health = GetComponent<EnemyHealth>();
-        // Health 기반 슈퍼아머 또는 수동으로 추가된 소스가 있으면 슈퍼아머로 처리
         bool hasSuperArmor = (health != null && health.HasSuperArmor) || (manualSuperArmor != null && manualSuperArmor.Count > 0);
 
         bool allowInterrupt = !hasSuperArmor && CurrentState != EnemyState.ShieldBreak;
@@ -252,14 +275,12 @@ public class Enemy : MonoBehaviour
         if (CurrentState == EnemyState.Dead) return;
         SetState(EnemyState.Dead, true);
 
-        // Delegate death presentation to EnemyDie
         if (dieCtrl != null)
         {
             dieCtrl.Die(hitDir, weapon, impactScale);
         }
         else
         {
-            // Fallback: animation death + 7s destroy
             animator?.SetTrigger("Die");
             animator?.SetBool("IsDead", true);
             Destroy(this.gameObject, 7f);
@@ -275,10 +296,8 @@ public class Enemy : MonoBehaviour
         hasMoveRequest = true;
     }
 
-    // RequestLook을 락 중에 무시하도록 변경
     public void RequestLook(Vector3 dir)
     {
-        // 락 활성화 시 외부 회전 요청 무시(기본 각도 유지)
         if (lookLockActive) { hasLookRequest = false; return; }
 
         dir.y = 0f;
@@ -653,24 +672,17 @@ public class Enemy : MonoBehaviour
         manualSuperArmor.Clear();
     }
 
-    /// <summary>
-    /// 외부에서 공격 방향 고정(회전 락) 요청.
-    /// dir는 월드 XZ 평면 기준 방향으로 전달하세요.
-    /// </summary>
     public void LockLookDirection(Vector3 dir)
     {
         dir.y = 0f;
         if (dir.sqrMagnitude < 1e-6f) dir = transform.forward;
         lockedLookDir = dir.normalized;
         lookLockActive = true;
-        lookLockExpireTime = -1f; // 무기한
+        lookLockExpireTime = -1f;
     }
 
-    /// <summary>
-    /// duration 초 동안 락을 유지합니다. duration <= 0 이면 무시하지 않고 즉시 락(무기한)으로 처리됩니다.
-    /// </summary>
     public void LockLookDirection(Vector3 dir, float duration)
-    {   
+    {
         dir.y = 0f;
         if (dir.sqrMagnitude < 1e-6f) dir = transform.forward;
         lockedLookDir = dir.normalized;
@@ -687,28 +699,23 @@ public class Enemy : MonoBehaviour
         lookLockExpireTime = -1f;
     }
 
-    // 추가: LateUpdate에서 락을 강제 적용 및 만료 처리 (파일의 MonoBehaviour 메서드 영역에 추가)
     private void LateUpdate()
     {
         if (!lookLockActive) return;
 
-        // 만료 체크
         if (lookLockExpireTime >= 0f && Time.time >= lookLockExpireTime)
         {
             UnlockLookDirection();
             return;
         }
 
-        // 강제 유지: 매 프레임 정확히 고정 (다른 Update에서 회전해도 덮어씀)
         transform.rotation = Quaternion.LookRotation(lockedLookDir, Vector3.up);
     }
 
-    // 추가: 애니메이터가 회전을 덮어쓸 경우를 대비해 마지막 보호막(애니메이터 후 처리)에서 강제 고정
     private void OnAnimatorIK(int layerIndex)
     {
         if (!lookLockActive) return;
 
-        // 만료 체크 (여전히 여기서도 처리)
         if (lookLockExpireTime >= 0f && Time.time >= lookLockExpireTime)
         {
             UnlockLookDirection();
@@ -716,14 +723,11 @@ public class Enemy : MonoBehaviour
         }
 
         Quaternion lockedQ = Quaternion.LookRotation(lockedLookDir, Vector3.up);
-
-        // 애니메이터가 회전을 덮어써도 여기서 덮어씌워 유지
         if (rb != null)
             rb.MoveRotation(lockedQ);
         else
             transform.rotation = lockedQ;
     }
 
-    // 추가: 외부에서 락 상태를 확인할 수 있는 프로퍼티 (수동 슈퍼아머 API 근처에 추가)
     public bool IsLookLocked => lookLockActive;
 }

@@ -420,7 +420,7 @@ public class EnemyAttackController : MonoBehaviour
             meleeMoveRoutine = StartCoroutine(MeleeMovingRoutine(data));
         }
 
-        Log($"MELEE START idx={index} req={meleeRequestedDuration:F3}s clip={meleeClipLength:F3}s freeze={(meleeWillFreeze ? "Y" : "N")}, hitDelay={(data.hitboxSpawnDelay):F3}s");
+        Log($"MELEE START idx={index} req={meleeRequestedDuration:F3}s clip={meleeClipLength:F3}s freeze={(meleeWillFreeze ? "Y" : "N")}, hitDelay={data.hitboxSpawnDelay:F3}s");
     }
 
     private float GetMeleeClipLength(MeleeAttackData data)
@@ -523,13 +523,14 @@ public class EnemyAttackController : MonoBehaviour
         if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
         dir.Normalize();
 
-        // 회전: 순간적으로 타겟 바라봄
+        // MovementLockTiming.JustBeforeImpulse: 이 시점 계산된 공격 각도를 남은 공격시간 동안 고정
         if (data.lockTiming == MeleeAttackData.MovementLockTiming.JustBeforeImpulse)
         {
             float remaining = Mathf.Max(0f, attackEndTime - Time.time);
             enemy.LockLookDirection(dir, remaining);
         }
 
+        // 락이 아직 걸리지 않았다면 즉시 그 방향을 바라보게 1회 회전
         if (enemy == null || !enemy.IsLookLocked)
         {
             transform.rotation = Quaternion.LookRotation(dir);
@@ -561,8 +562,8 @@ public class EnemyAttackController : MonoBehaviour
             yield return new WaitForFixedUpdate();
         }
 
-        // 루틴 종료(정상 종료/중단 모두) 직전에 락 해제
-        enemy.UnlockLookDirection();
+        // 루틴 종료(정상 종료/중단 모두) 직전에는 방향 락을 해제하지 않음.
+        // 락은 FinishMelee에서 공격 종료 시점에만 해제.
         meleeMoveRoutine = null;
     }
     #endregion

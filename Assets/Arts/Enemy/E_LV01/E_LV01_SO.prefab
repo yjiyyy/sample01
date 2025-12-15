@@ -139,10 +139,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackPatterns:
-  - {fileID: 11400000, guid: 4b203a2b38263dd4294224c2d5d56871, type: 2}
+  - {fileID: 11400000, guid: 4442699513e905642bc08e634f8e3dc1, type: 2}
   "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0
   defaultPatternHoldDuration: 0
-  debugDecisionLogs: 0
+  debugDecisionLogs: 1
 --- !u!114 &-6019980081282909286
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -265,8 +265,6 @@ MonoBehaviour:
   rootCollider: {fileID: 0}
   excludeRoot: {fileID: 0}
   hipsBody: {fileID: 3124859621649976648}
-  enableDebugLogs: 0
-  debugTag: '[EnemyDie]'
 --- !u!1001 &8862513175375928873
 PrefabInstance:
   m_ObjectHideFlags: 0
