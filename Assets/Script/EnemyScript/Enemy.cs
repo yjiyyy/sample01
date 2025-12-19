@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// Enemy (MovementSettings-required)
-/// - MovementSettings SO is the source of truth for movement/headroom/obstacle masks.
+/// - MovementSettings SO is the source of truth for movement/headroom/obstacle masks. 
 /// - Super-armor/state related to shield is now handled by EnemyHealth (currentShield > 0f).
 /// - Death logic is delegated to EnemyDie component.
 /// </summary>
@@ -22,7 +22,7 @@ public class Enemy : MonoBehaviour
     [Header("Sub-components")]
     public EnemyAI ai;
     public EnemyImpact impact;
-    public EnemyDie dieCtrl; // death handler (new)
+    public EnemyDie dieCtrl;
 
     [Header("Common params")]
     [Tooltip("Base move speed (m/s)")]
@@ -35,7 +35,6 @@ public class Enemy : MonoBehaviour
 
     private Transform player;
 
-    // movement requests (from AI)
     private Vector3 desiredMoveDir = Vector3.zero;
     private float desiredSpeed01 = 0f;
     private bool hasMoveRequest = false;
@@ -45,7 +44,6 @@ public class Enemy : MonoBehaviour
 
     private bool lookLockActive = false;
     private Vector3 lockedLookDir = Vector3.forward;
-
     private float lookLockExpireTime = -1f;
 
     private HashSet<SuperArmorSource> manualSuperArmor = new HashSet<SuperArmorSource>();
@@ -92,7 +90,7 @@ public class Enemy : MonoBehaviour
 
         if (movementSettings == null)
         {
-            Debug.LogError($"[{nameof(Enemy)}] MovementSettings not assigned on GameObject '{gameObject.name}'. Disabling Enemy component. Assign a MovementSettings asset to enable movement.");
+            Debug.LogError($"[{nameof(Enemy)}] MovementSettings not assigned on GameObject '{gameObject.name}'.  Disabling Enemy component.  Assign a MovementSettings asset to enable movement.");
             this.enabled = false;
             return;
         }
@@ -217,33 +215,12 @@ public class Enemy : MonoBehaviour
                 break;
 
             case EnemyState.Dead:
-                {
-                    // 1) 공격 즉시 취소 및 프리즈 해제
-                    attackCtrl?.InterruptCooldown();
-                    if (animator) animator.speed = 1f;
-
-                    // 2) 방향 락 해제
-                    UnlockLookDirection();
-
-                    // 3) 플레이어를 향해 즉시 회전(수평만)
-                    Transform playerT = player != null ? player : GameObject.FindWithTag("Player")?.transform;
-                    if (playerT != null)
-                    {
-                        Vector3 dir = playerT.position - transform.position;
-                        dir.y = 0f;
-                        if (dir.sqrMagnitude > EPS)
-                        {
-                            Quaternion faceQ = Quaternion.LookRotation(dir.normalized, Vector3.up);
-                            if (rb != null) rb.MoveRotation(faceQ);
-                            else transform.rotation = faceQ;
-                        }
-                    }
-
-                    // 4) 이후 죽음 연출은 EnemyDie가 처리(첫 프레임부터 플레이어를 향함)
-                    ai?.ForceClearBackstep();
-                    animCtrl?.SetSignedSpeed(0f);
-                    break;
-                }
+                attackCtrl?.InterruptCooldown();
+                if (animator) animator.speed = 1f;
+                UnlockLookDirection();
+                ai?.ForceClearBackstep();
+                animCtrl?.SetSignedSpeed(0f);
+                break;
         }
     }
 
@@ -273,6 +250,14 @@ public class Enemy : MonoBehaviour
     public void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
     {
         if (CurrentState == EnemyState.Dead) return;
+
+        var mode = weapon != null ? weapon.deathMode : DeathMode.Animation;
+
+        if (mode == DeathMode.Animation)
+        {
+            FaceHitDirectionImmediate(hitDir);
+        }
+
         SetState(EnemyState.Dead, true);
 
         if (dieCtrl != null)
@@ -282,8 +267,24 @@ public class Enemy : MonoBehaviour
         else
         {
             animator?.SetTrigger("Die");
-            animator?.SetBool("IsDead", true);
             Destroy(this.gameObject, 7f);
+        }
+    }
+
+    private void FaceHitDirectionImmediate(Vector3 hitDir)
+    {
+        Vector3 look = -hitDir;
+        look.y = 0f;
+
+        if (look.sqrMagnitude < 0.0001f) return;
+        look.Normalize();
+
+        Quaternion faceQ = Quaternion.LookRotation(look, Vector3.up);
+
+        transform.rotation = faceQ;
+        if (rb != null)
+        {
+            rb.rotation = faceQ;
         }
     }
 
@@ -338,7 +339,6 @@ public class Enemy : MonoBehaviour
 
         bool strictHeadroomBlock = ms.strictHeadroomBlock;
 
-        // 1) strict headroom block
         if (capsule != null && strictHeadroomBlock && headClampIterations > 0 && headPortion > 0f && headMask != 0)
         {
             Transform t = capsule.transform;
@@ -374,7 +374,6 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        // 2) headroom clamp (partial allow)
         if (capsule != null && headClampIterations > 0 && headPortion > 0f)
         {
             disp = StepChecker.ClampHeadroomHorizontal(
@@ -390,7 +389,6 @@ public class Enemy : MonoBehaviour
             );
         }
 
-        // 3) final overlap check at target origin
         if (capsule != null)
         {
             LayerMask obsMask = obstacleMask;
@@ -427,7 +425,7 @@ public class Enemy : MonoBehaviour
 
                     if (crowdBlocks)
                     {
-                        if (debugMode) Debug.Log($"[EnemyMovement] Movement blocked by crowd resistance: totalMass={summary.totalPushableMass:F2}, count={summary.pushableCount}");
+                        if (debugMode) Debug.Log($"[EnemyMovement] Movement blocked by crowd resistance:  totalMass={summary.totalPushableMass:F2}, count={summary.pushableCount}");
                         return;
                     }
                     else
@@ -481,7 +479,7 @@ public class Enemy : MonoBehaviour
                                         MoveCapsuleDirect(steppedOrigin);
                                         return;
                                     }
-                                    else if (debugMode) Debug.Log($"[EnemyMovement] Step denied: floor normal too shallow {floorHit.normal.y:F3}");
+                                    else if (debugMode) Debug.Log($"[EnemyMovement] Step denied:  floor normal too shallow {floorHit.normal.y:F3}");
                                 }
                                 else if (debugMode) Debug.Log("[EnemyMovement] Step denied: no floor found under stepped position");
                             }
@@ -490,7 +488,7 @@ public class Enemy : MonoBehaviour
                         else if (debugMode) Debug.Log("[EnemyMovement] Step denied: overlap after stepping (head/obstacle)");
                     }
 
-                    if (debugMode) Debug.Log("[EnemyMovement] Movement blocked: obstacle overlap and cannot step.");
+                    if (debugMode) Debug.Log("[EnemyMovement] Movement blocked:  obstacle overlap and cannot step.");
                     return;
                 }
             }
@@ -652,9 +650,6 @@ public class Enemy : MonoBehaviour
         if (totalMove.sqrMagnitude > EPS) MovePhysicsDisplacement(totalMove);
     }
 
-    // ----------------------
-    // 수동 슈퍼아머 API (호환성)
-    // ----------------------
     public void AddSuperArmor(SuperArmorSource src)
     {
         if (src == SuperArmorSource.None) return;
