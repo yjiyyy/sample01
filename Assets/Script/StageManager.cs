@@ -65,7 +65,7 @@ public class StageManager : MonoBehaviour
     public void HandlePlayerFall(GameObject player)
     {
         // 실제 게임 디자인에 맞는 처리: 사망 UI, 재시작, HP 0 등
-        Debug.Log($"[StageManager] Player fell below killY ({killY}).");
+        //Debug.Log($"[StageManager] Player fell below killY ({killY}).");
         // TODO: 플레이어 Health 컴포넌트가 있다면 Die() 호출 등으로 연결
         // 임시: 위치 리셋 또는 씬 리로드 등 (여기서는 로그만)
     }

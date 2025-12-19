@@ -29,10 +29,10 @@ MonoBehaviour:
   stunDuration: 2
   usePushInsteadOfKnockback: 0
   animationHoldDuration: 0.1
-  deathMode: 1
+  deathMode: 0
   ragdollImpulse: 7
-  ragdollUpImpulse: 20
-  ragdollSpinTorque: 6000
+  ragdollUpImpulse: 10
+  ragdollSpinTorque: 500
   sliceTargets: 
   sliceImpulse: 15
   chargeSlot: {fileID: 0}

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-[CreateAssetMenu(menuName = "Enemy/MeleeAttackData", fileName = "MeleeAttackData_SO")]
+[CreateAssetMenu(menuName = "Enemy/Attack/MeleeAttackData", fileName = "MeleeAttackData_SO")]
 public class MeleeAttackData : ScriptableObject
 {
     [Header("공격 기본 정보")]
