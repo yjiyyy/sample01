@@ -12,25 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3255eb0f23420241950d1d1e2b388b7, type: 3}
   m_Name: Jump Attack Data
   m_EditorClassIdentifier: 
-  attackName: 
-  prepareDuration: 0.6
-  airDuration: 0.9
-  endDuration: 0.4
+  attackName: Jump_Attack01
+  prepareDuration: 1
+  duration: 1
+  endDuration: 1
+  height: 10
   cooldown: 1.2
-  prepareClip: {fileID: 0}
-  loopClip: {fileID: 0}
-  endClip: {fileID: 0}
+  prepareClip: {fileID: 7799600219382172205, guid: af44e2aadd5abc844bae2d2b300730a8, type: 3}
+  loopClip: {fileID: 7799600219382172205, guid: a4c548049bb2acc4d890ad0542198ca2, type: 3}
+  endClip: {fileID: 7799600219382172205, guid: 0435d015d4e49e64dbf877923ca51de3, type: 3}
   grantSuperArmor: 1
-  hitBoxPrefab: {fileID: 0}
+  hitBoxPrefab: {fileID: 5009877497648116289, guid: 73512c4802986304ca8f39f7567bb9c6, type: 3}
   hitBoxLifetime: 0.5
-  damage: 20
-  range: 1.5
+  attachHitboxToEnemy: 0
+  damage: 50
+  range: 5
   knockbackPower: 6
-  knockbackDuration: 0.2
-  stunDuration: 0.4
+  knockbackDuration: 1
+  stunDuration: 2
   allowDuplicateHit: 0
-  duplicateHitInterval: 0.2
-  gravity: -20
-  predictByPlayerVelocity: 1
-  predictFactor: 0.5
-  cameraShake: {fileID: 0}
+  duplicateHitInterval: 0.5
+  cameraShake: {fileID: 11400000, guid: 10165f9087ca64447a4bde7e56772119, type: 2}
