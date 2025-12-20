@@ -20,6 +20,16 @@ public class EnemyDie : MonoBehaviour
     public Rigidbody rootRb;
     public Collider rootCollider;
 
+    [Header("데스 애니메이션 파라미터 (권장: BlendTree 사용)")]
+    [Tooltip("Animator Trigger name to start death transition (default: 'Die')")]
+    [SerializeField] private string deathTriggerName = "Die";
+    [Tooltip("BlendTree parameter name (DeadMotionIndex)")]
+    [SerializeField] private string deathIndexParam = "DeadMotionIndex";
+    [Tooltip("Animator state name that holds the BlendTree (set this to your BlendTree state's name)")]
+    [SerializeField] private string deathStateName = "DeadBlendTree";
+    [Tooltip("Number of death variants (e.g. 3)")]
+    [SerializeField] private int deathVariantCount = 3;
+
     [Header("랙돌 본 자동 수집")]
     public Transform excludeRoot;
 
@@ -238,7 +248,8 @@ public class EnemyDie : MonoBehaviour
         {
             if (root == null) continue;
 
-            root.SetParent(null, worldPositionStays: true);
+            Vector3 worldPos = root.position;
+            Quaternion worldRot = root.rotation;
 
             var partBodies = root.GetComponentsInChildren<Rigidbody>(true);
             var partCols = root.GetComponentsInChildren<Collider>(true);
@@ -248,15 +259,17 @@ public class EnemyDie : MonoBehaviour
                 if (t == null) continue;
                 var joints = t.GetComponents<Joint>();
                 foreach (var j in joints) { if (j == null) continue; j.connectedBody = null; Object.Destroy(j); }
-                var cfgs = t.GetComponents<ConfigurableJoint>();
+                var cfgs = t.GetComponentsInChildren<ConfigurableJoint>(true);
                 foreach (var c in cfgs) { if (c == null) continue; c.connectedBody = null; Object.Destroy(c); }
-                var chars = t.GetComponents<CharacterJoint>();
+                var chars = t.GetComponentsInChildren<CharacterJoint>(true);
                 foreach (var cj in chars) { if (cj == null) continue; cj.connectedBody = null; Object.Destroy(cj); }
-                var hinges = t.GetComponents<HingeJoint>();
+                var hinges = t.GetComponentsInChildren<HingeJoint>(true);
                 foreach (var hj in hinges) { if (hj == null) continue; hj.connectedBody = null; Object.Destroy(hj); }
-                var fixeds = t.GetComponents<FixedJoint>();
+                var fixeds = t.GetComponentsInChildren<FixedJoint>(true);
                 foreach (var fj in fixeds) { if (fj == null) continue; fj.connectedBody = null; Object.Destroy(fj); }
             }
+
+            root.SetParent(null, worldPositionStays: true);
 
             foreach (var col in partCols) { if (col != null) col.enabled = true; }
             foreach (var rb in partBodies)
@@ -393,13 +406,13 @@ public class EnemyDie : MonoBehaviour
                 if (t == null) continue;
                 var joints = t.GetComponents<Joint>();
                 foreach (var j in joints) { if (j == null) continue; j.connectedBody = null; Object.Destroy(j); }
-                var cfgs = t.GetComponents<ConfigurableJoint>();
+                var cfgs = t.GetComponentsInChildren<ConfigurableJoint>(true);
                 foreach (var c in cfgs) { if (c == null) continue; c.connectedBody = null; Object.Destroy(c); }
-                var chars = t.GetComponents<CharacterJoint>();
+                var chars = t.GetComponentsInChildren<CharacterJoint>(true);
                 foreach (var cj in chars) { if (cj == null) continue; cj.connectedBody = null; Object.Destroy(cj); }
-                var hinges = t.GetComponents<HingeJoint>();
+                var hinges = t.GetComponentsInChildren<HingeJoint>(true);
                 foreach (var hj in hinges) { if (hj == null) continue; hj.connectedBody = null; Object.Destroy(hj); }
-                var fixeds = t.GetComponents<FixedJoint>();
+                var fixeds = t.GetComponentsInChildren<FixedJoint>(true);
                 foreach (var fj in fixeds) { if (fj == null) continue; fj.connectedBody = null; Object.Destroy(fj); }
             }
 
@@ -646,7 +659,58 @@ public class EnemyDie : MonoBehaviour
     {
         if (animator != null)
         {
-            animator.SetTrigger("Die");
+            // Set a random DeadMotionIndex (0..deathVariantCount-1) and handle float/int param types.
+            int idx = Random.Range(0, Mathf.Max(1, deathVariantCount));
+
+            bool paramFound = false;
+            AnimatorControllerParameterType paramType = AnimatorControllerParameterType.Float;
+            foreach (var p in animator.parameters)
+            {
+                if (p.name == deathIndexParam)
+                {
+                    paramFound = true;
+                    paramType = p.type;
+                    break;
+                }
+            }
+
+            // Set parameter according to detected type (Int or Float). Default to float if not found.
+            if (paramFound && paramType == AnimatorControllerParameterType.Int)
+            {
+                animator.SetInteger(deathIndexParam, idx);
+            }
+            else
+            {
+                // use SetFloat for BlendTree float parameter compatibility
+                animator.SetFloat(deathIndexParam, (float)idx);
+            }
+
+            Debug.Log($"[EnemyDie] PlayAnimationDeath idx={idx} paramFound={paramFound} paramType={paramType} deathStateName='{deathStateName}'");
+
+            // Try to directly play the BlendTree state so the parameter is immediately used.
+            if (!string.IsNullOrEmpty(deathStateName))
+            {
+                int stateHash = Animator.StringToHash(deathStateName);
+                if (animator.HasState(0, stateHash))
+                {
+                    animator.Play(stateHash, 0, 0f);
+                    // Force immediate evaluation so the selected clip in BlendTree is applied this frame.
+                    animator.Update(0f);
+                    return;
+                }
+                else
+                {
+                    Debug.Log($"[EnemyDie] Animator.HasState returned false for '{deathStateName}' on layer 0.");
+                }
+            }
+            else
+            {
+                Debug.Log("[EnemyDie] deathStateName is empty; falling back to trigger.");
+            }
+
+            // Fallback: trigger the Die trigger (keep compatibility)
+            animator.SetTrigger(deathTriggerName);
+            animator.Update(0f);
         }
     }
 }
