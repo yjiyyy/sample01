@@ -745,12 +745,13 @@ public class PlayerMovement : MonoBehaviour
     // Public-facing FaceKnockback: same semantics as EnemyImpact.FaceHit
     public void FaceKnockback(Vector3 hitDir)
     {
-        // Only apply when meaningful
+        // 수평 방향만 사용
         Vector3 look = -hitDir;
         look.y = 0f;
         if (look.sqrMagnitude < 0.0001f) return;
         look.Normalize();
 
+        // 현재 정면과 너무 비슷하면 생략(프로젝트 상수 유지)
         Vector3 currentFwd = transform.forward;
         currentFwd.y = 0f;
         if (currentFwd.sqrMagnitude < 0.0001f) currentFwd = Vector3.forward;
@@ -758,9 +759,24 @@ public class PlayerMovement : MonoBehaviour
         float angle = Vector3.Angle(currentFwd, look);
         if (angle < FACE_ANGLE_THRESHOLD) return;
 
-        transform.rotation = Quaternion.LookRotation(look, Vector3.up);
+        // 물리 친화 회전 스냅
+        Quaternion target = Quaternion.LookRotation(look, Vector3.up);
 
-        // Make sure other rotation logic uses this facing (so we don't snap back)
+        if (rb != null)
+        {
+            // 남아있는 회전 관성 제거(느린 회전 지속 방지)
+            rb.angularVelocity = Vector3.zero;
+
+            // 물리 프레임에서 즉시 반영되는 안전한 회전 API
+            rb.MoveRotation(target);
+        }
+        else
+        {
+            // 리지드바디가 없으면 트랜스폼으로 폴백
+            transform.rotation = target;
+        }
+
+        // 이후 로직에서 이 전방을 참조하도록 업데이트
         _lastLookDirection = look;
     }
 

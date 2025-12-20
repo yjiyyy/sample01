@@ -16,7 +16,7 @@ MonoBehaviour:
   prepareDuration: 1
   duration: 1
   endDuration: 1
-  height: 10
+  height: 3
   cooldown: 1.2
   prepareClip: {fileID: 7799600219382172205, guid: af44e2aadd5abc844bae2d2b300730a8, type: 3}
   loopClip: {fileID: 7799600219382172205, guid: a4c548049bb2acc4d890ad0542198ca2, type: 3}

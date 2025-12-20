@@ -269,8 +269,6 @@ public class EnemyDie : MonoBehaviour
                 foreach (var fj in fixeds) { if (fj == null) continue; fj.connectedBody = null; Object.Destroy(fj); }
             }
 
-            root.SetParent(null, worldPositionStays: true);
-
             foreach (var col in partCols) { if (col != null) col.enabled = true; }
             foreach (var rb in partBodies)
             {
@@ -655,10 +653,52 @@ public class EnemyDie : MonoBehaviour
         return baseValue * factor;
     }
 
+    /// <summary>
+    /// 애니메이션 사망 경로일 때(DeathMode.Animation) 사용되는 함수.
+    ///  - 요청대로: 시체는 겹쳐도 되므로 즉시(지연 없이) 프리팹의 콜라이더와 리지드바디를 비활성화합니다.
+    ///  - 랙돌에 사용되는 ragdollBodies / ragdollColliders 는 제외합니다.
+    /// </summary>
+    private void DisableNonRagdollPhysics()
+    {
+        // Disable non-ragdoll colliders
+        var allColliders = GetComponentsInChildren<Collider>(true);
+        foreach (var col in allColliders)
+        {
+            if (col == null) continue;
+            if (ragdollColliders.Contains(col)) continue;
+            // disable collider immediately
+            col.enabled = false;
+        }
+
+        // Disable non-ragdoll rigidbodies (make kinematic + disable collisions)
+        var allBodies = GetComponentsInChildren<Rigidbody>(true);
+        foreach (var rb in allBodies)
+        {
+            if (rb == null) continue;
+            if (ragdollBodies.Contains(rb)) continue;
+            rb.isKinematic = true;
+            // Try to disable collision responses
+            rb.detectCollisions = false;
+        }
+
+        // Also handle root references if they are not part of ragdoll lists
+        if (rootCollider != null && !ragdollColliders.Contains(rootCollider))
+            rootCollider.enabled = false;
+
+        if (rootRb != null && !ragdollBodies.Contains(rootRb))
+        {
+            rootRb.isKinematic = true;
+            rootRb.detectCollisions = false;
+        }
+    }
+
     private void PlayAnimationDeath()
     {
         if (animator != null)
         {
+            // Immediately disable prefab colliders / rigidbodies except ragdoll ones (as requested).
+            DisableNonRagdollPhysics();
+
             // Set a random DeadMotionIndex (0..deathVariantCount-1) and handle float/int param types.
             int idx = Random.Range(0, Mathf.Max(1, deathVariantCount));
 

@@ -36,7 +36,7 @@ MonoBehaviour:
   idleMin: 1
   idleMax: 3
   attackPatterns:
-  - {fileID: 11400000, guid: 4442699513e905642bc08e634f8e3dc1, type: 2}
+  - {fileID: 11400000, guid: 4b203a2b38263dd4294224c2d5d56871, type: 2}
   globalPatternCooldown: 0
   defaultPatternHoldDuration: 0
   enablePerPatternHoldOverride: 0

@@ -47,9 +47,9 @@ MonoBehaviour:
   aimScanAngle: 90
   aimScanDistance: 15
   usesAmmo: 1
-  magazineSize: 7
-  initialReserve: 10
-  infiniteReserve: 0
+  magazineSize: 100
+  initialReserve: 100
+  infiniteReserve: 1
   reloadTime: 3
   consumePerShot: 1
   autoReloadOnEmpty: 1
