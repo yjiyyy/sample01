@@ -1,0 +1,324 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+// 중앙 관리 + 공통 유틸만 두고, 공격별 구현은 partial 파일로 분리한다.
+// 프리팹에는 이 EnemyAttackController 컴포넌트 1개만 붙이면 된다.
+public partial class EnemyAttackController : MonoBehaviour
+{
+    [Header("패턴 배열 (MeleeAttackData / RushAttackData / RangedAttackData / JumpAttackData)")]
+    public ScriptableObject[] attackPatterns;
+    public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
+
+    // Melee에서만 쓰는 현재 공격(기존 구조 유지)
+    private ScriptableObject currentAttack;
+    private int currentAttackIndex = -1;
+
+    private Enemy enemy;
+
+    private float[] readyTimes;
+
+    [Header("글로벌쿨타임 (성공 종료 후)")]
+    public float 글로벌쿨타임 = 0.35f;
+    private float globalReadyTime;
+
+    [Header("패턴 홀드")]
+    public float defaultPatternHoldDuration = 1.0f;
+
+    private bool holdActive = false;
+    private float holdExpireTime;
+    private int pendingAttackIndex = -1;
+    private bool pendingExecuted = false;
+
+    [Header("디버그")]
+    public bool debugDecisionLogs = true;
+
+    public bool IsMeleeExecuting => attackInProgress && !IsRushing && rangedRoutine == null && !IsJumping;
+    public bool IsAttackExecuting => IsMeleeExecuting || IsRushing || rushPrepareCoroutine != null || rangedRoutine != null || IsJumping || jumpPrepareCoroutine != null;
+
+    public string CurrentAttackName
+    {
+        get
+        {
+            if (currentAttack is MeleeAttackData m) return m.attackName;
+            if (IsRushing &&
+                runningRushIndex >= 0 &&
+                attackPatterns != null &&
+                runningRushIndex < attackPatterns.Length &&
+                attackPatterns[runningRushIndex] is RushAttackData r) return r.attackName;
+            if (rangedRoutine != null &&
+                runningRangedIndex >= 0 &&
+                attackPatterns != null &&
+                runningRangedIndex < attackPatterns.Length &&
+                attackPatterns[runningRangedIndex] is RangedAttackData ra) return ra.attackName;
+            if (IsJumping &&
+                runningJumpIndex >= 0 &&
+                attackPatterns != null &&
+                runningJumpIndex < attackPatterns.Length &&
+                attackPatterns[runningJumpIndex] is JumpAttackData ja) return ja.attackName;
+            return null;
+        }
+    }
+
+    private void Awake()
+    {
+        CleanPatterns();
+
+        enemy = GetComponent<Enemy>();
+        int n = AttackCount;
+        readyTimes = n > 0 ? new float[n] : System.Array.Empty<float>();
+        for (int i = 0; i < n; i++) readyTimes[i] = -Mathf.Infinity;
+        globalReadyTime = Time.time;
+
+        if (n == 0)
+            Debug.LogWarning("[EnemyAttackController] 등록된 유효 공격 패턴이 0개입니다. (공격 비활성 상태)");
+
+        Log($"INIT (validPatterns={n})");
+    }
+
+    /// <summary> null / 미지원 타입 제거 </summary>
+    private void CleanPatterns()
+    {
+        if (attackPatterns == null || attackPatterns.Length == 0) return;
+
+        var list = new List<ScriptableObject>(attackPatterns.Length);
+        int removedNull = 0;
+        int removedUnsupported = 0;
+
+        foreach (var p in attackPatterns)
+        {
+            if (p == null) { removedNull++; continue; }
+            if (p is MeleeAttackData || p is RushAttackData || p is RangedAttackData || p is JumpAttackData) list.Add(p);
+            else
+            {
+                removedUnsupported++;
+                Debug.LogWarning($"[EnemyAttackController] 지원하지 않는 패턴 타입 무시: {p.GetType().Name}");
+            }
+        }
+
+        if (removedNull > 0 || removedUnsupported > 0)
+            Debug.LogWarning($"[EnemyAttackController] 패턴 정리: null {removedNull}개, 미지원 {removedUnsupported}개 제거 → 최종 {list.Count}개");
+
+        attackPatterns = list.ToArray();
+    }
+
+    private void Update()
+    {
+        // 기존 Update에 있던 Melee 진행/프리즈/종료 로직을 그대로 위임 호출
+        TickMeleeUpdate();
+
+        // Hold 만료 (기존 로직 유지)
+        if (holdActive && !IsAttackExecuting && !pendingExecuted && Time.time >= holdExpireTime)
+        {
+            Log($"[AttackFlow] HOLD TIMEOUT idx={pendingAttackIndex}");
+            CancelPendingHold();
+        }
+    }
+
+    #region 외부 조회
+    public bool IsGlobalCooling() => Time.time < globalReadyTime;
+    public bool IsOffCooldown(int index)
+    {
+        if (index < 0 || index >= AttackCount) return false;
+        return Time.time >= readyTimes[index];
+    }
+    public float GetAttackRange(int index)
+    {
+        if (index < 0 || index >= AttackCount) return 0f;
+        if (attackPatterns[index] is MeleeAttackData m) return m.range;
+        if (attackPatterns[index] is RushAttackData r) return r.range;
+        if (attackPatterns[index] is RangedAttackData rg) return rg.range;
+        if (attackPatterns[index] is JumpAttackData j) return j.range;
+        return 0f;
+    }
+    public float GetAttackCooldown(int index)
+    {
+        if (index < 0 || index >= AttackCount) return 0f;
+        if (attackPatterns[index] is MeleeAttackData m) return m.cooldown;
+        if (attackPatterns[index] is RushAttackData r) return r.cooldown;
+        if (attackPatterns[index] is RangedAttackData rg) return rg.cooldown;
+        if (attackPatterns[index] is JumpAttackData j) return j.cooldown;
+        return 0f;
+    }
+    #endregion
+
+    #region 선택 & 시작 (랜덤 + 실행 플래그)
+    public int SelectAttackIndex(float distance)
+    {
+        if (IsAttackExecuting || IsGlobalCooling()) return -1;
+
+        if (pendingAttackIndex >= 0 && holdActive && !pendingExecuted)
+        {
+            float pr = GetAttackRange(pendingAttackIndex);
+            if (distance <= pr && IsOffCooldown(pendingAttackIndex))
+                return pendingAttackIndex;
+            return -1;
+        }
+
+        List<int> candidates = null;
+        for (int i = 0; i < AttackCount; i++)
+        {
+            if (!IsOffCooldown(i)) continue;
+            (candidates ??= new List<int>()).Add(i);
+        }
+
+        if (candidates == null || candidates.Count == 0)
+            return -1;
+
+        int chosen = candidates[Random.Range(0, candidates.Count)];
+        PreparePending(chosen);
+
+        float range = GetAttackRange(chosen);
+        if (distance <= range)
+            return chosen;
+
+        return -1;
+    }
+
+    public bool TryStartAttack(int index, Transform target)
+    {
+        if (IsAttackExecuting || IsGlobalCooling() || !IsOffCooldown(index)) return false;
+        if (attackPatterns == null || index < 0 || index >= attackPatterns.Length) return false;
+
+        if (pendingAttackIndex != index)
+            PreparePending(index);
+
+        var so = attackPatterns[index];
+        if (so is MeleeAttackData m)
+        {
+            StartMelee(m, index);
+            return true;
+        }
+        if (so is RushAttackData r)
+        {
+            StartRush(r, target, index);
+            return true;
+        }
+        if (so is RangedAttackData rg)
+        {
+            StartRanged(rg, target, index);
+            return true;
+        }
+        if (so is JumpAttackData j)
+        {
+            StartJump(j, target, index);
+            return true;
+        }
+        return false;
+    }
+    #endregion
+
+    #region 패턴 홀드 / 실행 플래그
+    private void PreparePending(int index)
+    {
+        pendingAttackIndex = index;
+        holdActive = true;
+        pendingExecuted = false;
+
+        float hold = defaultPatternHoldDuration;
+        holdExpireTime = Time.time + hold;
+        Log($"[AttackFlow] SELECT idx={index} hold={hold:F2}s");
+    }
+
+    private void MarkExecuted()
+    {
+        if (pendingExecuted) return;
+        pendingExecuted = true;
+        Log($"[AttackFlow] EXECUTE idx={pendingAttackIndex}");
+    }
+
+    private void ClearHold()
+    {
+        if (holdActive)
+            Log("HOLD CLEARED");
+        holdActive = false;
+        pendingAttackIndex = -1;
+        pendingExecuted = false;
+    }
+
+    private void CancelPendingHold()
+    {
+        holdActive = false;
+        pendingAttackIndex = -1;
+        pendingExecuted = false;
+    }
+    #endregion
+
+    #region 쿨타임 & 인터럽트
+    private void ApplyPerAttackCooldown(int index, float baseCooldown)
+    {
+        if (index < 0 || index >= AttackCount) return;
+        readyTimes[index] = Time.time + Mathf.Max(0f, baseCooldown);
+    }
+    private void ApplyGlobalCooldown() => globalReadyTime = Time.time + 글로벌쿨타임;
+
+    public void OnInterrupted()
+    {
+        // 기존 동작을 유지하되, 공격별 정리 코드를 공격 파일로 분리
+        InterruptMeleeIfNeeded();
+        InterruptRushIfNeeded();
+        InterruptRangedIfNeeded();
+        InterruptJumpIfNeeded();
+
+        if (pendingAttackIndex >= 0 && !pendingExecuted)
+        {
+            Log("INTERRUPT pending cleared");
+            CancelPendingHold();
+        }
+    }
+    public void InterruptCooldown() => OnInterrupted();
+    #endregion
+
+    #region 유틸
+    private bool IsHardCrowdControlled()
+    {
+        return enemy != null &&
+               (enemy.CurrentState == Enemy.EnemyState.Stunned ||
+                enemy.CurrentState == Enemy.EnemyState.ShieldBreak);
+    }
+
+    private void FaceTarget(Transform t)
+    {
+        if (t == null) return;
+        if (enemy != null && enemy.IsLookLocked) return;
+
+        Vector3 dir = t.position - transform.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.0001f) return;
+        transform.rotation = Quaternion.LookRotation(dir.normalized);
+    }
+
+    private Transform FindChildRecursive(Transform root, string name)
+    {
+        if (root == null || string.IsNullOrEmpty(name)) return null;
+        foreach (var tr in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (tr == null) continue;
+            if (tr.name == name) return tr;
+        }
+        return null;
+    }
+
+    private bool HasParam(string p)
+    {
+        if (enemy?.animator == null) return false;
+        foreach (var prm in enemy.animator.parameters)
+            if (prm.name == p) return true;
+        return false;
+    }
+
+    private void SafeSetBool(string p, bool v)
+    {
+        if (HasParam(p)) enemy.animator.SetBool(p, v);
+    }
+
+    private void Log(string msg)
+    {
+#if UNITY_EDITOR
+        if (debugDecisionLogs) Debug.Log($"[EnemyAttackController] {msg}", this);
+#else
+        if (debugDecisionLogs) Debug.Log($"[EnemyAttackController] {msg}");
+#endif
+    }
+    #endregion
+}

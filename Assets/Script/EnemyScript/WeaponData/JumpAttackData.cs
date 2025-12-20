@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-[CreateAssetMenu(menuName = "Enemy/AttackData/JumpAttackData")]
+[CreateAssetMenu(menuName = "Enemy/Attack/JumpAttackData")]
 public class JumpAttackData : ScriptableObject
 {
     [Header("General")]
