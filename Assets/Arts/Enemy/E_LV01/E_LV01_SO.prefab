@@ -139,7 +139,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackPatterns:
-  - {fileID: 11400000, guid: 9b9960ac6d441c64c84710c34b726a3e, type: 2}
+  - {fileID: 11400000, guid: 7daec1749cd036e4fb1bfc520f626da9, type: 2}
   "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0
   defaultPatternHoldDuration: 0
   debugDecisionLogs: 1
@@ -263,6 +263,10 @@ MonoBehaviour:
   animator: {fileID: 0}
   rootRb: {fileID: 0}
   rootCollider: {fileID: 0}
+  deathTriggerName: Die
+  deathIndexParam: DeadMotionIndex
+  deathStateName: DeadBlendTree
+  deathVariantCount: 3
   excludeRoot: {fileID: 0}
   hipsBody: {fileID: 3124859621649976648}
 --- !u!1 &5385469673980524015
@@ -480,7 +484,7 @@ PrefabInstance:
       addedObject: {fileID: 3124859621649976648}
     - targetCorrespondingSourceObject: {fileID: -8308449016884692104, guid: 6b65cd28f5af9aa43a80ca14e1316eff, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2633008041070160633}
+      addedObject: {fileID: 4091169856461184925}
     - targetCorrespondingSourceObject: {fileID: -8308449016884692104, guid: 6b65cd28f5af9aa43a80ca14e1316eff, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3781581647312664946}
@@ -1202,7 +1206,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6313718845957107999}
   serializedVersion: 4
-  m_Mass: 1.5625
+  m_Mass: 1
   m_Drag: 0
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -1255,7 +1259,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6785858595698569292}
   serializedVersion: 4
-  m_Mass: 0.625
+  m_Mass: 0.6
   m_Drag: 0
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -1523,8 +1527,8 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: -8308449016884692104, guid: 6b65cd28f5af9aa43a80ca14e1316eff, type: 3}
   m_PrefabInstance: {fileID: 8862513175375928873}
   m_PrefabAsset: {fileID: 0}
---- !u!65 &2633008041070160633
-BoxCollider:
+--- !u!136 &4091169856461184925
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -1541,9 +1545,11 @@ BoxCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.3, y: 0.3, z: 0.4}
-  m_Center: {x: -0.2, y: 0, z: 0}
+  serializedVersion: 2
+  m_Radius: 0.22
+  m_Height: 0.5
+  m_Direction: 0
+  m_Center: {x: -0.17, y: 0.02, z: 0}
 --- !u!54 &3781581647312664946
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1552,7 +1558,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8525188082983806289}
   serializedVersion: 4
-  m_Mass: 1.5625
+  m_Mass: 1
   m_Drag: 0
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}

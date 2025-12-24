@@ -626,24 +626,40 @@ public class EnemyDie : MonoBehaviour
 
     private Vector3 MakeRandomSpinAxisAvoidPitch(Vector3 hitDir)
     {
-        Vector3 rand = Random.onUnitSphere;
+        // 충격 방향을 수평으로 정규화
+        Vector3 horizontalHitDir = new Vector3(hitDir.x, 0f, hitDir.z);
 
-        if (hitDir.sqrMagnitude > 0.0001f)
+        if (horizontalHitDir.sqrMagnitude < 0.0001f)
         {
-            Vector3 h = new Vector3(hitDir.x, 0f, hitDir.z).normalized;
-            rand -= Vector3.Project(rand, h);
-        }
-
-        if (rand.sqrMagnitude < 0.0001f)
-        {
-            rand = Vector3.up;
+            // hitDir이 거의 수직이면 임의의 수평 방향 사용
+            horizontalHitDir = Vector3.forward;
         }
         else
         {
-            rand = (rand.normalized * 0.8f) + (Vector3.up * 0.2f);
+            horizontalHitDir = horizontalHitDir.normalized;
         }
 
-        return rand.normalized;
+        // 충격 방향과 위쪽 벡터의 외적으로 회전축 계산
+        // 방향을 반대로 하기 위해 Vector3.up과 horizontalHitDir 순서를 바꿈
+        Vector3 spinAxis = Vector3.Cross(Vector3.up, horizontalHitDir).normalized;
+
+        // 약간의 랜덤 변화 추가 (70% 계산된 축 + 30% 랜덤)
+        Vector3 randomOffset = Random.onUnitSphere;
+        randomOffset -= Vector3.Project(randomOffset, horizontalHitDir); // hitDir 방향 성분 제거
+
+        if (randomOffset.sqrMagnitude < 0.0001f)
+        {
+            randomOffset = Vector3.up;
+        }
+        else
+        {
+            randomOffset = randomOffset.normalized;
+        }
+
+        // 계산된 축과 랜덤 축을 섞어서 자연스러움 추가
+        Vector3 finalAxis = (spinAxis * 0.7f + randomOffset * 0.3f).normalized;
+
+        return finalAxis;
     }
 
     private float Randomize20Percent(float baseValue)

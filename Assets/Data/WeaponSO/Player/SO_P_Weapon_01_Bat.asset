@@ -32,7 +32,7 @@ MonoBehaviour:
   deathMode: 1
   ragdollImpulse: 10
   ragdollUpImpulse: 10
-  ragdollSpinTorque: 0
+  ragdollSpinTorque: 10
   sliceTargets: 
   sliceImpulse: 10
   chargeSlot: {fileID: 0}

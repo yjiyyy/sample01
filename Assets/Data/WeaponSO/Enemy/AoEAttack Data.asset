@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7c0609c654922349bd06cf14a76e05b, type: 3}
+  m_Name: AoEAttack Data
+  m_EditorClassIdentifier: 
+  attackName: AoE_Attack
+  attackClip: {fileID: 7382902893970610519, guid: d1f98cbc79857534180baf386f781b99, type: 3}
+  attackStateName: AoE_Attack
+  attackDuration: 2.5
+  cooldown: 3
+  spawnCount: 10
+  spawnRadius: 5
+  spawnAroundPlayerRadius: 0
+  prepareDuration: 1
+  spawnInterval: 0.2
+  hitBoxLifetime: 0.1
+  hitBoxPrefab: {fileID: 5009877497648116289, guid: fce32fbcaa94b3645bf5cbd8288f6b59, type: 3}
+  hitboxActivationDelay: 0.5
+  attachHitboxToEnemy: 0
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 0
+  spawnDebugMarker: 1
+  damage: 20
+  knockbackPower: 0
+  knockbackDuration: 0.5
+  stunDuration: 0.4
+  allowDuplicateHit: 0
+  duplicateHitInterval: 0.2
+  spawnMode: 1

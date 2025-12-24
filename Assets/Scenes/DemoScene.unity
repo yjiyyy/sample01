@@ -5138,7 +5138,7 @@ MonoBehaviour:
   enemyPrefabsByLevel:
   - {fileID: 4758100800114042528, guid: 1e6955f1566fb3e44b479a2adbb9af48, type: 3}
   hpuiPrefab: {fileID: 5425390646291263780, guid: c221514702d57b44bac940471d983478, type: 3}
-  spawnInterval: 4
+  spawnInterval: 50
   jitterRadius: 0.5
   applyGroundRaycast: 0
   raycastHeight: 20
