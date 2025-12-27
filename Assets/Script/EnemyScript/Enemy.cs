@@ -667,6 +667,19 @@ public class Enemy : MonoBehaviour
         manualSuperArmor.Clear();
     }
 
+    // Public helpers to query manual/combined super-armor state
+    public bool HasManualSuperArmor()
+    {
+        return manualSuperArmor != null && manualSuperArmor.Count > 0;
+    }
+
+    public bool HasAnySuperArmor()
+    {
+        var health = GetComponent<EnemyHealth>();
+        bool healthSA = (health != null && health.HasSuperArmor);
+        return healthSA || HasManualSuperArmor();
+    }
+
     public void LockLookDirection(Vector3 dir)
     {
         dir.y = 0f;

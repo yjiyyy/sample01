@@ -24,6 +24,11 @@ public class MeleeAttackData : ScriptableObject
     public float hitboxSpawnDelay = 0f;
     public float hitBoxLifetime = 0.2f;
 
+    // New: whether spawned hitbox should be attached to the enemy (local) or left in world space
+    [Header("히트박스 스폰 옵션")]
+    [Tooltip("히트박스를 적의 자식으로 붙일지 여부. true이면 적의 자식으로 붙고, false이면 월드 고정으로 스폰됩니다.")]
+    public bool attachHitboxToEnemy = true;
+
     [Header("넉백 / 저크")]
     public float knockbackPower = 4f;
     public float knockbackDuration = 0.25f;
@@ -40,7 +45,7 @@ public class MeleeAttackData : ScriptableObject
     [Tooltip("이동을 수행하는 공격인지 여부")]
     public bool isMovingAttack = false;
 
-    [Tooltip("임펄스(힘) 크기. Rigidbody에 단발로 적용하는 초기 속도/힘에 해당.")]
+    [Tooltip("임펄스(초기 속도) 크기. 단위: m/s (리지드바디에 단발로 적용하는 초기 속도 개념)")]
     public float moveForce = 4f;
 
     [Tooltip("이동 감쇠 지속시간(초). 임펄스 이후 속도를 감쇠하여 정지시키는 시간.")]

@@ -139,7 +139,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackPatterns:
-  - {fileID: 11400000, guid: 7daec1749cd036e4fb1bfc520f626da9, type: 2}
+  - {fileID: 11400000, guid: 6d08ade2d70ffc7489f83cc9b4985885, type: 2}
   "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0
   defaultPatternHoldDuration: 0
   debugDecisionLogs: 1
@@ -191,8 +191,8 @@ MonoBehaviour:
   backstepDistance: 5
   backstepSpeedMultiplier: 1
   forwardSpeedNormalizeTime: 0.25
-  detectionRadius: 5
-  findDuration: 0.8
+  detectionRadius: 10
+  findDuration: 3
   roamRadius: 3
   peaceMoveSpeedMultiplier: 0.5
   idleMin: 1

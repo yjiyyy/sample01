@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c55a14bd6d57f04c9dcd658e386f567, type: 3}
+  m_Name: Combo03
+  m_EditorClassIdentifier: 
+  attackName: Combo03
+  hitBoxPrefab: {fileID: 5009877497648116289, guid: fce32fbcaa94b3645bf5cbd8288f6b59, type: 3}
+  grantSuperArmor: 1
+  damage: 10
+  range: 15
+  cooldown: 1
+  attackTime: 1.5
+  clip: {fileID: 7409418909940678185, guid: 3656f849156ba4243bab85d257099432, type: 3}
+  hitboxSpawnDelay: 0.9
+  hitBoxLifetime: 0.2
+  attachHitboxToEnemy: 0
+  knockbackPower: 10
+  knockbackDuration: 1
+  stunDuration: 3
+  allowDuplicateHit: 0
+  duplicateHitInterval: 0.1
+  isMovingAttack: 1
+  moveForce: 15
+  moveDuration: 1.3
+  lockTiming: 1
+  forceApplyTime: 0.15

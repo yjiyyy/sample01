@@ -25,9 +25,8 @@ public class EnemyImpact : MonoBehaviour
         float knockbackDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
         float stunDuration = weapon != null ? weapon.stunDuration * impactScale : 0f;
 
-        // Super-armor check: delegated to EnemyHealth (shield-based)
-        var health = ctx.GetComponent<EnemyHealth>();
-        bool hasSuperArmor = health != null && health.HasSuperArmor;
+        // Super-armor check: consider both shield (EnemyHealth) and manual super armor (Enemy)
+        bool hasSuperArmor = ctx.HasAnySuperArmor();
 
         if (hasSuperArmor)
         {

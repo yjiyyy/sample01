@@ -26,8 +26,8 @@ MonoBehaviour:
   shieldRechargeRate: 10
   baseMoveSpeed: 5
   movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
-  detectionRadius: 5
-  findDuration: 0.8
+  detectionRadius: 10
+  findDuration: 3
   backstepDistance: 5
   backstepSpeedMultiplier: 1
   forwardSpeedNormalizeTime: 0.25
@@ -36,7 +36,7 @@ MonoBehaviour:
   idleMin: 1
   idleMax: 3
   attackPatterns:
-  - {fileID: 11400000, guid: 7daec1749cd036e4fb1bfc520f626da9, type: 2}
+  - {fileID: 11400000, guid: 6d08ade2d70ffc7489f83cc9b4985885, type: 2}
   globalPatternCooldown: 0
   defaultPatternHoldDuration: 0
   enablePerPatternHoldOverride: 0

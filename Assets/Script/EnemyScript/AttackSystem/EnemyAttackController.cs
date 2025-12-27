@@ -6,7 +6,7 @@ using UnityEngine;
 // 프리팹에는 이 EnemyAttackController 컴포넌트 1개만 붙이면 된다.
 public partial class EnemyAttackController : MonoBehaviour
 {
-    [Header("패턴 배열 (MeleeAttackData / RushAttackData / RangedAttackData / JumpAttackData / AoEAttackData)")]
+    [Header("패턴 배열 (MeleeAttackData / RushAttackData / RangedAttackData / JumpAttackData / AoEAttackData / ComboAttackData)")]
     public ScriptableObject[] attackPatterns;
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
@@ -35,13 +35,15 @@ public partial class EnemyAttackController : MonoBehaviour
 
     // 기존 상태 플래그들과 AoE 통합 (AoE는 partial 파일에서 aoeCoroutine 변수로 관리)
     public bool IsMeleeExecuting => attackInProgress && !IsRushing && rangedRoutine == null && !IsJumping;
-    public bool IsAttackExecuting => IsMeleeExecuting || IsRushing || rushPrepareCoroutine != null || rangedRoutine != null || IsJumping || aoeCoroutine != null;
+    // 콤보가 생겼으니 comboCoroutine은 partial 쪽에 선언됨; partial 합쳐질 때 같이 평가됩니다.
+    public bool IsAttackExecuting => IsMeleeExecuting || IsRushing || rushPrepareCoroutine != null || rangedRoutine != null || IsJumping || aoeCoroutine != null || comboCoroutine != null;
 
     public string CurrentAttackName
     {
         get
         {
             if (currentAttack is MeleeAttackData m) return m.attackName;
+            if (currentAttack is ComboAttackData cb) return cb.attackName;
             if (IsRushing &&
                 runningRushIndex >= 0 &&
                 attackPatterns != null &&
@@ -94,7 +96,7 @@ public partial class EnemyAttackController : MonoBehaviour
         foreach (var p in attackPatterns)
         {
             if (p == null) { removedNull++; continue; }
-            if (p is MeleeAttackData || p is RushAttackData || p is RangedAttackData || p is JumpAttackData || p is AoEAttackData) list.Add(p);
+            if (p is MeleeAttackData || p is RushAttackData || p is RangedAttackData || p is JumpAttackData || p is AoEAttackData || p is ComboAttackData) list.Add(p);
             else
             {
                 removedUnsupported++;
@@ -136,6 +138,7 @@ public partial class EnemyAttackController : MonoBehaviour
         if (attackPatterns[index] is RangedAttackData rg) return rg.range;
         if (attackPatterns[index] is JumpAttackData j) return j.range;
         if (attackPatterns[index] is AoEAttackData a) return a.spawnRadius; // AoE: use spawnRadius as effective range
+        if (attackPatterns[index] is ComboAttackData c) return c.range;
         return 0f;
     }
     public float GetAttackCooldown(int index)
@@ -146,6 +149,7 @@ public partial class EnemyAttackController : MonoBehaviour
         if (attackPatterns[index] is RangedAttackData rg) return rg.cooldown;
         if (attackPatterns[index] is JumpAttackData j) return j.cooldown;
         if (attackPatterns[index] is AoEAttackData a) return a.cooldown;
+        if (attackPatterns[index] is ComboAttackData c) return c.cooldown;
         return 0f;
     }
     #endregion
@@ -195,6 +199,11 @@ public partial class EnemyAttackController : MonoBehaviour
         if (so is MeleeAttackData m)
         {
             StartMelee(m, index);
+            return true;
+        }
+        if (so is ComboAttackData c)
+        {
+            StartCombo(c, target, index);
             return true;
         }
         if (so is RushAttackData r)
@@ -273,6 +282,7 @@ public partial class EnemyAttackController : MonoBehaviour
         InterruptRangedIfNeeded();
         InterruptJumpIfNeeded();
         InterruptAoEIfNeeded();
+        InterruptComboIfNeeded();
 
         if (pendingAttackIndex >= 0 && !pendingExecuted)
         {

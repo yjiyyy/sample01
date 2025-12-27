@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4fbc75897a434204b88ae12b2766f8e4, type: 3}
+  m_Name: ComboAttackData_SO
+  m_EditorClassIdentifier: 
+  attackName: Combo_Attack
+  slots:
+  - {fileID: 11400000, guid: 9380ffbe5c42bad4e94497d33d861177, type: 2}
+  - {fileID: 11400000, guid: f3e9a4a98ad34ce409fa1f2edc78ae1a, type: 2}
+  - {fileID: 11400000, guid: eddf14ae12d74984293efa1bb874e0cd, type: 2}
+  cooldown: 5
+  range: 2.5
+  applyFullCooldownOnInterrupt: 1
