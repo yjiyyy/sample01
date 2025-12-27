@@ -32,8 +32,8 @@ MonoBehaviour:
   deathMode: 1
   ragdollImpulse: 2
   ragdollUpImpulse: 15
-  ragdollSpinTorque: 1000000
-  sliceTargets: 
+  ragdollSpinTorque: 5000
+  sliceTargets: 05000000
   sliceImpulse: 15
   chargeSlot: {fileID: 0}
   recoilStartDelay: 0

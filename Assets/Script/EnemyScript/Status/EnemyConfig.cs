@@ -1,4 +1,30 @@
 ﻿using UnityEngine;
+using System;
+
+/// <summary>
+/// 적 파츠 슬롯 정의. 
+/// - boneName: 파츠가 붙을 본 이름 (문자열). 예: "Bip001 R Hand"
+/// - partPrefab: 생성할 파츠 프리펩 (드래그로 할당).
+/// - localOffset/Rotation/Scale: 부착 시 로컬 Transform 조정값.
+/// </summary>
+[System.Serializable]
+public class EnemyPartSlot
+{
+    [Tooltip("파츠가 붙을 본 이름 (정확히 입력). 예: 'Bip001 R Hand'")]
+    public string boneName = "";
+
+    [Tooltip("생성할 파츠 프리펩 (드래그로 할당).")]
+    public GameObject partPrefab;
+
+    [Tooltip("부착 후 로컬 위치 오프셋.")]
+    public Vector3 localOffset = Vector3.zero;
+
+    [Tooltip("부착 후 로컬 회전(오일러 각도).")]
+    public Vector3 localRotationEuler = Vector3.zero;
+
+    [Tooltip("부착 후 로컬 스케일.")]
+    public Vector3 localScale = Vector3.one;
+}
 
 [CreateAssetMenu(menuName = "Enemy/EnemyConfig", fileName = "EnemyConfig_SO")]
 public class EnemyConfig : ScriptableObject
@@ -11,7 +37,6 @@ public class EnemyConfig : ScriptableObject
     [Header("Stats")]
     public float maxHealth = 100f;
 
-    // NEW: Mass multiplier used for ragdoll and knockback scaling
     [Tooltip("Mass multiplier applied to ragdoll rigidbodies and used to scale knockback distance (1 = default).")]
     public float mass = 1f;
 
@@ -28,7 +53,7 @@ public class EnemyConfig : ScriptableObject
     public float shieldRechargeRate = 10f;
 
     [Header("Movement / AI")]
-    [Tooltip("Base move speed (m/s) used by Enemy.moveSpeed.")]
+    [Tooltip("Base move speed (m/s) used by Enemy. moveSpeed.")]
     public float baseMoveSpeed = 3.5f;
     [Tooltip("MovementSettings asset to assign to Enemy/movement components.")]
     public MovementSettings movementSettings = null;
@@ -47,18 +72,17 @@ public class EnemyConfig : ScriptableObject
     [Tooltip("Forward speed normalization time used by EnemyAI (seconds).")]
     [Range(0.05f, 2f)]
     public float forwardSpeedNormalizeTime = 0.25f;
-    [Tooltip("Roam radius around spawn when in Peace mode.")]
+    [Tooltip("Roam radius around spawn when in Peace mode. ")]
     public float roamRadius = 3f;
     [Tooltip("Peace mode movement speed multiplier (percentage of baseMoveSpeed).")]
     [Range(0.05f, 1f)]
     public float peaceMoveSpeedMultiplier = 0.6f;
-    [Tooltip("Idle wait time minimum in Peace mode.")]
+    [Tooltip("Idle wait time minimum in Peace mode. ")]
     public float idleMin = 1f;
     [Tooltip("Idle wait time maximum in Peace mode.")]
     public float idleMax = 3f;
 
     [Header("Combat")]
-    // Attack-specific values are intentionally removed because attack patterns (SO) own those values.
 
     [Header("Attack patterns (EnemyAttackController)")]
     [Tooltip("Array of attack pattern ScriptableObjects (MeleeAttackData/RushAttackData/RangedAttackData).")]
@@ -70,13 +94,12 @@ public class EnemyConfig : ScriptableObject
     [Tooltip("If true, EnemyAttackController will honor per-pattern holdOverride field when present.")]
     public bool enablePerPatternHoldOverride = true;
 
-    [Header("Impact / CC")]
-    // Knockback defaults removed; these live on attack pattern SOs now.
+    [Header("Parts System")]
+    [Tooltip("파츠 슬롯 개수.  이 값을 변경하면 OnValidate에서 배열 크기를 자동 조정합니다.")]
+    public int partSlotCount = 0;
+    [Tooltip("각 슬롯에 붙을 본 이름(문자열)과 파츠 프리펩을 설정합니다.")]
+    public EnemyPartSlot[] partSlots = new EnemyPartSlot[0];
 
-    [Header("Animation keys")]
-    // animation key strings removed from config — control animation keys through animation controller or dedicated controller script.
-
-    // Removed the old Death / Ragdoll fields (we keep weapon SO impulses).
     [Header("References")]
     public AnimatorOverrideController overrideController = null;
 
@@ -86,7 +109,6 @@ public class EnemyConfig : ScriptableObject
 
     private void OnValidate()
     {
-        // sanity clamps for editor convenience
         maxHealth = Mathf.Max(0f, maxHealth);
         maxShield = Mathf.Max(0f, maxShield);
         baseMoveSpeed = Mathf.Max(0f, baseMoveSpeed);
@@ -102,7 +124,18 @@ public class EnemyConfig : ScriptableObject
         globalPatternCooldown = Mathf.Max(0f, globalPatternCooldown);
         defaultPatternHoldDuration = Mathf.Max(0f, defaultPatternHoldDuration);
 
-        // NEW: clamp mass to a safe positive minimum
         mass = Mathf.Max(0.0001f, mass);
+
+        // Parts System:  partSlotCount 변경 시 배열 크기 자동 조정
+        partSlotCount = Mathf.Max(0, partSlotCount);
+        if (partSlots == null || partSlots.Length != partSlotCount)
+        {
+            Array.Resize(ref partSlots, partSlotCount);
+            for (int i = 0; i < partSlots.Length; i++)
+            {
+                if (partSlots[i] == null)
+                    partSlots[i] = new EnemyPartSlot();
+            }
+        }
     }
 }

@@ -3,14 +3,20 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Enemy 사망 연출 전담 컴포넌트. 
-/// - 애니메이션 죽음 / 랙돌 죽음 / 슬라이스(본 분리) 지원. 
-/// - 랙돌 본(Rigidbody+Collider)은 Awake에서 자동 초기화(isKinematic=true, Collider.enabled=false).
+/// Enemy 사망 연출 전담 컴포넌트.  
+/// - 애니메이션 죽음 / 랙돌 죽음 / 슬라이스(본 분리) 지원.  
+/// - 랙돌 본(Rigidbody+Collider)은 Awake에서 자동 초기화(isKinematic=true, Collider. enabled=false).
 /// - 슬라이스:  지정된 본을 찾아 해당 본과 모든 하위 본을 완전 독립 오브젝트로 분리(Transform.parent=null),
 ///   분리 트리 내/외부의 Joint 연결을 모두 끊고, 분리 파츠에만 sliceImpulse를 적용(±20% 랜덤).
-/// - deathMode가 Animation이면:  몸통은 애니메이션 재생, 슬라이스 파츠만 랙돌 물리. 
-/// - deathMode가 Ragdoll이면: 전신 랙돌, 슬라이스 파츠는 분리 + 더 강한 임펄스. 
-/// - 7초 뒤 모든 오브젝트 파괴. 
+/// - deathMode가 Animation이면:  몸통은 애니메이션 재생, 슬라이스 파츠만 랙돌 물리.  
+/// - deathMode가 Ragdoll이면:  전신 랙돌, 슬라이스 파츠는 분리 + 더 강한 임펄스.  
+/// - 7초 뒤 모든 오브젝트 파괴.
+/// 
+/// [Parts System]
+/// - Awake/Die() 시점에 EnemyFacade.SpawnedParts에서 파츠 Rigidbody/Collider 수집. 
+/// - 평소:  파츠는 "Parts" 레이어, Rigidbody kinematic, Collider disabled. 
+/// - 죽을 때: 파츠를 부모에서 분리(SetParent(null)), "Ragdoll" 레이어로 변경, 
+///   Rigidbody non-kinematic, Collider enabled, 타격 방향으로 sliceImpulse 적용.
 /// </summary>
 [DisallowMultipleComponent]
 public class EnemyDie : MonoBehaviour
@@ -20,14 +26,14 @@ public class EnemyDie : MonoBehaviour
     public Rigidbody rootRb;
     public Collider rootCollider;
 
-    [Header("데스 애니메이션 파라미터 (권장: BlendTree 사용)")]
+    [Header("데스 애니메이션 파라미터 (권장:  BlendTree 사용)")]
     [Tooltip("Animator Trigger name to start death transition (default: 'Die')")]
     [SerializeField] private string deathTriggerName = "Die";
     [Tooltip("BlendTree parameter name (DeadMotionIndex)")]
     [SerializeField] private string deathIndexParam = "DeadMotionIndex";
     [Tooltip("Animator state name that holds the BlendTree (set this to your BlendTree state's name)")]
     [SerializeField] private string deathStateName = "DeadBlendTree";
-    [Tooltip("Number of death variants (e.g. 3)")]
+    [Tooltip("Number of death variants (e.g.  3)")]
     [SerializeField] private int deathVariantCount = 3;
 
     [Header("랙돌 본 자동 수집")]
@@ -35,6 +41,11 @@ public class EnemyDie : MonoBehaviour
 
     private List<Rigidbody> ragdollBodies = new List<Rigidbody>();
     private List<Collider> ragdollColliders = new List<Collider>();
+
+    // Parts System:  파츠의 Rigidbody/Collider/GameObject를 보관
+    private List<Rigidbody> partRigidbodies = new List<Rigidbody>();
+    private List<Collider> partColliders = new List<Collider>();
+    private List<GameObject> partGameObjects = new List<GameObject>();
 
     [Header("중심 본(힙/골반) 지정")]
     [SerializeField] private Rigidbody hipsBody;
@@ -65,6 +76,7 @@ public class EnemyDie : MonoBehaviour
         }
 
         CollectRagdollParts();
+        CollectPartRigidbodies(); // 첫 시도 (파츠가 없을 수 있음)
         InitializeRagdollOff();
     }
 
@@ -115,6 +127,56 @@ public class EnemyDie : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Parts System: EnemyFacade.SpawnedParts에서 파츠의 Rigidbody/Collider/GameObject 수집. 
+    /// - 파츠 프리펩 루트에 Rigidbody가 있으면 Ragdoll 파츠로 간주.
+    /// </summary>
+    private void CollectPartRigidbodies()
+    {
+        var facade = GetComponent<EnemyFacade>();
+        if (facade == null || facade.SpawnedParts == null || facade.SpawnedParts.Count == 0)
+        {
+            Debug.Log("[EnemyDie] CollectPartRigidbodies: No parts found (facade or parts list empty).");
+            return;
+        }
+
+        // 기존 리스트 초기화 (재수집 대비)
+        partRigidbodies.Clear();
+        partColliders.Clear();
+        partGameObjects.Clear();
+
+        foreach (var partObj in facade.SpawnedParts)
+        {
+            if (partObj == null) continue;
+
+            // 파츠 루트에 Rigidbody가 있는지 확인
+            Rigidbody partRb = partObj.GetComponent<Rigidbody>();
+            if (partRb != null)
+            {
+                partRigidbodies.Add(partRb);
+                partGameObjects.Add(partObj);
+
+                // 파츠의 모든 Collider 수집 (루트 + 자식)
+                Collider[] cols = partObj.GetComponentsInChildren<Collider>(true);
+                foreach (var col in cols)
+                {
+                    if (col != null)
+                    {
+                        partColliders.Add(col);
+                    }
+                }
+
+                Debug.Log($"[EnemyDie] Collected part:  '{partObj.name}' (Rigidbody: 1, Colliders: {cols.Length})");
+            }
+            else
+            {
+                Debug.LogWarning($"[EnemyDie] Part '{partObj.name}' has no Rigidbody on root.  Skipping.");
+            }
+        }
+
+        Debug.Log($"[EnemyDie] Total parts collected: {partRigidbodies.Count}");
+    }
+
     private void InitializeRagdollOff()
     {
         foreach (var rb in ragdollBodies)
@@ -133,11 +195,61 @@ public class EnemyDie : MonoBehaviour
             if (col == null) continue;
             col.enabled = false;
         }
+
+        // Parts System: 파츠 Rigidbody/Collider 초기화
+        int disabledRbCount = 0;
+        foreach (var partRb in partRigidbodies)
+        {
+            if (partRb == null) continue;
+            partRb.isKinematic = true;
+            partRb.useGravity = true;
+            partRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            disabledRbCount++;
+        }
+
+        int disabledColCount = 0;
+        foreach (var partCol in partColliders)
+        {
+            if (partCol == null) continue;
+            partCol.enabled = false;
+            disabledColCount++;
+        }
+
+        Debug.Log($"[EnemyDie] InitializeRagdollOff:  Part Rigidbodies set kinematic: {disabledRbCount}, Colliders disabled: {disabledColCount}");
+
         initialized = true;
     }
 
     public void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
     {
+        // 파츠 재수집 (EnemyFacade.Start()가 Awake 이후 실행되므로 확실하게)
+        if (partRigidbodies.Count == 0)
+        {
+            Debug.Log("[EnemyDie] Die(): Re-collecting parts...");
+            CollectPartRigidbodies();
+
+            // 재수집 후 초기화
+            int disabledRbCount = 0;
+            foreach (var partRb in partRigidbodies)
+            {
+                if (partRb == null) continue;
+                partRb.isKinematic = true;
+                partRb.useGravity = true;
+                partRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                disabledRbCount++;
+            }
+
+            int disabledColCount = 0;
+            foreach (var partCol in partColliders)
+            {
+                if (partCol == null) continue;
+                partCol.enabled = false;
+                disabledColCount++;
+            }
+
+            Debug.Log($"[EnemyDie] Die(): Part Rigidbodies set kinematic: {disabledRbCount}, Colliders disabled: {disabledColCount}");
+        }
+
         if (!initialized) { CollectRagdollParts(); InitializeRagdollOff(); }
 
         var mode = weapon != null ? weapon.deathMode : DeathMode.Animation;
@@ -187,7 +299,111 @@ public class EnemyDie : MonoBehaviour
             col.enabled = true;
         }
 
+        // Parts System: 파츠 분리 + Ragdoll 활성화
+        SeparateAndActivateParts(hitDir, weapon, impactScale);
+
         ApplyGlobalImpulseAndSpin(ragdollBodies, hitDir, weapon, impactScale);
+    }
+
+    /// <summary>
+    /// Parts System: 파츠를 부모에서 분리하고 Ragdoll 활성화. 
+    /// - 부모에서 분리 (SetParent(null))
+    /// - 레이어를 "Ragdoll"로 변경
+    /// - Rigidbody non-kinematic, Collider enabled
+    /// - 타격 방향으로 sliceImpulse 적용
+    /// </summary>
+    private void SeparateAndActivateParts(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
+    {
+        if (partRigidbodies.Count == 0)
+        {
+            Debug.Log("[EnemyDie] SeparateAndActivateParts:  No parts to separate.");
+            return;
+        }
+
+        int ragdollLayer = LayerMask.NameToLayer("Ragdoll");
+        if (ragdollLayer == -1)
+        {
+            Debug.LogWarning("[EnemyDie] 'Ragdoll' layer not found!  Parts will keep their original layer.");
+            ragdollLayer = 0;
+        }
+
+        // ★ weapon이 null이면 기본값 5.0f 사용 ★
+        float sImpulseBase = (weapon != null ? weapon.sliceImpulse : 5.0f);
+        float sImpulse = Randomize20Percent(sImpulseBase) * Mathf.Max(impactScale, 0f);
+
+        Vector3 dir = hitDir;
+        if (dir.sqrMagnitude > 0.0001f)
+            dir = new Vector3(dir.x, 0f, dir.z).normalized;
+        else
+            dir = Vector3.forward;  // hitDir이 zero면 앞 방향
+
+        for (int i = 0; i < partGameObjects.Count; i++)
+        {
+            GameObject partObj = partGameObjects[i];
+            if (partObj == null) continue;
+
+            Rigidbody partRb = partRigidbodies[i];
+            if (partRb == null) continue;
+
+            // 1. 월드 포지션/회전 저장
+            Vector3 worldPos = partObj.transform.position;
+            Quaternion worldRot = partObj.transform.rotation;
+
+            // 2. 부모에서 분리
+            partObj.transform.SetParent(null, worldPositionStays: true);
+            partObj.name = partObj.name + "_Separated";
+
+            // 3. 월드 포지션/회전 복원
+            partObj.transform.position = worldPos;
+            partObj.transform.rotation = worldRot;
+
+            // 4. 레이어 변경 (재귀적으로 자식도)
+            SetLayerRecursively(partObj, ragdollLayer);
+
+            // 5. Rigidbody 활성화
+            partRb.isKinematic = false;
+            partRb.useGravity = true;
+            partRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+            // 6. Collider 활성화
+            Collider[] cols = partObj.GetComponentsInChildren<Collider>(true);
+            foreach (var col in cols)
+            {
+                if (col != null) col.enabled = true;
+            }
+
+            // 7. Impulse 적용
+            if (sImpulse > 0f && dir.sqrMagnitude > 0f)
+            {
+                Vector3 velChange = dir * sImpulse * 0.3f + Vector3.up * sImpulse * 0.7f;
+                partRb.AddForce(velChange, ForceMode.VelocityChange);
+
+                Vector3 spinAxis = MakeRandomSpinAxisAvoidPitch(dir);
+                partRb.AddTorque(spinAxis * sImpulse, ForceMode.VelocityChange);
+            }
+
+            // 8. 7초 후 파괴
+            Destroy(partObj, DESTROY_DELAY);
+
+            Debug.Log($"[EnemyDie] Separated part:  '{partObj.name}' (Layer: {LayerMask.LayerToName(ragdollLayer)}, Impulse: {sImpulse:F2})");
+        }
+
+        Debug.Log($"[EnemyDie] Total parts separated: {partGameObjects.Count}");
+    }
+
+    /// <summary>
+    /// GameObject와 모든 자식의 레이어를 재귀적으로 변경. 
+    /// </summary>
+    private void SetLayerRecursively(GameObject obj, int layer)
+    {
+        if (obj == null) return;
+        obj.layer = layer;
+
+        foreach (Transform child in obj.transform)
+        {
+            if (child != null)
+                SetLayerRecursively(child.gameObject, layer);
+        }
     }
 
     private void PerformSliceWithSelectiveGlobalImpulse(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
@@ -197,6 +413,9 @@ public class EnemyDie : MonoBehaviour
         if (rootCollider != null) rootCollider.enabled = false;
         foreach (var rb in ragdollBodies) { if (rb != null) rb.isKinematic = false; }
         foreach (var col in ragdollColliders) { if (col != null) col.enabled = true; }
+
+        // Parts System: 파츠 분리 + Ragdoll 활성화
+        SeparateAndActivateParts(hitDir, weapon, impactScale);
 
         SliceTarget target = ChooseSliceTarget(weapon.sliceTargets);
 
@@ -333,6 +552,9 @@ public class EnemyDie : MonoBehaviour
     {
         if (rootRb != null) rootRb.isKinematic = true;
         if (rootCollider != null) rootCollider.enabled = false;
+
+        // Parts System: 파츠 분리 + Ragdoll 활성화
+        SeparateAndActivateParts(hitDir, weapon, impactScale);
 
         SliceTarget target = ChooseSliceTarget(weapon.sliceTargets);
 
@@ -496,7 +718,8 @@ public class EnemyDie : MonoBehaviour
     {
         if (targets == null || targets.Count == 0) return;
 
-        Vector3 dir = hitDir; dir.y = 0f;
+        Vector3 dir = hitDir;
+        dir.y = 0f;
         if (dir.sqrMagnitude > 0.0001f) dir = dir.normalized;
 
         float horizBase = (weapon != null ? weapon.ragdollImpulse : 0f);
@@ -626,12 +849,10 @@ public class EnemyDie : MonoBehaviour
 
     private Vector3 MakeRandomSpinAxisAvoidPitch(Vector3 hitDir)
     {
-        // 충격 방향을 수평으로 정규화
         Vector3 horizontalHitDir = new Vector3(hitDir.x, 0f, hitDir.z);
 
         if (horizontalHitDir.sqrMagnitude < 0.0001f)
         {
-            // hitDir이 거의 수직이면 임의의 수평 방향 사용
             horizontalHitDir = Vector3.forward;
         }
         else
@@ -639,13 +860,10 @@ public class EnemyDie : MonoBehaviour
             horizontalHitDir = horizontalHitDir.normalized;
         }
 
-        // 충격 방향과 위쪽 벡터의 외적으로 회전축 계산
-        // 방향을 반대로 하기 위해 Vector3.up과 horizontalHitDir 순서를 바꿈
         Vector3 spinAxis = Vector3.Cross(Vector3.up, horizontalHitDir).normalized;
 
-        // 약간의 랜덤 변화 추가 (70% 계산된 축 + 30% 랜덤)
         Vector3 randomOffset = Random.onUnitSphere;
-        randomOffset -= Vector3.Project(randomOffset, horizontalHitDir); // hitDir 방향 성분 제거
+        randomOffset -= Vector3.Project(randomOffset, horizontalHitDir);
 
         if (randomOffset.sqrMagnitude < 0.0001f)
         {
@@ -656,7 +874,6 @@ public class EnemyDie : MonoBehaviour
             randomOffset = randomOffset.normalized;
         }
 
-        // 계산된 축과 랜덤 축을 섞어서 자연스러움 추가
         Vector3 finalAxis = (spinAxis * 0.7f + randomOffset * 0.3f).normalized;
 
         return finalAxis;
@@ -669,35 +886,25 @@ public class EnemyDie : MonoBehaviour
         return baseValue * factor;
     }
 
-    /// <summary>
-    /// 애니메이션 사망 경로일 때(DeathMode.Animation) 사용되는 함수.
-    ///  - 요청대로: 시체는 겹쳐도 되므로 즉시(지연 없이) 프리팹의 콜라이더와 리지드바디를 비활성화합니다.
-    ///  - 랙돌에 사용되는 ragdollBodies / ragdollColliders 는 제외합니다.
-    /// </summary>
     private void DisableNonRagdollPhysics()
     {
-        // Disable non-ragdoll colliders
         var allColliders = GetComponentsInChildren<Collider>(true);
         foreach (var col in allColliders)
         {
             if (col == null) continue;
             if (ragdollColliders.Contains(col)) continue;
-            // disable collider immediately
             col.enabled = false;
         }
 
-        // Disable non-ragdoll rigidbodies (make kinematic + disable collisions)
         var allBodies = GetComponentsInChildren<Rigidbody>(true);
         foreach (var rb in allBodies)
         {
             if (rb == null) continue;
             if (ragdollBodies.Contains(rb)) continue;
             rb.isKinematic = true;
-            // Try to disable collision responses
             rb.detectCollisions = false;
         }
 
-        // Also handle root references if they are not part of ragdoll lists
         if (rootCollider != null && !ragdollColliders.Contains(rootCollider))
             rootCollider.enabled = false;
 
@@ -710,12 +917,13 @@ public class EnemyDie : MonoBehaviour
 
     private void PlayAnimationDeath()
     {
+        // ★★★ Parts System:  애니메이션 죽음에서도 파츠 분리 ★★★
+        SeparateAndActivateParts(Vector3.forward, null, 1f);  // 앞 방향으로 기본값 impulse
+
         if (animator != null)
         {
-            // Immediately disable prefab colliders / rigidbodies except ragdoll ones (as requested).
             DisableNonRagdollPhysics();
 
-            // Set a random DeadMotionIndex (0..deathVariantCount-1) and handle float/int param types.
             int idx = Random.Range(0, Mathf.Max(1, deathVariantCount));
 
             bool paramFound = false;
@@ -730,33 +938,29 @@ public class EnemyDie : MonoBehaviour
                 }
             }
 
-            // Set parameter according to detected type (Int or Float). Default to float if not found.
             if (paramFound && paramType == AnimatorControllerParameterType.Int)
             {
                 animator.SetInteger(deathIndexParam, idx);
             }
             else
             {
-                // use SetFloat for BlendTree float parameter compatibility
                 animator.SetFloat(deathIndexParam, (float)idx);
             }
 
             Debug.Log($"[EnemyDie] PlayAnimationDeath idx={idx} paramFound={paramFound} paramType={paramType} deathStateName='{deathStateName}'");
 
-            // Try to directly play the BlendTree state so the parameter is immediately used.
             if (!string.IsNullOrEmpty(deathStateName))
             {
                 int stateHash = Animator.StringToHash(deathStateName);
                 if (animator.HasState(0, stateHash))
                 {
                     animator.Play(stateHash, 0, 0f);
-                    // Force immediate evaluation so the selected clip in BlendTree is applied this frame.
                     animator.Update(0f);
                     return;
                 }
                 else
                 {
-                    Debug.Log($"[EnemyDie] Animator.HasState returned false for '{deathStateName}' on layer 0.");
+                    Debug.Log($"[EnemyDie] Animator. HasState returned false for '{deathStateName}' on layer 0.");
                 }
             }
             else
@@ -764,7 +968,6 @@ public class EnemyDie : MonoBehaviour
                 Debug.Log("[EnemyDie] deathStateName is empty; falling back to trigger.");
             }
 
-            // Fallback: trigger the Die trigger (keep compatibility)
             animator.SetTrigger(deathTriggerName);
             animator.Update(0f);
         }

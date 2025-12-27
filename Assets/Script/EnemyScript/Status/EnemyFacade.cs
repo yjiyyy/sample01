@@ -7,7 +7,10 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-[DisallowMultipleComponent]
+/// <summary>
+/// Enemy + 관련 컴포넌트들에 EnemyConfig SO 값을 적용하는 facade.
+/// - 파츠 시스템:  Start()에서 config.partSlots 기반으로 파츠 생성 및 부착.
+/// </summary>
 public class EnemyFacade : MonoBehaviour
 {
     [Header("Core")]
@@ -17,12 +20,19 @@ public class EnemyFacade : MonoBehaviour
     public bool autoSync = true;
 
     [Header("Optional - override individual components")]
-    public Enemy targetEnemy; // optional reference, if null GetComponent will be used
-    public Component[] extraTargets; // optional extra components to sync (inspector convenience)
+    public Enemy targetEnemy;
+    public Component[] extraTargets;
 
-    // internal: store last-applied config to avoid repeated work at runtime
     private EnemyConfig appliedConfig;
     private bool appliedOnce = false;
+
+    // Parts System:  생성된 파츠 오브젝트들을 보관 (EnemyDie에서 참조)
+    private List<GameObject> spawnedParts = new List<GameObject>();
+
+    /// <summary>
+    /// EnemyDie에서 접근할 수 있도록 public으로 노출.
+    /// </summary>
+    public List<GameObject> SpawnedParts => spawnedParts;
 
 #if UNITY_EDITOR
     private void OnValidate()
@@ -36,7 +46,6 @@ public class EnemyFacade : MonoBehaviour
 
     private void Awake()
     {
-        // runtime one-time sync for safety (also we will re-try in Start to avoid Awake ordering issues)
         appliedOnce = false;
         if (config != null && autoSync)
             ApplyToComponents();
@@ -44,11 +53,16 @@ public class EnemyFacade : MonoBehaviour
 
     private void Start()
     {
-        // Re-apply in Start as a safety for components that initialize in Awake/OnEnable after facades Awake
         if (Application.isPlaying && autoSync && config != null)
         {
             if (!appliedOnce || appliedConfig != config)
                 ApplyToComponents();
+        }
+
+        // Parts System: 파츠 생성 (런타임에서만)
+        if (Application.isPlaying && config != null)
+        {
+            SpawnParts();
         }
     }
 
@@ -98,7 +112,6 @@ public class EnemyFacade : MonoBehaviour
 #if UNITY_EDITOR
                 TrySetSerializedObjectField(enemy, "movementSettings", config.movementSettings);
 #else
-                // 필드/프로퍼티로 모두 시도 (private 필드도 리플렉션으로 설정)
                 TrySetPublicPropertyOrField(enemy, "movementSettings", config.movementSettings);
                 var f = enemy.GetType().GetField("movementSettings", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 if (f != null) f.SetValue(enemy, config.movementSettings);
@@ -110,7 +123,7 @@ public class EnemyFacade : MonoBehaviour
             Debug.LogWarning($"[EnemyFacade] Enemy component not found on '{gameObject.name}'.");
         }
 
-        // 3) EnemyHealth - map health & shield fields
+        // 3) EnemyHealth
         var healthWrapper = FindComponentInChildrenByTypeName("EnemyHealth");
         if (healthWrapper != null && healthWrapper.component != null)
         {
@@ -151,8 +164,8 @@ public class EnemyFacade : MonoBehaviour
                        || TrySetSerializedFloat(healthComp, "hpMax", config.maxHealth)
                        || TrySetSerializedFloat(healthComp, "maxHP", config.maxHealth);
 
-#if !UNITY_EDITOR
-                if (!applied)
+#if ! UNITY_EDITOR
+                if (! applied)
                 {
                     applied = TrySetPublicPropertyOrField(healthComp, "maxHP", config.maxHealth)
                            || TrySetPublicPropertyOrField(healthComp, "maxHealth", config.maxHealth);
@@ -164,7 +177,7 @@ public class EnemyFacade : MonoBehaviour
                 Debug.LogWarning($"[EnemyFacade] EnemyHealth present but no known health/shield field found on '{healthComp.GetType().Name}'.");
         }
 
-        // 4) EnemyAI - apply AI tuning fields
+        // 4) EnemyAI
         var aiComp = FindComponentByTypeName("EnemyAI");
         if (aiComp != null)
         {
@@ -194,14 +207,14 @@ public class EnemyFacade : MonoBehaviour
 #endif
         }
 
-        // 5) EnemyImpact - kept best-effort but no global config knockback fields now
+        // 5) EnemyImpact
         var impactComp = GetComponent<EnemyImpact>();
         if (impactComp != null)
         {
-            TrySetSerializedFloat(impactComp, "softKnockRatio", config.shieldRechargeRate); // No direct mapping; kept minimal
+            TrySetSerializedFloat(impactComp, "softKnockRatio", config.shieldRechargeRate);
         }
 
-        // 6) EnemyAttackController - patterns, global cooldown, hold defaults
+        // 6) EnemyAttackController
         var attackComp = FindComponentByTypeName("EnemyAttackController");
         if (attackComp != null)
         {
@@ -229,10 +242,7 @@ public class EnemyFacade : MonoBehaviour
 #else
             try
             {
-                // attackPatterns 배열 설정(필드/프로퍼티 모두 시도)
-                TrySetPublicPropertyOrField(attackComp, "attackPatterns", config.attackPatterns);
-
-                // 나머지 기본값/쿨다운 반영
+                TrySetPublicPropertyOrField(attackComp, "attackPatterns", config. attackPatterns);
                 TrySetPublicPropertyOrField(attackComp, "defaultPatternHoldDuration", config.defaultPatternHoldDuration);
                 TrySetPublicPropertyOrField(attackComp, "enablePerPatternHoldOverride", config.enablePerPatternHoldOverride);
                 TrySetPublicPropertyOrField(attackComp, "글로벌쿨타임", config.globalPatternCooldown);
@@ -256,7 +266,7 @@ public class EnemyFacade : MonoBehaviour
 #endif
         }
 
-        // 8) EnemyDeath - map mass -> weight
+        // 8) EnemyDeath
         var deathComp = FindComponentByTypeName("EnemyDeath");
         if (deathComp != null)
         {
@@ -291,91 +301,210 @@ public class EnemyFacade : MonoBehaviour
         Debug.Log("[EnemyFacade] RevertFromComponents called - this function is a no-op in current simple implementation.");
     }
 
+    /// <summary>
+    /// Parts System: config.partSlots 기반으로 파츠 생성 및 부착.
+    /// - boneName(문자열)으로 본을 검색해서 부착. 
+    /// - 생성된 파츠는 spawnedParts 리스트에 보관.
+    /// </summary>
+    private void SpawnParts()
+    {
+        if (config == null || config.partSlots == null || config.partSlots.Length == 0)
+            return;
+
+        foreach (var slot in config.partSlots)
+        {
+            if (slot == null) continue;
+
+            // boneName이 비어있으면 스킵
+            if (string.IsNullOrEmpty(slot.boneName))
+            {
+                Debug.LogWarning($"[EnemyFacade] Part slot has empty boneName.  Skipping.");
+                continue;
+            }
+
+            // partPrefab이 없으면 스킵
+            if (slot.partPrefab == null)
+            {
+                Debug.LogWarning($"[EnemyFacade] Part slot (bone='{slot.boneName}') has no partPrefab assigned. Skipping.");
+                continue;
+            }
+
+            // boneName으로 본 검색
+            Transform attachBone = FindBoneByName(slot.boneName);
+            if (attachBone == null)
+            {
+                Debug.LogWarning($"[EnemyFacade] Bone '{slot.boneName}' not found in '{gameObject.name}'. Skipping part.");
+                continue;
+            }
+
+            // 파츠 생성
+            GameObject partInstance = Instantiate(slot.partPrefab, attachBone);
+            partInstance.name = slot.partPrefab.name;
+
+            // 로컬 Transform 적용
+            partInstance.transform.localPosition = slot.localOffset;
+            partInstance.transform.localRotation = Quaternion.Euler(slot.localRotationEuler);
+            partInstance.transform.localScale = slot.localScale;
+
+            // ★★★ 생성 직후 파츠 물리 비활성화 ★★★
+            InitializePartPhysics(partInstance);
+
+            spawnedParts.Add(partInstance);
+
+            Debug.Log($"[EnemyFacade] Spawned part '{partInstance.name}' on bone '{attachBone.name}'");
+        }
+    }
+    private void InitializePartPhysics(GameObject partObj)
+    {
+        if (partObj == null) return;
+
+        int rbCount = 0;
+        int colCount = 0;
+
+        // Rigidbody 초기화 (루트)
+        Rigidbody partRb = partObj.GetComponent<Rigidbody>();
+        if (partRb != null)
+        {
+            partRb.isKinematic = true;
+            partRb.useGravity = true;
+            partRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            rbCount++;
+        }
+
+        // Collider 초기화 (루트 + 자식 모두)
+        Collider[] colliders = partObj.GetComponentsInChildren<Collider>(true);
+        foreach (var col in colliders)
+        {
+            if (col != null)
+            {
+                col.enabled = false;
+                colCount++;
+            }
+        }
+
+        Debug.Log($"[EnemyFacade] InitializePartPhysics: '{partObj.name}' - Rigidbody kinematic: {rbCount}, Colliders disabled: {colCount}");
+    }
+
+    /// <summary>
+    /// 본 이름으로 Transform을 재귀 검색 (대소문자 구분).
+    /// </summary>
+    private Transform FindBoneByName(string boneName)
+    {
+        if (string.IsNullOrEmpty(boneName)) return null;
+
+        foreach (Transform child in GetComponentsInChildren<Transform>(true))
+        {
+            if (child != null && child.name == boneName)
+                return child;
+        }
+
+        return null;
+    }
+
     // ---------- Helper methods ----------
+
     private int GetFirstLayerIndex(LayerMask mask)
     {
-        int v = mask;
-        for (int i = 0; i < 32; ++i)
-            if ((v & (1 << i)) != 0) return i;
+        int val = mask.value;
+        for (int i = 0; i < 32; i++)
+        {
+            if ((val & (1 << i)) != 0) return i;
+        }
         return -1;
     }
 
-    private bool TrySetSerializedFloat(object compObj, string fieldName, float value)
+    private Component FindComponentByTypeName(string typeName)
     {
-#if UNITY_EDITOR
-        if (compObj == null) return false;
-        UnityEngine.Object comp = compObj as UnityEngine.Object;
-        if (comp == null) return false;
-
-        var so = new SerializedObject(comp);
-        var prop = so.FindProperty(fieldName);
-        if (prop == null)
+        foreach (var c in GetComponents<Component>())
         {
-            prop = so.FindProperty("m_" + fieldName);
-            if (prop == null)
-                return false;
+            if (c == null) continue;
+            if (c.GetType().Name == typeName) return c;
         }
+        return null;
+    }
 
-        if (prop.propertyType == SerializedPropertyType.Float)
+    private class ComponentWrapper
+    {
+        public Component component;
+    }
+
+    private ComponentWrapper FindComponentInChildrenByTypeName(string typeName)
+    {
+        foreach (var c in GetComponentsInChildren<Component>(true))
         {
-            prop.floatValue = value;
-            so.ApplyModifiedProperties();
+            if (c == null) continue;
+            if (c.GetType().Name == typeName)
+                return new ComponentWrapper { component = c };
+        }
+        return null;
+    }
+
+    private bool TrySetPublicPropertyOrField(object target, string name, object value)
+    {
+        if (target == null) return false;
+        var t = target.GetType();
+        var prop = t.GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+        if (prop != null && prop.CanWrite)
+        {
+            prop.SetValue(target, value);
             return true;
         }
-        else if (prop.propertyType == SerializedPropertyType.Integer)
+        var field = t.GetField(name, BindingFlags.Instance | BindingFlags.Public);
+        if (field != null)
         {
-            prop.intValue = Mathf.RoundToInt(value);
-            so.ApplyModifiedProperties();
+            field.SetValue(target, value);
             return true;
         }
-#endif
         return false;
     }
 
-    private bool TrySetSerializedString(object compObj, string fieldName, string value)
+    private void TryInvokeMethodIfExists(object target, string[] possibleNames, object[] args)
     {
-#if UNITY_EDITOR
-        if (compObj == null) return false;
-        UnityEngine.Object comp = compObj as UnityEngine.Object;
-        if (comp == null) return false;
-
-        var so = new SerializedObject(comp);
-        var prop = so.FindProperty(fieldName);
-        if (prop == null)
+        if (target == null) return;
+        var t = target.GetType();
+        foreach (var name in possibleNames)
         {
-            prop = so.FindProperty("m_" + fieldName);
-            if (prop == null)
-                return false;
+            var m = t.GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (m != null)
+            {
+                m.Invoke(target, args);
+                return;
+            }
         }
+    }
 
-        if (prop.propertyType == SerializedPropertyType.String)
+#if UNITY_EDITOR
+    private bool TrySetSerializedFloat(Component comp, string propName, float value)
+    {
+        if (comp == null) return false;
+        var so = new SerializedObject(comp);
+        var prop = so.FindProperty(propName) ?? so.FindProperty("m_" + propName);
+        if (prop != null && (prop.propertyType == SerializedPropertyType.Float || prop.propertyType == SerializedPropertyType.Integer))
         {
-            prop.stringValue = value;
+            if (prop.propertyType == SerializedPropertyType.Float)
+                prop.floatValue = value;
+            else
+                prop.intValue = Mathf.RoundToInt(value);
             so.ApplyModifiedProperties();
             return true;
         }
-#endif
         return false;
     }
 
-    private bool TrySetSerializedObjectField(UnityEngine.Object targetObject, string fieldName, UnityEngine.Object value)
+    private bool TrySetSerializedObjectField(Component comp, string propName, UnityEngine.Object value)
     {
-#if UNITY_EDITOR
-        if (targetObject == null) return false;
-        var so = new SerializedObject(targetObject);
-        var prop = so.FindProperty(fieldName);
-        if (prop == null)
-            prop = so.FindProperty("m_" + fieldName);
-        if (prop == null) return false;
-        if (prop.propertyType == SerializedPropertyType.ObjectReference)
+        if (comp == null) return false;
+        var so = new SerializedObject(comp);
+        var prop = so.FindProperty(propName) ?? so.FindProperty("m_" + propName);
+        if (prop != null && prop.propertyType == SerializedPropertyType.ObjectReference)
         {
             prop.objectReferenceValue = value;
             so.ApplyModifiedProperties();
             return true;
         }
-#endif
         return false;
     }
+#endif
 
     private void TryApplyCommonFieldsToComponent(Component comp, EnemyConfig cfg)
     {
@@ -388,7 +517,7 @@ public class EnemyFacade : MonoBehaviour
             {"maxHealth", cfg.maxHealth},
             {"baseMoveSpeed", cfg.baseMoveSpeed},
             {"detectionRadius", cfg.detectionRadius},
-            {"shieldRechargeRate", cfg.shieldRechargeRate},
+            {"shieldRechargeRate", cfg. shieldRechargeRate},
         };
 
         foreach (var kv in attempts)
@@ -403,84 +532,13 @@ public class EnemyFacade : MonoBehaviour
                 if (prop.propertyType == SerializedPropertyType.Float) prop.floatValue = f;
                 else prop.intValue = Mathf.RoundToInt(f);
             }
-            else if (val is string s && prop.propertyType == SerializedPropertyType.String)
-            {
-                prop.stringValue = s;
-            }
         }
         so.ApplyModifiedProperties();
+#else
+        TrySetPublicPropertyOrField(comp, "maxHealth", cfg. maxHealth);
+        TrySetPublicPropertyOrField(comp, "baseMoveSpeed", cfg. baseMoveSpeed);
+        TrySetPublicPropertyOrField(comp, "detectionRadius", cfg.detectionRadius);
+        TrySetPublicPropertyOrField(comp, "shieldRechargeRate", cfg.shieldRechargeRate);
 #endif
-    }
-
-    private bool TryInvokeMethodIfExists(object target, string[] candidateMethodNames, object[] args)
-    {
-        if (target == null || candidateMethodNames == null) return false;
-        Type t = target.GetType();
-        foreach (var name in candidateMethodNames)
-        {
-            var mi = t.GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (mi == null) continue;
-            try
-            {
-                var pars = mi.GetParameters();
-                if ((args == null && pars.Length == 0) || (args != null && pars.Length == args.Length))
-                {
-                    mi.Invoke(target, args);
-                    return true;
-                }
-            }
-            catch (Exception) { }
-        }
-        return false;
-    }
-
-    private bool TrySetPublicPropertyOrField(object target, string name, object value)
-    {
-        if (target == null || string.IsNullOrEmpty(name)) return false;
-        Type t = target.GetType();
-
-        var pi = t.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (pi != null && pi.CanWrite)
-        {
-            try { pi.SetValue(target, Convert.ChangeType(value, pi.PropertyType)); return true; }
-            catch { }
-        }
-
-        var fi = t.GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        if (fi != null)
-        {
-            try { fi.SetValue(target, Convert.ChangeType(value, fi.FieldType)); return true; }
-            catch { }
-        }
-
-        return false;
-    }
-
-    private ComponentWithName FindComponentInChildrenByTypeName(string typeName)
-    {
-        var comps = GetComponentsInChildren<Component>(true);
-        foreach (var c in comps)
-        {
-            if (c == null) continue;
-            if (c.GetType().Name == typeName)
-                return new ComponentWithName { component = c };
-        }
-        return null;
-    }
-
-    private Component FindComponentByTypeName(string typeName)
-    {
-        var comps = GetComponents<Component>();
-        foreach (var c in comps)
-        {
-            if (c == null) continue;
-            if (c.GetType().Name == typeName) return c;
-        }
-        return null;
-    }
-
-    private class ComponentWithName
-    {
-        public Component component;
     }
 }

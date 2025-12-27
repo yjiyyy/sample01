@@ -6,7 +6,7 @@ using UnityEngine;
 // 프리팹에는 이 EnemyAttackController 컴포넌트 1개만 붙이면 된다.
 public partial class EnemyAttackController : MonoBehaviour
 {
-    [Header("패턴 배열 (MeleeAttackData / RushAttackData / RangedAttackData / JumpAttackData / AoEAttackData / ComboAttackData)")]
+    [Header("패턴 배열 (MeleeAttackData / RushAttackData / RangedAttackData / JumpAttackData / AoEAttackData / ComboAttackData / TimeProjectileAttackData)")]
     public ScriptableObject[] attackPatterns;
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
@@ -33,10 +33,14 @@ public partial class EnemyAttackController : MonoBehaviour
     [Header("디버그")]
     public bool debugDecisionLogs = true;
 
+    // TimeProjectile 전용 상태를 main에 선언 (TPA partial에서 참조)
+    private Coroutine timeProjectileRoutine;
+    private int runningTimeProjectileIndex = -1;
+
     // 기존 상태 플래그들과 AoE 통합 (AoE는 partial 파일에서 aoeCoroutine 변수로 관리)
     public bool IsMeleeExecuting => attackInProgress && !IsRushing && rangedRoutine == null && !IsJumping;
     // 콤보가 생겼으니 comboCoroutine은 partial 쪽에 선언됨; partial 합쳐질 때 같이 평가됩니다.
-    public bool IsAttackExecuting => IsMeleeExecuting || IsRushing || rushPrepareCoroutine != null || rangedRoutine != null || IsJumping || aoeCoroutine != null || comboCoroutine != null;
+    public bool IsAttackExecuting => IsMeleeExecuting || IsRushing || rushPrepareCoroutine != null || rangedRoutine != null || IsJumping || aoeCoroutine != null || comboCoroutine != null || timeProjectileRoutine != null;
 
     public string CurrentAttackName
     {
@@ -64,6 +68,11 @@ public partial class EnemyAttackController : MonoBehaviour
                 attackPatterns != null &&
                 runningAoEIndex < attackPatterns.Length &&
                 attackPatterns[runningAoEIndex] is AoEAttackData a) return a.attackName;
+            if (timeProjectileRoutine != null &&
+                runningTimeProjectileIndex >= 0 &&
+                attackPatterns != null &&
+                runningTimeProjectileIndex < attackPatterns.Length &&
+                attackPatterns[runningTimeProjectileIndex] is TimeProjectileAttackData t) return t.attackName;
             return null;
         }
     }
@@ -73,15 +82,16 @@ public partial class EnemyAttackController : MonoBehaviour
         CleanPatterns();
 
         enemy = GetComponent<Enemy>();
-        int n = AttackCount;
-        readyTimes = n > 0 ? new float[n] : System.Array.Empty<float>();
-        for (int i = 0; i < n; i++) readyTimes[i] = -Mathf.Infinity;
+
+        // readyTimes 초기화 (길이 동기화 및 기본값 세팅)
+        SyncReadyTimes(initialFill: true);
+
         globalReadyTime = Time.time;
 
-        if (n == 0)
+        if (AttackCount == 0)
             Debug.LogWarning("[EnemyAttackController] 등록된 유효 공격 패턴이 0개입니다. (공격 비활성 상태)");
 
-        Log($"INIT (validPatterns={n})");
+        Log($"INIT (validPatterns={AttackCount})");
     }
 
     /// <summary> null / 미지원 타입 제거 </summary>
@@ -96,7 +106,7 @@ public partial class EnemyAttackController : MonoBehaviour
         foreach (var p in attackPatterns)
         {
             if (p == null) { removedNull++; continue; }
-            if (p is MeleeAttackData || p is RushAttackData || p is RangedAttackData || p is JumpAttackData || p is AoEAttackData || p is ComboAttackData) list.Add(p);
+            if (p is MeleeAttackData || p is RushAttackData || p is RangedAttackData || p is JumpAttackData || p is AoEAttackData || p is ComboAttackData || p is TimeProjectileAttackData) list.Add(p);
             else
             {
                 removedUnsupported++;
@@ -108,6 +118,32 @@ public partial class EnemyAttackController : MonoBehaviour
             Debug.LogWarning($"[EnemyAttackController] 패턴 정리: null {removedNull}개, 미지원 {removedUnsupported}개 제거 → 최종 {list.Count}개");
 
         attackPatterns = list.ToArray();
+
+        // 패턴 정리 후 readyTimes 길이 동기화 (현재 값 보존)
+        SyncReadyTimes(initialFill: false);
+    }
+
+    /// <summary>
+    /// readyTimes 배열을 AttackCount에 맞춰 동기화합니다.
+    /// initialFill = true 면 새로 생성된 인덱스는 -Infinity로 채웁니다.
+    /// initialFill = false 면 기존 readyTimes 값은 보존되고 새로 생긴 인덱스만 -Infinity로 채웁니다.
+    /// </summary>
+    private void SyncReadyTimes(bool initialFill)
+    {
+        int n = AttackCount;
+        var old = readyTimes;
+        if (old == null || old.Length != n)
+        {
+            var nw = n > 0 ? new float[n] : System.Array.Empty<float>();
+            for (int i = 0; i < nw.Length; i++)
+            {
+                if (!initialFill && old != null && i < old.Length)
+                    nw[i] = old[i];
+                else
+                    nw[i] = -Mathf.Infinity;
+            }
+            readyTimes = nw;
+        }
     }
 
     private void Update()
@@ -121,13 +157,17 @@ public partial class EnemyAttackController : MonoBehaviour
             Log($"[AttackFlow] HOLD TIMEOUT idx={pendingAttackIndex}");
             CancelPendingHold();
         }
+
+        // partial 쪽에서 필요하면 TickTimeProjectileUpdate 같은 헬퍼를 호출하도록 설계되어 있음.
+        TickTimeProjectileUpdate();
     }
 
     #region 외부 조회
     public bool IsGlobalCooling() => Time.time < globalReadyTime;
     public bool IsOffCooldown(int index)
     {
-        if (index < 0 || index >= AttackCount) return false;
+        if (index < 0) return false;
+        if (readyTimes == null || index >= readyTimes.Length) return false;
         return Time.time >= readyTimes[index];
     }
     public float GetAttackRange(int index)
@@ -139,6 +179,7 @@ public partial class EnemyAttackController : MonoBehaviour
         if (attackPatterns[index] is JumpAttackData j) return j.range;
         if (attackPatterns[index] is AoEAttackData a) return a.spawnRadius; // AoE: use spawnRadius as effective range
         if (attackPatterns[index] is ComboAttackData c) return c.range;
+        if (attackPatterns[index] is TimeProjectileAttackData t) return t.range;
         return 0f;
     }
     public float GetAttackCooldown(int index)
@@ -150,6 +191,7 @@ public partial class EnemyAttackController : MonoBehaviour
         if (attackPatterns[index] is JumpAttackData j) return j.cooldown;
         if (attackPatterns[index] is AoEAttackData a) return a.cooldown;
         if (attackPatterns[index] is ComboAttackData c) return c.cooldown;
+        if (attackPatterns[index] is TimeProjectileAttackData t) return t.cooldown;
         return 0f;
     }
     #endregion
@@ -226,6 +268,11 @@ public partial class EnemyAttackController : MonoBehaviour
             StartAoE(a, target, index);
             return true;
         }
+        if (so is TimeProjectileAttackData tpa)
+        {
+            StartTimeProjectile(tpa, target, index);
+            return true;
+        }
         return false;
     }
     #endregion
@@ -269,7 +316,8 @@ public partial class EnemyAttackController : MonoBehaviour
     #region 쿨타임 & 인터럽트
     private void ApplyPerAttackCooldown(int index, float baseCooldown)
     {
-        if (index < 0 || index >= AttackCount) return;
+        if (index < 0) return;
+        if (readyTimes == null || index >= readyTimes.Length) return;
         readyTimes[index] = Time.time + Mathf.Max(0f, baseCooldown);
     }
     private void ApplyGlobalCooldown() => globalReadyTime = Time.time + 글로벌쿨타임;

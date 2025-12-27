@@ -36,9 +36,16 @@ MonoBehaviour:
   idleMin: 1
   idleMax: 3
   attackPatterns:
-  - {fileID: 11400000, guid: 6d08ade2d70ffc7489f83cc9b4985885, type: 2}
+  - {fileID: 11400000, guid: 6d181c6ead674a744af9b8eff1e16bc1, type: 2}
   globalPatternCooldown: 0
   defaultPatternHoldDuration: 0
   enablePerPatternHoldOverride: 0
+  partSlotCount: 1
+  partSlots:
+  - boneName: Bip001 Prop1
+    partPrefab: {fileID: 1183057563308587319, guid: e5cbf47e1f849114da884556c665cff7, type: 3}
+    localOffset: {x: 0, y: 0, z: 0}
+    localRotationEuler: {x: 0, y: 0, z: 0}
+    localScale: {x: 1.5, y: 1.5, z: 1.5}
   overrideController: {fileID: 0}
   editorAutoApplyDefault: 1
