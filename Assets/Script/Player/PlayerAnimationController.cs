@@ -9,7 +9,9 @@ using UnityEngine;
 /// - Animator 파라미터가 없을 때 예외가 발생하지 않도록 안전하게 호출
 /// - LateUpdate에서 Speed 파라미터 업데이트 (물리 이동과 동기화)
 /// - 성능 개선: 파라미터 존재 여부 캐시 및 누적 로그 방지
+/// - Death 애니메이션은 한 번만 재생되고, 재생이 끝나면 마지막 프레임에 멈추도록 처리
 /// </summary>
+[DisallowMultipleComponent]
 public class PlayerAnimationController : MonoBehaviour
 {
     private Animator animator;
@@ -37,6 +39,13 @@ public class PlayerAnimationController : MonoBehaviour
     private HashSet<int> existingParamHashes;
     // 이미 경고를 남긴 파라미터(중복 로그 방지)
     private HashSet<int> warnedMissingParams = new HashSet<int>();
+
+    // Death 애니메이션이 이미 한 번 재생되었는지 표시
+    // Death 동안 외부에서 다시 재생 호출이 와도 반복 재생하지 않도록 방지
+    private bool deathPlayed = false;
+
+    // Death 재생을 관리하는 코루틴 레퍼런스 (so we can stop it if respawn/reset)
+    private Coroutine deathRoutine;
 
     void Awake()
     {
@@ -140,10 +149,13 @@ public class PlayerAnimationController : MonoBehaviour
 
     /* ───────── 상태별 강제 애니메이션 전환 ───────── */
 
+    // PlayerState 변경에 따라 애니메이션을 강제로 재생/설정합니다.
+    // Death는 한 번만 재생되고 재생이 끝나면 마지막 프레임에서 멈춥니다.
     public void ForceAnimationByState(PlayerState newState)
     {
         if (animator == null) return;
 
+        // ResetAllAnimatorParams는 targetState을 인자로 받아 Dead일 때 IsDead를 끄지 않도록 구현되어 있음
         ResetAllAnimatorParams(newState);
 
         int upperLayer = GetUpperLayerIndex();
@@ -174,13 +186,13 @@ public class PlayerAnimationController : MonoBehaviour
         {
             case PlayerState.Idle:
                 SafeSetFloat(hashSpeed, 0f);
-                animator.Play("Idle/Run", 0, 0f);
+                TryPlaySafe("Idle/Run", 0, 0f);
                 Debug.Log("[PlayerAnim] 강제 전환 → Idle");
                 break;
 
             case PlayerState.Move:
                 SafeSetFloat(hashSpeed, 1f);
-                animator.Play("Idle/Run", 0, 0f);
+                TryPlaySafe("Idle/Run", 0, 0f);
                 Debug.Log("[PlayerAnim] 강제 전환 → Run");
                 break;
 
@@ -192,29 +204,192 @@ public class PlayerAnimationController : MonoBehaviour
                 float randomKnockbackIndex = UnityEngine.Random.Range(0, 3);
                 SafeSetFloat(hashKnockbackIndex, randomKnockbackIndex);
                 SafeSetTrigger(hashKnockback);
-                animator.Play("Knockback_Blend Tree", 0, 0f);
+                TryPlaySafe("Knockback_Blend Tree", 0, 0f);
                 Debug.Log($"[PlayerAnim] 강제 전환 → Knockback (Index: {randomKnockbackIndex})");
                 break;
 
             case PlayerState.Stun:
                 SafeSetTrigger(hashStun);
-                animator.Play("Stun", 0, 0f);
+                TryPlaySafe("Stun", 0, 0f);
                 Debug.Log("[PlayerAnim] 강제 전환 → Stun");
                 break;
 
             case PlayerState.Evade:
                 SafeSetBool(hashIsEvading, true);
                 animator.Update(0f);
-                animator.Play("Evade", 0, 0f);
+                TryPlaySafe("Evade", 0, 0f);
                 Debug.Log("[PlayerAnim] 강제 전환 → Evade");
                 break;
 
             case PlayerState.Dead:
-                SafeSetBool(hashIsDead, true);
-                animator.Play("Death", 0, 0f);
-                Debug.Log("[PlayerAnim] 강제 전환 → Death");
+                // Death는 반드시 한 번만 재생하도록 합니다.
+                if (!deathPlayed)
+                {
+                    deathPlayed = true;
+                    SafeSetBool(hashIsDead, true);
+
+                    // Stop any existing death coroutine just in case
+                    if (deathRoutine != null)
+                    {
+                        try { StopCoroutine(deathRoutine); } catch { }
+                        deathRoutine = null;
+                    }
+
+                    // Play death once and then freeze at last frame
+                    // Log caller for debugging repeated requests
+                    string caller = GetCallerSummary();
+                    Debug.Log($"[PlayerAnim] Playing Death once. Caller: {caller}");
+                    TryPlaySafe("Death", 0, 0f);
+                    deathRoutine = StartCoroutine(PlayDeathAndFreezeRoutine());
+                }
+                else
+                {
+                    // Already played: ensure flag stays set and IsDead remains true
+                    SafeSetBool(hashIsDead, true);
+                }
                 break;
         }
+    }
+
+    // Play Death clip once and freeze at its last frame.
+    // This avoids looping that can be caused by transitions or external replays.
+    private IEnumerator PlayDeathAndFreezeRoutine()
+    {
+        if (animator == null)
+        {
+            deathRoutine = null;
+            yield break;
+        }
+
+        // Ensure animator is playing death; wait one frame to allow state to update.
+        yield return null;
+
+        // Grab current state info and clip length
+        float clipLength = 0f;
+        int stateHash = 0;
+        try
+        {
+            var stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+            stateHash = stateInfo.fullPathHash;
+
+            var clips = animator.GetCurrentAnimatorClipInfo(0);
+            if (clips != null && clips.Length > 0 && clips[0].clip != null)
+            {
+                clipLength = clips[0].clip.length;
+            }
+            else
+            {
+                // fallback: try to find a clip with "Death" in name among all clips on animator (less likely)
+                var allClips = animator.runtimeAnimatorController != null ? animator.runtimeAnimatorController.animationClips : null;
+                if (allClips != null)
+                {
+                    foreach (var c in allClips)
+                    {
+                        if (c != null && c.name.IndexOf("death", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            clipLength = c.length;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[PlayerAnim] PlayDeathAndFreezeRoutine: failed to get clip length: {ex.Message}");
+        }
+
+        // If we couldn't determine length, use a reasonable default (2s)
+        if (clipLength <= 0f) clipLength = 2f;
+
+        float elapsed = 0f;
+        while (elapsed < clipLength)
+        {
+            // If death flag was reset externally (respawn), abort
+            if (!deathPlayed)
+            {
+                deathRoutine = null;
+                yield break;
+            }
+
+            // If animator state changed away from death unexpectedly, we still wait but won't restart
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // After full clip duration, freeze animator at last frame.
+        try
+        {
+            // Set normalized time to 1 (end) for current state and then stop playback by setting speed = 0.
+            // Use Play with state's hash to jump to end; prefer fullPathHash if available.
+            var info = animator.GetCurrentAnimatorStateInfo(0);
+            int playHash = info.fullPathHash != 0 ? info.fullPathHash : Animator.StringToHash("Death");
+            animator.Play(playHash, 0, 1f);
+            animator.Update(0f);
+            animator.speed = 0f;
+            Debug.Log("[PlayerAnim] Death clip finished — animator frozen at last frame.");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[PlayerAnim] Failed to freeze animator at end of Death: {ex.Message}");
+        }
+
+        deathRoutine = null;
+    }
+
+    // helper: try to play state safely (no exception if state name missing)
+    private void TryPlaySafe(string stateName, int layer = 0, float normalizedTime = 0f)
+    {
+        if (animator == null) return;
+        try
+        {
+            animator.Play(stateName, layer, normalizedTime);
+        }
+        catch (Exception e)
+        {
+            // state missing or other error — keep IsDead/bools as fallback
+            Debug.LogWarning($"[PlayerAnim] animator.Play('{stateName}') failed: {e.Message}");
+        }
+    }
+
+    // Detect if the current base-layer state or current clip corresponds to Death
+    private bool IsCurrentStateDeath()
+    {
+        if (animator == null) return false;
+
+        try
+        {
+            var stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+            if (stateInfo.IsName("Death") || stateInfo.IsName("Base Layer.Death") || stateInfo.IsName("Base Layer.Player_Death"))
+                return true;
+
+            var clips = animator.GetCurrentAnimatorClipInfo(0);
+            if (clips != null && clips.Length > 0)
+            {
+                var clipName = clips[0].clip != null ? clips[0].clip.name : "";
+                if (!string.IsNullOrEmpty(clipName) && clipName.IndexOf("Death", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+        }
+        catch { /* ignore */ }
+
+        return false;
+    }
+
+    // short stacktrace summarizer to identify caller (helpful for debugging repeated requests)
+    private string GetCallerSummary()
+    {
+        try
+        {
+            var st = new System.Diagnostics.StackTrace(2, true);
+            var frames = st.GetFrames();
+            if (frames == null || frames.Length == 0) return "<unknown>";
+            var f = frames[0];
+            var m = f.GetMethod();
+            if (m == null) return "<unknown>";
+            return $"{m.DeclaringType?.Name}.{m.Name}()";
+        }
+        catch { return "<unknown>"; }
     }
 
     private bool IsStateBlockingUpperBody(PlayerState state)
@@ -231,6 +406,8 @@ public class PlayerAnimationController : MonoBehaviour
         return animator.GetLayerIndex(upperLayerName);
     }
 
+    // Reset animator params in a safe manner.
+    // If targetState == Dead, do NOT clear the IsDead flag.
     private void ResetAllAnimatorParams(PlayerState targetState = PlayerState.Idle)
     {
         if (animator == null) return;
@@ -241,7 +418,14 @@ public class PlayerAnimationController : MonoBehaviour
         SafeSetBool(hashIsAttacking, false);
         SafeSetBool(hashIsUpperAttacking, false);
         SafeSetBool(hashIsBackStep, false);
-        SafeSetBool(hashIsDead, false);
+
+        // IsDead는 Death 상태 재생 중일 때 끄지 않음
+        if (targetState != PlayerState.Dead)
+        {
+            // Only clear IsDead if we're not transitioning into Dead
+            // Also allow explicit ResetDeathState() to clear deathPlayed flag when respawning.
+            SafeSetBool(hashIsDead, false);
+        }
 
         if (targetState != PlayerState.Evade)
         {
@@ -252,7 +436,35 @@ public class PlayerAnimationController : MonoBehaviour
         SafeSetFloat(hashKnockbackIndex, 0f);
         SafeSetFloat(hashLowerBodySpeed, 1f);
 
-        Debug.Log("[PlayerAnim] 모든 애니메이터 파라미터 리셋 완료");
+        Debug.Log("[PlayerAnim] 모든 애니메이터 파라미터 리셋 완료 (IsDead 보존 로직 포함)");
+    }
+
+    // Respawn or external logic can call this to allow Death to be played again.
+    // Also un-freezes animator if it was paused.
+    public void ResetDeathState()
+    {
+        deathPlayed = false;
+        SafeSetBool(hashIsDead, false);
+
+        // If we froze animator at the end of death, restore speed and play idle
+        if (animator != null)
+        {
+            try
+            {
+                animator.speed = 1f;
+                TryPlaySafe("Idle/Run", 0, 0f);
+            }
+            catch { /* ignore */ }
+        }
+
+        // Stop any death coroutine
+        if (deathRoutine != null)
+        {
+            try { StopCoroutine(deathRoutine); } catch { }
+            deathRoutine = null;
+        }
+
+        Debug.Log("[PlayerAnim] Death 상태 리셋: deathPlayed=false, animator resumed.");
     }
 
     public void EndEvade()
@@ -283,12 +495,13 @@ public class PlayerAnimationController : MonoBehaviour
 
                 if (!currentlyUpper)
                 {
-                    animator.Play("Attack_BlendTree", upperLayer, 0f);
+                    TryPlaySafe("Attack_BlendTree", upperLayer, 0f);
                     Debug.Log($"[PlayerAnim] Upper-body Attack 시작(초기) → Index:{randomIndex}, 무기:{weaponData?.weaponName}");
                 }
                 else
                 {
-                    animator.CrossFade("Attack_BlendTree", 0f, upperLayer, 0f);
+                    try { animator.CrossFade("Attack_BlendTree", 0f, upperLayer, 0f); }
+                    catch { TryPlaySafe("Attack_BlendTree", 0, 0f); }
                     Debug.Log($"[PlayerAnim] Upper-body Attack 재시작 → Index:{randomIndex}, 무기:{weaponData?.weaponName}");
                 }
 
@@ -302,7 +515,7 @@ public class PlayerAnimationController : MonoBehaviour
                 ResetAllAnimatorParams();
                 SafeSetFloat(hashAttackIndex, randomIndex);
                 SafeSetBool(hashIsAttacking, true);
-                animator.Play("Attack_BlendTree", 0, 0f);
+                TryPlaySafe("Attack_BlendTree", 0, 0f);
                 Debug.Log($"[PlayerAnim] UpperLayer 없음 → 전체 Attack 시작(fallback) Index:{randomIndex}, 무기:{weaponData?.weaponName}");
             }
         }
@@ -311,7 +524,7 @@ public class PlayerAnimationController : MonoBehaviour
             ResetAllAnimatorParams();
             SafeSetFloat(hashAttackIndex, randomIndex);
             SafeSetBool(hashIsAttacking, true);
-            animator.Play("Attack_BlendTree", 0, 0f);
+            TryPlaySafe("Attack_BlendTree", 0, 0f);
             Debug.Log($"[PlayerAnim] Attack 시작 → Index:{randomIndex}, 무기:{weaponData?.weaponName}");
         }
     }
@@ -380,8 +593,7 @@ public class PlayerAnimationController : MonoBehaviour
         SafeSetBool(hashIsAttacking, true);
 
         string s = string.IsNullOrEmpty(stateNameOrClip) ? "Attack_Charged01" : stateNameOrClip;
-        animator.Play(s, 0, 0f);
-
+        TryPlaySafe(s, 0, 0f);
         Debug.Log($"[PlayerAnim] ChargedAttack 시작 → {s}");
     }
 

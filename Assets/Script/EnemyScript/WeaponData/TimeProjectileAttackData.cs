@@ -1,77 +1,78 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/TimeProjectileAttackData")]
 public class TimeProjectileAttackData : ScriptableObject
 {
-    [Header("기본 정보")]
-    [Tooltip("패턴 이름(디버그용)")]
+    [Header("기본 설정")]
+    [Tooltip("패턴 이름(에디터용)")]
     public string attackName = "TimeProjectile";
 
-    [Tooltip("이 공격을 시도할 최대 거리 (몬스터-플레이어 거리)")]
+    [Tooltip("사정 거리 (폭발 목표 예측에 사용)")]
     public float range = 10f;
 
-    [Tooltip("공격 전체 모션 시간 (초). 이 시간 동안 공격 중으로 유지됩니다.")]
+    [Tooltip("공격 전체 시간(초)")]
     public float attackTime = 1.0f;
 
-    [Tooltip("공격 시작 후 몇 초 뒤에 투사체를 발사할지 (초). attackTime보다 크면 발사하지 않습니다(애니메이션만 재생).")]
+    [Tooltip("발사 타이밍(attackTime 기준)")]
     public float fireAtTime = 0.4f;
 
-    [Tooltip("공격 쿨다운 (성공 종료 후 적용, 초)")]
+    [Tooltip("쿨다운(초)")]
     public float cooldown = 2.0f;
 
-    [Header("애니메이션 (선택)")]
-    [Tooltip("이 공격에서 재생할 애니메이션 클립 (선택). 지정하지 않으면 컨트롤러 기본 애니메이션 사용.")]
+    [Header("애니메이션")]
+    [Tooltip("공격 애니메이션 클립(옵션)")]
     public AnimationClip clip;
 
-    [Header("발사 위치 설정")]
-    [Tooltip("발사 위치로 사용할 본/더미의 이름 (Enemy 루트 아래에서 FindChildRecursive로 검색)")]
+    [Header("발사 위치")]
+    [Tooltip("무기/적의 뼈대 이름 (예: Fire_Point_Throw)")]
     public string muzzleBoneName = "";
 
     public enum ExplosionTriggerType
     {
-        OnCollisionOnly,      // 첫 충돌에서만 폭발
-        OnTimeoutOnly,        // LifeTime 만료에서만 폭발
-        OnCollisionOrTimeout  // 둘 중 먼저 일어나는 쪽에서 폭발
+        OnCollisionOnly,      // 충돌 시 폭발
+        OnTimeoutOnly,        // 시간 만료 시 폭발
+        OnCollisionOrTimeout  // 충돌 또는 시간 만료 시 폭발
     }
 
-    [Header("폭발 시작 조건")]
-    [Tooltip("폭발을 언제 시작할지 결정합니다.")]
+    [Header("폭발 트리거")]
+    [Tooltip("폭발 발생 방식")]
     public ExplosionTriggerType explosionTrigger = ExplosionTriggerType.OnCollisionOrTimeout;
 
-    [Header("투사체 설정")]
-    [Tooltip("TimeProjectile 컴포넌트와 Rigidbody, Collider가 붙어있는 프리팹")]
+    [Header("발사체 설정")]
+    [Tooltip("발사체 프리팹")]
     public GameObject projectilePrefab;
 
-    [Tooltip("투사체의 기본 속도 크기 (m/s) - 수평 방향 속도에 사용됩니다.")]
+    [Tooltip("발사 속도 (m/s)")]
     public float projectileSpeed = 15f;
 
-    [Tooltip("위로 던지는 높이 감각. 값이 클수록 더 높이 포물선으로 날아갑니다.")]
+    [Tooltip("호를 만드는 높이")]
     public float arcHeight = 2f;
 
-    [Tooltip("투사체 최대 생존 시간(초). 이 시간이 지나면 (옵션에 따라) 자동 폭발합니다.")]
+    [Tooltip("발사체 수명 (초)")]
     public float projectileLifeTime = 3f;
 
-    [Tooltip("리지드바디에서 중력을 사용할지 여부")]
+    [Tooltip("중력 사용 여부")]
     public bool useGravity = true;
 
-    [Header("폭발/피해 설정")]
-    [Tooltip("폭발 기본 피해량 (중심 기준)")]
+    [Header("데미지 / 폭발")]
+    [Tooltip("기본 데미지")]
     public float damage = 20f;
 
-    [Tooltip("폭발 반경 (OverlapSphere에 사용)")]
+    [Tooltip("폭발 반경")]
     public float explosionRadius = 2f;
 
-    [Tooltip("폭발 반경 끝에서의 피해 배율 (0~1). 1이면 감쇠 없음, 0이면 끝에서는 피해 0.")]
+    [Tooltip("가장자리 데미지 곱 (0~1) - 1이면 균일, 0이면 에지에서 0")]
     [Range(0f, 1f)]
     public float edgeDamageMultiplier = 0.5f;
 
-    [Tooltip("넉백 힘 (프로젝트의 EnemyImpact/PlayerImpact 시스템에 맞게 사용 예정)")]
+    [Tooltip("넉백 파워 (EnemyImpact/PlayerImpact에서 참조)")]
     public float knockbackPower = 5f;
 
-    [Tooltip("넉백 지속 시간(초)")]
+    [Tooltip("넉백 지속시간 (초)")]
     public float knockbackDuration = 0.2f;
 
-    [Tooltip("기절(스턴) 지속 시간(초)")]
+    [Tooltip("스턴 지속시간 (초)")]
     public float stunDuration = 0.0f;
 
     public enum ExplosionTargetType
@@ -81,26 +82,60 @@ public class TimeProjectileAttackData : ScriptableObject
         Both
     }
 
-    [Header("폭발 타겟 설정")]
-    [Tooltip("폭발 피해가 적용될 대상 타입")]
+    [Header("타겟 필터")]
+    [Tooltip("폭발이 영향을 주는 대상 타입")]
     public ExplosionTargetType explosionTargets = ExplosionTargetType.PlayerOnly;
 
-    [Header("폭발 시 디버그/범위 표시")]
-    [Tooltip("폭발 시 범위 표시용 더미 스피어를 소환할지 여부 (시각 Only)")]
+    [Header("디버그")]
+    [Tooltip("폭발 시 디버그 구체 스폰")]
     public bool spawnDebugSphereOnExplode = false;
 
-    [Header("물리(발사/굴림) 튜닝")]
-    [Tooltip("Rigidbody mass (권장 0.5~2)")]
+    [Header("물리(발사체)")]
+    [Tooltip("Rigidbody mass")]
     public float rigidbodyMass = 1f;
 
-    [Tooltip("선형 저항(Drag). 공중 이동 조절용 (권장 0~0.3)")]
+    [Tooltip("선형 드래그")]
     public float linearDrag = 0.05f;
 
-    [Tooltip("회전 저항(Angular Drag). 굴림 감쇠용 (권장 0.2~1.0)")]
+    [Tooltip("회전 드래그")]
     public float angularDrag = 0.4f;
 
-    [Tooltip("초기 스핀 속도(도/초). 발사 후 투사체가 회전(구르기)하도록 하는 시각 요소")]
+    [Tooltip("회전(스핀) 속도 deg/s")]
     public float spinSpeedDeg = 720f;
+
+    // ───────── Weapon-like death / ragdoll / slice 관련 필드 (Player WeaponDataSO와 동일 구성) ─────────
+    [Header("데스 연출 (Weapon과 동일한 구성)")]
+    [Tooltip("죽음 연출 방식: Animation 또는 Ragdoll")]
+    public DeathMode deathMode = DeathMode.Animation;
+
+    [Tooltip("랙돌 수평 임펄스 (ForceMode.VelocityChange 기준 m/s)")]
+    public float ragdollImpulse = 5f;
+
+    [Tooltip("랙돌 위로 임펄스 (m/s)")]
+    public float ragdollUpImpulse = 0f;
+
+    [Tooltip("랙돌 회전 토크(ForceMode.VelocityChange) - 전체 분배 기준값")]
+    public float ragdollSpinTorque = 0f;
+
+    [Tooltip("본 분리 대상 목록 (Slice) - WeaponDataSO와 동일 타입 사용")]
+    public List<SliceTarget> sliceTargets = new List<SliceTarget>();
+
+    [Tooltip("슬라이스에 적용되는 임펄스 (VelocityChange m/s)")]
+    public float sliceImpulse = 0f;
+
+    [Tooltip("애니메이션/힛스탑 지속시간(초) - death 연출 등에서 사용")]
+    public float animationHoldDuration = 0f;
+
+    [Tooltip("넉백 대신 push(밀림)을 사용할지 여부 (EnemyImpact.ApplyPush 사용)")]
+    public bool usePushInsteadOfKnockback = false;
+
+    [Tooltip("Jerk(짧은 흔들림) 세기 (weapon과 호환)")]
+    public float jerkIntensity = 1f;
+
+    [Tooltip("Jerk 지속시간")]
+    public float jerkDuration = 0.2f;
+
+    // ───────────────────────────────────────────────────────────────────────────────────────────────
 
     private void OnValidate()
     {
@@ -124,5 +159,13 @@ public class TimeProjectileAttackData : ScriptableObject
         linearDrag = Mathf.Max(0f, linearDrag);
         angularDrag = Mathf.Max(0f, angularDrag);
         spinSpeedDeg = Mathf.Max(0f, spinSpeedDeg);
+
+        ragdollImpulse = Mathf.Max(0f, ragdollImpulse);
+        ragdollUpImpulse = Mathf.Max(0f, ragdollUpImpulse);
+        ragdollSpinTorque = Mathf.Max(0f, ragdollSpinTorque);
+        sliceImpulse = Mathf.Max(0f, sliceImpulse);
+        animationHoldDuration = Mathf.Max(0f, animationHoldDuration);
+        jerkIntensity = Mathf.Max(0f, jerkIntensity);
+        jerkDuration = Mathf.Max(0f, jerkDuration);
     }
 }

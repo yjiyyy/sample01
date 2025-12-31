@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,6 +7,8 @@ using UnityEngine;
 /// PlayerWeaponController (호환성 보존)
 /// - 기존 API(외부 호출되던 멤버)를 유지/복원합니다.
 /// - ForceApplyKnockback는 movement.ApplyKnockback를 사용하여 처리합니다.
+/// - Unity6(6000.0.42f1) 기준으로 FixedDeltaTime 기반 이동/넉백 처리를 존중합니다.
+/// - 변경점: 죽음(Dead) 상태가 최우선이 되도록 안전 검사 및 코루틴 방어를 추가했습니다.
 /// </summary>
 public enum PlayerState
 {
@@ -18,6 +21,7 @@ public enum PlayerState
     Evade
 }
 
+[DisallowMultipleComponent]
 public class PlayerWeaponController : MonoBehaviour
 {
     [Header("애니메이션 컴포넌트")]
@@ -33,7 +37,7 @@ public class PlayerWeaponController : MonoBehaviour
     [Tooltip("체크 시: 1초에 '차지 시작', SO 시간에 '차지 성공' 메시지 출력")]
     [SerializeField] private bool enableChargeMessages = true;
 
-    // v3 컴포넌트들
+    // v3 서브컴포넌트
     private PlayerRecoil recoilComp;
     private PlayerEquipmentController equipComp;
     private PlayerChargeController chargeComp;
@@ -72,8 +76,16 @@ public class PlayerWeaponController : MonoBehaviour
     public bool IsInvincible() => (evadeComp?.IsInvincible() ?? false) || chargeInvincible;
 
     // Force apply knockback (compat API). Matches original signature used by enemies.
+    // IMPORTANT: If player is already Dead, this MUST be ignored to ensure death has highest priority.
     public void ForceApplyKnockback(Vector3 dir, float power, float duration, float stun)
     {
+        // If already dead, do not start any knockback/stun behavior.
+        if (state == PlayerState.Dead)
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] ForceApplyKnockback ignored because state==Dead");
+            return;
+        }
+
         // Stop attacking / cancel states & invoke local knockback behavior
         if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
         evadeComp?.CancelEvade();
@@ -87,8 +99,61 @@ public class PlayerWeaponController : MonoBehaviour
         if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
         EndARFireState();
 
+        // Stop any running knockback coroutine then start new one.
         if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
         knockbackRoutine = StartCoroutine(KnockbackRoutine_Internal(dir, power, duration, stun));
+    }
+
+    // --- OnDeath: 플레이어가 사망했을 때 외부(Health)에서 호출할 public API ---
+    // 요구사항:
+    // - 상태를 Dead로 전환
+    // - 애니메이터에서 IsDead 호출(애니메이션 재생)
+    // - 이동(입력) 차단
+    // - 5초 후 플레이어 루트 프리팹 제거
+    public void OnDeath(Vector3 hitDir, WeaponDataSO weapon = null, float impactScale = 1f)
+    {
+        // Defensive: if already dead, ignore
+        if (state == PlayerState.Dead)
+            return;
+
+        Debug.Log("[PlayerWeaponController] OnDeath invoked.");
+
+        // 1) Cancel ongoing actions similar to ForceApplyKnockback cleanup
+        if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
+        evadeComp?.CancelEvade();
+        chargeComp?.CancelAll();
+        chargeInvincible = false;
+        CancelRecoil();
+
+        equipComp?.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
+        equipComp?.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
+
+        if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
+        EndARFireState();
+
+        // Ensure any running knockback coroutine is stopped immediately so CC cannot play after death.
+        if (knockbackRoutine != null)
+        {
+            try { StopCoroutine(knockbackRoutine); } catch { }
+            knockbackRoutine = null;
+        }
+
+        // 2) Change internal state to Dead (this will also invoke animation change)
+        ChangeState(PlayerState.Dead);
+
+        // 3) Movement: prevent further movement/inputs
+        if (movement != null)
+        {
+            // Cancel any ongoing knockback movement
+            try { movement.CancelKnockback(); } catch { }
+            // Disable movement component so Update/FixedUpdate won't process inputs
+            movement.enabled = false;
+        }
+
+        // 4) Schedule player root destroy after 5 seconds
+        GameObject root = this.transform.root != null ? this.transform.root.gameObject : this.gameObject;
+        Debug.Log($"[PlayerWeaponController] Player died. Root '{root.name}' will be destroyed in 5s.");
+        Destroy(root, 5f);
     }
 
     // Expose AR-related flags/properties expected by PlayerMovement
@@ -234,14 +299,14 @@ public class PlayerWeaponController : MonoBehaviour
     private void HandleIdle()
     {
         if (IsActionBlocking()) return;
-        if (movement.GetVelocityMagnitude() > 0.1f) { ChangeState(PlayerState.Move); return; }
+        if (movement != null && movement.GetVelocityMagnitude() > 0.1f) { ChangeState(PlayerState.Move); return; }
         if (InputManager.Instance.GetAttackInput()) PlayAttack();
     }
 
     private void HandleMove()
     {
         if (IsActionBlocking()) return;
-        if (movement.GetVelocityMagnitude() <= 0.1f) { ChangeState(PlayerState.Idle); return; }
+        if (movement != null && movement.GetVelocityMagnitude() <= 0.1f) { ChangeState(PlayerState.Idle); return; }
         if (InputManager.Instance.GetAttackInput()) PlayAttack();
     }
 
@@ -483,35 +548,100 @@ public class PlayerWeaponController : MonoBehaviour
     #region Knockback / CC (internal coroutine used by ForceApplyKnockback)
     private IEnumerator KnockbackRoutine_Internal(Vector3 dir, float power, float duration, float stun)
     {
+        // If we are already dead at the moment this coroutine starts, bail out immediately.
+        if (state == PlayerState.Dead)
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] KnockbackRoutine_Internal aborted because state==Dead at start.");
+            knockbackRoutine = null;
+            yield break;
+        }
+
         ChangeState(PlayerState.Knockback);
 
         Vector3 knockDir = dir.normalized; knockDir.y = 0f;
 
-        // Instead of rotating here directly, use movement.FaceKnockback to match EnemyImpact.FaceHit behavior.
+        // Use movement.FaceKnockback to match EnemyImpact.FaceHit behavior when possible
         if (movement != null)
         {
             movement.FaceKnockback(dir);
         }
         else
         {
-            // fallback: previous behavior
+            // fallback: rotate to face hit
             if (knockDir.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.LookRotation(-knockDir);
         }
 
-        // Apply knockback on movement component (movement.ApplyKnockback handles physics)
-        movement?.ApplyKnockback(knockDir, power, duration, null);
+        // If death occurred during FaceKnockback call, don't proceed.
+        if (state == PlayerState.Dead)
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] KnockbackRoutine_Internal stopping because state became Dead after FaceKnockback.");
+            knockbackRoutine = null;
+            yield break;
+        }
 
-        // Wait for knockback duration (movement.ApplyKnockback also runs its own movement routine)
-        yield return new WaitForSeconds(duration);
+        // Apply knockback on movement component (movement.ApplyKnockback handles physics)
+        // Guard: movement may be disabled by OnDeath -> skip if movement is disabled or null.
+        if (movement != null && movement.enabled)
+        {
+            movement.ApplyKnockback(knockDir, power, duration, null);
+        }
+        else
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] Knockback skipped because movement component is missing or disabled.");
+        }
+
+        // Wait for knockback duration, but exit early if Dead state set during wait.
+        float elapsed = 0f;
+        float waitDur = Mathf.Max(0f, duration);
+        while (elapsed < waitDur)
+        {
+            if (state == PlayerState.Dead)
+            {
+                if (debugMode) Debug.Log("[PlayerWeaponController] KnockbackRoutine_Internal interrupted by Dead state during wait.");
+                knockbackRoutine = null;
+                yield break;
+            }
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // After knockback, may apply stun - but if Dead occurred, skip it.
+        if (state == PlayerState.Dead)
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] Skipping stun because state==Dead.");
+            knockbackRoutine = null;
+            yield break;
+        }
 
         if (stun > 0f)
         {
             ChangeState(PlayerState.Stun);
-            yield return new WaitForSeconds(stun);
+
+            // Wait for stun, but interrupt if Dead becomes true
+            float stunElapsed = 0f;
+            while (stunElapsed < stun)
+            {
+                if (state == PlayerState.Dead)
+                {
+                    if (debugMode) Debug.Log("[PlayerWeaponController] Stun interrupted by Dead state.");
+                    knockbackRoutine = null;
+                    yield break;
+                }
+                stunElapsed += Time.deltaTime;
+                yield return null;
+            }
         }
 
-        ChangeState(PlayerState.Idle);
+        // Restore to idle/move based on velocity (unless became Dead)
+        if (state != PlayerState.Dead)
+        {
+            if (movement != null && movement.GetVelocityMagnitude() > 0.1f)
+                ChangeState(PlayerState.Move);
+            else
+                ChangeState(PlayerState.Idle);
+        }
+
         knockbackRoutine = null;
     }
     #endregion
@@ -653,9 +783,9 @@ public class PlayerWeaponController : MonoBehaviour
 
         float halfRad = Mathf.Deg2Rad * halfAngleDeg;
         float cosMax = Mathf.Cos(halfRad);
-        float u = Random.Range(cosMax, 1f);
+        float u = UnityEngine.Random.Range(cosMax, 1f);
         float theta = Mathf.Acos(u);
-        float phi = Random.Range(0f, Mathf.PI * 2f);
+        float phi = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
         float sinT = Mathf.Sin(theta);
 
         Vector3 local = new Vector3(sinT * Mathf.Cos(phi), sinT * Mathf.Sin(phi), Mathf.Cos(theta));

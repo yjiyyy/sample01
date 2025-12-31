@@ -2,17 +2,17 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Explosion hitbox: 폭발 판정 + 데미지 적용 + 디버그 로깅 강화
-/// - OverlapSphereNonAlloc(Trigger 포함)로 판정
-/// - 대상에서 PlayerHealth / EnemyHealth를 robust하게 찾음
-/// - owner(발사자) 별도 제외 로직 제거: explosionTargets에 따라 Player/Enemy/Both로만 판정합니다.
+/// Explosion hitbox: 폭발 판정 + 플레이어/적 데미지 적용 + 연출 호출
+/// - OverlapSphereNonAlloc(트리거 방식) 사용
+/// - 주변의 PlayerHealth / EnemyHealth를 robust하게 탐색
+/// - owner(발사자) 설정에 따라 explosionTargets로 Player/Enemy/Both 처리.
 /// </summary>
 public class HitBox_Enemy_Explosion : MonoBehaviour
 {
     private static readonly Collider[] Overlap = new Collider[256];
 
     private TimeProjectileAttackData data;
-    private Enemy enemyOwner; // 보관은 해두되 별도 제외 처리하지 않음
+    private Enemy enemyOwner; // 발사한 적 (owner) 참조
 
     // shared material for debug sphere to avoid per-instance material allocations
     private static Material s_debugSphereMaterial;
@@ -62,7 +62,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             }
         }
 
-        // OverlapSphereNonAlloc (Trigger 포함)
+        // OverlapSphereNonAlloc (Trigger 방식)
         int count = Physics.OverlapSphereNonAlloc(center, data.explosionRadius, Overlap, ~0, QueryTriggerInteraction.Collide);
         Debug.Log($"[Explosion] Overlap found {count} colliders (including triggers).");
 
@@ -96,7 +96,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
 
             float t = data.explosionRadius > 0f ? dist / data.explosionRadius : 1f;
             t = Mathf.Clamp01(t);
-            float mul = Mathf.Lerp(1f, data.edgeDamageMultiplier, t);
+            float mul = Mathf.Lerp(1f, data.edgeDamageMultiplier, t); // distance-based multiplier (1@center -> edgeDamageMultiplier@edge)
             float actualDamage = data.damage * mul;
             Vector3 hitDir = (targetPos - center);
             hitDir.y = 0f;
@@ -110,7 +110,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
                 {
                     hitSeen.Add(ph);
                     Debug.Log($"[Explosion] Applying {actualDamage:F2} dmg to Player '{ph.gameObject.name}' (dist={dist:F3})");
-                    TryApplyDamageToPlayer(ph, actualDamage, hitDir);
+                    TryApplyDamageToPlayer(ph, actualDamage, hitDir, mul);
                 }
                 else
                 {
@@ -118,14 +118,14 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
                 }
             }
 
-            // Enemy 처리 (owner 포함 여부에 대한 별도 처리 없음)
+            // Enemy 처리
             if (eh != null && (data.explosionTargets == TimeProjectileAttackData.ExplosionTargetType.EnemyOnly || data.explosionTargets == TimeProjectileAttackData.ExplosionTargetType.Both))
             {
                 if (!hitSeen.Contains(eh))
                 {
                     hitSeen.Add(eh);
                     Debug.Log($"[Explosion] Applying {actualDamage:F2} dmg to Enemy '{eh.gameObject.name}' (dist={dist:F3})");
-                    TryApplyDamageToEnemy(eh, actualDamage, hitDir);
+                    TryApplyDamageToEnemy(eh, actualDamage, hitDir, mul);
                 }
                 else
                 {
@@ -202,11 +202,27 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
         return null;
     }
 
-    private void TryApplyDamageToPlayer(PlayerHealth ph, float dmg, Vector3 hitDir)
+    private void TryApplyDamageToPlayer(PlayerHealth ph, float dmg, Vector3 hitDir, float mul)
     {
         if (ph == null) return;
+
+        // If player has a weapon controller, respect invincibility/evade flags.
+        PlayerWeaponController pwc = ph.GetComponentInParent<PlayerWeaponController>() ?? ph.GetComponent<PlayerWeaponController>();
+        if (pwc != null && pwc.IsInvincible())
+        {
+            Debug.Log($"[Explosion] Player '{ph.gameObject.name}' is invincible/evading - skipping damage/knockback.");
+            return;
+        }
+
+        // Distance-scaled knockback/stun
+        float kbPower = data.knockbackPower * mul;
+        float kbDuration = data.knockbackDuration * mul;
+        float stun = data.stunDuration * mul;
+
         try
         {
+            // Apply damage to player. PlayerHealth currently ignores WeaponDataSO for ragdoll,
+            // but we still pass null to keep original behavior for HP.
             ph.ApplyDamage(dmg, hitDir, null, 1f);
             Debug.Log($"[Explosion] Player '{ph.gameObject.name}' ApplyDamage called successfully.");
         }
@@ -214,26 +230,114 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
         {
             Debug.LogError($"[Explosion] Exception while applying damage to Player '{ph.gameObject.name}': {ex}");
         }
+
+        // Apply knockback/stun if player is still alive and not invincible.
+        // Use PlayerWeaponController.ForceApplyKnockback when available for proper state handling.
+        if (pwc != null)
+        {
+            try
+            {
+                pwc.ForceApplyKnockback(hitDir, kbPower, kbDuration, stun);
+                Debug.Log($"[Explosion] Player '{ph.gameObject.name}' ForceApplyKnockback called: power={kbPower}, dur={kbDuration}, stun={stun}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[Explosion] Exception while applying ForceApplyKnockback to Player '{ph.gameObject.name}': {ex}");
+            }
+            return;
+        }
+
+        // Fallback: try PlayerMovement.ApplyKnockback
+        var pm = ph.GetComponentInParent<PlayerMovement>() ?? ph.GetComponent<PlayerMovement>();
+        if (pm != null)
+        {
+            try
+            {
+                pm.ApplyKnockback(hitDir, kbPower, kbDuration, enemyOwner != null ? enemyOwner.transform : null);
+                Debug.Log($"[Explosion] Player '{ph.gameObject.name}' Movement.ApplyKnockback called: power={kbPower}, dur={kbDuration}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[Explosion] Exception while applying Movement.ApplyKnockback to Player '{ph.gameObject.name}': {ex}");
+            }
+        }
     }
 
-    private void TryApplyDamageToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir)
+    private void TryApplyDamageToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir, float mul)
     {
         if (eh == null) return;
+
+        // Create a transient WeaponDataSO proxy and copy relevant fields from TPA SO (scaled by mul for knockback/stun).
+        WeaponDataSO proxy = null;
         try
         {
-            eh.ApplyDamage(dmg, hitDir, null, 1f);
-            Debug.Log($"[Explosion] Enemy '{eh.gameObject.name}' ApplyDamage called successfully.");
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"[Explosion] Exception while applying damage to Enemy '{eh.gameObject.name}': {ex}");
-        }
+            proxy = ScriptableObject.CreateInstance<WeaponDataSO>();
+            proxy.hideFlags = HideFlags.HideAndDontSave;
 
-        var enemyT = eh.GetComponentInParent<Enemy>();
-        if (enemyT != null && enemyT.CurrentState != Enemy.EnemyState.Dead)
+            // copy damage-unrelated fields (for death/animation/ragdoll/slice)
+            proxy.deathMode = data.deathMode;
+            proxy.ragdollImpulse = data.ragdollImpulse;
+            proxy.ragdollUpImpulse = data.ragdollUpImpulse;
+            proxy.ragdollSpinTorque = data.ragdollSpinTorque;
+
+            if (data.sliceTargets != null)
+                proxy.sliceTargets = new List<SliceTarget>(data.sliceTargets);
+            else
+                proxy.sliceTargets = new List<SliceTarget>();
+
+            proxy.sliceImpulse = data.sliceImpulse;
+            proxy.animationHoldDuration = data.animationHoldDuration;
+            proxy.usePushInsteadOfKnockback = data.usePushInsteadOfKnockback;
+
+            // knockback/stun values should be attenuated by distance (mul)
+            proxy.knockbackPower = data.knockbackPower * mul;
+            proxy.knockbackDuration = data.knockbackDuration * mul;
+            proxy.stunDuration = data.stunDuration * mul;
+
+            proxy.jerkIntensity = data.jerkIntensity;
+            proxy.jerkDuration = data.jerkDuration;
+
+            // Call damage with weapon proxy so EnemyDie/EnemyImpact can read weapon-specific settings
+            try
+            {
+                eh.ApplyDamage(dmg, hitDir, proxy, 1f);
+                Debug.Log($"[Explosion] Enemy '{eh.gameObject.name}' ApplyDamage called successfully with proxy.");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[Explosion] Exception while applying damage to Enemy '{eh.gameObject.name}': {ex}");
+            }
+
+            // Apply knockback/push only if enemy didn't die from damage
+            var enemyT = eh.GetComponentInParent<Enemy>();
+            if (enemyT != null && enemyT.CurrentState != Enemy.EnemyState.Dead)
+            {
+                try
+                {
+                    if (proxy.usePushInsteadOfKnockback)
+                    {
+                        enemyT.ApplyPush(hitDir, proxy, 1f);
+                        Debug.Log($"[Explosion] Enemy '{eh.gameObject.name}' ApplyPush called (power={proxy.knockbackPower}, dur={proxy.knockbackDuration}).");
+                    }
+                    else
+                    {
+                        enemyT.ApplyKnockback(hitDir, proxy, 1f);
+                        Debug.Log($"[Explosion] Enemy '{eh.gameObject.name}' ApplyKnockback called (power={proxy.knockbackPower}, dur={proxy.knockbackDuration}, stun={proxy.stunDuration}).");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[Explosion] Exception while applying knockback/push to Enemy '{eh.gameObject.name}': {ex}");
+                }
+            }
+        }
+        finally
         {
-            try { enemyT.ApplyPush(hitDir, null, 1f); }
-            catch { /* defensive */ }
+            // clean up transient proxy (Destroy defers removal until end of frame)
+            if (proxy != null)
+            {
+                Object.Destroy(proxy);
+            }
         }
     }
 
