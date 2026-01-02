@@ -1,18 +1,18 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Explosion hitbox: Æø¹ß ÆÇÁ¤ + ÇÃ·¹ÀÌ¾î/Àû µ¥¹ÌÁö Àû¿ë + ¿¬Ãâ È£Ãâ
-/// - OverlapSphereNonAlloc(Æ®¸®°Å ¹æ½Ä) »ç¿ë
-/// - ÁÖº¯ÀÇ PlayerHealth / EnemyHealth¸¦ robustÇÏ°Ô Å½»ö
-/// - owner(¹ß»çÀÚ) ¼³Á¤¿¡ µû¶ó explosionTargets·Î Player/Enemy/Both Ã³¸®.
+/// Explosion hitbox: ì£¼ë³€ í”¼í•´ + í”Œë ˆì´ì–´/ì  ëŒ€ìƒ ì„ íƒ + ë„‰ë°± í˜¸ì¶œ
+/// - OverlapSphereNonAlloc(íŠ¸ë¦¬ê±° í¬í•¨) ì‚¬ìš©
+/// - ì£¼ë³€ì˜ PlayerHealth / EnemyHealthë¥¼ robustí•˜ê²Œ íƒìƒ‰
+/// - owner(ë°œì‚¬í•œ ì ) ì •ë³´ë¥¼ ì´ìš©í•´ explosionTargetsë¥¼ Player/Enemy/Both ì²˜ë¦¬.
 /// </summary>
 public class HitBox_Enemy_Explosion : MonoBehaviour
 {
     private static readonly Collider[] Overlap = new Collider[256];
 
     private TimeProjectileAttackData data;
-    private Enemy enemyOwner; // ¹ß»çÇÑ Àû (owner) ÂüÁ¶
+    private Enemy enemyOwner; // ë°œì‚¬í•œ ì  (owner) ì •ë³´
 
     // shared material for debug sphere to avoid per-instance material allocations
     private static Material s_debugSphereMaterial;
@@ -62,7 +62,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             }
         }
 
-        // OverlapSphereNonAlloc (Trigger ¹æ½Ä)
+        // OverlapSphereNonAlloc (Trigger í¬í•¨)
         int count = Physics.OverlapSphereNonAlloc(center, data.explosionRadius, Overlap, ~0, QueryTriggerInteraction.Collide);
         Debug.Log($"[Explosion] Overlap found {count} colliders (including triggers).");
 
@@ -103,7 +103,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
             hitDir.Normalize();
 
-            // Player Ã³¸®
+            // Player ì²˜ë¦¬
             if (ph != null && (data.explosionTargets == TimeProjectileAttackData.ExplosionTargetType.PlayerOnly || data.explosionTargets == TimeProjectileAttackData.ExplosionTargetType.Both))
             {
                 if (!hitSeen.Contains(ph))
@@ -118,7 +118,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
                 }
             }
 
-            // Enemy Ã³¸®
+            // Enemy ì²˜ë¦¬
             if (eh != null && (data.explosionTargets == TimeProjectileAttackData.ExplosionTargetType.EnemyOnly || data.explosionTargets == TimeProjectileAttackData.ExplosionTargetType.Both))
             {
                 if (!hitSeen.Contains(eh))
@@ -219,10 +219,9 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
         float kbDuration = data.knockbackDuration * mul;
         float stun = data.stunDuration * mul;
 
+        // 1) Damage
         try
         {
-            // Apply damage to player. PlayerHealth currently ignores WeaponDataSO for ragdoll,
-            // but we still pass null to keep original behavior for HP.
             ph.ApplyDamage(dmg, hitDir, null, 1f);
             Debug.Log($"[Explosion] Player '{ph.gameObject.name}' ApplyDamage called successfully.");
         }
@@ -231,8 +230,14 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             Debug.LogError($"[Explosion] Exception while applying damage to Player '{ph.gameObject.name}': {ex}");
         }
 
-        // Apply knockback/stun if player is still alive and not invincible.
-        // Use PlayerWeaponController.ForceApplyKnockback when available for proper state handling.
+        // âœ… í•µì‹¬: í­ë°œ ë°ë¯¸ì§€ë¡œ HP 0ì´ ë˜ì—ˆìœ¼ë©´ ë„‰ë°±/ìŠ¤í„´ ìŠ¤í‚µ
+        if (ph.GetCurrentHP() <= 0f)
+        {
+            if (VERBOSE) Debug.Log($"[Explosion] Player '{ph.gameObject.name}' is dead after damage -> skip knockback/stun.");
+            return;
+        }
+
+        // 2) Knockback/stun if alive
         if (pwc != null)
         {
             try

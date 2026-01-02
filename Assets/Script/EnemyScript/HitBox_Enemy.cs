@@ -118,6 +118,14 @@ public class HitBox_Enemy : MonoBehaviour
         hp.ApplyDamage(damage);
         Debug.Log($"✅ [HitBox_Enemy] PlayerHealth에 {damage} 데미지 적용! (dup:{duplicateEnabled})");
 
+        // ✅ 핵심: HP가 0 이하로 떨어졌으면 넉백/스턴을 절대 실행하지 않음 (즉시 Death 우선)
+        if (hp.GetCurrentHP() <= 0f)
+        {
+            if (Debug.isDebugBuild)
+                Debug.Log("[HitBox_Enemy] Player is dead after damage → skip knockback/stun.");
+            return;
+        }
+
         // 2) 넉백/스턴 처리
         Vector3 hitDir = (hp.transform.position - transform.position);
         hitDir.y = 0f;

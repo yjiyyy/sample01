@@ -243,7 +243,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3843984e48da68946a7e53e281970d85, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHP: 100
+  maxHP: 90
   weight: 1
 --- !u!114 &-4674434038375394502
 MonoBehaviour:
@@ -314,8 +314,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e509e4d6259d96748881e1385e0543af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100
-  currentHealth: 100
+  maxHealth: 90
+  currentHealth: 90
   massMultiplier: 1
   baseMoveSpeed: 10
   rotationSpeedDegPerSec: 1080

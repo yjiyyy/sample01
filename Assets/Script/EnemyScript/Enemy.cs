@@ -118,9 +118,37 @@ public class Enemy : MonoBehaviour
 
     private void Update()
     {
-        if (player == null) player = GameObject.FindWithTag("Player")?.transform;
+        // ✅ 플레이어 타겟 갱신 (죽은 플레이어는 타겟으로 취급하지 않음)
+        if (player == null)
+        {
+            var p = GameObject.FindWithTag("Player");
+            if (p != null)
+            {
+                var ph = p.GetComponent<PlayerHealth>() ?? p.GetComponentInChildren<PlayerHealth>();
+                if (ph != null && ph.GetCurrentHP() <= 0f)
+                {
+                    // 죽은 플레이어는 타겟으로 잡지 않음
+                    player = null;
+                }
+                else
+                {
+                    player = p.transform;
+                }
+            }
+        }
+        else
+        {
+            // 이미 캐시된 타겟도 죽었는지 재검사 (죽었다면 즉시 해제)
+            var ph = player.GetComponent<PlayerHealth>() ?? player.GetComponentInChildren<PlayerHealth>();
+            if (ph != null && ph.GetCurrentHP() <= 0f)
+            {
+                player = null;
+            }
+        }
+
         if (CurrentState == EnemyState.Dead || player == null) return;
         if (CurrentState == EnemyState.ShieldBreak) return;
+
         ai?.Tick(this, player);
     }
 

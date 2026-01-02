@@ -249,7 +249,6 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         if (!faceToMovement) return;
         if (dir.sqrMagnitude < 0.0001f) return;
 
-        // "화면좌표" 씬 기준 위쪽은 Vector3.up. 수평 정렬을 위해 y=0 처리.
         Quaternion look = Quaternion.LookRotation(dir.normalized, Vector3.up);
         transform.rotation = look;
     }
@@ -349,7 +348,10 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
 
         // 1) 데미지
         hp.ApplyDamage(damage);
-        // Debug.Log($"✅ [EnemyProjectile] PlayerHealth에 {damage} 데미지 적용! (dup:{duplicateEnabled})");
+
+        // ✅ 핵심: HP 0이면 넉백/스턴 스킵 (즉시 Death 우선)
+        if (hp.GetCurrentHP() <= 0f)
+            return;
 
         // 2) 넉백/스턴
         Vector3 hitDir = (hp.transform.position - transform.position);
