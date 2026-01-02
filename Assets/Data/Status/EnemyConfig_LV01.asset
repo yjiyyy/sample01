@@ -26,7 +26,7 @@ MonoBehaviour:
   shieldRechargeRate: 10
   baseMoveSpeed: 5
   movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
-  detectionRadius: 10
+  detectionRadius: 5
   findDuration: 3
   backstepDistance: 5
   backstepSpeedMultiplier: 1
@@ -36,16 +36,11 @@ MonoBehaviour:
   idleMin: 1
   idleMax: 3
   attackPatterns:
-  - {fileID: 11400000, guid: ed4896676dec6594aa351e48ff70f48e, type: 2}
+  - {fileID: 11400000, guid: 770b2a8b8fcf819478d7ab6abe831b8a, type: 2}
   globalPatternCooldown: 0
   defaultPatternHoldDuration: 0
   enablePerPatternHoldOverride: 0
-  partSlotCount: 1
-  partSlots:
-  - boneName: Bip001 Prop1
-    partPrefab: {fileID: 1183057563308587319, guid: e5cbf47e1f849114da884556c665cff7, type: 3}
-    localOffset: {x: 0, y: 0, z: 0}
-    localRotationEuler: {x: 0, y: 0, z: 0}
-    localScale: {x: 1.5, y: 1.5, z: 1.5}
+  partSlotCount: 0
+  partSlots: []
   overrideController: {fileID: 0}
   editorAutoApplyDefault: 1

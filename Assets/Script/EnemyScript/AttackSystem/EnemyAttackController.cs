@@ -6,11 +6,10 @@ using UnityEngine;
 // 프리팹에는 이 EnemyAttackController 컴포넌트 1개만 붙이면 된다.
 public partial class EnemyAttackController : MonoBehaviour
 {
-    [Header("패턴 배열 (MeleeAttackData / RushAttackData / RangedAttackData / JumpAttackData / AoEAttackData / ComboAttackData / TimeProjectileAttackData)")]
+    [Header("패턴 배열 (Melee / Rush / Ranged / Jump / AoE / Combo / TimeProjectile / Suicide)")]
     public ScriptableObject[] attackPatterns;
     public int AttackCount => attackPatterns != null ? attackPatterns.Length : 0;
 
-    // Melee에서만 쓰는 현재 공격(기존 구조 유지)
     private ScriptableObject currentAttack;
     private int currentAttackIndex = -1;
 
@@ -33,14 +32,21 @@ public partial class EnemyAttackController : MonoBehaviour
     [Header("디버그")]
     public bool debugDecisionLogs = true;
 
-    // TimeProjectile 전용 상태를 main에 선언 (TPA partial에서 참조)
     private Coroutine timeProjectileRoutine;
     private int runningTimeProjectileIndex = -1;
 
-    // 기존 상태 플래그들과 AoE 통합 (AoE는 partial 파일에서 aoeCoroutine 변수로 관리)
     public bool IsMeleeExecuting => attackInProgress && !IsRushing && rangedRoutine == null && !IsJumping;
-    // 콤보가 생겼으니 comboCoroutine은 partial 쪽에 선언됨; partial 합쳐질 때 같이 평가됩니다.
-    public bool IsAttackExecuting => IsMeleeExecuting || IsRushing || rushPrepareCoroutine != null || rangedRoutine != null || IsJumping || aoeCoroutine != null || comboCoroutine != null || timeProjectileRoutine != null;
+
+    public bool IsAttackExecuting =>
+        IsMeleeExecuting ||
+        IsRushing ||
+        rushPrepareCoroutine != null ||
+        rangedRoutine != null ||
+        IsJumping ||
+        aoeCoroutine != null ||
+        comboCoroutine != null ||
+        timeProjectileRoutine != null ||
+        IsSuicideExecuting;
 
     public string CurrentAttackName
     {
@@ -48,31 +54,43 @@ public partial class EnemyAttackController : MonoBehaviour
         {
             if (currentAttack is MeleeAttackData m) return m.attackName;
             if (currentAttack is ComboAttackData cb) return cb.attackName;
+
             if (IsRushing &&
                 runningRushIndex >= 0 &&
                 attackPatterns != null &&
                 runningRushIndex < attackPatterns.Length &&
                 attackPatterns[runningRushIndex] is RushAttackData r) return r.attackName;
+
             if (rangedRoutine != null &&
                 runningRangedIndex >= 0 &&
                 attackPatterns != null &&
                 runningRangedIndex < attackPatterns.Length &&
                 attackPatterns[runningRangedIndex] is RangedAttackData ra) return ra.attackName;
+
             if (IsJumping &&
                 runningJumpIndex >= 0 &&
                 attackPatterns != null &&
                 runningJumpIndex < attackPatterns.Length &&
                 attackPatterns[runningJumpIndex] is JumpAttackData ja) return ja.attackName;
+
             if (aoeCoroutine != null &&
                 runningAoEIndex >= 0 &&
                 attackPatterns != null &&
                 runningAoEIndex < attackPatterns.Length &&
                 attackPatterns[runningAoEIndex] is AoEAttackData a) return a.attackName;
+
             if (timeProjectileRoutine != null &&
                 runningTimeProjectileIndex >= 0 &&
                 attackPatterns != null &&
                 runningTimeProjectileIndex < attackPatterns.Length &&
                 attackPatterns[runningTimeProjectileIndex] is TimeProjectileAttackData t) return t.attackName;
+
+            if (IsSuicideExecuting &&
+                runningSuicideIndex >= 0 &&
+                attackPatterns != null &&
+                runningSuicideIndex < attackPatterns.Length &&
+                attackPatterns[runningSuicideIndex] is SuicideAttackData s) return s.attackName;
+
             return null;
         }
     }
@@ -83,9 +101,7 @@ public partial class EnemyAttackController : MonoBehaviour
 
         enemy = GetComponent<Enemy>();
 
-        // readyTimes 초기화 (길이 동기화 및 기본값 세팅)
         SyncReadyTimes(initialFill: true);
-
         globalReadyTime = Time.time;
 
         if (AttackCount == 0)
@@ -94,7 +110,6 @@ public partial class EnemyAttackController : MonoBehaviour
         Log($"INIT (validPatterns={AttackCount})");
     }
 
-    /// <summary> null / 미지원 타입 제거 </summary>
     private void CleanPatterns()
     {
         if (attackPatterns == null || attackPatterns.Length == 0) return;
@@ -106,7 +121,18 @@ public partial class EnemyAttackController : MonoBehaviour
         foreach (var p in attackPatterns)
         {
             if (p == null) { removedNull++; continue; }
-            if (p is MeleeAttackData || p is RushAttackData || p is RangedAttackData || p is JumpAttackData || p is AoEAttackData || p is ComboAttackData || p is TimeProjectileAttackData) list.Add(p);
+
+            bool supported =
+                p is MeleeAttackData ||
+                p is RushAttackData ||
+                p is RangedAttackData ||
+                p is JumpAttackData ||
+                p is AoEAttackData ||
+                p is ComboAttackData ||
+                p is TimeProjectileAttackData ||
+                p is SuicideAttackData;
+
+            if (supported) list.Add(p);
             else
             {
                 removedUnsupported++;
@@ -118,97 +144,123 @@ public partial class EnemyAttackController : MonoBehaviour
             Debug.LogWarning($"[EnemyAttackController] 패턴 정리: null {removedNull}개, 미지원 {removedUnsupported}개 제거 → 최종 {list.Count}개");
 
         attackPatterns = list.ToArray();
-
-        // 패턴 정리 후 readyTimes 길이 동기화 (현재 값 보존)
         SyncReadyTimes(initialFill: false);
     }
 
-    /// <summary>
-    /// readyTimes 배열을 AttackCount에 맞춰 동기화합니다.
-    /// initialFill = true 면 새로 생성된 인덱스는 -Infinity로 채웁니다.
-    /// initialFill = false 면 기존 readyTimes 값은 보존되고 새로 생긴 인덱스만 -Infinity로 채웁니다.
-    /// </summary>
     private void SyncReadyTimes(bool initialFill)
     {
         int n = AttackCount;
         var old = readyTimes;
-        if (old == null || old.Length != n)
+
+        if (old != null && old.Length == n)
+            return;
+
+        var nw = n > 0 ? new float[n] : System.Array.Empty<float>();
+
+        for (int i = 0; i < nw.Length; i++)
         {
-            var nw = n > 0 ? new float[n] : System.Array.Empty<float>();
-            for (int i = 0; i < nw.Length; i++)
-            {
-                if (!initialFill && old != null && i < old.Length)
-                    nw[i] = old[i];
-                else
-                    nw[i] = -Mathf.Infinity;
-            }
-            readyTimes = nw;
+            if (!initialFill && old != null && i < old.Length)
+                nw[i] = old[i];
+            else
+                nw[i] = -Mathf.Infinity;
         }
+
+        readyTimes = nw;
     }
 
     private void Update()
     {
-        // 기존 Update에 있던 Melee 진행/프리즈/종료 로직을 그대로 위임 호출
         TickMeleeUpdate();
 
-        // Hold 만료 (기존 로직 유지)
         if (holdActive && !IsAttackExecuting && !pendingExecuted && Time.time >= holdExpireTime)
         {
             Log($"[AttackFlow] HOLD TIMEOUT idx={pendingAttackIndex}");
             CancelPendingHold();
         }
 
-        // partial 쪽에서 필요하면 TickTimeProjectileUpdate 같은 헬퍼를 호출하도록 설계되어 있음.
         TickTimeProjectileUpdate();
     }
 
     #region 외부 조회
     public bool IsGlobalCooling() => Time.time < globalReadyTime;
+
     public bool IsOffCooldown(int index)
     {
         if (index < 0) return false;
         if (readyTimes == null || index >= readyTimes.Length) return false;
         return Time.time >= readyTimes[index];
     }
+
     public float GetAttackRange(int index)
     {
         if (index < 0 || index >= AttackCount) return 0f;
-        if (attackPatterns[index] is MeleeAttackData m) return m.range;
-        if (attackPatterns[index] is RushAttackData r) return r.range;
-        if (attackPatterns[index] is RangedAttackData rg) return rg.range;
-        if (attackPatterns[index] is JumpAttackData j) return j.range;
-        if (attackPatterns[index] is AoEAttackData a) return a.spawnRadius; // AoE: use spawnRadius as effective range
-        if (attackPatterns[index] is ComboAttackData c) return c.range;
-        if (attackPatterns[index] is TimeProjectileAttackData t) return t.range;
+
+        var so = attackPatterns[index];
+
+        if (so is MeleeAttackData m) return m.range;
+        if (so is RushAttackData r) return r.range;
+        if (so is RangedAttackData rg) return rg.range;
+        if (so is JumpAttackData j) return j.range;
+        if (so is AoEAttackData a) return a.spawnRadius;
+        if (so is ComboAttackData c) return c.range;
+        if (so is TimeProjectileAttackData t) return t.range;
+
+        // ✅ 변경: 자폭은 "시작 거리"를 사거리로 사용
+        if (so is SuicideAttackData s) return s.startRange;
+
         return 0f;
     }
+
     public float GetAttackCooldown(int index)
     {
         if (index < 0 || index >= AttackCount) return 0f;
-        if (attackPatterns[index] is MeleeAttackData m) return m.cooldown;
-        if (attackPatterns[index] is RushAttackData r) return r.cooldown;
-        if (attackPatterns[index] is RangedAttackData rg) return rg.cooldown;
-        if (attackPatterns[index] is JumpAttackData j) return j.cooldown;
-        if (attackPatterns[index] is AoEAttackData a) return a.cooldown;
-        if (attackPatterns[index] is ComboAttackData c) return c.cooldown;
-        if (attackPatterns[index] is TimeProjectileAttackData t) return t.cooldown;
+
+        var so = attackPatterns[index];
+
+        if (so is MeleeAttackData m) return m.cooldown;
+        if (so is RushAttackData r) return r.cooldown;
+        if (so is RangedAttackData rg) return rg.cooldown;
+        if (so is JumpAttackData j) return j.cooldown;
+        if (so is AoEAttackData a) return a.cooldown;
+        if (so is ComboAttackData c) return c.cooldown;
+        if (so is TimeProjectileAttackData t) return t.cooldown;
+        if (so is SuicideAttackData s) return s.cooldown;
+
         return 0f;
     }
     #endregion
 
-    #region 선택 & 시작 (랜덤 + 실행 플래그)
+    #region 선택 & 시작
     public int SelectAttackIndex(float distance)
     {
         if (IsAttackExecuting || IsGlobalCooling()) return -1;
 
+        // ✅ 기존 홀드 로직 유지
         if (pendingAttackIndex >= 0 && holdActive && !pendingExecuted)
         {
             float pr = GetAttackRange(pendingAttackIndex);
             if (distance <= pr && IsOffCooldown(pendingAttackIndex))
                 return pendingAttackIndex;
+
             return -1;
         }
 
+        // ✅ 최적화: 패턴이 1개면 List/Random 없이 바로 판단
+        if (AttackCount == 1)
+        {
+            int only = 0;
+            if (!IsOffCooldown(only)) return -1;
+
+            PreparePending(only);
+
+            float range = GetAttackRange(only);
+            if (distance <= range)
+                return only;
+
+            return -1;
+        }
+
+        // 다중 패턴일 때만 후보 리스트 생성
         List<int> candidates = null;
         for (int i = 0; i < AttackCount; i++)
         {
@@ -222,8 +274,8 @@ public partial class EnemyAttackController : MonoBehaviour
         int chosen = candidates[Random.Range(0, candidates.Count)];
         PreparePending(chosen);
 
-        float range = GetAttackRange(chosen);
-        if (distance <= range)
+        float chosenRange = GetAttackRange(chosen);
+        if (distance <= chosenRange)
             return chosen;
 
         return -1;
@@ -238,41 +290,16 @@ public partial class EnemyAttackController : MonoBehaviour
             PreparePending(index);
 
         var so = attackPatterns[index];
-        if (so is MeleeAttackData m)
-        {
-            StartMelee(m, index);
-            return true;
-        }
-        if (so is ComboAttackData c)
-        {
-            StartCombo(c, target, index);
-            return true;
-        }
-        if (so is RushAttackData r)
-        {
-            StartRush(r, target, index);
-            return true;
-        }
-        if (so is RangedAttackData rg)
-        {
-            StartRanged(rg, target, index);
-            return true;
-        }
-        if (so is JumpAttackData j)
-        {
-            StartJump(j, target, index);
-            return true;
-        }
-        if (so is AoEAttackData a)
-        {
-            StartAoE(a, target, index);
-            return true;
-        }
-        if (so is TimeProjectileAttackData tpa)
-        {
-            StartTimeProjectile(tpa, target, index);
-            return true;
-        }
+
+        if (so is MeleeAttackData m) { StartMelee(m, index); return true; }
+        if (so is ComboAttackData c) { StartCombo(c, target, index); return true; }
+        if (so is RushAttackData r) { StartRush(r, target, index); return true; }
+        if (so is RangedAttackData rg) { StartRanged(rg, target, index); return true; }
+        if (so is JumpAttackData j) { StartJump(j, target, index); return true; }
+        if (so is AoEAttackData a) { StartAoE(a, target, index); return true; }
+        if (so is TimeProjectileAttackData tpa) { StartTimeProjectile(tpa, target, index); return true; }
+        if (so is SuicideAttackData sda) { StartSuicide(sda, target, index); return true; }
+
         return false;
     }
     #endregion
@@ -300,6 +327,7 @@ public partial class EnemyAttackController : MonoBehaviour
     {
         if (holdActive)
             Log("HOLD CLEARED");
+
         holdActive = false;
         pendingAttackIndex = -1;
         pendingExecuted = false;
@@ -318,19 +346,24 @@ public partial class EnemyAttackController : MonoBehaviour
     {
         if (index < 0) return;
         if (readyTimes == null || index >= readyTimes.Length) return;
+
         readyTimes[index] = Time.time + Mathf.Max(0f, baseCooldown);
     }
-    private void ApplyGlobalCooldown() => globalReadyTime = Time.time + 글로벌쿨타임;
+
+    private void ApplyGlobalCooldown()
+    {
+        globalReadyTime = Time.time + 글로벌쿨타임;
+    }
 
     public void OnInterrupted()
     {
-        // 기존 동작을 유지하되, 공격별 정리 코드를 공격 파일로 분리
         InterruptMeleeIfNeeded();
         InterruptRushIfNeeded();
         InterruptRangedIfNeeded();
         InterruptJumpIfNeeded();
         InterruptAoEIfNeeded();
         InterruptComboIfNeeded();
+        InterruptSuicideIfNeeded();
 
         if (pendingAttackIndex >= 0 && !pendingExecuted)
         {
@@ -338,6 +371,7 @@ public partial class EnemyAttackController : MonoBehaviour
             CancelPendingHold();
         }
     }
+
     public void InterruptCooldown() => OnInterrupted();
     #endregion
 
@@ -363,6 +397,7 @@ public partial class EnemyAttackController : MonoBehaviour
     private Transform FindChildRecursive(Transform root, string name)
     {
         if (root == null || string.IsNullOrEmpty(name)) return null;
+
         foreach (var tr in root.GetComponentsInChildren<Transform>(true))
         {
             if (tr == null) continue;

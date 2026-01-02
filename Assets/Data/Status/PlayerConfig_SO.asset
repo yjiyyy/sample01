@@ -17,7 +17,7 @@ MonoBehaviour:
   layer:
     serializedVersion: 2
     m_Bits: 64
-  maxHealth: 100
+  maxHealth: 90
   mass: 1
   useAbsoluteMass: 1
   baseMoveSpeed: 10

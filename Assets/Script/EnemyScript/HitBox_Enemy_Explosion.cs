@@ -206,7 +206,6 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
     {
         if (ph == null) return;
 
-        // If player has a weapon controller, respect invincibility/evade flags.
         PlayerWeaponController pwc = ph.GetComponentInParent<PlayerWeaponController>() ?? ph.GetComponent<PlayerWeaponController>();
         if (pwc != null && pwc.IsInvincible())
         {
@@ -214,12 +213,10 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             return;
         }
 
-        // Distance-scaled knockback/stun
         float kbPower = data.knockbackPower * mul;
         float kbDuration = data.knockbackDuration * mul;
         float stun = data.stunDuration * mul;
 
-        // 1) Damage
         try
         {
             ph.ApplyDamage(dmg, hitDir, null, 1f);
@@ -230,14 +227,12 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             Debug.LogError($"[Explosion] Exception while applying damage to Player '{ph.gameObject.name}': {ex}");
         }
 
-        // ✅ 핵심: 폭발 데미지로 HP 0이 되었으면 넉백/스턴 스킵
         if (ph.GetCurrentHP() <= 0f)
         {
             if (VERBOSE) Debug.Log($"[Explosion] Player '{ph.gameObject.name}' is dead after damage -> skip knockback/stun.");
             return;
         }
 
-        // 2) Knockback/stun if alive
         if (pwc != null)
         {
             try
@@ -252,7 +247,6 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             return;
         }
 
-        // Fallback: try PlayerMovement.ApplyKnockback
         var pm = ph.GetComponentInParent<PlayerMovement>() ?? ph.GetComponent<PlayerMovement>();
         if (pm != null)
         {
@@ -272,29 +266,23 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
     {
         if (eh == null) return;
 
-        // Create a transient WeaponDataSO proxy and copy relevant fields from TPA SO (scaled by mul for knockback/stun).
         WeaponDataSO proxy = null;
         try
         {
             proxy = ScriptableObject.CreateInstance<WeaponDataSO>();
             proxy.hideFlags = HideFlags.HideAndDontSave;
 
-            // copy damage-unrelated fields (for death/animation/ragdoll/slice)
             proxy.deathMode = data.deathMode;
             proxy.ragdollImpulse = data.ragdollImpulse;
             proxy.ragdollUpImpulse = data.ragdollUpImpulse;
             proxy.ragdollSpinTorque = data.ragdollSpinTorque;
 
-            if (data.sliceTargets != null)
-                proxy.sliceTargets = new List<SliceTarget>(data.sliceTargets);
-            else
-                proxy.sliceTargets = new List<SliceTarget>();
-
+            proxy.sliceTargets = data.sliceTargets != null ? new List<SliceTarget>(data.sliceTargets) : new List<SliceTarget>();
             proxy.sliceImpulse = data.sliceImpulse;
+
             proxy.animationHoldDuration = data.animationHoldDuration;
             proxy.usePushInsteadOfKnockback = data.usePushInsteadOfKnockback;
 
-            // knockback/stun values should be attenuated by distance (mul)
             proxy.knockbackPower = data.knockbackPower * mul;
             proxy.knockbackDuration = data.knockbackDuration * mul;
             proxy.stunDuration = data.stunDuration * mul;
@@ -302,47 +290,19 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             proxy.jerkIntensity = data.jerkIntensity;
             proxy.jerkDuration = data.jerkDuration;
 
-            // Call damage with weapon proxy so EnemyDie/EnemyImpact can read weapon-specific settings
-            try
-            {
-                eh.ApplyDamage(dmg, hitDir, proxy, 1f);
-                Debug.Log($"[Explosion] Enemy '{eh.gameObject.name}' ApplyDamage called successfully with proxy.");
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"[Explosion] Exception while applying damage to Enemy '{eh.gameObject.name}': {ex}");
-            }
+            eh.ApplyDamage(dmg, hitDir, proxy, 1f);
 
-            // Apply knockback/push only if enemy didn't die from damage
             var enemyT = eh.GetComponentInParent<Enemy>();
             if (enemyT != null && enemyT.CurrentState != Enemy.EnemyState.Dead)
             {
-                try
-                {
-                    if (proxy.usePushInsteadOfKnockback)
-                    {
-                        enemyT.ApplyPush(hitDir, proxy, 1f);
-                        Debug.Log($"[Explosion] Enemy '{eh.gameObject.name}' ApplyPush called (power={proxy.knockbackPower}, dur={proxy.knockbackDuration}).");
-                    }
-                    else
-                    {
-                        enemyT.ApplyKnockback(hitDir, proxy, 1f);
-                        Debug.Log($"[Explosion] Enemy '{eh.gameObject.name}' ApplyKnockback called (power={proxy.knockbackPower}, dur={proxy.knockbackDuration}, stun={proxy.stunDuration}).");
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.LogError($"[Explosion] Exception while applying knockback/push to Enemy '{eh.gameObject.name}': {ex}");
-                }
+                if (proxy.usePushInsteadOfKnockback) enemyT.ApplyPush(hitDir, proxy, 1f);
+                else enemyT.ApplyKnockback(hitDir, proxy, 1f);
             }
         }
         finally
         {
-            // clean up transient proxy (Destroy defers removal until end of frame)
             if (proxy != null)
-            {
                 Object.Destroy(proxy);
-            }
         }
     }
 

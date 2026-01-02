@@ -25,7 +25,6 @@ public class EnemyAI : MonoBehaviour
     [Header("Forward 속도 정규화 시간")]
     [Range(0.1f, 2f)] public float forwardSpeedNormalizeTime = 0.25f;
 
-    // --- Peace / Detection 설정 (인스펙터에서 조정 가능)
     [Header("Peace / Detection")]
     [Tooltip("플레이어를 발견하는 반경 (유닛)")]
     public float detectionRadius = 8f;
@@ -50,7 +49,6 @@ public class EnemyAI : MonoBehaviour
     private float LowerBand => backstepDistance - 1f;
     private float UpperBand => backstepDistance + 1f;
 
-    // --- AI 모드 상태
     private enum AIState { Peace, Finding, Combat }
     private AIState aiState = AIState.Peace;
     private Vector3 spawnPosition;
@@ -63,11 +61,7 @@ public class EnemyAI : MonoBehaviour
     {
         enemy = GetComponent<Enemy>();
         attackCtrl = GetComponent<EnemyAttackController>();
-
-        // 기록해둔 스폰 위치를 배회 기준으로 사용
         spawnPosition = transform.position;
-
-        // 기본 모드는 Peace (스폰 직후 배회)
         aiState = AIState.Peace;
     }
 
@@ -84,7 +78,6 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // 공격 애니를 실행 중이면 공격 관련 처리 우선 (기존 동작 유지)
         if (ctx.CurrentState == Enemy.EnemyState.Attack)
         {
             HandleAttackFacing(ctx, player);
@@ -92,33 +85,23 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // AI 모드에 따른 분기
         switch (aiState)
         {
             case AIState.Peace:
                 PeaceTick(ctx, player);
                 break;
             case AIState.Finding:
-                // Finding 중에도 플레이어를 바라보게 함
                 IdleFacing(ctx, player);
                 break;
             case AIState.Combat:
-                // 기존 DriveDecision 로직 유지
-                if (backstepping)
-                {
-                    UpdateBackstep(ctx, player);
-                }
-                else
-                {
-                    DriveDecision(ctx, player);
-                }
+                if (backstepping) UpdateBackstep(ctx, player);
+                else DriveDecision(ctx, player);
                 break;
         }
     }
 
     private void PeaceTick(Enemy ctx, Transform player)
     {
-        // 플레이어 탐지(거리 기반, 성능을 위해 sqr사용)
         float sqrDist = (player.position - ctx.transform.position).sqrMagnitude;
         if (sqrDist <= detectionRadius * detectionRadius)
         {
@@ -126,7 +109,6 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // 평화 배회 행동: 타겟이 있으면 이동, 없으면 대기(Idle) 후 랜덤 타겟 선택
         if (hasRoamTarget)
         {
             Vector3 toTarget = roamTarget - ctx.transform.position;
@@ -134,37 +116,30 @@ public class EnemyAI : MonoBehaviour
             float dist = toTarget.magnitude;
             if (dist <= 0.25f)
             {
-                // 도착: 대기 시간
                 hasRoamTarget = false;
                 idleTimer = Random.Range(idleMin, idleMax);
                 ctx.animCtrl?.SetSignedSpeed(0f);
             }
             else
             {
-                // 이동
                 Vector3 dir = toTarget.normalized;
                 ctx.RequestLook(dir);
                 ctx.RequestMove(dir, Mathf.Clamp01(peaceMoveSpeedMultiplier));
-                // 애니메이터에도 속도 전달 (0~1)
                 ctx.animCtrl?.SetSignedSpeed(Mathf.Clamp01(peaceMoveSpeedMultiplier));
             }
         }
         else
         {
-            // idle 중인지 체크
             if (idleTimer > 0f)
             {
                 idleTimer -= Time.deltaTime;
                 ctx.animCtrl?.SetSignedSpeed(0f);
-                // 바라보기 정도만 유지
             }
             else
             {
-                // 새로운 배회 타겟 생성 (spawnPosition 기준)
                 Vector2 rnd2 = Random.insideUnitCircle * roamRadius;
                 roamTarget = new Vector3(spawnPosition.x + rnd2.x, ctx.transform.position.y, spawnPosition.z + rnd2.y);
                 hasRoamTarget = true;
-                // 준비: 애니에서 걷기(느리게)
                 ctx.animCtrl?.SetSignedSpeed(Mathf.Clamp01(peaceMoveSpeedMultiplier));
             }
         }
@@ -175,7 +150,6 @@ public class EnemyAI : MonoBehaviour
         if (aiState == AIState.Finding) return;
         aiState = AIState.Finding;
 
-        // 이동/속도 보간 초기화
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
 
@@ -185,13 +159,11 @@ public class EnemyAI : MonoBehaviour
 
     private IEnumerator FindingCoroutine(Enemy ctx, Transform player)
     {
-        // Find 애니 재생(Animator에 "Find" trigger 추가 필요)
         ctx.animCtrl?.PlayFind();
 
         float t = 0f;
         while (t < findDuration)
         {
-            // 만약 도중에 상태가 Dead/Stunned/Knockback이면 Finding 취소하고 Peace로 복귀
             if (ctx.CurrentState == Enemy.EnemyState.Dead ||
                 ctx.CurrentState == Enemy.EnemyState.ShieldBreak ||
                 ctx.CurrentState == Enemy.EnemyState.Stunned ||
@@ -206,12 +178,9 @@ public class EnemyAI : MonoBehaviour
             yield return null;
         }
 
-        // 애니 재생 후 전투 모드로 전환
         aiState = AIState.Combat;
         findingCoroutine = null;
 
-        // 전투 모드로 전환하면 기존 AI가 플레이어를 추적하도록 함
-        // signed speed 초기화
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
     }
@@ -263,6 +232,38 @@ public class EnemyAI : MonoBehaviour
         {
             reason = "GLOBAL";
             return true;
+        }
+
+        // ✅ 최적화: 패턴 1개면 루프 없이 0번만 검사
+        if (attackCtrl.AttackCount == 1)
+        {
+            const int idx = 0;
+
+            bool ready = attackCtrl.IsOffCooldown(idx);
+            float r = attackCtrl.GetAttackRange(idx);
+
+            if (!ready)
+            {
+                if (distance <= UpperBand)
+                {
+                    reason = "ALL_COOLDOWN_WAIT_RING";
+                    return true;
+                }
+                reason = "APPROACH_RING";
+                return false;
+            }
+
+            // ready인데 사거리 밖이면 그냥 추적
+            if (distance > r)
+            {
+                reason = "NO_RANGE";
+                return false;
+            }
+
+            // ready인데 사거리 안인데(=지금 당장 공격 가능 거리)
+            // 유지모드 할 이유 없음(바로 공격 시도)
+            reason = "READY_IN_RANGE";
+            return false;
         }
 
         bool anyReadyOverall = false;
