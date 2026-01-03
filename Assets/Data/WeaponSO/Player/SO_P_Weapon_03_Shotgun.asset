@@ -16,6 +16,7 @@ MonoBehaviour:
   weaponName: Shotgun_Base
   icon: {fileID: 21300000, guid: 419adb5ccb916e74b84ffa872297305b, type: 3}
   category: 0
+  weaponPrefab: {fileID: 522649090004456507, guid: 3e0286ade08eaa547bd0a6bce8217b10, type: 3}
   overrideController: {fileID: 22100000, guid: edf16d4553c293c42b2ec9e26bb30453, type: 2}
   cooldown: 1
   damage: 10
@@ -28,17 +29,28 @@ MonoBehaviour:
   jerkDuration: 0.2
   stunDuration: 2
   usePushInsteadOfKnockback: 0
-  hitstopTime: 0.2
+  animationHoldDuration: 0.2
+  deathMode: 0
   ragdollImpulse: 5
-  upwardImpulse: 3
-  torqueImpulse: 6
-  sliceForce: 8
-  deathType: 1
-  possibleSliceParts: 
+  ragdollUpImpulse: 0
+  ragdollSpinTorque: 0
+  sliceTargets: 
+  sliceImpulse: 0
   chargeSlot: {fileID: 0}
   recoilStartDelay: 0.15
   recoilPower: 3
   recoilDuration: 0.2
+  socketNames:
+  - R_Hand_Weapon
+  meleeSpawnPointPathOrName: 
+  projectileSpawnPointPathOrName: 
+  meleeHitboxPrefab: {fileID: 0}
+  projectilePrefab: {fileID: 0}
+  shotgunSectorPrefab: {fileID: 0}
+  dualWield: 0
+  hitboxSpawnDelay2: 0
+  meleeSpawnPoint2PathOrName: 
+  projectileSpawnPoint2PathOrName: 
   shotgunRadius: 60
   shotgunAngle: 60
   shotgunUseDistanceFalloff: 1

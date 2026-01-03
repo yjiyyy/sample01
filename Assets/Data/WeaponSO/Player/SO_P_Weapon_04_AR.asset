@@ -16,6 +16,7 @@ MonoBehaviour:
   weaponName: AR_Base
   icon: {fileID: 21300000, guid: 11d8677ec0e09024d8d623faa359e265, type: 3}
   category: 0
+  weaponPrefab: {fileID: 4911667774358884905, guid: b65c1f005bff3494399f619b0ddfe200, type: 3}
   overrideController: {fileID: 22100000, guid: 26da7d36aa69f4c4ebdaa1aa693b4b8f, type: 2}
   cooldown: 0.2
   damage: 1
@@ -28,19 +29,28 @@ MonoBehaviour:
   jerkDuration: 0.2
   stunDuration: 0
   usePushInsteadOfKnockback: 1
-  animationHoldDuration: 1
+  animationHoldDuration: 0.1
+  deathMode: 0
   ragdollImpulse: 5
-  upwardImpulse: 3
-  torqueImpulse: 6
-  sliceForce: 8
-  deathType: 1
-  possibleSliceParts: 
+  ragdollUpImpulse: 0
+  ragdollSpinTorque: 0
+  sliceTargets: 
+  sliceImpulse: 0
   chargeSlot: {fileID: 0}
   recoilStartDelay: 0
   recoilPower: 0.1
   recoilDuration: 0.1
   socketNames:
   - R_Hand_Weapon
+  meleeSpawnPointPathOrName: 
+  projectileSpawnPointPathOrName: 
+  meleeHitboxPrefab: {fileID: 0}
+  projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
+  shotgunSectorPrefab: {fileID: 0}
+  dualWield: 0
+  hitboxSpawnDelay2: 0
+  meleeSpawnPoint2PathOrName: 
+  projectileSpawnPoint2PathOrName: 
   lockRotationDuringFiring: 1
   allowMoveWhileFiring: 1
   projectileSpeed: 40

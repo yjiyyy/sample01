@@ -5,15 +5,22 @@ using System.Collections.Generic;
 /// PlayerEquipmentController
 /// - 장착 관련 API 호환성(기존 Equip(...) 호출을 유지)
 /// - 무기 소켓 바인딩은 WeaponDataSO.socketNames(List<string>) 를 사용하여 플레이어 계층에서 이름으로 검색합니다.
-/// - 변경: Instantiate 시 부모를 지정하도록 하여 WeaponBehavior.Awake()가 이미 부모 계층에 붙어있는 상태에서 실행되도록 개선.
+/// - Instantiate 시 부모를 지정하여 WeaponBehavior.Awake()가 부모 계층에서 실행되도록 구성.
+///
+/// [DualWield 확장]
+/// - CurrentWeaponData.dualWield == true 이고 socketNames에 2개 이상 있으면:
+///   socketNames[0] = 메인(오른손), socketNames[1] = 서브(왼손)으로 같은 프리팹을 2개 장착합니다.
+/// - 탄창 공유를 위해 서브(왼손) 인스턴스에서는 WeaponBehavior/AmmoRuntime을 제거하고 모델만 남깁니다.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerEquipmentController : MonoBehaviour
 {
     private PlayerAnimationController animCtrl;
 
-    public GameObject CurrentWeapon { get; private set; }
-    public WeaponBehavior WeaponBehavior { get; private set; }
+    public GameObject CurrentWeapon { get; private set; }   // 메인(오른손)
+    public GameObject SecondaryWeapon { get; private set; } // 서브(왼손, 모델만)
+
+    public WeaponBehavior WeaponBehavior { get; private set; } // 메인만 유지
     public WeaponDataSO CurrentWeaponData { get; private set; }
 
     // Default weapon prefab assigned by PlayerFacade (PlayerConfig.defaultWeaponPrefab)
@@ -34,19 +41,15 @@ public class PlayerEquipmentController : MonoBehaviour
     private RuntimeAnimatorController baseController;
 
     // ----------------- Setup overloads for backward compatibility -----------------
-    // Original code used Setup(Transform socket, PlayerAnimationController animCtrl)
     public void Setup(Transform socket, PlayerAnimationController animationController)
     {
-        // socket is deprecated: we now resolve mount per-weapon via WeaponDataSO.socketNames
         Setup(animationController);
     }
 
-    // Newer simplified Setup
     public void Setup(PlayerAnimationController animationController)
     {
         animCtrl = animationController;
 
-        // cache base controller if available
         if (animCtrl != null && animCtrl.GetAnimator() != null)
         {
             baseController = animCtrl.GetAnimator().runtimeAnimatorController;
@@ -64,15 +67,10 @@ public class PlayerEquipmentController : MonoBehaviour
     }
 
     // ----------------- Public Equip APIs (compatibility) -----------------
-
-    // Original 3-arg API preserved for callers that still call it
     public void Equip(GameObject weaponPrefab, GameObject defaultWeaponPrefab, bool debugLogs = false)
     {
-        // save snapshots, destroy existing, then spawn as in legacy behavior
         SaveCurrentSnapshots();
-
-        if (CurrentWeapon != null)
-            Destroy(CurrentWeapon);
+        Unequip();
 
         GameObject prefabToSpawn = weaponPrefab != null ? weaponPrefab : defaultWeaponPrefab;
         if (prefabToSpawn == null)
@@ -81,18 +79,18 @@ public class PlayerEquipmentController : MonoBehaviour
             return;
         }
 
-        // Use EquipPrefab for consistent binding rules
-        EquipPrefab(prefabToSpawn, transform.root);
+        // debugLogs를 EquipPrefab로 전달 (스코프 에러 방지)
+        EquipPrefab(prefabToSpawn, transform.root, debugLogs);
     }
 
-    // Simpler API
     public void EquipWeapon(GameObject weaponPrefab)
     {
         Equip(weaponPrefab, defaultWeaponPrefab, debugLogs: false);
     }
 
     // New API: equip by prefab, searching player root for named sockets
-    public void EquipPrefab(GameObject weaponPrefab, Transform playerRoot)
+    // debugLogs 기본값 false로 둬서 기존 호출과 호환
+    public void EquipPrefab(GameObject weaponPrefab, Transform playerRoot, bool debugLogs = false)
     {
         if (weaponPrefab == null)
         {
@@ -100,81 +98,79 @@ public class PlayerEquipmentController : MonoBehaviour
             return;
         }
 
-        // destroy old
-        if (CurrentWeapon != null)
-            Destroy(CurrentWeapon);
+        Unequip();
 
-        GameObject inst = null;
+        // ----------------- 1) 메인 무기(오른손) -----------------
+        GameObject instMain = playerRoot != null
+            ? Instantiate(weaponPrefab, playerRoot, false)
+            : Instantiate(weaponPrefab);
 
-        // We need CurrentWeaponData to decide socketNames. But WeaponBehavior (on the prefab) will be setup in Awake.
-        // Strategy: instantiate attached to playerRoot initially (so Awake can find Root_dummy), then if mount found later adjust transform.
-        if (playerRoot != null)
-        {
-            // Instantiate under playerRoot so WeaponBehavior.Awake can find Root_dummy / other spawn points reliably.
-            inst = Instantiate(weaponPrefab, playerRoot, false);
-        }
-        else
-        {
-            inst = Instantiate(weaponPrefab);
-        }
+        instMain.name = weaponPrefab.name;
+        CurrentWeapon = instMain;
 
-        inst.name = weaponPrefab.name;
-        CurrentWeapon = inst;
-        WeaponBehavior wb = inst.GetComponent<WeaponBehavior>();
+        WeaponBehavior wb = instMain.GetComponent<WeaponBehavior>();
         WeaponBehavior = wb;
         CurrentWeaponData = wb != null ? wb.data : null;
 
-        // Now that instance exists and Awake already ran (with parent if provided), attempt to find the best mount.
-        Transform desiredMount = null;
+        // 메인 소켓: socketNames[0] 우선, 없으면 기존 호환(순회)
+        Transform mainMount = null;
         if (playerRoot != null && CurrentWeaponData != null && CurrentWeaponData.socketNames != null)
         {
-            foreach (var n in CurrentWeaponData.socketNames)
-            {
-                if (string.IsNullOrEmpty(n)) continue;
-                desiredMount = FindDeepChild(playerRoot, n);
-                if (desiredMount != null) break;
-            }
-        }
+            if (CurrentWeaponData.socketNames.Count > 0 && !string.IsNullOrEmpty(CurrentWeaponData.socketNames[0]))
+                mainMount = FindDeepChild(playerRoot, CurrentWeaponData.socketNames[0]);
 
-        // If desired mount is found and the instance isn't already parented to it, reparent (keeps local transform)
-        if (desiredMount != null && inst.transform.parent != desiredMount)
-        {
-            inst.transform.SetParent(desiredMount, false);
-            inst.transform.localPosition = Vector3.zero;
-            inst.transform.localRotation = Quaternion.identity;
-            inst.transform.localScale = Vector3.one;
-        }
-        else
-        {
-            // ensure local transform reset (we instantiated with playerRoot parent earlier which keeps transform relative)
-            inst.transform.localPosition = Vector3.zero;
-            inst.transform.localRotation = Quaternion.identity;
-            inst.transform.localScale = Vector3.one;
-        }
-
-        // Ensure WeaponBehavior initializes if needed
-        if (wb != null)
-        {
-            wb.EnsureAmmoInitialized();
-        }
-
-        // Apply animator override if weapon data has one, otherwise restore base controller
-        var animator = animCtrl != null ? animCtrl.GetAnimator() : null;
-        if (animator != null)
-        {
-            if (CurrentWeaponData != null && CurrentWeaponData.overrideController != null)
+            if (mainMount == null)
             {
-                animator.runtimeAnimatorController = CurrentWeaponData.overrideController;
-                if (debugModeUsedForLog()) Debug.Log($"[Equip] Animator <- Override({CurrentWeaponData.overrideController.name})");
-            }
-            else
-            {
-                if (baseController != null)
+                foreach (var n in CurrentWeaponData.socketNames)
                 {
-                    animator.runtimeAnimatorController = baseController;
-                    if (debugModeUsedForLog()) Debug.Log("[Equip] Animator <- BaseController (default)");
+                    if (string.IsNullOrEmpty(n)) continue;
+                    mainMount = FindDeepChild(playerRoot, n);
+                    if (mainMount != null) break;
                 }
             }
+        }
+
+        AttachToMount(instMain.transform, mainMount);
+
+        if (wb != null)
+            wb.EnsureAmmoInitialized();
+
+        ApplyAnimatorOverride(debugLogs);
+
+        // ----------------- 2) 듀얼이면 서브 무기(왼손, 모델만) -----------------
+        if (playerRoot != null &&
+            CurrentWeaponData != null &&
+            CurrentWeaponData.dualWield &&
+            CurrentWeaponData.socketNames != null &&
+            CurrentWeaponData.socketNames.Count >= 2 &&
+            !string.IsNullOrEmpty(CurrentWeaponData.socketNames[1]))
+        {
+            Transform subMount = FindDeepChild(playerRoot, CurrentWeaponData.socketNames[1]);
+            if (subMount == null)
+            {
+                Debug.LogWarning($"[Equip] dualWield=true 이지만 왼손 소켓을 못 찾음: '{CurrentWeaponData.socketNames[1]}'");
+                return;
+            }
+
+            GameObject instSub = Instantiate(weaponPrefab, playerRoot, false);
+            instSub.name = weaponPrefab.name + "_Sub";
+            SecondaryWeapon = instSub;
+
+            // 탄창 공유(중복 공격 방지)를 위해 서브는 모델 전용으로 만든다
+            var subWB = instSub.GetComponent<WeaponBehavior>();
+            if (subWB != null) Destroy(subWB);
+
+            var subAmmo = instSub.GetComponent<WeaponAmmoRuntime>();
+            if (subAmmo != null) Destroy(subAmmo);
+
+            var subAmmoAR = instSub.GetComponent<WeaponAmmoRuntime_AR>();
+            if (subAmmoAR != null) Destroy(subAmmoAR);
+
+            AttachToMount(instSub.transform, subMount);
+
+#if UNITY_EDITOR
+            if (debugLogs) Debug.Log("[Equip] DualWield: spawned secondary weapon model.");
+#endif
         }
     }
 
@@ -182,7 +178,7 @@ public class PlayerEquipmentController : MonoBehaviour
     public void EquipDefault(Transform playerRoot)
     {
         if (DefaultWeaponPrefab == null) return;
-        EquipPrefab(DefaultWeaponPrefab, playerRoot);
+        EquipPrefab(DefaultWeaponPrefab, playerRoot, debugLogs: false);
     }
 
     public void Unequip()
@@ -191,15 +187,21 @@ public class PlayerEquipmentController : MonoBehaviour
         {
             Destroy(CurrentWeapon);
             CurrentWeapon = null;
-            WeaponBehavior = null;
-            CurrentWeaponData = null;
         }
+
+        if (SecondaryWeapon != null)
+        {
+            Destroy(SecondaryWeapon);
+            SecondaryWeapon = null;
+        }
+
+        WeaponBehavior = null;
+        CurrentWeaponData = null;
     }
 
     // ----------------- Snapshot helpers (kept lightweight) -----------------
     private void SaveCurrentSnapshots()
     {
-        // Implementation kept minimal to avoid compile errors; snapshot logic exists in original repo.
         SaveCurrentGunSnapshot();
         SaveCurrentARSnapshot();
         SaveCurrentShotgunSnapshot();
@@ -220,9 +222,6 @@ public class PlayerEquipmentController : MonoBehaviour
         int reserve = gun.infiniteReserve ? 0 : ammo.CurrentReserve;
 
         gunAmmoSnapshots[gun] = new AmmoSnapshot { magazine = magazine, reserve = reserve };
-#if UNITY_EDITOR
-        Debug.Log($"[Ammo] gun snapshot saved: {gun.weaponName}");
-#endif
     }
 
     private void SaveCurrentARSnapshot()
@@ -272,10 +271,39 @@ public class PlayerEquipmentController : MonoBehaviour
         return null;
     }
 
-    private bool debugModeUsedForLog()
+    private void AttachToMount(Transform inst, Transform mount)
     {
-        // Try to find a PlayerWeaponController on root to query debugMode if present (best-effort)
-        var pwc = GetComponentInParent<PlayerWeaponController>();
-        return pwc != null ? pwc.hideFlags == HideFlags.None : false;
+        if (inst == null) return;
+
+        if (mount != null && inst.parent != mount)
+            inst.SetParent(mount, false);
+
+        inst.localPosition = Vector3.zero;
+        inst.localRotation = Quaternion.identity;
+        inst.localScale = Vector3.one;
+    }
+
+    private void ApplyAnimatorOverride(bool debugLogs)
+    {
+        var animator = animCtrl != null ? animCtrl.GetAnimator() : null;
+        if (animator == null) return;
+
+        if (CurrentWeaponData != null && CurrentWeaponData.overrideController != null)
+        {
+            animator.runtimeAnimatorController = CurrentWeaponData.overrideController;
+#if UNITY_EDITOR
+            if (debugLogs) Debug.Log($"[Equip] Animator <- Override({CurrentWeaponData.overrideController.name})");
+#endif
+        }
+        else
+        {
+            if (baseController != null)
+            {
+                animator.runtimeAnimatorController = baseController;
+#if UNITY_EDITOR
+                if (debugLogs) Debug.Log("[Equip] Animator <- BaseController (default)");
+#endif
+            }
+        }
     }
 }

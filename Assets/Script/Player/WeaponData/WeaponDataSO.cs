@@ -4,7 +4,9 @@ using UnityEngine.Serialization;
 
 /// <summary>
 /// Weapon data ScriptableObject (common for most weapons)
-/// - DeathMode 및 Ragdoll/Slice 필드 추가.
+/// - 기존 필드 + (WeaponBehavior 완전 이관용) 스폰포인트/프리팹 필드
+/// - 듀얼(2번째 스폰포인트/딜레이) 필드
+/// - PlayerAnimationTester용 weaponPrefab 필드
 /// </summary>
 
 public enum DamageTargetType
@@ -14,22 +16,20 @@ public enum DamageTargetType
     Both
 }
 
-// 죽음 방식 선택
 public enum DeathMode
 {
     Animation,
     Ragdoll
 }
 
-// 새로 추가: 슬라이스 타겟(본 그룹)
 public enum SliceTarget
 {
-    Head,       // Bip001 Head
-    LeftArm,    // Bip001 L UpperArm
-    RightArm,   // Bip001 R UpperArm
-    LeftLeg,    // Bip001 L Thigh
-    RightLeg,   // Bip001 R Thigh
-    All         // 위 모든 파트 전체 분리
+    Head,
+    LeftArm,
+    RightArm,
+    LeftLeg,
+    RightLeg,
+    All
 }
 
 [CreateAssetMenu(menuName = "Weapon/WeaponDataSO")]
@@ -40,6 +40,11 @@ public class WeaponDataSO : ScriptableObject
     public string weaponName = "NewWeapon";
     public Sprite icon;
     public WeaponCategory category = WeaponCategory.Primary;
+
+    [Header("장착 프리팹 (테스트/장착용)")]
+    [Tooltip("이 WeaponDataSO를 장착할 때 사용할 무기 프리팹.\n" +
+             "PlayerAnimationTester(에디터 테스트)에서 이 값을 사용해 장착합니다.")]
+    public GameObject weaponPrefab;
 
     [Header("애니메이션 세트 (Animator Override Controller 방식)")]
     public AnimatorOverrideController overrideController;
@@ -65,30 +70,19 @@ public class WeaponDataSO : ScriptableObject
     [Header("Push(밀림) 옵션")]
     public bool usePushInsteadOfKnockback = false;
 
-    // renamed from hitstopTime -> animationHoldDuration
     [FormerlySerializedAs("hitstopTime")]
     public float animationHoldDuration = 0f;
 
     [Header("처치 연출 선택")]
-    [Tooltip("죽음 방식 선택: Animation(애니메이션) 또는 Ragdoll(물리 랙돌)")]
     public DeathMode deathMode = DeathMode.Animation;
 
     [Header("Ragdoll 임펄스(죽음이 Ragdoll일 때만 사용)")]
-    [Tooltip("수평(히트 방향) 속도 변화(m/s). ForceMode.VelocityChange로 적용.")]
     public float ragdollImpulse = 5f;
-
-    [Tooltip("위로 띄우는 속도 변화(m/s). ForceMode.VelocityChange로 추가.")]
     public float ragdollUpImpulse = 0f;
-
-    [Tooltip("회전 토크(ForceMode.VelocityChange). 전체 분배 기준값(힙=1.0, 머리=0.8, 기타=0.5).")]
     public float ragdollSpinTorque = 0f;
 
-    /* ───────── Slice(본 분리) 옵션 ───────── */
     [Header("Slice(본 분리)")]
-    [Tooltip("슬라이스 대상 본 목록. 여러 개 지정 시 균등 확률로 하나를 선택합니다. All을 지정하면 전체 분리합니다.")]
     public List<SliceTarget> sliceTargets = new List<SliceTarget>();
-
-    [Tooltip("슬라이스된 파츠(선택된 본과 모든 하위 본)에만 적용할 힘(단일 값). 거리와 높이 모두 이 값 하나로 사용합니다. ForceMode.VelocityChange로 적용.")]
     public float sliceImpulse = 0f;
 
     [Header("Charge Attack (무기별 선택 적용)")]
@@ -101,6 +95,37 @@ public class WeaponDataSO : ScriptableObject
 
     [Header("Mount / Socket names (priority order)")]
     public List<string> socketNames = new List<string>() { "R_Hand_Weapon" };
+
+    // ---------------- 완전 이관: Spawn points & prefabs ----------------
+    [Header("Attack Spawn Points (완전 이관)")]
+    [Tooltip("근접 히트박스 스폰 포인트(1). 비워두면 플레이어 루트에서 'Root_dummy'를 자동 사용.\n" +
+             "값을 넣으면 플레이어 루트 기준으로 해당 이름/경로를 찾아 사용합니다.")]
+    public string meleeSpawnPointPathOrName = "";
+
+    [Tooltip("원거리 스폰 포인트(1). 비워두면 무기(프리팹) 내부에서 'Fire_Point'를 자동 사용.\n" +
+             "값을 넣으면 무기(프리팹) 기준으로 해당 이름/경로를 찾아 사용합니다.")]
+    public string projectileSpawnPointPathOrName = "";
+
+    [Header("Attack Prefabs (완전 이관)")]
+    public GameObject meleeHitboxPrefab;
+    public GameObject projectilePrefab;
+    public GameObject shotgunSectorPrefab;
+
+    // ---------------- Dual Wield ----------------
+    [Header("Dual Wield (양손 옵션)")]
+    [Tooltip("true면 1회 공격에서 스폰을 최대 2번(1번/2번) 시도합니다.\n" +
+             "2번 스폰은 2번째 스폰포인트가 입력된 경우에만 나갑니다.")]
+    public bool dualWield = false;
+
+    [Tooltip("2번째 스폰 딜레이(초). 0이면 거의 동시에 나갑니다.")]
+    public float hitboxSpawnDelay2 = 0f;
+
+    [Header("Dual Wield - Second Spawn Points")]
+    [Tooltip("근접 스폰 포인트(2). 비워두면 2번째 근접 스폰은 안 나갑니다. (플레이어 루트 기준 이름/경로)")]
+    public string meleeSpawnPoint2PathOrName = "";
+
+    [Tooltip("원거리 스폰 포인트(2). 비워두면 2번째 원거리 스폰은 안 나갑니다. (무기 내부 기준 이름/경로)")]
+    public string projectileSpawnPoint2PathOrName = "";
 
 #if UNITY_EDITOR
     private void OnValidate()
@@ -124,10 +149,10 @@ public class WeaponDataSO : ScriptableObject
 
         sliceImpulse = Mathf.Max(0f, sliceImpulse);
 
+        hitboxSpawnDelay2 = Mathf.Max(0f, hitboxSpawnDelay2);
+
         if (string.IsNullOrEmpty(id))
-        {
             Debug.LogWarning($"WeaponDataSO '{name}' has empty id. Please set a unique id for inventory/DB usage.");
-        }
     }
 #endif
 }
