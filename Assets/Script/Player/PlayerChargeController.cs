@@ -236,69 +236,98 @@ public class PlayerChargeController : MonoBehaviour
             yield break;
         }
 
-        if (slot.spawnDelay > 0f)
+        // Prepare duration limit (if duration not set, use same default as maintain routine)
+        float maxDuration = (slot.duration > 0f) ? slot.duration : 0.8f;
+
+        // Defensive: if spawnCount is zero or list empty, nothing to do
+        if (slot.spawnCount <= 0 || slot.spawnDelays == null || slot.spawnDelays.Count == 0)
         {
-            float waited = 0f;
-            while (waited < slot.spawnDelay)
-            {
-                var s = getState != null ? getState() : PlayerState.Idle;
-                if (s == PlayerState.Knockback || s == PlayerState.Stun ||
-                    s == PlayerState.Dead || s == PlayerState.Evade)
-                {
-                    chargeSpawnRoutine = null;
-                    yield break;
-                }
-                float step = Mathf.Min(Time.deltaTime, slot.spawnDelay - waited);
-                waited += step;
-                yield return null;
-            }
+            if (debugMode) Debug.Log("[Charge] spawnDelays 비어있음 → 스폰 없음");
+            chargeSpawnRoutine = null;
+            yield break;
         }
+
+        // Ensure spawn delays are in ascending order (OnValidate already sorts, but double-check)
+        List<float> delays = new List<float>(slot.spawnDelays);
+        delays.Sort();
 
         Transform spawn = spawnPoint != null ? spawnPoint : transform;
 
         EnsureChargeWeaponProxy(slot);
 
-        GameObject hb = Instantiate(slot.hitBoxPrefab, spawn.position, spawn.rotation);
+        float startTime = Time.time;
 
-        if (hb.TryGetComponent<HitBox_PC>(out var hitbox))
+        for (int i = 0; i < delays.Count; i++)
         {
-            hitbox.SetWeapon(chargeWeaponProxy);
-
-            if (slot.enableAreaDot)
+            float d = delays[i];
+            // Skip scheduled spawns that are after the allowed duration
+            if (d > maxDuration)
             {
-                float dmgPerTick = slot.dotDamagePerTick > 0f ? slot.dotDamagePerTick : slot.damage;
-                float interval = Mathf.Max(0.01f, slot.dotTickInterval);
+                if (debugMode)
+                    Debug.Log($"[Charge] Scheduled spawn at {d:F2}s exceeds duration {maxDuration:F2}s → 무시");
+                continue;
+            }
 
-                hitbox.Initialize(
-                    dmgPerTick,
-                    slot.range,
-                    slot.knockbackPower,
-                    slot.hitBoxLifetime,
-                    allowDup: true,
-                    dupInterval: interval
-                );
+            float targetTime = startTime + d;
+
+            // Wait until targetTime, checking cancel conditions each frame
+            while (Time.time < targetTime)
+            {
+                var s = getState != null ? getState() : PlayerState.Idle;
+                if (s == PlayerState.Knockback || s == PlayerState.Stun ||
+                    s == PlayerState.Dead || s == PlayerState.Evade)
+                {
+                    // Cancel entire spawn sequence
+                    chargeSpawnRoutine = null;
+                    yield break;
+                }
+
+                yield return null;
+            }
+
+            // Time reached: spawn one hitbox
+            GameObject hb = Instantiate(slot.hitBoxPrefab, spawn.position, spawn.rotation);
+
+            if (hb.TryGetComponent<HitBox_PC>(out var hitbox))
+            {
+                hitbox.SetWeapon(chargeWeaponProxy);
+
+                if (slot.enableAreaDot)
+                {
+                    float dmgPerTick = slot.dotDamagePerTick > 0f ? slot.dotDamagePerTick : slot.damage;
+                    float interval = Mathf.Max(0.01f, slot.dotTickInterval);
+
+                    hitbox.Initialize(
+                        dmgPerTick,
+                        slot.range,
+                        slot.knockbackPower,
+                        slot.hitBoxLifetime,
+                        allowDup: true,
+                        dupInterval: interval
+                    );
+                }
+                else
+                {
+                    hitbox.Initialize(
+                        slot.damage,
+                        slot.range,
+                        slot.knockbackPower,
+                        slot.hitBoxLifetime
+                    );
+                }
             }
             else
             {
-                hitbox.Initialize(
-                    slot.damage,
-                    slot.range,
-                    slot.knockbackPower,
-                    slot.hitBoxLifetime
-                );
+                Debug.LogWarning("⚠ 차지 힛박스 프리팹에 HitBox_PC 컴포넌트가 없습니다.");
             }
-        }
-        else
-        {
-            Debug.LogWarning("⚠ 차지 힛박스 프리팹에 HitBox_PC 컴포넌트가 없습니다.");
-        }
 
 #if UNITY_EDITOR
-        if (debugMode)
-        {
-            Debug.Log($"[Charge] HB Spawn(Delay {slot.spawnDelay:F2}s) │ dmg:{slot.damage}, range:{slot.range}, kb:{slot.knockbackPower}, life:{slot.hitBoxLifetime}, dup:{slot.enableAreaDot}");
-        }
+            if (debugMode)
+            {
+                Debug.Log($"[Charge] HB Spawn(idx:{i}, Delay {d:F2}s) │ dmg:{slot.damage}, range:{slot.range}, kb:{slot.knockbackPower}, life:{slot.hitBoxLifetime}, dup:{slot.enableAreaDot}");
+            }
 #endif
+        }
 
         chargeSpawnRoutine = null;
     }
@@ -319,7 +348,16 @@ public class PlayerChargeController : MonoBehaviour
         // --- animationHoldDuration(구 hitstopTime) 복사 ---
         chargeWeaponProxy.animationHoldDuration = slot.animationHoldDuration;
 
-        // 처치 연출 파라미터 관련 필드 제거됨 - 더 이상 복사하지 않음
+        // --- 처치 연출 관련 필드 복사 (PlayerChargeAttackSO에서 설정한 값이 그대로 반영되도록) ---
+        chargeWeaponProxy.deathMode = slot.deathMode;
+        chargeWeaponProxy.ragdollImpulse = slot.ragdollImpulse;
+        chargeWeaponProxy.ragdollUpImpulse = slot.ragdollUpImpulse;
+        chargeWeaponProxy.ragdollSpinTorque = slot.ragdollSpinTorque;
+        // 안전하게 리스트 복사 (null 체크)
+        chargeWeaponProxy.sliceTargets = (slot.sliceTargets != null) ? new List<SliceTarget>(slot.sliceTargets) : new List<SliceTarget>();
+        chargeWeaponProxy.sliceImpulse = slot.sliceImpulse;
+
+        // 처치 연출 파라미터 관련 필드 추가 복사 완료
     }
 
     private IEnumerator EndInvincibleLater(float duration)

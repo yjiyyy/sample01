@@ -22,16 +22,20 @@ MonoBehaviour:
   hitBoxLifetime: 1
   knockbackPower: 1
   knockbackDuration: 0.3
-  stunDuration: 0
+  stunDuration: 1
+  usePushInsteadOfKnockback: 0
+  animationHoldDuration: 0
   invincibilityDuration: 0.5
   meleeSpawnPointName: Root_dummy
-  spawnDelay: 0.1
+  spawnCount: 1
+  spawnDelays:
+  - 0.1
   enableAreaDot: 1
   dotDamagePerTick: 20
-  dotTickInterval: 0.1
-  deathType: 2
-  ragdollImpulse: 15
-  upwardImpulse: 50
-  torqueImpulse: 30
-  sliceForce: 8
-  possibleSliceParts: 01000000
+  dotTickInterval: 0.05
+  deathMode: 1
+  ragdollImpulse: 3
+  ragdollUpImpulse: 5
+  ragdollSpinTorque: 0
+  sliceTargets: 00000000
+  sliceImpulse: 15

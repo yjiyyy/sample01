@@ -45,9 +45,10 @@ public class PlayerChargeAttackSO : ScriptableObject
     [Tooltip("없으면 플레이어 Transform 기준. 기본은 Root_dummy")]
     public string meleeSpawnPointName = "Root_dummy";
 
-    [Header("히트박스 스폰 딜레이")]
-    [Tooltip("차지 성공 후 히트박스 생성까지 대기 시간(초)")]
-    public float spawnDelay = 0f;
+    [Header("히트박스 스폰 딜레이 (절대시간, 차지 성공 시점 기준)")]
+    [Tooltip("spawnCount로 개수 조절. spawnDelays에 절대시간(초)을 입력하세요. OnValidate에서 자동 정렬됩니다.")]
+    public int spawnCount = 1;
+    public List<float> spawnDelays = new List<float>() { 0f };
 
     [Header("AoE DoT(틱 모드)")]
     [Tooltip("켜면 라이프타임 동안 주기적으로 피해를 줍니다(즉발 1회 타격 없음).")]
@@ -57,7 +58,20 @@ public class PlayerChargeAttackSO : ScriptableObject
     [Tooltip("틱 주기(초)")]
     public float dotTickInterval = 0.2f;
 
-    // 처치/랙돌/슬라이스 연출 관련 필드는 요청에 의해 제거되었습니다.
+    // ---------------- 처치 연출 (WeaponDataSO와 동일 필드) ----------------
+    [Header("처치 연출 선택")]
+    public DeathMode deathMode = DeathMode.Animation;
+
+    [Header("Ragdoll 임펄스(죽음이 Ragdoll일 때만 사용)")]
+    public float ragdollImpulse = 5f;
+    public float ragdollUpImpulse = 0f;
+    public float ragdollSpinTorque = 0f;
+
+    [Header("Slice(본 분리)")]
+    public List<SliceTarget> sliceTargets = new List<SliceTarget>();
+    public float sliceImpulse = 0f;
+
+    // 처치/랙돌/슬라이스 연출 관련 필드는 요청에 의해 추가되었습니다.
 
     private void OnValidate()
     {
@@ -69,11 +83,40 @@ public class PlayerChargeAttackSO : ScriptableObject
         knockbackDuration = Mathf.Max(0f, knockbackDuration);
         stunDuration = Mathf.Max(0f, stunDuration);
         invincibilityDuration = Mathf.Max(0f, invincibilityDuration);
-        spawnDelay = Mathf.Max(0f, spawnDelay);
         dotDamagePerTick = Mathf.Max(0f, dotDamagePerTick);
         dotTickInterval = Mathf.Max(0.01f, dotTickInterval);
 
         // other fields validated above
         animationHoldDuration = Mathf.Max(0f, animationHoldDuration);
+
+        // spawnCount / spawnDelays validation & auto-sort (오름차순)
+        if (spawnCount < 0) spawnCount = 0;
+        if (spawnDelays == null) spawnDelays = new List<float>();
+        // Resize list to match spawnCount
+        if (spawnDelays.Count < spawnCount)
+        {
+            int toAdd = spawnCount - spawnDelays.Count;
+            for (int i = 0; i < toAdd; i++) spawnDelays.Add(0f);
+        }
+        else if (spawnDelays.Count > spawnCount)
+        {
+            spawnDelays.RemoveRange(spawnCount, spawnDelays.Count - spawnCount);
+        }
+
+        // Ensure non-negative and sensible minimum values
+        for (int i = 0; i < spawnDelays.Count; i++)
+        {
+            spawnDelays[i] = Mathf.Max(0f, spawnDelays[i]);
+        }
+
+        // Auto-sort so earlier 시간이 먼저 오도록 함
+        spawnDelays.Sort();
+
+        // 처치 연출값 유효성 검사
+        ragdollImpulse = Mathf.Max(0f, ragdollImpulse);
+        ragdollUpImpulse = Mathf.Max(0f, ragdollUpImpulse);
+        ragdollSpinTorque = Mathf.Max(0f, ragdollSpinTorque);
+        sliceImpulse = Mathf.Max(0f, sliceImpulse);
+        if (sliceTargets == null) sliceTargets = new List<SliceTarget>();
     }
 }
