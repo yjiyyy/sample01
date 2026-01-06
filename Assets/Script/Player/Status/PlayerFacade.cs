@@ -170,8 +170,9 @@ public class PlayerFacade : MonoBehaviour
 
         if (pec != null)
         {
-            pec.DefaultWeaponPrefab = config.defaultWeaponPrefab;
-            if (Application.isPlaying && config.defaultWeaponPrefab != null)
+            pec.DefaultWeaponData = config.defaultWeaponData;
+
+            if (Application.isPlaying && config.defaultWeaponData != null)
             {
                 pec.EquipDefault(root.transform);
             }

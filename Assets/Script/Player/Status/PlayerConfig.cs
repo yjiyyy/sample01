@@ -31,12 +31,12 @@ public class PlayerConfig : ScriptableObject
     [Header("Animation")]
     public AnimatorOverrideController overrideController = null;
 
-    [Header("Default Weapon")]
-    [Tooltip("기본으로 장착할 무기 프리팹 (GameObject). 빈값이면 장착 안 함.")]
-    public GameObject defaultWeaponPrefab = null;
+    [Header("Default Weapon (SO)")]
+    [Tooltip("기본 무기(공격) 데이터 SO.\n이 SO의 weaponPrefab이 실제 장착 프리팹으로 사용됩니다.")]
+    public WeaponDataSO defaultWeaponData = null;
 
     [Header("Evade / 회피 (shared 설정)")]
-    [Tooltip("회피 관련 세팅을 SO로 관리(옵션).")]
+    [Tooltip("회피 동작 설정 SO를 지정(옵션).")]
     public EvadeDataSO evadeData = null;
 
     [Header("EnemyDetector (applied by PlayerFacade)")]

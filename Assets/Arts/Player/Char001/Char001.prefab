@@ -135,16 +135,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad8ee9dc60506c541acb3305e38ecf5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  testWeaponPrefabs:
-  - {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
-  - {fileID: 2739951429482498694, guid: 61b8bb56613b29841b73e0b856e05ad4, type: 3}
-  - {fileID: 38192432513176113, guid: d90c3f245074e2048af3c0061756d414, type: 3}
-  - {fileID: 522649090004456507, guid: 3e0286ade08eaa547bd0a6bce8217b10, type: 3}
-  - {fileID: 4911667774358884905, guid: b65c1f005bff3494399f619b0ddfe200, type: 3}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  testWeapons:
+  - {fileID: 11400000, guid: 4fea67bffc1b3aa418d2b0ff14aa7cbc, type: 2}
+  - {fileID: 11400000, guid: 35acc212ed499b749806d3ec27951d41, type: 2}
+  - {fileID: 11400000, guid: 4f446b322fd0f5c48a8dae281deee4be, type: 2}
+  - {fileID: 11400000, guid: b8500695101ee304f99b6e43d6f46df5, type: 2}
+  - {fileID: 11400000, guid: 74c3a9dc47cc68f438b9572e6098ef48, type: 2}
 --- !u!114 &3684259590824549436
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -157,11 +153,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f293c8830d1707e4c9ea95213b4bde86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  weaponSocket: {fileID: 7245750648237609498}
   animationController: {fileID: 7043935488017820867}
   enemyDetector: {fileID: -4674434038375394502}
-  defaultWeaponPrefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
-  evadeData: {fileID: 11400000, guid: eb54fb9932698344bb40ac36fb164e65, type: 2}
   debugMode: 0
   enableChargeMessages: 0
 --- !u!33 &-1541331493322818118
@@ -246,11 +239,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHP: 100
   weight: 1
-  level: 1
-  experience: 0
-  expToNextLevel: 100
-  maxHPBonus: 0
-  weightBonus: 0
 --- !u!114 &-4674434038375394502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -269,10 +257,6 @@ MonoBehaviour:
   height: 0.8
   weaponBehavior: {fileID: 0}
   usePhysicsScan: 1
-  enemyLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  sortByCenterBias: 1
 --- !u!136 &4257991530131573243
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -485,10 +469,5 @@ PrefabInstance:
 --- !u!4 &1357356317409213256 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b9a91ee47d9af7448bd32f17b8bf54b9, type: 3}
-  m_PrefabInstance: {fileID: 1539374675181935779}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &7245750648237609498 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -1021500387163517255, guid: b9a91ee47d9af7448bd32f17b8bf54b9, type: 3}
   m_PrefabInstance: {fileID: 1539374675181935779}
   m_PrefabAsset: {fileID: 0}

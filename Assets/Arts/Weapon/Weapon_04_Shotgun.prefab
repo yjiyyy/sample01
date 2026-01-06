@@ -46,12 +46,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 694f5e900f31199479729c357cd73c40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  data: {fileID: 11400000, guid: b8500695101ee304f99b6e43d6f46df5, type: 2}
-  meleeSpawnPoint: {fileID: 0}
-  projectileSpawnPoint: {fileID: 330341601666460069}
-  meleeHitboxPrefab: {fileID: 0}
-  projectilePrefab: {fileID: 0}
-  shotgunSectorPrefab: {fileID: 6927439261670298432, guid: 2730b5bd2ecc78e458f6958bad2bc16d, type: 3}
+  data: {fileID: 0}
+  ammoRuntime: {fileID: 0}
+  preserveVertical: 0
 --- !u!1 &6840398172115487432
 GameObject:
   m_ObjectHideFlags: 0

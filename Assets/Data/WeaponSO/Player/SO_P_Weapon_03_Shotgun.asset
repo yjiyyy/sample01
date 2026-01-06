@@ -46,7 +46,7 @@ MonoBehaviour:
   projectileSpawnPointPathOrName: 
   meleeHitboxPrefab: {fileID: 0}
   projectilePrefab: {fileID: 0}
-  shotgunSectorPrefab: {fileID: 0}
+  shotgunSectorPrefab: {fileID: 6927439261670298432, guid: 2730b5bd2ecc78e458f6958bad2bc16d, type: 3}
   dualWield: 0
   hitboxSpawnDelay2: 0
   meleeSpawnPoint2PathOrName: 

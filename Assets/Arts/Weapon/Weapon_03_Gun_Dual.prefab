@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 694f5e900f31199479729c357cd73c40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  data: {fileID: 11400000, guid: 4f446b322fd0f5c48a8dae281deee4be, type: 2}
+  data: {fileID: 0}
   ammoRuntime: {fileID: 0}
   preserveVertical: 0
 --- !u!1 &7743072092023857155

@@ -7,11 +7,13 @@ public class PlayerAnimationTester : MonoBehaviour
     [SerializeField] private WeaponDataSO[] testWeapons;
 
     private PlayerWeaponController weaponController;
+    private PlayerEquipmentController equip;
     private PlayerHealth health;
 
     void Awake()
     {
         weaponController = GetComponent<PlayerWeaponController>();
+        equip = GetComponent<PlayerEquipmentController>();
         health = GetComponent<PlayerHealth>();
     }
 
@@ -54,16 +56,14 @@ public class PlayerAnimationTester : MonoBehaviour
             return;
         }
 
-        // 1) 프리팹으로 장착 (기존 흐름 그대로 사용)
-        weaponController.EquipWeapon(so.weaponPrefab);
-
-        // 2) 혹시 프리팹 안의 WeaponBehavior.data가 다른 SO를 가리키는 경우를 대비해서 강제로 덮어쓰기
-        //    (듀얼 테스트에서도 CurrentWeaponData가 이 SO로 잡히는 게 중요)
-        var equip = weaponController.GetComponent<PlayerEquipmentController>();
-        if (equip != null && equip.WeaponBehavior != null)
+        if (equip == null)
         {
-            equip.WeaponBehavior.data = so;
+            Debug.LogWarning("[PlayerAnimationTester] PlayerEquipmentController를 찾을 수 없습니다.");
+            return;
         }
+
+        // ✅ 핵심: SO 기준으로 장착 (CurrentWeaponData/AOC/UI가 같이 갱신됨)
+        equip.EquipByData(so, transform.root, debugLogs: true);
 
         Debug.Log($"[PlayerAnimationTester] Equip SO: {so.weaponName} ({so.name})");
     }

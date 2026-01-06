@@ -1,11 +1,6 @@
-// WeaponBehavior.cs (full version)
-// - Spawn points & prefabs are managed by WeaponDataSO (완전 이관)
-// - Dual-wield: fires twice if data.dualWield == true
-//   - 2nd delay uses data.hitboxSpawnDelay2
-//   - 2nd projectile spawn: if projectileSpawnPoint2PathOrName is empty, auto-detect Fire_Point under left-hand socket (socketNames[1])
-// - Fix: left-hand Fire_Point may be attached after Awake -> re-resolve projectileSpawnPoint2 at fire time (lazy resolve)
-// - Fix(NEW): Gun Aim Scan Angle/Distance 적용 (뒤쪽 적 타겟팅 방지)
-// - Ammo consumption: only consume when the shot will actually spawn
+// WeaponBehavior.cs (full version - updated for SO injection)
+// - Prefab의 WeaponBehavior.data를 비워도 됨
+// - 장착 시점에 ApplyData(WeaponDataSO)로 주입하면 spawnpoint/ammo/preview 초기화가 보장됨
 // - Unity6(6000.0.42f1) / mobile+PC / 30/60fps 동일 결과 (WaitForSeconds 기반)
 
 using System.Collections;
@@ -38,22 +33,53 @@ public class WeaponBehavior : MonoBehaviour
     [Tooltip("발사 시 원래 수직 보존 플래그 (일부 경로에서 사용). 그러나 조준 발사(타깃 존재) 시에는 spawn Y를 우선 사용합니다.")]
     public bool preserveVertical = false;
 
+    // NEW: ApplyData로 초기화가 끝났는지(중복 초기화 방지)
+    private bool initializedOnce = false;
+
     void Awake()
     {
-        if (data == null)
+        // ✅ 변경: 프리팹에서 data를 비워도 문제 없게 함.
+        // data가 이미 들어있는(레거시/테스트) 경우는 기존처럼 초기화.
+        if (data != null)
         {
-            Debug.LogWarning("[WeaponBehavior] WeaponDataSO(data)가 비어 있습니다. 무기 SO 연결을 확인하세요.");
+            ApplyDataInternal(data, forceReinit: true);
+        }
+    }
+
+    /// <summary>
+    /// ✅ NEW: 장착 시점에 WeaponDataSO를 주입하고, 스폰포인트/탄약/프리뷰 초기화를 재수행합니다.
+    /// 프리팹에 SO를 등록하지 않아도 되게 만드는 핵심 API입니다.
+    /// </summary>
+    public void ApplyData(WeaponDataSO newData, bool forceReinit = true)
+    {
+        if (newData == null)
+        {
+            Debug.LogWarning("[WeaponBehavior] ApplyData called with null data");
             return;
         }
 
-        ResolveSpawnPointsFromSO();
+        ApplyDataInternal(newData, forceReinit);
+    }
 
+    private void ApplyDataInternal(WeaponDataSO newData, bool forceReinit)
+    {
+        // 같은 데이터 + 이미 초기화된 상태 + 강제 아님이면 스킵 가능
+        if (!forceReinit && initializedOnce && data == newData)
+            return;
+
+        data = newData;
+
+        ResolveSpawnPointsFromSO();
         EnsurePreviewLine();
-        EnsureAmmoInitialized(); // Gun/Shotgun이면 1회 초기화
+        EnsureAmmoInitialized();
+
+        initializedOnce = true;
     }
 
     private void ResolveSpawnPointsFromSO()
     {
+        if (data == null) return;
+
         // --- Melee spawn: player root (1) ---
         string meleeKey = string.IsNullOrEmpty(data.meleeSpawnPointPathOrName) ? "Root_dummy" : data.meleeSpawnPointPathOrName;
         meleeKey = NormalizePath(meleeKey);
@@ -77,6 +103,10 @@ public class WeaponBehavior : MonoBehaviour
             meleeSpawnPoint2 = FindByNameOrPath(transform.root, melee2Key);
             if (meleeSpawnPoint2 == null)
                 Debug.LogWarning($"[WeaponBehavior] meleeSpawnPoint(2) 못 찾음 (playerRoot): '{melee2Key}'.");
+        }
+        else
+        {
+            meleeSpawnPoint2 = null;
         }
 
         // --- Dual projectile spawn (2): 비어있어도 자동 탐색(왼손) ---
@@ -145,6 +175,8 @@ public class WeaponBehavior : MonoBehaviour
 
     public void EnsureAmmoInitialized()
     {
+        if (data == null) return;
+
         var gun = data as WeaponDataSO_Gun;
         if (gun != null)
         {
@@ -177,7 +209,12 @@ public class WeaponBehavior : MonoBehaviour
             if (previewLR == null) EnsurePreviewLine();
             var owner = GetComponentInParent<PlayerWeaponController>();
             Vector3 center = projectileSpawnPoint.position;
+
             Vector3 forward = owner != null ? owner.transform.forward : transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
+            forward.Normalize();
+
             UpdatePreviewSector(center, forward, sg.shotgunRadius, sg.shotgunAngle, sg.shotgunDebugColor);
         }
         else
@@ -243,7 +280,6 @@ public class WeaponBehavior : MonoBehaviour
         if (playerCtrl == null || gunData == null) return null;
         if (playerCtrl.enemyDetector == null) return null;
 
-        // 너가 말한 Aim Scan Angle/Distance
         float maxDist = Mathf.Max(0f, gunData.aimScanDistance);
         float halfAngle = Mathf.Max(0f, gunData.aimScanAngle) * 0.5f;
 
@@ -328,7 +364,6 @@ public class WeaponBehavior : MonoBehaviour
         PlayerWeaponController playerCtrl = Object.FindFirstObjectByType<PlayerWeaponController>();
         Vector3 shootDir = playerCtrl ? playerCtrl.transform.forward : transform.forward;
 
-        // ✅ CHANGE: list[0] 대신 Aim Scan 필터로 타겟 선택
         Transform targetTransform = null;
         if (playerCtrl != null && gun != null)
         {
@@ -376,7 +411,6 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        // 타겟이 없으면 정면 발사
         Vector3 dir = shootDir;
         if (!preserveVertical) dir.y = 0f;
         if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
@@ -414,7 +448,7 @@ public class WeaponBehavior : MonoBehaviour
 
     private void SpawnShotgunSector(bool useSecond)
     {
-        // (필요하면 추후 같은 방식으로 2번째 스폰포인트 재탐색 적용 가능)
+        // TODO: 필요하면 구현 (현재 프로젝트에서는 비어 있어도 됨)
     }
 
     public void FireProjectileForced(Vector3 shootDir, bool preserveVerticalLocal = false)
@@ -468,6 +502,74 @@ public class WeaponBehavior : MonoBehaviour
         Debug.LogWarning("[WeaponBehavior] 지원 컴포넌트를 찾지 못한 발사체(Forced)");
     }
 
-    private void EnsurePreviewLine() { /* 기존 코드 유지 */ }
-    private void UpdatePreviewSector(Vector3 center, Vector3 forward, float radius, float angle, Color color) { /* 기존 코드 유지 */ }
+    // ---------------- Preview Line (새로 구현) ----------------
+
+    private void EnsurePreviewLine()
+    {
+        if (previewLR != null) return;
+
+        // 기존에 LineRenderer가 붙어있을 수도 있으니 GetComponent 먼저 시도
+        previewLR = GetComponent<LineRenderer>();
+        if (previewLR == null)
+            previewLR = gameObject.AddComponent<LineRenderer>();
+
+        previewLR.useWorldSpace = true;
+        previewLR.loop = false;
+        previewLR.alignment = LineAlignment.View;
+
+        // 굵기 기본값(너무 두꺼우면 모바일에서 보기 안 좋음)
+        previewLR.widthMultiplier = 0.02f;
+
+        // 머티리얼 준비
+        if (previewMat == null)
+        {
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader != null) previewMat = new Material(shader);
+            else previewMat = new Material(Shader.Find("Unlit/Color"));
+        }
+
+        previewLR.material = previewMat;
+        previewLR.positionCount = 0;
+        previewLR.enabled = false;
+    }
+
+    private void UpdatePreviewSector(Vector3 center, Vector3 forward, float radius, float angle, Color color)
+    {
+        if (previewLR == null) return;
+
+        radius = Mathf.Max(0f, radius);
+        angle = Mathf.Clamp(angle, 0f, 360f);
+
+        if (radius <= 0.0001f || angle <= 0.0001f)
+        {
+            previewLR.positionCount = 0;
+            previewLR.enabled = false;
+            return;
+        }
+
+        previewLR.enabled = true;
+        previewLR.startColor = color;
+        previewLR.endColor = color;
+
+        int seg = Mathf.Max(3, kPreviewSegments);
+        int count = seg + 1;
+        previewLR.positionCount = count;
+
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
+        forward.Normalize();
+
+        float half = angle * 0.5f;
+        float start = -half;
+
+        for (int i = 0; i < count; i++)
+        {
+            float t = (float)i / seg;
+            float a = start + angle * t;
+            Quaternion rot = Quaternion.AngleAxis(a, Vector3.up);
+            Vector3 dir = rot * forward;
+
+            previewLR.SetPosition(i, center + dir * radius);
+        }
+    }
 }

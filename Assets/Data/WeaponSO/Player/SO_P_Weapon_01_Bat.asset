@@ -45,7 +45,7 @@ MonoBehaviour:
   - Bip001 L Hand
   meleeSpawnPointPathOrName: 
   projectileSpawnPointPathOrName: 
-  meleeHitboxPrefab: {fileID: 0}
+  meleeHitboxPrefab: {fileID: 4874105736294604296, guid: 0d26afa0cfa1f7c448bd54a078bfae5a, type: 3}
   projectilePrefab: {fileID: 0}
   shotgunSectorPrefab: {fileID: 0}
   dualWield: 0
