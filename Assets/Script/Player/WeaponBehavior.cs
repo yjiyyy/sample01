@@ -1,8 +1,4 @@
-// WeaponBehavior.cs (full version - updated for SO injection)
-// - Prefab의 WeaponBehavior.data를 비워도 됨
-// - 장착 시점에 ApplyData(WeaponDataSO)로 주입하면 spawnpoint/ammo/preview 초기화가 보장됨
-// - Unity6(6000.0.42f1) / mobile+PC / 30/60fps 동일 결과 (WaitForSeconds 기반)
-
+// WeaponBehavior.cs (full version - updated for SO injection + shotgun ammo consumption)
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -30,26 +26,18 @@ public class WeaponBehavior : MonoBehaviour
     private const int kPreviewSegments = 36;
 
     [Header("발사 옵션")]
-    [Tooltip("발사 시 원래 수직 보존 플래그 (일부 경로에서 사용). 그러나 조준 발사(타깃 존재) 시에는 spawn Y를 우선 사용합니다.")]
     public bool preserveVertical = false;
 
-    // NEW: ApplyData로 초기화가 끝났는지(중복 초기화 방지)
     private bool initializedOnce = false;
 
     void Awake()
     {
-        // ✅ 변경: 프리팹에서 data를 비워도 문제 없게 함.
-        // data가 이미 들어있는(레거시/테스트) 경우는 기존처럼 초기화.
         if (data != null)
         {
             ApplyDataInternal(data, forceReinit: true);
         }
     }
 
-    /// <summary>
-    /// ✅ NEW: 장착 시점에 WeaponDataSO를 주입하고, 스폰포인트/탄약/프리뷰 초기화를 재수행합니다.
-    /// 프리팹에 SO를 등록하지 않아도 되게 만드는 핵심 API입니다.
-    /// </summary>
     public void ApplyData(WeaponDataSO newData, bool forceReinit = true)
     {
         if (newData == null)
@@ -63,7 +51,6 @@ public class WeaponBehavior : MonoBehaviour
 
     private void ApplyDataInternal(WeaponDataSO newData, bool forceReinit)
     {
-        // 같은 데이터 + 이미 초기화된 상태 + 강제 아님이면 스킵 가능
         if (!forceReinit && initializedOnce && data == newData)
             return;
 
@@ -80,7 +67,6 @@ public class WeaponBehavior : MonoBehaviour
     {
         if (data == null) return;
 
-        // --- Melee spawn: player root (1) ---
         string meleeKey = string.IsNullOrEmpty(data.meleeSpawnPointPathOrName) ? "Root_dummy" : data.meleeSpawnPointPathOrName;
         meleeKey = NormalizePath(meleeKey);
 
@@ -88,7 +74,6 @@ public class WeaponBehavior : MonoBehaviour
         if (meleeSpawnPoint == null)
             Debug.LogWarning($"[WeaponBehavior] meleeSpawnPoint(1) 못 찾음 (playerRoot): '{meleeKey}'.");
 
-        // --- Projectile spawn: weapon self (1) ---
         string projKey = string.IsNullOrEmpty(data.projectileSpawnPointPathOrName) ? "Fire_Point" : data.projectileSpawnPointPathOrName;
         projKey = NormalizePath(projKey);
 
@@ -96,7 +81,6 @@ public class WeaponBehavior : MonoBehaviour
         if (projectileSpawnPoint == null)
             Debug.LogWarning($"[WeaponBehavior] projectileSpawnPoint(1) 못 찾음 (weapon): '{projKey}'.");
 
-        // --- Dual melee spawn (2): 입력된 경우에만 ---
         if (!string.IsNullOrEmpty(data.meleeSpawnPoint2PathOrName))
         {
             string melee2Key = NormalizePath(data.meleeSpawnPoint2PathOrName);
@@ -109,7 +93,6 @@ public class WeaponBehavior : MonoBehaviour
             meleeSpawnPoint2 = null;
         }
 
-        // --- Dual projectile spawn (2): 비어있어도 자동 탐색(왼손) ---
         projectileSpawnPoint2 = ResolveSecondProjectileSpawnPoint();
     }
 
@@ -194,6 +177,16 @@ public class WeaponBehavior : MonoBehaviour
             ammoRuntime.Initialize(sg, force: false);
             return;
         }
+
+        // AR handled by WeaponAmmoRuntime_AR component (if present)
+        var ar = data as WeaponDataSO_AR;
+        if (ar != null)
+        {
+            var arAmmo = GetComponent<WeaponAmmoRuntime_AR>();
+            if (arAmmo == null) arAmmo = gameObject.AddComponent<WeaponAmmoRuntime_AR>();
+            arAmmo.Initialize(ar, force: false);
+            // note: we don't store AR ammo in ammoRuntime variable (separate component)
+        }
     }
 
     void OnDisable()
@@ -274,7 +267,6 @@ public class WeaponBehavior : MonoBehaviour
         }
     }
 
-    // ✅ NEW: Gun Aim Scan (Angle/Distance) 기반으로 타겟 선택
     private Transform ChooseAimTarget(PlayerWeaponController playerCtrl, Transform spawnPoint, WeaponDataSO_Gun gunData)
     {
         if (playerCtrl == null || gunData == null) return null;
@@ -343,7 +335,6 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        // 탄 소비는 "스폰 가능한 상황"에서만
         var gun = data as WeaponDataSO_Gun;
         if (gun != null && ammoRuntime != null && gun.usesAmmo)
         {
@@ -448,7 +439,103 @@ public class WeaponBehavior : MonoBehaviour
 
     private void SpawnShotgunSector(bool useSecond)
     {
-        // TODO: 필요하면 구현 (현재 프로젝트에서는 비어 있어도 됨)
+        var sg = data as WeaponDataSO_Shotgun;
+        if (sg == null)
+        {
+            Debug.LogWarning("[WeaponBehavior] SpawnShotgunSector 호출되었으나 data가 Shotgun이 아님");
+            return;
+        }
+
+        if (useSecond && projectileSpawnPoint2 == null)
+        {
+            projectileSpawnPoint2 = ResolveSecondProjectileSpawnPoint();
+        }
+
+        Transform spawnPoint = useSecond ? projectileSpawnPoint2 : projectileSpawnPoint;
+        if (spawnPoint == null)
+        {
+            if (meleeSpawnPoint != null)
+            {
+                spawnPoint = meleeSpawnPoint;
+#if UNITY_EDITOR
+                Debug.Log("[WeaponBehavior] SpawnShotgunSector: projectileSpawnPoint 없음 → meleeSpawnPoint로 폴백");
+#endif
+            }
+            else
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning("[WeaponBehavior] SpawnShotgunSector: spawnPoint를 찾을 수 없음 (projectileSpawnPoint/meleeSpawnPoint 모두 null)");
+#endif
+                spawnPoint = transform;
+            }
+        }
+
+        var sectorPrefab = sg.shotgunSectorPrefab != null ? sg.shotgunSectorPrefab : null;
+        if (sectorPrefab == null)
+        {
+            Debug.LogWarning("[WeaponBehavior] SpawnShotgunSector: shotgunSectorPrefab 미할당 (SO)");
+            return;
+        }
+
+        // 탄 소비 처리: 듀얼일 때도 각 스폰마다 소비
+        bool allowSpawn = true;
+        if (sg.usesAmmo)
+        {
+            // Try to use existing ammoRuntime if available, otherwise try GetComponent
+            var ammo = ammoRuntime != null ? ammoRuntime : GetComponent<WeaponAmmoRuntime>();
+            if (ammo == null)
+            {
+                // No ammo component found: try AR variant? but shotgun uses WeaponAmmoRuntime normally
+                Debug.LogWarning("[WeaponBehavior] SpawnShotgunSector: WeaponAmmoRuntime 없음 (비탄약으로 처리)");
+            }
+            else
+            {
+                if (!ammo.TryConsumeForShot(sg.consumePerShot))
+                {
+                    // 소비 실패: 재장전 시도는 ammo 내부에서 할 수 있음, 폴백은 없음
+                    Debug.Log("[WeaponBehavior] SpawnShotgunSector: 탄 소비 실패 → 스폰 취소");
+                    allowSpawn = false;
+                }
+            }
+        }
+
+        if (!allowSpawn) return;
+
+        GameObject inst = Instantiate(sectorPrefab, spawnPoint.position, spawnPoint.rotation);
+
+        HitBox_PC_Sector sector = null;
+        if (inst.TryGetComponent(out sector) == false)
+        {
+            sector = inst.GetComponentInChildren<HitBox_PC_Sector>();
+        }
+
+        if (sector == null)
+        {
+            Debug.LogWarning("[WeaponBehavior] SpawnShotgunSector: 생성된 prefab에 HitBox_PC_Sector 컴포넌트가 없음");
+            Destroy(inst);
+            return;
+        }
+
+        sector.SetWeapon(this.data);
+
+        var owner = GetComponentInParent<PlayerWeaponController>();
+        Vector3 forward = owner != null ? owner.transform.forward : transform.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
+        forward.Normalize();
+
+        sector.SetForwardOverride(forward);
+
+        float dmg = data.damage;
+        float radius = sg.shotgunRadius;
+        float kb = data.knockbackPower;
+        float life = data.hitBoxLifetime;
+
+        sector.Initialize(dmg, radius, kb, life);
+
+#if UNITY_EDITOR
+        Debug.Log($"[WeaponBehavior] SpawnShotgunSector: spawned at {spawnPoint.name} (useSecond={useSecond}) dmg={dmg} radius={radius} forward={forward}");
+#endif
     }
 
     public void FireProjectileForced(Vector3 shootDir, bool preserveVerticalLocal = false)
@@ -502,13 +589,12 @@ public class WeaponBehavior : MonoBehaviour
         Debug.LogWarning("[WeaponBehavior] 지원 컴포넌트를 찾지 못한 발사체(Forced)");
     }
 
-    // ---------------- Preview Line (새로 구현) ----------------
-
+    // Preview Line and UpdatePreviewSector unchanged (omitted here for brevity in this block)
+    // But in actual project please keep the EnsurePreviewLine() and UpdatePreviewSector(...) methods below.
     private void EnsurePreviewLine()
     {
         if (previewLR != null) return;
 
-        // 기존에 LineRenderer가 붙어있을 수도 있으니 GetComponent 먼저 시도
         previewLR = GetComponent<LineRenderer>();
         if (previewLR == null)
             previewLR = gameObject.AddComponent<LineRenderer>();
@@ -516,11 +602,8 @@ public class WeaponBehavior : MonoBehaviour
         previewLR.useWorldSpace = true;
         previewLR.loop = false;
         previewLR.alignment = LineAlignment.View;
-
-        // 굵기 기본값(너무 두꺼우면 모바일에서 보기 안 좋음)
         previewLR.widthMultiplier = 0.02f;
 
-        // 머티리얼 준비
         if (previewMat == null)
         {
             Shader shader = Shader.Find("Sprites/Default");

@@ -23,6 +23,7 @@ GameObject:
   - component: {fileID: 4257991530131573243}
   - component: {fileID: 4334977632541756716}
   - component: {fileID: 5963420850293031168}
+  - component: {fileID: 1513574080355849079}
   m_Layer: 6
   m_Name: Char001_SO
   m_TagString: Player
@@ -143,6 +144,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4f446b322fd0f5c48a8dae281deee4be, type: 2}
   - {fileID: 11400000, guid: b8500695101ee304f99b6e43d6f46df5, type: 2}
   - {fileID: 11400000, guid: 74c3a9dc47cc68f438b9572e6098ef48, type: 2}
+  weaponControllerManual: {fileID: 0}
+  equipManual: {fileID: 0}
+  healthManual: {fileID: 0}
 --- !u!114 &3684259590824549436
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -318,6 +322,18 @@ MonoBehaviour:
   level: 1
   experience: 0
   expToNextLevel: 100
+--- !u!114 &1513574080355849079
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981492291339588791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7e111c425f55404f87d6ff777bee636, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1539374675181935779
 PrefabInstance:
   m_ObjectHideFlags: 0

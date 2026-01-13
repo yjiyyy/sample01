@@ -20,8 +20,9 @@ public class PlayerEquipmentController : MonoBehaviour
         set => defaultWeaponData = value;
     }
 
-    // (선택) UI가 이벤트로도 갱신할 수 있게 제공
+    // UI 구독용 이벤트
     public event Action<WeaponDataSO> OnWeaponChanged;
+    public event Action<int, int, bool> OnAmmoChanged; // magazine, reserve, isReloading
 
     private struct AmmoSnapshot { public int magazine; public int reserve; }
     private readonly Dictionary<WeaponDataSO_Gun, AmmoSnapshot> gunAmmoSnapshots = new();
@@ -29,6 +30,10 @@ public class PlayerEquipmentController : MonoBehaviour
     private readonly Dictionary<WeaponDataSO_Shotgun, AmmoSnapshot> shotgunAmmoSnapshots = new();
 
     private RuntimeAnimatorController baseController;
+
+    // 현재 구독중인 ammo 런타임들
+    private WeaponAmmoRuntime currentAmmoRuntime;
+    private WeaponAmmoRuntime_AR currentAmmoRuntimeAR;
 
     public void Setup(Transform socket, PlayerAnimationController animationController) => Setup(animationController);
 
@@ -52,12 +57,6 @@ public class PlayerEquipmentController : MonoBehaviour
 #endif
     }
 
-    [System.Obsolete("Use Equip(GameObject weaponPrefab, bool debugLogs=false). Default weapon comes from DefaultWeaponData.", false)]
-    public void Equip(GameObject weaponPrefab, GameObject defaultWeaponPrefab, bool debugLogs = false)
-    {
-        Equip(weaponPrefab, debugLogs);
-    }
-
     public void Equip(GameObject weaponPrefab, bool debugLogs = false)
     {
         SaveCurrentSnapshots();
@@ -72,18 +71,12 @@ public class PlayerEquipmentController : MonoBehaviour
             return;
         }
 
-        // 프리팹만 주어졌을 때는 "적용할 SO"를 DefaultWeaponData로 시도
         EquipPrefabInternal(prefabToSpawn, transform.root, dataToApply: DefaultWeaponData, debugLogs: debugLogs);
         OnWeaponChanged?.Invoke(CurrentWeaponData);
     }
 
     public void EquipWeapon(GameObject weaponPrefab) => Equip(weaponPrefab, debugLogs: false);
 
-    /// <summary>
-    /// �� NEW: WeaponDataSO 기준으로 장착 (권장)
-    /// - 프리팹 장착 + ApplyData(so) + CurrentWeaponData 갱신 + AOC 적용까지 한 번에 처리
-    /// - SlotView(아이콘) / AOC 모두 이 흐름에서 정상적으로 바뀜
-    /// </summary>
     public void EquipByData(WeaponDataSO so, Transform playerRoot = null, bool debugLogs = false)
     {
         if (so == null)
@@ -102,7 +95,6 @@ public class PlayerEquipmentController : MonoBehaviour
 
         SaveCurrentSnapshots();
 
-        // ✅ 테스트/스위칭 중에는 이 SO를 현재 기본으로도 간주(탄이 없을 때 기본무기로 전환 등에서 일관성)
         DefaultWeaponData = so;
 
         EquipPrefabInternal(so.weaponPrefab, playerRoot, dataToApply: so, debugLogs: debugLogs);
@@ -128,7 +120,6 @@ public class PlayerEquipmentController : MonoBehaviour
 
         Unequip();
 
-        // ----------------- 1) 메인 무기 -----------------
         GameObject instMain = playerRoot != null
             ? Instantiate(weaponPrefab, playerRoot, false)
             : Instantiate(weaponPrefab);
@@ -139,7 +130,6 @@ public class PlayerEquipmentController : MonoBehaviour
         WeaponBehavior wb = instMain.GetComponent<WeaponBehavior>();
         WeaponBehavior = wb;
 
-        // ✅ 핵심: CurrentWeaponData를 이번에 적용할 SO로 확정
         if (wb != null && dataToApply != null)
         {
             wb.ApplyData(dataToApply, forceReinit: true);
@@ -147,11 +137,9 @@ public class PlayerEquipmentController : MonoBehaviour
         }
         else
         {
-            // 폴백: 프리팹에 wb.data가 박혀있다면 그걸 사용
             CurrentWeaponData = wb != null ? wb.data : null;
         }
 
-        // 메인 소켓 바인딩
         Transform mainMount = null;
         if (playerRoot != null && CurrentWeaponData != null && CurrentWeaponData.socketNames != null)
         {
@@ -171,10 +159,15 @@ public class PlayerEquipmentController : MonoBehaviour
 
         AttachToMount(instMain.transform, mainMount);
 
-        // AOC 적용 (CurrentWeaponData 기준)
         ApplyAnimatorOverride(debugLogs);
 
-        // ----------------- 2) 듀얼이면 서브 무기(모델만) -----------------
+        // 복원
+        RestoreCurrentSnapshots();
+
+        // ammo 구독(AR/Gun/Shotgun 모두)
+        SubscribeToAmmoFromWeaponBehavior();
+
+        // 듀얼 서브 모델
         if (playerRoot != null &&
             CurrentWeaponData != null &&
             CurrentWeaponData.dualWield &&
@@ -193,7 +186,6 @@ public class PlayerEquipmentController : MonoBehaviour
             instSub.name = weaponPrefab.name + "_Sub";
             SecondaryWeapon = instSub;
 
-            // 탄창 공유(중복 공격 방지)를 위해 서브는 모델 전용
             var subWB = instSub.GetComponent<WeaponBehavior>();
             if (subWB != null) Destroy(subWB);
 
@@ -232,13 +224,14 @@ public class PlayerEquipmentController : MonoBehaviour
 
     public void Unequip()
     {
+        UnsubscribeCurrentAmmo();
+
         if (CurrentWeapon != null) { Destroy(CurrentWeapon); CurrentWeapon = null; }
         if (SecondaryWeapon != null) { Destroy(SecondaryWeapon); SecondaryWeapon = null; }
         WeaponBehavior = null;
         CurrentWeaponData = null;
     }
 
-    // ----------------- Snapshot -----------------
     private void SaveCurrentSnapshots()
     {
         SaveCurrentGunSnapshot();
@@ -291,7 +284,100 @@ public class PlayerEquipmentController : MonoBehaviour
         shotgunAmmoSnapshots[sg] = new AmmoSnapshot { magazine = magazine, reserve = reserve };
     }
 
-    // ----------------- Utilities -----------------
+    private void RestoreCurrentSnapshots()
+    {
+        if (WeaponBehavior == null || CurrentWeaponData == null) return;
+
+        if (CurrentWeaponData is WeaponDataSO_Gun gun && gun.usesAmmo)
+        {
+            if (gunAmmoSnapshots.TryGetValue(gun, out AmmoSnapshot snap))
+            {
+                var ammo = WeaponBehavior.GetComponent<WeaponAmmoRuntime>();
+                if (ammo != null && ammo.IsInitialized)
+                {
+                    ammo.LoadSnapshot(snap.magazine, snap.reserve, triggerAutoReload: true);
+#if UNITY_EDITOR
+                    Debug.Log($"[Equip] Gun snapshot restored: {snap.magazine}/{snap.reserve} for {gun.name}");
+#endif
+                }
+            }
+        }
+
+        if (CurrentWeaponData is WeaponDataSO_AR ar && ar.usesAmmo)
+        {
+            if (arAmmoSnapshots.TryGetValue(ar, out AmmoSnapshot snap))
+            {
+                var ammo = WeaponBehavior.GetComponent<WeaponAmmoRuntime_AR>();
+                if (ammo != null && ammo.IsInitialized)
+                {
+                    ammo.LoadSnapshot(snap.magazine, snap.reserve, triggerAutoReload: true);
+#if UNITY_EDITOR
+                    Debug.Log($"[Equip] AR snapshot restored: {snap.magazine}/{snap.reserve} for {ar.name}");
+#endif
+                }
+            }
+        }
+
+        if (CurrentWeaponData is WeaponDataSO_Shotgun sg && sg.usesAmmo)
+        {
+            if (shotgunAmmoSnapshots.TryGetValue(sg, out AmmoSnapshot snap))
+            {
+                var ammo = WeaponBehavior.GetComponent<WeaponAmmoRuntime>();
+                if (ammo != null && ammo.IsInitialized)
+                {
+                    ammo.LoadSnapshot(snap.magazine, snap.reserve, triggerAutoReload: true);
+#if UNITY_EDITOR
+                    Debug.Log($"[Equip] Shotgun snapshot restored: {snap.magazine}/{snap.reserve} for {sg.name}");
+#endif
+                }
+            }
+        }
+    }
+
+    // Ammo subscription helpers
+    private void SubscribeToAmmoFromWeaponBehavior()
+    {
+        UnsubscribeCurrentAmmo();
+
+        if (WeaponBehavior == null) return;
+
+        var gunAmmo = WeaponBehavior.GetComponent<WeaponAmmoRuntime>();
+        if (gunAmmo != null)
+        {
+            currentAmmoRuntime = gunAmmo;
+            currentAmmoRuntime.OnAmmoChanged += InternalAmmoChanged;
+            InternalAmmoChanged(currentAmmoRuntime.CurrentMagazine, currentAmmoRuntime.CurrentReserve, currentAmmoRuntime.IsReloading);
+        }
+
+        var arAmmo = WeaponBehavior.GetComponent<WeaponAmmoRuntime_AR>();
+        if (arAmmo != null)
+        {
+            currentAmmoRuntimeAR = arAmmo;
+            currentAmmoRuntimeAR.OnAmmoChanged += InternalAmmoChanged;
+            InternalAmmoChanged(currentAmmoRuntimeAR.CurrentMagazine, currentAmmoRuntimeAR.CurrentReserve, currentAmmoRuntimeAR.IsReloading);
+        }
+    }
+
+    private void UnsubscribeCurrentAmmo()
+    {
+        if (currentAmmoRuntime != null)
+        {
+            currentAmmoRuntime.OnAmmoChanged -= InternalAmmoChanged;
+            currentAmmoRuntime = null;
+        }
+        if (currentAmmoRuntimeAR != null)
+        {
+            currentAmmoRuntimeAR.OnAmmoChanged -= InternalAmmoChanged;
+            currentAmmoRuntimeAR = null;
+        }
+    }
+
+    private void InternalAmmoChanged(int magazine, int reserve, bool isReloading)
+    {
+        OnAmmoChanged?.Invoke(magazine, reserve, isReloading);
+    }
+
+    // Utilities
     private Transform FindDeepChild(Transform parent, string name)
     {
         if (parent == null) return null;
