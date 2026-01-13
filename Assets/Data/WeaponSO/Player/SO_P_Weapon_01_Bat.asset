@@ -32,11 +32,12 @@ MonoBehaviour:
   animationHoldDuration: 0.1
   deathMode: 1
   ragdollImpulse: 10
-  ragdollUpImpulse: 10
-  ragdollSpinTorque: 10
+  ragdollUpImpulse: 5
+  ragdollSpinTorque: 500
   sliceTargets: 
   sliceImpulse: 10
   chargeSlot: {fileID: 0}
+  comboSlot: {fileID: 0}
   recoilStartDelay: 0
   recoilPower: 0
   recoilDuration: 0

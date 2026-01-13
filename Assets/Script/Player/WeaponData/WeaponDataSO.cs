@@ -88,6 +88,10 @@ public class WeaponDataSO : ScriptableObject
     [Header("Charge Attack (무기별 선택 적용)")]
     public PlayerChargeAttackSO chargeSlot;
 
+    [Header("Melee Combo (무기별)")]
+    [Tooltip("근접 콤보가 있는 경우 MeleeComboSO를 연결하세요. 비어있으면 콤보 비활성.")]
+    public MeleeComboSO comboSlot;
+
     [Header("리코일(자기 반동)")]
     public float recoilStartDelay = 0f;
     public float recoilPower = 0f;
@@ -113,7 +117,7 @@ public class WeaponDataSO : ScriptableObject
 
     // ---------------- Dual Wield ----------------
     [Header("Dual Wield (양손 옵션)")]
-    [Tooltip("true면 1회 공격에서 스폰을 최대 2번(1번/2번) 시도합니다.\n" +
+    [Tooltip("true면 1회 공격에서 스폰을 최대 2번(1번/2번) ���도합니다.\n" +
              "2번 스폰은 2번째 스폰포인트가 입력된 경우에만 나갑니다.")]
     public bool dualWield = false;
 

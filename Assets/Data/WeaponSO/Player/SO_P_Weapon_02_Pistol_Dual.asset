@@ -37,6 +37,7 @@ MonoBehaviour:
   sliceTargets: 
   sliceImpulse: 15
   chargeSlot: {fileID: 0}
+  comboSlot: {fileID: 0}
   recoilStartDelay: 0
   recoilPower: 0
   recoilDuration: 0
@@ -58,9 +59,9 @@ MonoBehaviour:
   aimScanAngle: 90
   aimScanDistance: 15
   usesAmmo: 1
-  magazineSize: 100
-  initialReserve: 100
-  infiniteReserve: 1
+  magazineSize: 10
+  initialReserve: 30
+  infiniteReserve: 0
   reloadTime: 3
   consumePerShot: 1
   autoReloadOnEmpty: 1

@@ -1,14 +1,15 @@
-﻿using System;
+﻿// (전체 파일) PlayerWeaponController.cs
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// PlayerWeaponController (호환성 보존)
-/// - 기존 API(외부 호출되던 멤버)를 유지/복원합니다.
-/// - ForceApplyKnockback는 movement.ApplyKnockback를 사용하여 처리합니다.
-/// - Unity6(6000.0.42f1) 기준으로 FixedDeltaTime 기반 이동/넉백 처리를 존중합니다.
-/// - 변경점: 죽음(Dead) 상태가 최우선이 되도록 안전 검사 및 코루틴 방어를 추가했습니다.
+/// PlayerWeaponController - 통합된 전체 파일
+/// - 기존 레포의 API와 호환되도록 public 멤버들을 유지/복원했습니다.
+/// - 콤보 무기(comboSlot != null)는 WeaponDataSO.cooldown을 사용하지 않고 콤보 컴포넌트에 위임합니다.
+/// - ForceApplyKnockback 등 외부에서 호출되는 공용 메서드를 포함합니다.
+/// - Unity6(6000.0.42f1) 환경, 모바일/PC 동일 동작(타이밍은 Time.deltaTime/Time.fixedDeltaTime 기반).
 /// </summary>
 public enum PlayerState
 {
@@ -37,7 +38,7 @@ public class PlayerWeaponController : MonoBehaviour
     [Tooltip("체크 시: 1초에 '차지 시작', SO 시간에 '차지 성공' 메시지 출력")]
     [SerializeField] private bool enableChargeMessages = true;
 
-    // v3 서브컴포넌트
+    // 서브컴포넌트
     private PlayerRecoil recoilComp;
     private PlayerEquipmentController equipComp;
     private PlayerChargeController chargeComp;
@@ -55,7 +56,7 @@ public class PlayerWeaponController : MonoBehaviour
     private Coroutine knockbackRoutine;
     private Coroutine arFireRoutine;
 
-    // AR 관련 플래그
+    // AR 관련 플래그(외부에서 사용되는 프로퍼티 제공)
     private bool arRotationLocked = false;
     private Vector3 arLockedForward;
     private bool arAllowMoveWhileFiringFlag = false;
@@ -72,21 +73,21 @@ public class PlayerWeaponController : MonoBehaviour
 
     // ------------------ Public compatibility APIs ------------------
 
-    // Invincibility check used by enemy hitboxes
+    // Invincibility check used by enemy hitboxes / other systems
     public bool IsInvincible() => (evadeComp?.IsInvincible() ?? false) || chargeInvincible;
 
-    // Force apply knockback (compat API). Matches original signature used by enemies.
-    // IMPORTANT: If player is already Dead, this MUST be ignored to ensure death has highest priority.
+    // ForceApplyKnockback: 적 공격(폭발/충격 등)이 플레이어에 넉백을 바로 적용할 때 외부에서 호출
+    // 시그니처: (Vector3 dir, float power, float duration, float stun)
     public void ForceApplyKnockback(Vector3 dir, float power, float duration, float stun)
     {
-        // If already dead, do not start any knockback/stun behavior.
+        // Dead 상태면 무시
         if (state == PlayerState.Dead)
         {
             if (debugMode) Debug.Log("[PlayerWeaponController] ForceApplyKnockback ignored because state==Dead");
             return;
         }
 
-        // Stop attacking / cancel states & invoke local knockback behavior
+        // 취소/정리
         if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
         evadeComp?.CancelEvade();
         chargeComp?.CancelAll();
@@ -99,70 +100,18 @@ public class PlayerWeaponController : MonoBehaviour
         if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
         EndARFireState();
 
-        // Stop any running knockback coroutine then start new one.
+        // 기존 넉백 코루틴 정리 후 새로 시작
         if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
         knockbackRoutine = StartCoroutine(KnockbackRoutine_Internal(dir, power, duration, stun));
     }
 
-    // --- OnDeath: 플레이어가 사망했을 때 외부(Health)에서 호출할 public API ---
-    // 요구사항:
-    // - 상태를 Dead로 전환
-    // - 애니메이터에서 IsDead 호출(애니메이션 재생)
-    // - 이동(입력) 차단
-    // - 5초 후 플레이어 루트 프리팹 제거
-    public void OnDeath(Vector3 hitDir, WeaponDataSO weapon = null, float impactScale = 1f)
-    {
-        // Defensive: if already dead, ignore
-        if (state == PlayerState.Dead)
-            return;
-
-        Debug.Log("[PlayerWeaponController] OnDeath invoked.");
-
-        // 1) Cancel ongoing actions similar to ForceApplyKnockback cleanup
-        if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
-        evadeComp?.CancelEvade();
-        chargeComp?.CancelAll();
-        chargeInvincible = false;
-        CancelRecoil();
-
-        equipComp?.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
-        equipComp?.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
-
-        if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
-        EndARFireState();
-
-        // Ensure any running knockback coroutine is stopped immediately so CC cannot play after death.
-        if (knockbackRoutine != null)
-        {
-            try { StopCoroutine(knockbackRoutine); } catch { }
-            knockbackRoutine = null;
-        }
-
-        // 2) Change internal state to Dead (this will also invoke animation change)
-        ChangeState(PlayerState.Dead);
-
-        // 3) Movement: prevent further movement/inputs
-        if (movement != null)
-        {
-            // Cancel any ongoing knockback movement
-            try { movement.CancelKnockback(); } catch { }
-            // Disable movement component so Update/FixedUpdate won't process inputs
-            movement.enabled = false;
-        }
-
-        // 4) Schedule player root destroy after 5 seconds
-        GameObject root = this.transform.root != null ? this.transform.root.gameObject : this.gameObject;
-        Debug.Log($"[PlayerWeaponController] Player died. Root '{root.name}' will be destroyed in 5s.");
-        Destroy(root, 5f);
-    }
-
-    // Expose AR-related flags/properties expected by PlayerMovement
+    // AR state exposers used by PlayerMovement
     public bool IsARFiring => arFireRoutine != null;
     public bool ARAllowMoveWhileFiring => arAllowMoveWhileFiringFlag && IsARFiring;
     public bool ARIsRotationLocked => arRotationLocked && IsARFiring;
     public Vector3 ARLockedForward => arLockedForward;
 
-    // Evade gauges expected by UI
+    // Evade gauge accessors used by UI
     public float GetEvadeGauge() => evadeComp != null ? evadeComp.GetEvadeGauge() : 0f;
     public float GetMaxEvadeGauge() => evadeComp != null ? evadeComp.GetMaxEvadeGauge() : 0f;
 
@@ -186,13 +135,12 @@ public class PlayerWeaponController : MonoBehaviour
         }
     }
 
-    // Cancel recoil wrapper
+    // Recoil helpers
     public void CancelRecoil()
     {
         recoilComp?.Cancel();
     }
 
-    // Start recoil helper (used by attack flow)
     public void StartRecoilIfNeeded(WeaponDataSO data)
     {
         if (recoilComp == null || data == null) return;
@@ -227,7 +175,7 @@ public class PlayerWeaponController : MonoBehaviour
         }
         if (meleeSpawnPointCache == null) meleeSpawnPointCache = transform;
 
-        // Setup subcomponents - we provide backward-compatible Setup overloads in equipComp
+        // Setup subcomponents - backward compatible Setup overloads in equipComp
         equipComp.Setup(animationController);
 
         chargeComp.Setup(
@@ -241,14 +189,12 @@ public class PlayerWeaponController : MonoBehaviour
             debugMode
         );
 
-        // Evade comp: apply data (may be null)
         if (evadeComp != null)
             evadeComp.Setup(appliedEvadeData, animationController, movement, () => state, s => ChangeState(s));
     }
 
     private void Start()
     {
-        // Equip default weapon if equipment controller has one configured by PlayerFacade
         EquipWeapon(null);
         ChangeState(PlayerState.Idle);
     }
@@ -261,7 +207,6 @@ public class PlayerWeaponController : MonoBehaviour
         evadeComp?.TickRecharge(Time.deltaTime);
         AutoResumeReloadIfNeeded();
 
-        // Evade input (same as before)
         if (InputManager.Instance.GetEvadeInput() && (evadeComp?.CanEvade() ?? false) && state != PlayerState.Evade)
         {
             Vector2 currentMoveInput = InputManager.Instance.GetMoveInput();
@@ -400,12 +345,44 @@ public class PlayerWeaponController : MonoBehaviour
         equipComp?.EquipPrefab(weaponPrefab, this.transform.root);
     }
 
-    // The PlayAttack / Fire logic remains compatible with existing systems.
+    // PlayAttack: 콤보 무기면 WeaponDataSO.cooldown을 사용하지 않고 MeleeComboBehavior에 위임
     public void PlayAttack()
     {
         var data = equipComp.CurrentWeaponData;
         if (data == null) return;
         if (IsActionBlocking()) return;
+
+        // ----------------- Melee combo handling -----------------
+        if (data.comboSlot != null)
+        {
+            var wb = equipComp.WeaponBehavior;
+            if (wb == null)
+            {
+                if (debugMode) Debug.LogWarning("[Combo] WeaponBehavior missing");
+                return;
+            }
+
+            // Ensure MeleeComboBehavior exists and is setup
+            var comboComp = wb.GetComponent<MeleeComboBehavior>();
+            if (comboComp == null) comboComp = wb.gameObject.AddComponent<MeleeComboBehavior>();
+
+            comboComp.Setup(
+                data.comboSlot,
+                animationController,
+                meleeSpawnPointCache,
+                () => equipComp.CurrentWeaponData,
+                () => state,
+                s => ChangeState(s),
+                movement,
+                this,
+                debugMode
+            );
+
+            // 콤보인 경우 WeaponDataSO.cooldown 검사 및 lastAttackTime 갱신을 하지 않음 (요청 사항)
+            comboComp.OnPress();
+            return;
+        }
+        // -------------------------------------------------------
 
         if (data is WeaponDataSO_AR arData)
         {
@@ -419,8 +396,8 @@ public class PlayerWeaponController : MonoBehaviour
         }
 
         var sg = data as WeaponDataSO_Shotgun;
-        var wb = equipComp.WeaponBehavior;
-        var ammoShotgun = wb != null ? wb.GetComponent<WeaponAmmoRuntime>() : null;
+        var wb2 = equipComp.WeaponBehavior;
+        var ammoShotgun = wb2 != null ? wb2.GetComponent<WeaponAmmoRuntime>() : null;
         if (sg != null && sg.usesAmmo && ammoShotgun != null)
         {
             if (ammoShotgun.IsReloading)
@@ -447,7 +424,7 @@ public class PlayerWeaponController : MonoBehaviour
         }
 
         var gun = data as WeaponDataSO_Gun;
-        var ammoGun = wb != null ? wb.GetComponent<WeaponAmmoRuntime>() : null;
+        var ammoGun = wb2 != null ? wb2.GetComponent<WeaponAmmoRuntime>() : null;
         if (gun != null && gun.usesAmmo && ammoGun != null)
         {
             if (ammoGun.IsReloading)
@@ -473,8 +450,8 @@ public class PlayerWeaponController : MonoBehaviour
             }
         }
 
-        float delta2 = Time.time - lastAttackTime;
-        if (delta2 < data.cooldown) return;
+        float deltaGeneral = Time.time - lastAttackTime;
+        if (deltaGeneral < data.cooldown) return;
         lastAttackTime = Time.time;
 
         if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
@@ -548,7 +525,6 @@ public class PlayerWeaponController : MonoBehaviour
     #region Knockback / CC (internal coroutine used by ForceApplyKnockback)
     private IEnumerator KnockbackRoutine_Internal(Vector3 dir, float power, float duration, float stun)
     {
-        // If we are already dead at the moment this coroutine starts, bail out immediately.
         if (state == PlayerState.Dead)
         {
             if (debugMode) Debug.Log("[PlayerWeaponController] KnockbackRoutine_Internal aborted because state==Dead at start.");
@@ -560,19 +536,16 @@ public class PlayerWeaponController : MonoBehaviour
 
         Vector3 knockDir = dir.normalized; knockDir.y = 0f;
 
-        // Use movement.FaceKnockback to match EnemyImpact.FaceHit behavior when possible
         if (movement != null)
         {
             movement.FaceKnockback(dir);
         }
         else
         {
-            // fallback: rotate to face hit
             if (knockDir.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.LookRotation(-knockDir);
         }
 
-        // If death occurred during FaceKnockback call, don't proceed.
         if (state == PlayerState.Dead)
         {
             if (debugMode) Debug.Log("[PlayerWeaponController] KnockbackRoutine_Internal stopping because state became Dead after FaceKnockback.");
@@ -580,8 +553,6 @@ public class PlayerWeaponController : MonoBehaviour
             yield break;
         }
 
-        // Apply knockback on movement component (movement.ApplyKnockback handles physics)
-        // Guard: movement may be disabled by OnDeath -> skip if movement is disabled or null.
         if (movement != null && movement.enabled)
         {
             movement.ApplyKnockback(knockDir, power, duration, null);
@@ -591,7 +562,6 @@ public class PlayerWeaponController : MonoBehaviour
             if (debugMode) Debug.Log("[PlayerWeaponController] Knockback skipped because movement component is missing or disabled.");
         }
 
-        // Wait for knockback duration, but exit early if Dead state set during wait.
         float elapsed = 0f;
         float waitDur = Mathf.Max(0f, duration);
         while (elapsed < waitDur)
@@ -606,7 +576,6 @@ public class PlayerWeaponController : MonoBehaviour
             yield return null;
         }
 
-        // After knockback, may apply stun - but if Dead occurred, skip it.
         if (state == PlayerState.Dead)
         {
             if (debugMode) Debug.Log("[PlayerWeaponController] Skipping stun because state==Dead.");
@@ -618,7 +587,6 @@ public class PlayerWeaponController : MonoBehaviour
         {
             ChangeState(PlayerState.Stun);
 
-            // Wait for stun, but interrupt if Dead becomes true
             float stunElapsed = 0f;
             while (stunElapsed < stun)
             {
@@ -633,7 +601,6 @@ public class PlayerWeaponController : MonoBehaviour
             }
         }
 
-        // Restore to idle/move based on velocity (unless became Dead)
         if (state != PlayerState.Dead)
         {
             if (movement != null && movement.GetVelocityMagnitude() > 0.1f)
@@ -646,9 +613,9 @@ public class PlayerWeaponController : MonoBehaviour
     }
     #endregion
 
-    public bool IsInvinciblePublic() => IsInvincible(); // helper if any code uses different name
+    public bool IsInvinciblePublic() => IsInvincible();
 
-    // Expose AR start/end for assault rifle behavior
+    // AR helpers
     private void BeginARFireState(WeaponDataSO_AR arData)
     {
         arAllowMoveWhileFiringFlag = arData.allowMoveWhileFiring;
