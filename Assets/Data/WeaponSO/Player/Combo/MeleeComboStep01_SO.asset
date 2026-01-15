@@ -12,16 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 246c3cb45d6b4964e80f98bee71652db, type: 3}
   m_Name: MeleeComboStep01_SO
   m_EditorClassIdentifier: 
-  animClip: {fileID: 7400000, guid: d9d5eddf5eb48834684276f4da1fd452, type: 2}
-  fallbackStateName: Attack
+  animClip: {fileID: 7400000, guid: a45f9b6d4c55b4c46aee59a5add3e6c3, type: 2}
   cooldown: 0
-  damage: 20
+  damage: 10
   range: 3
   hitboxSpawnDelay: 0.2
   hitBoxLifetime: 0.1
   hitBoxPrefab: {fileID: 1988047932026333537, guid: 4f98ed13c83d79348b3d04aa2cd0e190, type: 3}
-  knockbackDuration: 0
-  knockbackPower: 0
+  knockbackDuration: 0.5
+  knockbackPower: 1
   jerkIntensity: 0
   jerkDuration: 0
   stunDuration: 0
@@ -38,5 +37,5 @@ MonoBehaviour:
   recoilDuration: 0
   allowDuplicateHit: 0
   duplicateInterval: 0.2
-  stepDuration: 1.5
-  ignoreTimeAfterInput: 0.7
+  stepDuration: 1
+  ignoreTimeAfterInput: 0.5

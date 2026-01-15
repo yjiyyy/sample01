@@ -71,6 +71,11 @@ public class PlayerWeaponController : MonoBehaviour
     // Evade data applied by PlayerFacade
     private EvadeDataSO appliedEvadeData = null;
 
+    // State-change suppression flag:
+    // 콤보를 강제로 취소할 때 콤보 내부에서 호출하는 ChangeState 호출이 넉백/스턴을 덮어쓰지 못하도록
+    // 아주 짧은 구간(콤보 Cancel 직전/직후) 동안 ChangeState를 무시하도록 사용합니다.
+    private bool suppressStateChangeRequests = false;
+
     // ------------------ Public compatibility APIs ------------------
 
     // Invincibility check used by enemy hitboxes / other systems
@@ -99,6 +104,26 @@ public class PlayerWeaponController : MonoBehaviour
 
         if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
         EndARFireState();
+
+        // --- 콤보 즉시 중단 처리: 콤보는 EndCombo에서 ChangeState(Idle/Move)를 호출하므로
+        //     콤보 종료 도중 상태 변경이 넉백을 덮어쓰지 않도록 일시적으로 차단합니다.
+        try
+        {
+            var wb = equipComp?.WeaponBehavior;
+            var comboComp = wb != null ? wb.GetComponent<MeleeComboBehavior>() : null;
+            if (comboComp != null)
+            {
+                if (debugMode) Debug.Log("[PlayerWeaponController] ForceApplyKnockback -> cancelling combo immediately");
+                suppressStateChangeRequests = true;
+                try { comboComp.CancelCombo(); } catch { }
+                suppressStateChangeRequests = false;
+            }
+        }
+        catch
+        {
+            // 안전하게 무시
+            suppressStateChangeRequests = false;
+        }
 
         // 기존 넉백 코루틴 정리 후 새로 시작
         if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
@@ -234,6 +259,23 @@ public class PlayerWeaponController : MonoBehaviour
             case PlayerState.Idle: HandleIdle(); break;
             case PlayerState.Move: HandleMove(); break;
             case PlayerState.Attack:
+                {
+                    // 콤보 실행 중에도 공격 버튼을 콤보 컴포넌트에 전달하여 다음 스텝으로 넘어가도록 처리
+                    var data = equipComp != null ? equipComp.CurrentWeaponData : null;
+                    if (data != null && data.comboSlot != null)
+                    {
+                        var wb = equipComp.WeaponBehavior;
+                        if (wb != null)
+                        {
+                            var comboComp = wb.GetComponent<MeleeComboBehavior>();
+                            if (comboComp != null && InputManager.Instance.GetAttackInput())
+                            {
+                                comboComp.OnPress();
+                            }
+                        }
+                    }
+                }
+                break;
             case PlayerState.Knockback:
             case PlayerState.Stun:
             case PlayerState.Evade:
@@ -265,6 +307,13 @@ public class PlayerWeaponController : MonoBehaviour
 
     private void ChangeState(PlayerState newState)
     {
+        // 상태 변경 요청이 일시 차단되어 있으면 무시합니다.
+        if (suppressStateChangeRequests)
+        {
+            if (debugMode) Debug.Log($"[PlayerWeaponController] ChangeState suppressed: {newState}");
+            return;
+        }
+
         if (state == newState) return;
         state = newState;
         fsm?.Set(newState);

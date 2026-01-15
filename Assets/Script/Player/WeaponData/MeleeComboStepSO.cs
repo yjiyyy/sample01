@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Melee Combo 단일 스텝 정의(SO)
-/// - 애니메이션(클립 또는 상태명), 히트박스, 타이밍, 데미지/넉백/스턴/리코일/처치연출 등
+/// - 애니메이션(클립), 히트박스, 타이밍, 데미지/넉백/스턴/리코일/처치연출 등
 /// - Step에 값이 설정되어 있으면 우선 사용하고, 비어 있으면 WeaponDataSO의 기본값을 사용합니다.
 /// </summary>
 [CreateAssetMenu(menuName = "Player/MeleeComboStep", fileName = "MeleeComboStep_SO")]
@@ -12,8 +12,8 @@ public class MeleeComboStepSO : ScriptableObject
     [Header("Animation")]
     [Tooltip("우선 재생할 애니메이션 클립(클립 이름을 재생에 사용).")]
     public AnimationClip animClip;
-    [Tooltip("animClip이 비어있을 때 재생할 상태 이름(Animator의 state name).")]
-    public string fallbackStateName = "Attack";
+    // NOTE: 요청에 따라 fallbackStateName 필드는 제거되었습니다.
+    // 추후에 상태명 기반 폴백이 필요하면 별도 로직으로 구현하세요.
 
     [Header("전투 관련")]
     [Tooltip("스텝 자체의 쿨다운 (optional). 음수면 무기 기본값 사용.")]
@@ -69,7 +69,7 @@ public class MeleeComboStepSO : ScriptableObject
     [Header("타이밍 - 콤보 제어")]
     [Tooltip("이 스텝 전체 지속시간(초). 이 시간이 지나면 다음 입력 없을 경우 콤보 종료.")]
     public float stepDuration = 0.6f;
-    [Tooltip("스텝 시�� 후 이 시간동안은 입력을 무시합니다. 이 시간이 지난 이후 ~ stepDuration 사이에 입력이 들어오면 다음 스텝.")]
+    [Tooltip("스텝 시작 후 이 시간동안은 입력을 무시합니다. 이 시간이 지난 이후 ~ stepDuration 사이에 입력이 들어오면 다음 스텝.")]
     public float ignoreTimeAfterInput = 0.15f;
 
     private void OnValidate()

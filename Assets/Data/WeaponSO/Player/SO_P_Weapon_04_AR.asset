@@ -23,8 +23,8 @@ MonoBehaviour:
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.1
-  knockbackDuration: 5
-  knockbackPower: 10
+  knockbackDuration: 0.2
+  knockbackPower: 5
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 0

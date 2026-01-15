@@ -1,4 +1,4 @@
-// (전체 파일) MeleeComboBehavior.cs
+// MeleeComboBehavior.cs
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,16 +6,11 @@ using UnityEngine;
 
 /// <summary>
 /// MeleeComboBehavior
-/// - WeaponBehavior가 붙은 무기 오브젝트에 추가되어 콤보 Step SO를 실행합니다.
-/// - Setup(...) 으로 플레이어의 상태 변경 델리게이트, 애니메이션 컨트롤러, 스폰 포인트 등을 전달받아 동작합니다.
-/// - 내부적으로 타이머 기반으로 step을 재생하고, ignoreTimeAfterInput 이후에 GetAttackDown()이 들어오면 다음 스텝으로 진행합니다.
-/// - 콤보 중엔 PlayerMovement.enabled 원래 상태를 보존했다가 콤보 끝나면 복원합니다.
-/// - 런타임에서 생성한 proxy SO는 hideFlags로 편집기 자산으로 남지 않게 하고, OnDisable/OnDestroy에서 정리합니다.
+/// - WeaponBehavior에서 콤보 동작을 담당합니다.
 /// </summary>
 [DisallowMultipleComponent]
 public class MeleeComboBehavior : MonoBehaviour
 {
-    // 설정(외부에서 호출)
     private MeleeComboSO comboData;
     private PlayerAnimationController animCtrl;
     private Transform spawnPoint;
@@ -186,14 +181,21 @@ public class MeleeComboBehavior : MonoBehaviour
         }
 
         // Play animation
-        string animName = step.animClip != null ? step.animClip.name : step.fallbackStateName;
-        if (string.IsNullOrEmpty(animName)) animName = "Attack";
-
-        try
+        // 변경: 이제 animClip이 존재할 때만 애니메이션 재생을 시도합니다. (폴백 문자열 사용 안함)
+        if (step.animClip != null)
         {
-            animCtrl?.PlayChargedAttack(animName);
+            string animName = step.animClip.name;
+            try
+            {
+                animCtrl?.PlayChargedAttack(animName);
+            }
+            catch { try { animCtrl?.PlayChargedAttack(animName); } catch { } }
         }
-        catch { try { animCtrl?.PlayChargedAttack(animName); } catch { } }
+        else
+        {
+            // animClip이 없으면 아무것도 재생하지 않습니다 (요청하신 동작)
+            if (debugMode) Debug.Log("[Combo] step has no animClip -> no animation will be played for this step.");
+        }
 
         // Spawn hitbox after hitboxSpawnDelay
         float spawnTime = Time.time + step.hitboxSpawnDelay;

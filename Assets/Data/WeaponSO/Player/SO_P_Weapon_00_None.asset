@@ -18,7 +18,7 @@ MonoBehaviour:
   category: 0
   weaponPrefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
   overrideController: {fileID: 0}
-  cooldown: 0.5
+  cooldown: 0
   damage: 50
   range: 2.5
   hitboxSpawnDelay: 0.2
@@ -37,6 +37,7 @@ MonoBehaviour:
   sliceTargets: 
   sliceImpulse: 0
   chargeSlot: {fileID: 11400000, guid: c69bc0d8fc298f143880b8c289baaba1, type: 2}
+  comboSlot: {fileID: 11400000, guid: eb09f75ea09710648ae9fd24921c0eff, type: 2}
   recoilStartDelay: 0
   recoilPower: 0
   recoilDuration: 0

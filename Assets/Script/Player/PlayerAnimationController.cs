@@ -41,11 +41,13 @@ public class PlayerAnimationController : MonoBehaviour
     private HashSet<int> warnedMissingParams = new HashSet<int>();
 
     // Death 애니메이션이 이미 한 번 재생되었는지 표시
-    // Death 동안 외부에서 다시 재생 호출이 와도 반복 재생하지 않도록 방지
     private bool deathPlayed = false;
 
     // Death 재생을 관리하는 코루틴 레퍼런스 (so we can stop it if respawn/reset)
     private Coroutine deathRoutine;
+
+    // 상태 관련 경고 캐시 (Play 시 상태가 없을 때 중복 로그 방지)
+    private HashSet<string> warnedMissingStates = new HashSet<string>();
 
     void Awake()
     {
@@ -340,15 +342,100 @@ public class PlayerAnimationController : MonoBehaviour
     // helper: try to play state safely (no exception if state name missing)
     private void TryPlaySafe(string stateName, int layer = 0, float normalizedTime = 0f)
     {
-        if (animator == null) return;
+        if (animator == null || string.IsNullOrEmpty(stateName)) return;
+
+        // Normalize and prepare checks:
+        // - Check animator.HasState for several common variants:
+        //   1) exact provided name
+        //   2) "Base Layer." + provided name (some states are referenced with layer prefix)
+        //   3) last segment if stateName contains '/' or '.' (e.g. "Idle/Run")
+        // If none found, do not call Play (to avoid Animator.GotoState: State could not be found).
+        bool exists = false;
+        try
+        {
+            int hashExact = Animator.StringToHash(stateName);
+            if (animator.HasState(layer, hashExact)) exists = true;
+            else
+            {
+                // Try Base Layer prefix
+                string basePrefixed = "Base Layer." + stateName;
+                if (animator.HasState(layer, Animator.StringToHash(basePrefixed))) exists = true;
+                else
+                {
+                    // Try last segment after '/' or '.'
+                    string lastSeg = stateName;
+                    int slash = stateName.LastIndexOf('/');
+                    if (slash >= 0) lastSeg = stateName.Substring(slash + 1);
+                    int dot = lastSeg.LastIndexOf('.');
+                    if (dot >= 0) lastSeg = lastSeg.Substring(dot + 1);
+
+                    if (animator.HasState(layer, Animator.StringToHash(lastSeg))) exists = true;
+                }
+            }
+        }
+        catch { /* ignore any HasState exception, fallback to clip-name check */ }
+
+        // If HasState failed or uncertain, also check runtimeAnimatorController's clips by name (best-effort).
+        if (!exists)
+        {
+            try
+            {
+                var rac = animator.runtimeAnimatorController;
+                if (rac != null)
+                {
+                    var clips = rac.animationClips;
+                    if (clips != null)
+                    {
+                        // Compare last segment and full name case-insensitively
+                        string lastSeg = stateName;
+                        int slash = stateName.LastIndexOf('/');
+                        if (slash >= 0) lastSeg = stateName.Substring(slash + 1);
+                        int dot = lastSeg.LastIndexOf('.');
+                        if (dot >= 0) lastSeg = lastSeg.Substring(dot + 1);
+
+                        foreach (var c in clips)
+                        {
+                            if (c == null) continue;
+                            if (string.Equals(c.name, stateName, StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(c.name, lastSeg, StringComparison.OrdinalIgnoreCase))
+                            {
+                                // Note: clip exists on controller, but if there's no state referencing it, Play by name may still fail.
+                                // We treat this conservatively: do NOT call Play unless animator.HasState returned true.
+                                // So here we mark exists=false but we could log info for debugging.
+                                // For safety (user requested "아예 안나오게"), we won't call Play solely because a clip is present.
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            catch { /* ignore */ }
+        }
+
+        if (!exists)
+        {
+            // Warn once per missing state
+            if (!warnedMissingStates.Contains(stateName))
+            {
+                Debug.LogWarning($"[PlayerAnim] Play skipped — state not found on Animator: '{stateName}' (layer:{layer})");
+                warnedMissingStates.Add(stateName);
+            }
+            return;
+        }
+
+        // If we get here, state seems to exist; call Play wrapped in try/catch to be extra-safe.
         try
         {
             animator.Play(stateName, layer, normalizedTime);
         }
         catch (Exception e)
         {
-            // state missing or other error — keep IsDead/bools as fallback
-            Debug.LogWarning($"[PlayerAnim] animator.Play('{stateName}') failed: {e.Message}");
+            // If Play still fails, log once
+            if (!warnedMissingStates.Contains(stateName))
+            {
+                Debug.LogWarning($"[PlayerAnim] animator.Play('{stateName}') failed despite existence check: {e.Message}");
+                warnedMissingStates.Add(stateName);
+            }
         }
     }
 
@@ -422,8 +509,6 @@ public class PlayerAnimationController : MonoBehaviour
         // IsDead는 Death 상태 재생 중일 때 끄지 않음
         if (targetState != PlayerState.Dead)
         {
-            // Only clear IsDead if we're not transitioning into Dead
-            // Also allow explicit ResetDeathState() to clear deathPlayed flag when respawning.
             SafeSetBool(hashIsDead, false);
         }
 
