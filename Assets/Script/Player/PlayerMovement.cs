@@ -23,7 +23,7 @@ public class PlayerMovement : MonoBehaviour
     private const float FACE_ANGLE_THRESHOLD = 30f;
 
     [Header("Core")]
-    [Tooltip("MovementSettings asset (REQUIRED). If not assigned this component will be disabled.")]
+    [Tooltip("MovementSettings asset (REQUIRED). If not assigned this component will be disabled. Assign a MovementSettings asset to enable movement.")]
     [SerializeField] private MovementSettings movementSettings;
 
     [Header("Player (persistent)")]
@@ -64,6 +64,14 @@ public class PlayerMovement : MonoBehaviour
     private HashSet<int> selfColliderIds;
 
     private float prevLowerBodySpeed = -1f;
+
+    // --- New: external override & multiplier support for charge rotations/movement ---
+    // If lookOverrideActive=true, HandleRotation uses lookOverrideDir as rotation target (overrides _lastLookDirection)
+    private bool lookOverrideActive = false;
+    private Vector3 lookOverrideDir = Vector3.zero;
+
+    // Rotation multiplier (applied to rotationSpeedDegPerSec). Default 1.0f
+    private float rotationMultiplier = 1f;
 
     void Awake()
     {
@@ -117,8 +125,29 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!enabled) return;
         if (isKnockbacked) return;
+
         Vector2 raw = InputManager.Instance.GetMoveInput();
         lastInput = new Vector3(raw.x, 0f, raw.y);
+
+        // 변경: 공격 중(일반 Attack)에는 입력으로 _lastLookDirection을 갱신하지 않음.
+        // 단, AR 발사 중이고 ARAllowMoveWhileFiring가 true인 경우만 예외적으로 허용.
+        bool isARFiring = weaponCtrl != null && weaponCtrl.IsARFiring;
+        bool arAllowMove = weaponCtrl != null && weaponCtrl.ARAllowMoveWhileFiring;
+        bool inAttackState = weaponCtrl != null && weaponCtrl.CurrentState == PlayerState.Attack;
+
+        if (!inAttackState || (isARFiring && arAllowMove))
+        {
+            if (lastInput.sqrMagnitude > EPS)
+            {
+                Vector3 camRel = CameraRelative(lastInput);
+                camRel.y = 0f;
+                if (camRel.sqrMagnitude > EPS)
+                {
+                    _lastLookDirection = camRel.normalized;
+                }
+            }
+        }
+        // else: 공격 중이면 _lastLookDirection 유지(회전 고정)
     }
 
     void FixedUpdate()
@@ -139,7 +168,7 @@ public class PlayerMovement : MonoBehaviour
         CheckKillZone();
 
         if (!isEvading)
-            HandleBackStep(lastInput.sqrMagnitude > EPS, IsMovementBlocked(), lastInput);
+            HandleBackStep(lastInput.sqrMagnitude > 0.0001f, IsMovementBlocked(), lastInput);
     }
 
     private void HandleHorizontal()
@@ -171,7 +200,7 @@ public class PlayerMovement : MonoBehaviour
         if (weaponCtrl == null) return false;
         PlayerState state = weaponCtrl.CurrentState;
         bool isARFiring = weaponCtrl.IsARFiring;
-        bool arAllowMove = weaponCtrl.ARAllowMoveWhileFiring;
+        bool arAllowMove = weaponCtrl != null && weaponCtrl.ARAllowMoveWhileFiring;
         bool attackBlocking = state == PlayerState.Attack && !(isARFiring && arAllowMove);
 
         if (attackBlocking ||
@@ -558,7 +587,8 @@ public class PlayerMovement : MonoBehaviour
         if (weaponCtrl != null && weaponCtrl.CurrentState == PlayerState.Evade)
             return;
 
-        Vector3 desiredDir = _lastLookDirection;
+        // If look override is active, prefer it (used by charge controller)
+        Vector3 desiredDir = lookOverrideActive ? lookOverrideDir : _lastLookDirection;
         bool arRotationLocked = weaponCtrl != null && weaponCtrl.ARIsRotationLocked;
 
         if (arRotationLocked && isARFiring && weaponCtrl != null)
@@ -571,10 +601,11 @@ public class PlayerMovement : MonoBehaviour
         if (desiredDir.sqrMagnitude > EPS)
         {
             Quaternion targetRot = Quaternion.LookRotation(desiredDir, Vector3.up);
+            float effectiveRotSpeed = rotationSpeedDegPerSec * Mathf.Clamp01(rotationMultiplier);
             transform.rotation = Quaternion.RotateTowards(
                 transform.rotation,
                 targetRot,
-                rotationSpeedDegPerSec * Time.fixedDeltaTime
+                effectiveRotSpeed * Time.fixedDeltaTime
             );
         }
     }
@@ -656,6 +687,37 @@ public class PlayerMovement : MonoBehaviour
         float inputMag = Mathf.Clamp01(lastInput.magnitude);
         if (baseMoveSpeed <= EPS) return inputMag > EPS ? 1f : 0f;
         return Mathf.Clamp01(inputMag * (currentMoveSpeed / baseMoveSpeed));
+    }
+
+    // Expose base move speed for external scripts (charge controller uses this)
+    public float GetBaseMoveSpeed()
+    {
+        return baseMoveSpeed;
+    }
+
+    // External API: override look direction (used by charge logic). Call ClearLookOverride() to resume normal behavior.
+    public void SetLookOverride(Vector3 dir)
+    {
+        dir.y = 0f;
+        if (dir.sqrMagnitude < EPS) return;
+        lookOverrideDir = dir.normalized;
+        lookOverrideActive = true;
+    }
+
+    public void ClearLookOverride()
+    {
+        lookOverrideActive = false;
+    }
+
+    // External API: rotation speed multiplier (applied to rotationSpeedDegPerSec). Use 1f to reset to normal.
+    public void SetRotationMultiplier(float mult)
+    {
+        rotationMultiplier = Mathf.Clamp01(mult);
+    }
+
+    public void ResetRotationMultiplier()
+    {
+        rotationMultiplier = 1f;
     }
 
     public Vector3 CameraRelative(Vector3 input)
