@@ -56,7 +56,8 @@ public class MeleeAttackBehavior : EnemyAttackBehaviorBase
                         data.hitBoxLifetime,
                         data.stunDuration,
                         data.allowDuplicateHit,
-                        data.duplicateHitInterval
+                        data.duplicateHitInterval,
+                        WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse)
                     );
                 }
             );
@@ -66,6 +67,6 @@ public class MeleeAttackBehavior : EnemyAttackBehaviorBase
     public override void Interrupt(bool hard)
     {
         base.Interrupt(hard);
-        // Melee´Â ÀÎÅÍ·´Æ® ½Ã Ãß°¡ Ã³¸® ¾øÀ½ (µ¥¹ÌÁö ¹Ì¹ß»ý Çã¿ë)
+        // Melee?? ?????? ?? ??? ó?? ???? (?????? ???? ???)
     }
 }

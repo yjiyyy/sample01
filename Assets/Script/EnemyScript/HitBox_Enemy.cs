@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -8,6 +8,7 @@ public class HitBox_Enemy : MonoBehaviour
     private float knockbackPower;
     private float knockbackDuration;
     private float stunDuration;
+    private WeaponDataSO playerDeathWeapon;
 
     // 드릴형 중복 히트 옵션
     private bool duplicateEnabled = false;
@@ -20,12 +21,13 @@ public class HitBox_Enemy : MonoBehaviour
 
     public void Initialize(
         float dmg, float rng, float kbPower, float kbDuration, float lifetime, float stun = 0f,
-        bool allowDup = false, float dupInterval = 0f)
+        bool allowDup = false, float dupInterval = 0f, WeaponDataSO deathWeapon = null)
     {
         damage = dmg;
         knockbackPower = kbPower;
         knockbackDuration = kbDuration;
         stunDuration = stun;
+        playerDeathWeapon = deathWeapon;
 
         duplicateEnabled = allowDup;
         duplicateInterval = Mathf.Max(0.01f, dupInterval);
@@ -114,8 +116,12 @@ public class HitBox_Enemy : MonoBehaviour
             return;
         }
 
-        // 1) 데미지 적용
-        hp.ApplyDamage(damage);
+        // 1) 데미지 적용 (플레이어 사망 시 랙돌 여부는 playerDeathWeapon.deathMode로 결정)
+        Vector3 hitDirForDamage = (hp.transform.position - transform.position);
+        hitDirForDamage.y = 0f;
+        if (hitDirForDamage.sqrMagnitude < 0.0001f) hitDirForDamage = Vector3.forward;
+        hitDirForDamage.Normalize();
+        hp.ApplyDamage(damage, hitDirForDamage, playerDeathWeapon, 1f);
         Debug.Log($"✅ [HitBox_Enemy] PlayerHealth에 {damage} 데미지 적용! (dup:{duplicateEnabled})");
 
         // ✅ 핵심: HP가 0 이하로 떨어졌으면 넉백/스턴을 절대 실행하지 않음 (즉시 Death 우선)

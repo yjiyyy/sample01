@@ -272,7 +272,8 @@ public partial class EnemyAttackController
                 life,
                 data.stunDuration,
                 data.allowDuplicateHit,
-                data.duplicateHitInterval
+                data.duplicateHitInterval,
+                null
             );
         }
     }

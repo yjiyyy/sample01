@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+using UnityEngine;
+using System.Collections.Generic;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/MeleeAttackData", fileName = "MeleeAttackData_SO")]
 public class MeleeAttackData : ScriptableObject
@@ -37,6 +38,16 @@ public class MeleeAttackData : ScriptableObject
     [Header("중복 데미지")]
     public bool allowDuplicateHit = false;
     public float duplicateHitInterval = 0.1f;
+
+    [Header("처치 연출 (플레이어)")]
+    public DeathMode deathMode = DeathMode.Animation;
+    [Header("Ragdoll 임펄스(죽음이 Ragdoll일 때만 사용)")]
+    public float ragdollImpulse = 5f;
+    public float ragdollUpImpulse = 0f;
+    public float ragdollSpinTorque = 0f;
+    [Header("Slice(본 분리)")]
+    public List<SliceTarget> sliceTargets = new List<SliceTarget>();
+    public float sliceImpulse = 0f;
 
     // -----------------------------
     // Moving attack 간소화된 필드

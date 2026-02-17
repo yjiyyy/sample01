@@ -181,11 +181,12 @@ public partial class EnemyAttackController
                 data.spinAxis,
                 data.spinSpeed,
                 data.destroyOnObstacle,
-                data.obstacleLayers
+                data.obstacleLayers,
+                WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse)
             );
         }
 
-        Log($"RANGED FIRE proj@{firePoint.name} ¡æ target {targetPos} type={data.movementType}");
+        Log($"RANGED FIRE proj@{firePoint.name} ?? target {targetPos} type={data.movementType}");
     }
 
     private void FinishRanged(RangedAttackData data, bool success)

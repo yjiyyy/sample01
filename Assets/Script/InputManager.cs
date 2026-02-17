@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
@@ -30,6 +30,23 @@ public class InputManager : MonoBehaviour
     [HideInInspector]
     public bool OverlayInputBlocked = false;
 
+    /// <summary> 플레이어 사망 시 true — 모든 플레이어 입력 차단 (죽음 이벤트만 유지) </summary>
+    private static bool playerDeathBlocked = false;
+
+    /// <summary> 사망 시 호출. 이후 GetMoveInput 등은 0/false 반환. </summary>
+    public static void SetPlayerDeathBlock(bool block) { playerDeathBlocked = block; }
+
+    /// <summary> 사망 시 호출. 모바일 입력(조이스틱 등)을 즉시 초기화하여 적용 방지. </summary>
+    public void ClearPlayerInput()
+    {
+        mobileMove = Vector2.zero;
+        mobileAttackPressed = false;
+        mobileAttackDownFrames = 0;
+        mobileAttackUpFrames = 0;
+        mobileEvadeDownFrames = 0;
+        mobileEvadeUpFrames = 0;
+    }
+
     private bool IsMobileRuntimeActive =>
 #if UNITY_EDITOR
         forceMobileInEditor;
@@ -41,6 +58,7 @@ public class InputManager : MonoBehaviour
     private static void ResetStatics()
     {
         Instance = null;
+        playerDeathBlocked = false;
     }
 
     private void Awake()
@@ -74,6 +92,7 @@ public class InputManager : MonoBehaviour
     /* ───── 이동 입력 ───── */
     public Vector2 GetMoveInput()
     {
+        if (playerDeathBlocked) return Vector2.zero;
         // 모바일 런타임이고, 오버레이가 차단중이면 모바일 입력 무시
         if (IsMobileRuntimeActive && !OverlayInputBlocked && mobileMove.sqrMagnitude > 0.0001f)
             return mobileMove; // 이미 ClampMagnitude로 크기 1.0이 보장됨
@@ -114,6 +133,7 @@ public class InputManager : MonoBehaviour
     /* ───── 무기 슬롯 ───── */
     public int GetWeaponSwapInput()
     {
+        if (playerDeathBlocked) return -1;
         if (IsMobileRuntimeActive && OverlayInputBlocked)
             return -1;
 
@@ -134,6 +154,7 @@ public class InputManager : MonoBehaviour
 
     public bool GetAttackDown()
     {
+        if (playerDeathBlocked) return false;
         bool kb = GetKeyDown(KeyCode.Alpha0);
         bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileAttackDownFrames > 0;
         return kb || mobile;
@@ -141,6 +162,7 @@ public class InputManager : MonoBehaviour
 
     public bool GetAttack()
     {
+        if (playerDeathBlocked) return false;
         bool kb = GetKey(KeyCode.Alpha0);
         bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileAttackPressed;
         return kb || mobile;
@@ -148,6 +170,7 @@ public class InputManager : MonoBehaviour
 
     public bool GetAttackUp()
     {
+        if (playerDeathBlocked) return false;
         bool kb = GetKeyUp(KeyCode.Alpha0);
         bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileAttackUpFrames > 0;
         return kb || mobile;
@@ -156,6 +179,7 @@ public class InputManager : MonoBehaviour
     /* ───── 회피 ───── */
     public bool GetEvadeInput()
     {
+        if (playerDeathBlocked) return false;
         bool kb = GetKeyDown(KeyCode.Space);
         bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileEvadeDownFrames > 0;
         return kb || mobile;

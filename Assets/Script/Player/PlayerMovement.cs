@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -163,6 +163,17 @@ public class PlayerMovement : MonoBehaviour
         {
             HandleHorizontal();
             HandleRotation(isARFiring);
+        }
+
+        // 지면에 붙어 있을 때 위쪽으로 쌓이는 속도 제거 (충돌 해소로 인한 계속 떠오름 방지)
+        if (rb != null && !suspendFalling && movementSettings != null && movementSettings.floorMask != 0 && IsGrounded())
+        {
+            var v = rb.linearVelocity;
+            if (v.y > 0f)
+            {
+                v.y = 0f;
+                rb.linearVelocity = v;
+            }
         }
 
         CheckKillZone();
@@ -635,6 +646,22 @@ public class PlayerMovement : MonoBehaviour
                 anim?.SetBackStep(false);
             }
         }
+    }
+
+    /// <summary>캡슐 발밑에서 짧게 아래로 레이캐스트해 지면인지 확인. 지면에 붙었을 때 위로 쌓이는 속도 제거용.</summary>
+    private bool IsGrounded()
+    {
+        if (capsule == null || movementSettings == null) return false;
+        var ms = movementSettings;
+        if (ms.floorMask == 0) return false;
+
+        Vector3 centerWorld = transform.TransformPoint(capsule.center);
+        float halfH = Mathf.Max(capsule.height * 0.5f - capsule.radius, 0f);
+        Vector3 bottom = centerWorld - transform.up * halfH;
+        float checkDist = ms.floorCheckDepth + 0.05f;
+        if (Physics.Raycast(bottom + Vector3.up * 0.01f, Vector3.down, out RaycastHit hit, checkDist, ms.floorMask, QueryTriggerInteraction.Ignore))
+            return hit.normal.y >= ms.floorThreshold;
+        return false;
     }
 
     private void CheckKillZone()

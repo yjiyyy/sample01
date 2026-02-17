@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -115,7 +115,8 @@ public class SuicideDroppedBomb : MonoBehaviour
         float kbDur = data.knockbackDuration * mul;
         float stun = data.stunDuration * mul;
 
-        ph.ApplyDamage(dmg, hitDir, null, 1f);
+        var deathProxy = WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse);
+        ph.ApplyDamage(dmg, hitDir, deathProxy, 1f);
 
         if (ph.GetCurrentHP() <= 0f)
             return;

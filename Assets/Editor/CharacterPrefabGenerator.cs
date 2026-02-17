@@ -83,6 +83,8 @@ public static class EnemyPrefabGenerator
             rootAnimator.avatar = sourceAnimator.avatar;
             rootAnimator.runtimeAnimatorController = sourceAnimator.runtimeAnimatorController;
             rootAnimator.applyRootMotion = false;
+            rootAnimator.updateMode = AnimatorUpdateMode.Normal;
+            rootAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             Object.DestroyImmediate(sourceAnimator);
         }
         else
@@ -92,9 +94,11 @@ public static class EnemyPrefabGenerator
             {
                 rootAnimator.avatar = sourceAnimator.avatar;
                 rootAnimator.runtimeAnimatorController = sourceAnimator.runtimeAnimatorController;
-                rootAnimator.applyRootMotion = sourceAnimator.applyRootMotion;
+                rootAnimator.applyRootMotion = false;
                 Object.DestroyImmediate(sourceAnimator);
             }
+            rootAnimator.updateMode = AnimatorUpdateMode.Normal;
+            rootAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         }
 
         Animator rootAnim = root.GetComponent<Animator>();
@@ -354,6 +358,7 @@ public static class EnemyPrefabGenerator
             joint.enableProjection = true;
         }
 
+        SetRagdollBonesLayer(root, boneToRb.Keys);
         SetEnemyDieHipsBody(root, hipsTr, boneToRb);
     }
 
@@ -435,11 +440,10 @@ public static class EnemyPrefabGenerator
             Transform tr = kv.Value;
             if (!boneToRb.TryGetValue(tr, out Rigidbody bodyRb)) continue;
             string parentKey = parentMap.TryGetValue(key, out var p) ? p : null;
+            // Pelvis(Bip001)에는 Character Joint를 붙이지 않음 — 수동 랙돌과 동일, 이동 오류 방지
+            if (parentKey == null) continue;
             Rigidbody connected = null;
-            if (parentKey == null)
-                connected = rootRb;
-            else if (bones.TryGetValue(parentKey, out Transform parentTr) && boneToRb.TryGetValue(parentTr, out connected)) { }
-
+            if (bones.TryGetValue(parentKey, out Transform parentTr) && boneToRb.TryGetValue(parentTr, out connected)) { }
             if (connected == null) continue;
 
             CharacterJoint joint = tr.GetComponent<CharacterJoint>();
@@ -455,8 +459,21 @@ public static class EnemyPrefabGenerator
             joint.enableProjection = true;
         }
 
+        SetRagdollBonesLayer(root, boneToRb.Keys);
         SetEnemyDieHipsBody(root, bones["Pelvis"], boneToRb);
         Debug.Log($"[EnemyPrefabGenerator] BIP 랙돌 생성 완료 (Total Mass={totalMass}, Strength={strength}, 본 수={count})");
+    }
+
+    /// <summary> 랙돌에 포함된 모든 본의 레이어를 Ragdoll로 설정 </summary>
+    private static void SetRagdollBonesLayer(GameObject root, IEnumerable<Transform> ragdollBones)
+    {
+        int ragdollLayer = LayerMask.NameToLayer("Ragdoll");
+        if (ragdollLayer < 0) return;
+        foreach (Transform tr in ragdollBones)
+        {
+            if (tr != null && tr.gameObject != root)
+                tr.gameObject.layer = ragdollLayer;
+        }
     }
 
     private static void SetEnemyDieHipsBody(GameObject root, Transform hipsTr, Dictionary<Transform, Rigidbody> boneToRb)

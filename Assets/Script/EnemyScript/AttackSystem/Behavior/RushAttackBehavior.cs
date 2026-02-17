@@ -220,7 +220,8 @@ public class RushAttackBehavior : MonoBehaviour
                 life,
                 data.stunDuration,
                 data.allowDuplicateHit,
-                data.duplicateHitInterval
+                data.duplicateHitInterval,
+                null
             );
         }
     }

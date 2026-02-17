@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -53,6 +53,8 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
     private bool destroyOnObstacle;
     private LayerMask obstacleLayers;
 
+    private WeaponDataSO playerDeathWeapon;
+
     // 드릴형 중복 히트 관리(플레이어 단위로 관리; 멀티 콜라이더 보호)
     private readonly HashSet<PlayerHealth> overlapping = new();
     private readonly HashSet<PlayerHealth> alreadyHit = new();
@@ -91,10 +93,12 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         float arcH,
         // 회전/장애물 옵션
         bool faceMove, bool spin, Vector3 spinAxis, float spinSpd,
-        bool destroyObstacle, LayerMask obstacleMask
+        bool destroyObstacle, LayerMask obstacleMask,
+        WeaponDataSO deathWeapon = null
     )
     {
         damage = dmg;
+        playerDeathWeapon = deathWeapon;
         speed = Mathf.Max(0f, spd);
         lifetime = Mathf.Max(0.01f, life);
         knockbackPower = kbPower;
@@ -346,19 +350,18 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
             return;
         }
 
-        // 1) 데미지
-        hp.ApplyDamage(damage);
+        // 1) 데미지 (플레이어 사망 시 랙돌 여부는 playerDeathWeapon.deathMode로 결정)
+        Vector3 hitDir = (hp.transform.position - transform.position);
+        hitDir.y = 0f;
+        if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
+        hitDir.Normalize();
+        hp.ApplyDamage(damage, hitDir, playerDeathWeapon, 1f);
 
         // ✅ 핵심: HP 0이면 넉백/스턴 스킵 (즉시 Death 우선)
         if (hp.GetCurrentHP() <= 0f)
             return;
 
-        // 2) 넉백/스턴
-        Vector3 hitDir = (hp.transform.position - transform.position);
-        hitDir.y = 0f;
-        if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
-        hitDir.Normalize();
-
+        // 2) 넉백/스턴 (hitDir는 위에서 이미 계산됨)
         if (pwc != null)
         {
             pwc.ForceApplyKnockback(hitDir, knockbackPower, knockbackDuration, stunDuration);

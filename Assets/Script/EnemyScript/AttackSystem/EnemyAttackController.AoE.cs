@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -356,6 +356,10 @@ public partial class EnemyAttackController
             else if (ptype == typeof(int))
             {
                 list.Add(0);
+            }
+            else if (ptype == typeof(WeaponDataSO))
+            {
+                list.Add(null); // AoE: 처치 연출 없음이면 Animation 죽음
             }
             else
             {

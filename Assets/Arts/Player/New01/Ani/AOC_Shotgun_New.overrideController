@@ -9,11 +9,13 @@ AnimatorOverrideController:
   m_Name: AOC_Shotgun_New
   m_Controller: {fileID: 9100000, guid: 040e64a34f0e23848a2f7dbeea3566d1, type: 2}
   m_Clips:
-  - m_OriginalClip: {fileID: 7400000, guid: d9d5eddf5eb48834684276f4da1fd452, type: 2}
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: 13daa9d01d93b2849ab6521506de9fa1, type: 3}
     m_OverrideClip: {fileID: 1827226128182048838, guid: 37ecbbe12e0e7e140ba5fe72080b24d7, type: 3}
-  - m_OriginalClip: {fileID: 7400000, guid: 9b1a84a765e18344aa718c23c0d49ed0, type: 2}
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: d420c0775da9771489cd4d1b2ab3e005, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 37ecbbe12e0e7e140ba5fe72080b24d7, type: 3}
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: 9fbc2a70bf41db648b423ce7c6ea45fa, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 37ecbbe12e0e7e140ba5fe72080b24d7, type: 3}
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: 73605151411929840aa25afce1a7d5ef, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 7c1646237b75e814792c91eb7588ae65, type: 3}
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: 2d3cf6458b7c92f429ecb54f90ff5bb5, type: 3}
     m_OverrideClip: {fileID: 1827226128182048838, guid: 45d1581d25bd2d54ab52ca2f97a83c84, type: 3}
-  - m_OriginalClip: {fileID: 7400000, guid: f73a63970d9f89f41b1705334be67ac8, type: 2}
-    m_OverrideClip: {fileID: 1827226128182048838, guid: 37ecbbe12e0e7e140ba5fe72080b24d7, type: 3}
-  - m_OriginalClip: {fileID: 7400000, guid: 6a642b36394d5d64fb5f5173dd06839f, type: 2}
-    m_OverrideClip: {fileID: 1827226128182048838, guid: 37ecbbe12e0e7e140ba5fe72080b24d7, type: 3}

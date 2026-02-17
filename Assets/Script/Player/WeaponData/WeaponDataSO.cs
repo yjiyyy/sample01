@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.Serialization;
 
@@ -130,6 +130,29 @@ public class WeaponDataSO : ScriptableObject
 
     [Tooltip("원거리 스폰 포인트(2). 비워두면 2번째 원거리 스폰은 안 나갑니다. (무기 내부 기준 이름/경로)")]
     public string projectileSpawnPoint2PathOrName = "";
+
+    /// <summary>
+    /// 몬스터 공격 데이터의 처치 연출(Death Mode, 랙돌, 슬라이스)로 런타임 프록시 WeaponDataSO 생성.
+    /// HitBox/ApplyDamage 호출 시 인라인 필드만 넘길 때 사용.
+    /// </summary>
+    public static WeaponDataSO CreatePlayerDeathProxy(
+        DeathMode deathMode,
+        float ragdollImpulse,
+        float ragdollUpImpulse,
+        float ragdollSpinTorque,
+        List<SliceTarget> sliceTargets,
+        float sliceImpulse)
+    {
+        var so = CreateInstance<WeaponDataSO>();
+        so.hideFlags = HideFlags.HideAndDontSave;
+        so.deathMode = deathMode;
+        so.ragdollImpulse = ragdollImpulse;
+        so.ragdollUpImpulse = ragdollUpImpulse;
+        so.ragdollSpinTorque = ragdollSpinTorque;
+        so.sliceTargets = sliceTargets != null ? new List<SliceTarget>(sliceTargets) : new List<SliceTarget>();
+        so.sliceImpulse = sliceImpulse;
+        return so;
+    }
 
 #if UNITY_EDITOR
     private void OnValidate()

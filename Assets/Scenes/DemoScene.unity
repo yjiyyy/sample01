@@ -4919,7 +4919,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c8ca97f2e8fc144c95840b4bc2c43f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 1981492291339588791, guid: 216c6d4d726fa5e47acddd85ac41f066, type: 3}
+  playerPrefab: {fileID: 6551838243190283326, guid: 618caf26f5d2ff64abfd927541bd9de1, type: 3}
   followCamera: {fileID: 1661507712}
 --- !u!1 &1914551070
 GameObject:
@@ -5136,7 +5136,7 @@ MonoBehaviour:
   spawnPoints:
   - {fileID: 1171404612}
   enemyPrefabsByLevel:
-  - {fileID: 4758100800114042528, guid: 1e6955f1566fb3e44b479a2adbb9af48, type: 3}
+  - {fileID: 2335072867457397040, guid: 728ab470164a0c346a4d2ab91ab95f7e, type: 3}
   hpuiPrefab: {fileID: 5425390646291263780, guid: c221514702d57b44bac940471d983478, type: 3}
   spawnInterval: 50
   jitterRadius: 0.5

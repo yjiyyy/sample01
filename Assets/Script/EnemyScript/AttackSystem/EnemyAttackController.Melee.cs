@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 
 public partial class EnemyAttackController
@@ -121,7 +121,8 @@ public partial class EnemyAttackController
                 life,
                 data.stunDuration,
                 data.allowDuplicateHit,
-                data.duplicateHitInterval
+                data.duplicateHitInterval,
+                WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse)
             );
         }
         else

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
@@ -219,7 +219,8 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
 
         try
         {
-            ph.ApplyDamage(dmg, hitDir, null, 1f);
+            var deathProxy = WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse);
+            ph.ApplyDamage(dmg, hitDir, deathProxy, 1f);
             Debug.Log($"[Explosion] Player '{ph.gameObject.name}' ApplyDamage called successfully.");
         }
         catch (System.Exception ex)

@@ -25,8 +25,8 @@ MonoBehaviour:
   movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
   stopWhenNoInput: 1
   overrideController: {fileID: 0}
-  defaultWeaponData: {fileID: 11400000, guid: 4fea67bffc1b3aa418d2b0ff14aa7cbc, type: 2}
-  evadeData: {fileID: 11400000, guid: eb54fb9932698344bb40ac36fb164e65, type: 2}
+  defaultWeaponData: {fileID: 11400000, guid: dbc5259d0ca8f3f448cb65df4bc65720, type: 2}
+  evadeData: {fileID: 11400000, guid: c20d2c56f0e0faf449a4adb14a25caad, type: 2}
   detectorViewAngle: 45
   detectorViewDistance: 10
   editorAutoApplyDefault: 1
