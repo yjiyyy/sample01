@@ -12,7 +12,7 @@ public class RushAttackBehavior : MonoBehaviour
     private Coroutine rushRoutine;
     private GameObject spawnedHitbox;
 
-    // ¸¶Áö¸· µ¹Áø ¹æÇâ(¸¶¹«¸® °¨¼Ó ¶§ »ç¿ë)
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½)
     private Vector3 lastRushDir = Vector3.forward;
 
     private void Awake()
@@ -32,21 +32,21 @@ public class RushAttackBehavior : MonoBehaviour
 
     private IEnumerator RushFlow()
     {
-        // »óÅÂ ÀüÈ¯ ¹× ½´ÆÛ¾Æ¸Ó
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ ï¿½ï¿½ ï¿½ï¿½ï¿½Û¾Æ¸ï¿½
         enemy.SetState(Enemy.EnemyState.Attack);
         if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack);
         else enemy.RemoveSuperArmor(SuperArmorSource.Attack);
 
-        // 1) ÁØºñ ´Ü°è
+        // 1) ï¿½Øºï¿½ ï¿½Ü°ï¿½
         yield return StartCoroutine(PreparePhase());
 
-        // 2) °ø°Ý(µ¹Áø) ´Ü°è
+        // 2) ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½) ï¿½Ü°ï¿½
         yield return StartCoroutine(AttackPhase());
 
-        // 3) ¸¶¹«¸®(°¨¼Ó) ´Ü°è
+        // 3) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½) ï¿½Ü°ï¿½
         yield return StartCoroutine(FinishPhase());
 
-        // Á¾·á Á¤¸®
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         enemy.RemoveSuperArmor(SuperArmorSource.Attack);
         if (enemy.CurrentState == Enemy.EnemyState.Attack)
             enemy.SetState(Enemy.EnemyState.Chase);
@@ -56,7 +56,7 @@ public class RushAttackBehavior : MonoBehaviour
 
     private IEnumerator PreparePhase()
     {
-        // ¾Ö´Ï¸ÞÀÌ¼Ç: ÁØºñ Å¬¸³ ¿ì¼± Àç»ý
+        // ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½: ï¿½Øºï¿½ Å¬ï¿½ï¿½ ï¿½ì¼± ï¿½ï¿½ï¿½
         if (enemy.animCtrl?.Animator != null && data.prepareClip != null)
         {
             enemy.animCtrl.Animator.speed = 1f;
@@ -64,14 +64,14 @@ public class RushAttackBehavior : MonoBehaviour
         }
         else if (enemy.animCtrl?.Animator != null)
         {
-            // Æú¹é: ÄÁÆ®·Ñ·¯¿¡ ÁØºñ »óÅÂ°¡ ÀÖ´Ù¸é ÀÌ¸§À¸·Î Àç»ý
+            // ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½Æ®ï¿½Ñ·ï¿½ï¿½ï¿½ ï¿½Øºï¿½ ï¿½ï¿½ï¿½Â°ï¿½ ï¿½Ö´Ù¸ï¿½ ï¿½Ì¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
             enemy.animCtrl.Animator.Play("RushPrepare", 0, 0f);
         }
 
         float elapsed = 0f;
         while (elapsed < data.prepareDuration)
         {
-            // Áß´Ü Á¶°Ç
+            // ï¿½ß´ï¿½ ï¿½ï¿½ï¿½ï¿½
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
@@ -79,7 +79,7 @@ public class RushAttackBehavior : MonoBehaviour
                 yield break;
             }
 
-            // Å¸°Ù ¹Ù¶óº¸±â(·çÆ® ¸ð¼Ç ¾øÀ½, ¼öÆò È¸Àü¸¸)
+            // Å¸ï¿½ï¿½ ï¿½Ù¶óº¸±ï¿½(ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ È¸ï¿½ï¿½ï¿½ï¿½)
             if (target != null)
             {
                 Vector3 dir = target.position - transform.position;
@@ -95,7 +95,7 @@ public class RushAttackBehavior : MonoBehaviour
 
     private IEnumerator AttackPhase()
     {
-        // °ø°Ý ¾Ö´Ï
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½
         if (enemy.animCtrl?.Animator != null)
         {
             enemy.animCtrl.Animator.speed = 1f;
@@ -107,10 +107,10 @@ public class RushAttackBehavior : MonoBehaviour
                 enemy.animCtrl.Animator.Play("Rush", 0, 0f);
         }
 
-        // È÷Æ®¹Ú½º ½ºÆù(¼ö¸í: attackDuration ¶Ç´Â ÁöÁ¤°ª)
+        // ï¿½ï¿½Æ®ï¿½Ú½ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½: attackDuration ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
         SpawnHitbox();
 
-        // ÃÊ±â ¹æÇâ
+        // ï¿½Ê±ï¿½ ï¿½ï¿½ï¿½ï¿½
         Vector3 rushDir = transform.forward;
         rushDir.y = 0f;
         if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
@@ -129,7 +129,7 @@ public class RushAttackBehavior : MonoBehaviour
                 yield break;
             }
 
-            // ¹æÇâ º¸Á¤(½º¹«½ºÇÏ°Ô Å¸°ÙÀ» µû¶ó°¨)
+            // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ Å¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
             if (useDeviation && baseWeight > 0f && target != null)
             {
                 Vector3 desired = target.position - transform.position;
@@ -137,7 +137,7 @@ public class RushAttackBehavior : MonoBehaviour
                 if (desired.sqrMagnitude > 0.0001f)
                 {
                     desired.Normalize();
-                    // Fixed timestep ±âÁØ °¡ÁßÄ¡(60fps Ã¼°¨ À¯Áö)
+                    // Fixed timestep ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ä¡(60fps Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
                     float dtWeight = 1f - Mathf.Pow(1f - baseWeight, Time.fixedDeltaTime * 60f);
                     rushDir = Vector3.Slerp(rushDir, desired, dtWeight).normalized;
 
@@ -146,7 +146,7 @@ public class RushAttackBehavior : MonoBehaviour
                 }
             }
 
-            // ÀÌµ¿: FixedUpdate ±â¹Ý, FPS µ¶¸³
+            // ï¿½Ìµï¿½: FixedUpdate ï¿½ï¿½ï¿½, FPS ï¿½ï¿½ï¿½ï¿½
             Vector3 disp = rushDir * data.rushSpeed * Time.fixedDeltaTime;
             enemy.MoveFilteredDisplacement(disp);
 
@@ -155,13 +155,13 @@ public class RushAttackBehavior : MonoBehaviour
             yield return new WaitForFixedUpdate();
         }
 
-        // °ø°Ý ±¸°£ Á¾·á ¡æ È÷Æ®¹Ú½º Á¦°Å(¸¶¹«¸® µ¿¾È ºñÈ°¼º)
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½Æ®ï¿½Ú½ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È°ï¿½ï¿½)
         DespawnHitbox();
     }
 
     private IEnumerator FinishPhase()
     {
-        // ¸¶¹«¸® ¾Ö´Ï Àç»ý(ÀÖÀ» ¶§¸¸)
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
         if (enemy.animCtrl?.Animator != null && data.finishClip != null)
         {
             enemy.animCtrl.Animator.speed = 1f;
@@ -171,7 +171,7 @@ public class RushAttackBehavior : MonoBehaviour
         float dur = Mathf.Max(0f, data.finishDuration);
         float elapsed = 0f;
 
-        // rushSpeed ¡æ 0 ¼±Çü °¨¼Ó
+        // rushSpeed ï¿½ï¿½ 0 ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         float initialSpeed = Mathf.Max(0f, data.rushSpeed);
 
         Vector3 dir = lastRushDir;
@@ -194,7 +194,7 @@ public class RushAttackBehavior : MonoBehaviour
             Vector3 disp = dir * currentSpeed * Time.fixedDeltaTime;
             enemy.MoveFilteredDisplacement(disp);
 
-            // ½Ã¼±Àº ¸¶Áö¸· ¹æÇâ À¯Áö
+            // ï¿½Ã¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             if (dir.sqrMagnitude > 0.0001f)
                 transform.rotation = Quaternion.LookRotation(dir);
 
@@ -238,7 +238,7 @@ public class RushAttackBehavior : MonoBehaviour
         enemy.RemoveSuperArmor(SuperArmorSource.Attack);
         DespawnHitbox();
 
-        // ¾Ö´Ï¸ÞÀÌÅÍ´Â ÆÄ¶ó¹ÌÅÍ ¾øÀÌ Å¬¸³¸¸ Àç»ýÇÏ¹Ç·Î Ãß°¡ ÇØÁ¦ ºÒÇÊ¿ä
+        // ï¿½Ö´Ï¸ï¿½ï¿½ï¿½ï¿½Í´ï¿½ ï¿½Ä¶ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï¹Ç·ï¿½ ï¿½ß°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ê¿ï¿½
         if (enemy.CurrentState == Enemy.EnemyState.Attack)
             enemy.SetState(Enemy.EnemyState.Chase);
 

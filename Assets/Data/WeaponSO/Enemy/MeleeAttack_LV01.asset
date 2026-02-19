@@ -15,7 +15,7 @@ MonoBehaviour:
   attackName: Attack
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   grantSuperArmor: 0
-  damage: 100
+  damage: 10
   range: 1
   cooldown: 0
   attackTime: 0.7

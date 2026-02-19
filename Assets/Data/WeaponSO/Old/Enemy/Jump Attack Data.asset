@@ -18,9 +18,9 @@ MonoBehaviour:
   endDuration: 1
   height: 3
   cooldown: 1.2
-  prepareClip: {fileID: 7799600219382172205, guid: af44e2aadd5abc844bae2d2b300730a8, type: 3}
-  loopClip: {fileID: 7799600219382172205, guid: a4c548049bb2acc4d890ad0542198ca2, type: 3}
-  endClip: {fileID: 7799600219382172205, guid: 0435d015d4e49e64dbf877923ca51de3, type: 3}
+  prepareClip: {fileID: 1827226128182048838, guid: d996f4befabe9e04aa55c8d5732e509b, type: 3}
+  loopClip: {fileID: 1827226128182048838, guid: 3a7e09efe66b16647921043edcac90b4, type: 3}
+  endClip: {fileID: 1827226128182048838, guid: b7fa4736af21e1444b12bd48c10457e4, type: 3}
   grantSuperArmor: 1
   hitBoxPrefab: {fileID: 5009877497648116289, guid: 73512c4802986304ca8f39f7567bb9c6, type: 3}
   hitBoxLifetime: 0.5

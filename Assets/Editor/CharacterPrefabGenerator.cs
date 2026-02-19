@@ -77,32 +77,33 @@ public static class EnemyPrefabGenerator
         fbxInstance.transform.localScale = Vector3.one;
 
         Animator sourceAnimator = fbxInstance.GetComponent<Animator>();
-        if (sourceAnimator != null && sourceAnimator.avatar != null && sourceAnimator.isHuman)
-        {
-            Animator rootAnimator = root.AddComponent<Animator>();
-            rootAnimator.avatar = sourceAnimator.avatar;
-            rootAnimator.runtimeAnimatorController = sourceAnimator.runtimeAnimatorController;
-            rootAnimator.applyRootMotion = false;
-            rootAnimator.updateMode = AnimatorUpdateMode.Normal;
-            rootAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        Animator rootAnimator = root.AddComponent<Animator>();
+
+        // Enemy 공통: Controller=E_Animator, Avatar=PC001_newAvatar, Apply Root Motion 끄기, Normal, Always Animate
+        RuntimeAnimatorController enemyController = FindEnemyAnimatorController();
+        Avatar enemyAvatar = FindEnemyAvatar(fbxAssetPath, sourceAnimator);
+
+        RuntimeAnimatorController ctrlToUse = enemyController ?? sourceAnimator?.runtimeAnimatorController;
+        Avatar avaToUse = enemyAvatar ?? sourceAnimator?.avatar;
+
+        if (ctrlToUse == null)
+            Debug.LogWarning("[EnemyPrefabGenerator] E_Animator를 찾지 못했습니다. " + EnemyAnimatorControllerPath);
+        if (avaToUse == null)
+            Debug.LogWarning("[EnemyPrefabGenerator] Avatar를 찾지 못했습니다. " + fbxAssetPath + " / " + EnemyAvatarSourcePath);
+
+        // SerializedObject로 할당하여 프리팹에 확실히 반영
+        var soAnim = new SerializedObject(rootAnimator);
+        soAnim.FindProperty("m_Controller").objectReferenceValue = ctrlToUse;
+        soAnim.FindProperty("m_Avatar").objectReferenceValue = avaToUse;
+        soAnim.FindProperty("m_ApplyRootMotion").boolValue = false;
+        soAnim.FindProperty("m_UpdateMode").intValue = (int)AnimatorUpdateMode.Normal;
+        soAnim.FindProperty("m_CullingMode").intValue = (int)AnimatorCullingMode.AlwaysAnimate;
+        soAnim.ApplyModifiedPropertiesWithoutUndo();
+
+        if (sourceAnimator != null)
             Object.DestroyImmediate(sourceAnimator);
-        }
-        else
-        {
-            Animator rootAnimator = root.AddComponent<Animator>();
-            if (sourceAnimator != null)
-            {
-                rootAnimator.avatar = sourceAnimator.avatar;
-                rootAnimator.runtimeAnimatorController = sourceAnimator.runtimeAnimatorController;
-                rootAnimator.applyRootMotion = false;
-                Object.DestroyImmediate(sourceAnimator);
-            }
-            rootAnimator.updateMode = AnimatorUpdateMode.Normal;
-            rootAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-        }
 
         Animator rootAnim = root.GetComponent<Animator>();
-        if (rootAnim == null) rootAnim = root.AddComponent<Animator>();
 
         Rigidbody rb = root.AddComponent<Rigidbody>();
         rb.useGravity = true;
@@ -177,6 +178,47 @@ public static class EnemyPrefabGenerator
         }
     }
 
+    private const string EnemyAnimatorControllerPath = "Assets/Arts/Enemy/Ani/E_Animator.controller";
+    private const string EnemyAvatarSourcePath = "Assets/Arts/Player/New01/Model/PC001_new.fbx";
+    private const string E_AnimatorGUID = "0c585f06e6c97534cac89d91d9e0726d";
+    private const string PC001_newGUID = "8660d3d865b72a241877d8d4e0773df0";
+
+    /// <summary>Enemy 공통 Animator Controller (E_Animator) 찾기</summary>
+    private static RuntimeAnimatorController FindEnemyAnimatorController()
+    {
+        var ctrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AssetDatabase.GUIDToAssetPath(E_AnimatorGUID));
+        if (ctrl != null) return ctrl;
+        ctrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(EnemyAnimatorControllerPath);
+        if (ctrl != null) return ctrl;
+        foreach (string guid in AssetDatabase.FindAssets("E_Animator t:AnimatorController"))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (path == null || path.Contains("/Old/")) continue;
+            ctrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(path);
+            if (ctrl != null) return ctrl;
+        }
+        return null;
+    }
+
+    /// <summary>Enemy 공통 Avatar (PC001_newAvatar) 찾기</summary>
+    private static Avatar FindEnemyAvatar(string fbxAssetPath, Animator sourceAnimator)
+    {
+        foreach (string path in new[]
+        {
+            fbxAssetPath,
+            AssetDatabase.GUIDToAssetPath(PC001_newGUID),
+            EnemyAvatarSourcePath
+        })
+        {
+            if (string.IsNullOrEmpty(path)) continue;
+            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(path))
+            {
+                if (o is Avatar av && av.isHuman) return av;
+            }
+        }
+        return sourceAnimator?.avatar != null && sourceAnimator.isHuman ? sourceAnimator.avatar : null;
+    }
+
     private static MovementSettings FindDefaultMovementSettings()
     {
         string[] guids = AssetDatabase.FindAssets("t:MovementSettings");
@@ -214,23 +256,38 @@ public static class EnemyPrefabGenerator
     private static void BuildRagdoll(GameObject root, Animator animator, Rigidbody rootRb, Transform modelRoot)
     {
         RagdollBuildSettings settings = FindRagdollBuildSettings();
+        // PC 제너레이터와 동일: Bip001이 있으면 BIP 경로 우선 (최상위 본 Bip001, Character Joint 없음)
+        Transform pelvisTr = FindBoneInChildren(modelRoot, "Bip001");
+        if (pelvisTr != null)
+        {
+            var enemySettings = settings != null ? settings : ScriptableObject.CreateInstance<RagdollBuildSettings>();
+            if (settings == null) enemySettings.pelvis = "Bip001";
+            else if (string.IsNullOrEmpty(settings.pelvis)) enemySettings.pelvis = "Bip001";
+            BuildRagdollBIP(root, rootRb, modelRoot, enemySettings);
+            RemoveCharacterJointFromBip001(modelRoot);
+            if (settings == null) Object.DestroyImmediate(enemySettings);
+            return;
+        }
+
         bool useHumanoid = animator != null && animator.avatar != null && animator.isHuman;
         Transform hipsTr = useHumanoid ? animator.GetBoneTransform(HumanBodyBones.Hips) : null;
-
         if (useHumanoid && hipsTr != null)
         {
             BuildRagdollHumanoid(root, animator, rootRb, hipsTr, settings);
+            RemoveCharacterJointFromBip001(modelRoot);
             return;
         }
 
-        Transform pelvisTr = FindBoneInChildren(modelRoot, settings != null ? settings.pelvis : "Bip001");
-        if (pelvisTr != null)
-        {
-            BuildRagdollBIP(root, rootRb, modelRoot, settings);
-            return;
-        }
+        Debug.LogWarning("[EnemyPrefabGenerator] BIP 본(Bip001)도 Humanoid도 찾지 못해 랙돌을 생성하지 않습니다.");
+    }
 
-        Debug.LogWarning("[EnemyPrefabGenerator] Humanoid도 BIP 본(Pelvis/Bip001)도 찾지 못해 랙돌을 생성하지 않습니다. Rig를 Humanoid로 하거나 BIP 본 이름을 확인하세요.");
+    /// <summary>Bip001(최상위 본)에 붙은 Character Joint 제거. PC 제너레이터와 동일.</summary>
+    private static void RemoveCharacterJointFromBip001(Transform modelRoot)
+    {
+        Transform bip001 = FindBoneInChildren(modelRoot, "Bip001");
+        if (bip001 == null) return;
+        var cj = bip001.GetComponent<CharacterJoint>();
+        if (cj != null) Object.DestroyImmediate(cj);
     }
 
     private static RagdollBuildSettings FindRagdollBuildSettings()

@@ -25,6 +25,9 @@ public class WeaponBehavior : MonoBehaviour
     private Material previewMat;
     private const int kPreviewSegments = 36;
 
+    /* ─ 트레일 (공격 시 on/off) ─ */
+    private WeaponTrailController trailController;
+
     [Header("발사 옵션")]
     public bool preserveVertical = false;
 
@@ -59,6 +62,7 @@ public class WeaponBehavior : MonoBehaviour
         ResolveSpawnPointsFromSO();
         EnsurePreviewLine();
         EnsureAmmoInitialized();
+        EnsureTrail();
 
         initializedOnce = true;
     }
@@ -189,9 +193,40 @@ public class WeaponBehavior : MonoBehaviour
         }
     }
 
+    void OnEnable()
+    {
+        EnsureTrail();
+    }
+
     void OnDisable()
     {
         if (previewLR != null) previewLR.enabled = false;
+        CancelTrailImmediate();
+    }
+
+    private void EnsureTrail()
+    {
+        if (trailController != null) return;
+        trailController = GetComponent<WeaponTrailController>();
+    }
+
+    /// <summary>공격 시작 시 호출. WeaponTrailController가 있으면 트레일을 켭니다.</summary>
+    public void EnableTrail()
+    {
+        EnsureTrail();
+        trailController?.EnableTrail();
+    }
+
+    /// <summary>공격 종료 시 호출. WeaponTrailController가 있으면 트레일을 끕니다.</summary>
+    public void DisableTrail()
+    {
+        trailController?.DisableTrail();
+    }
+
+    /// <summary>회피/넉백/스턴 등으로 공격이 끊길 때 호출. 트레일을 즉시 비웁니다.</summary>
+    public void CancelTrailImmediate()
+    {
+        trailController?.CancelTrailImmediate();
     }
 
     void LateUpdate()

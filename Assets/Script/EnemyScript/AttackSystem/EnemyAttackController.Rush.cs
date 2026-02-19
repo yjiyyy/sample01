@@ -10,7 +10,7 @@ public partial class EnemyAttackController
     private GameObject spawnedRushHitbox;
     private int runningRushIndex = -1;
     private Transform rushTarget;
-    // ¸¶Áö¸· µ¹Áø ¹æÇâ(¸¶¹«¸® °¨¼Ó¿¡ »ç¿ë)
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ó¿ï¿½ ï¿½ï¿½ï¿½)
     private Vector3 lastRushDir = Vector3.forward;
 
     private void StartRush(RushAttackData data, Transform target, int index)
@@ -34,7 +34,7 @@ public partial class EnemyAttackController
     {
         if (enemy.animator)
         {
-            // ÆÄ¶ó¹ÌÅÍ°¡ ¾ø¾îµµ Play¸¸À¸·Î µ¿ÀÛÇÏµµ·Ï
+            // ï¿½Ä¶ï¿½ï¿½ï¿½Í°ï¿½ ï¿½ï¿½ï¿½îµµ Playï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½
             if (data.prepareClip != null)
             {
                 enemy.animator.speed = 1f;
@@ -42,7 +42,7 @@ public partial class EnemyAttackController
             }
             else
             {
-                // Å¬¸³ ¹ÌÁöÁ¤ ½Ã Æú¹é(ÀÖÀ¸¸é): "RushPrepare"
+                // Å¬ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½): "RushPrepare"
                 SafeSetBool("IsRushPrepare", true);
                 SafeSetBool("IsRush", false);
                 enemy.animator.Play("RushPrepare");
@@ -83,7 +83,7 @@ public partial class EnemyAttackController
 
         if (enemy.animator)
         {
-            // °ø°Ý Å¬¸³ ¿ì¼±, ¾øÀ¸¸é attackName, ±×µµ ¾øÀ¸¸é "Rush"
+            // ï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ ï¿½ì¼±, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ attackName, ï¿½×µï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ "Rush"
             enemy.animator.speed = 1f;
             if (data.attackClip != null)
                 enemy.animator.Play(data.attackClip.name, 0, 0f);
@@ -96,7 +96,7 @@ public partial class EnemyAttackController
         SpawnRushHitbox(data);
 
         float elapsed = 0f;
-        // ÃÊ±â µ¹Áø ¹æÇâ
+        // ï¿½Ê±ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         Vector3 rushDir = transform.forward;
         rushDir.y = 0f;
         if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
@@ -109,7 +109,7 @@ public partial class EnemyAttackController
             baseWeight = Mathf.Clamp01(data.directionDeviationAmount);
         }
 
-        // FixedUpdate ±â¹Ý ÀÌµ¿(ÇÃ·§Æû/ÇÁ·¹ÀÓ µ¶¸³)
+        // FixedUpdate ï¿½ï¿½ï¿½ ï¿½Ìµï¿½(ï¿½Ã·ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
         while (elapsed < data.attackDuration)
         {
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
@@ -129,7 +129,7 @@ public partial class EnemyAttackController
                 if (desired.sqrMagnitude > 0.0001f)
                 {
                     desired.Normalize();
-                    // °íÁ¤ ÇÁ·¹ÀÓ ±â¹Ý °¡ÁßÄ¡
+                    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ä¡
                     float dtWeight = 1f - Mathf.Pow(1f - baseWeight, Time.fixedDeltaTime * 60f);
                     rushDir = Vector3.Slerp(rushDir, desired, dtWeight).normalized;
 
@@ -146,16 +146,16 @@ public partial class EnemyAttackController
             yield return new WaitForFixedUpdate();
         }
 
-        // °ø°Ý ±¸°£ Á¾·á ¡æ ¸¶¹«¸® °¨¼ÓÀ¸·Î ³Ñ¾î°¨ (È÷Æ®¹Ú½º´Â °ø°Ý ±¸°£±îÁö¸¸)
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ñ¾î°¨ (ï¿½ï¿½Æ®ï¿½Ú½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
         DespawnRushHitbox();
 
-        // ¸¶¹«¸® ·çÆ¾ ½ÇÇà(°è¼Ó IsRushing À¯Áö)
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ¾ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ IsRushing ï¿½ï¿½ï¿½ï¿½)
         rushCoroutine = StartCoroutine(RushFinishRoutine(data, lastRushDir));
     }
 
     private IEnumerator RushFinishRoutine(RushAttackData data, Vector3 dir)
     {
-        // ¸¶¹«¸® Å¬¸³(¼±ÅÃ) Àç»ý
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½) ï¿½ï¿½ï¿½
         if (enemy.animator && data.finishClip != null)
         {
             enemy.animator.speed = 1f;
@@ -165,7 +165,7 @@ public partial class EnemyAttackController
         float dur = Mathf.Max(0f, data.finishDuration);
         float elapsed = 0f;
 
-        // ¼±Çü °¨¼Ó: rushSpeed ¡æ 0
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½: rushSpeed ï¿½ï¿½ 0
         float initialSpeed = Mathf.Max(0f, data.rushSpeed);
 
         Vector3 finishDir = dir;
@@ -189,10 +189,10 @@ public partial class EnemyAttackController
             float currentSpeed = initialSpeed * (1f - t);
             Vector3 disp = finishDir * currentSpeed * Time.fixedDeltaTime;
 
-            // ¸¶¹«¸® Áß¿¡´Â ¹æÇâ º¸Á¤ ¾øÀÌ °¨¼Ó¸¸
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ß¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ó¸ï¿½
             enemy.MoveFilteredDisplacement(disp);
 
-            // ½Ã¼±Àº ¸¶Áö¸· ¹æÇâ À¯Áö
+            // ï¿½Ã¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             if (finishDir.sqrMagnitude > 0.0001f)
                 transform.rotation = Quaternion.LookRotation(finishDir);
 

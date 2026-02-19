@@ -1,4 +1,4 @@
-﻿// (전체 파일) PlayerWeaponController.cs
+// (전체 파일) PlayerWeaponController.cs
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -328,6 +328,11 @@ public class PlayerWeaponController : MonoBehaviour
             ExecutePendingSwitchIfAnyImmediate();
         }
 
+        // 회피/넉백/스턴/사망 시 트레일 즉시 제거
+        if (newState == PlayerState.Evade || newState == PlayerState.Knockback ||
+            newState == PlayerState.Stun || newState == PlayerState.Dead)
+            equipComp.WeaponBehavior?.CancelTrailImmediate();
+
         if (newState != PlayerState.Attack)
             CancelRecoil();
 
@@ -510,12 +515,14 @@ public class PlayerWeaponController : MonoBehaviour
     private IEnumerator AttackRoutine(WeaponDataSO data)
     {
         ChangeState(PlayerState.Attack);
+        equipComp.WeaponBehavior?.EnableTrail();
         animationController?.PlayAttack(data);
         StartRecoilIfNeeded(data);
         equipComp.WeaponBehavior?.AttackHit();
 
         yield return new WaitForSeconds(data.cooldown);
 
+        equipComp.WeaponBehavior?.DisableTrail();
         ChangeState(PlayerState.Idle);
         animationController?.EndAttack();
         CancelRecoil();
