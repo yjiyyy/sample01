@@ -63,6 +63,7 @@ public class WeaponBehavior : MonoBehaviour
         EnsurePreviewLine();
         EnsureAmmoInitialized();
         EnsureTrail();
+        EnsureWeaponHitboxDisabled();
 
         initializedOnce = true;
     }
@@ -282,6 +283,12 @@ public class WeaponBehavior : MonoBehaviour
 
     private void SpawnMeleeHitbox(bool useSecond)
     {
+        if (data != null && data.useWeaponCollider)
+        {
+            UseWeaponCollider(useSecond);
+            return;
+        }
+
         var prefab = data != null ? data.meleeHitboxPrefab : null;
         Transform spawn = useSecond ? meleeSpawnPoint2 : meleeSpawnPoint;
 
@@ -299,6 +306,67 @@ public class WeaponBehavior : MonoBehaviour
         {
             hitbox.SetWeapon(data);
             hitbox.Initialize(data.damage, data.range, data.knockbackPower, data.hitBoxLifetime);
+        }
+    }
+
+    private void UseWeaponCollider(bool useSecond)
+    {
+        if (data == null) return;
+
+        Transform weaponRoot = transform;
+        if (useSecond && data.dualWield)
+        {
+            var equip = transform.root != null ? transform.root.GetComponent<PlayerEquipmentController>() : null;
+            if (equip != null && equip.SecondaryWeapon != null)
+                weaponRoot = equip.SecondaryWeapon.transform;
+        }
+
+        var hitbox = weaponRoot.GetComponentInChildren<HitBox_PC>(true);
+        if (hitbox == null)
+        {
+            Debug.LogWarning("[WeaponBehavior] useWeaponCollider=true인데 무기에 HitBox_PC 없음");
+            return;
+        }
+
+        var col = hitbox.GetComponent<Collider>();
+        if (col == null)
+        {
+            Debug.LogWarning("[WeaponBehavior] useWeaponCollider=true인데 HitBox_PC에 Collider 없음");
+            return;
+        }
+
+        col.enabled = true;
+        hitbox.SetWeapon(data);
+        hitbox.InitializeAttached(data.damage, data.range, data.knockbackPower, data.hitBoxLifetime);
+        StartCoroutine(DisableHitboxAfterLifetime(col, data.hitBoxLifetime));
+    }
+
+    private IEnumerator DisableHitboxAfterLifetime(Collider col, float lifetime)
+    {
+        yield return new WaitForSeconds(lifetime);
+        if (col != null)
+            col.enabled = false;
+    }
+
+    private void EnsureWeaponHitboxDisabled()
+    {
+        if (data == null || !data.useWeaponCollider) return;
+        foreach (var hb in GetComponentsInChildren<HitBox_PC>(true))
+        {
+            var col = hb.GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+        }
+        if (data.dualWield)
+        {
+            var equip = transform.root != null ? transform.root.GetComponent<PlayerEquipmentController>() : null;
+            if (equip != null && equip.SecondaryWeapon != null)
+            {
+                foreach (var hb in equip.SecondaryWeapon.GetComponentsInChildren<HitBox_PC>(true))
+                {
+                    var col = hb.GetComponent<Collider>();
+                    if (col != null) col.enabled = false;
+                }
+            }
         }
     }
 

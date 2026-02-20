@@ -19,10 +19,10 @@ MonoBehaviour:
   weaponPrefab: {fileID: 1412765267159074636, guid: da5351bfe81789e4eb5a3e1466486ee0, type: 3}
   overrideController: {fileID: 22100000, guid: fed68105d96fde44c80e322c00b03b08, type: 2}
   cooldown: 0.5
-  damage: 200
+  damage: 10
   range: 2.5
-  hitboxSpawnDelay: 0.15
-  hitBoxLifetime: 0.1
+  hitboxSpawnDelay: 0.1
+  hitBoxLifetime: 0.15
   knockbackDuration: 1
   knockbackPower: 10
   jerkIntensity: 1
@@ -46,7 +46,8 @@ MonoBehaviour:
   - Bip001 L Hand
   meleeSpawnPointPathOrName: 
   projectileSpawnPointPathOrName: 
-  meleeHitboxPrefab: {fileID: 4874105736294604296, guid: 0d26afa0cfa1f7c448bd54a078bfae5a, type: 3}
+  useWeaponCollider: 1
+  meleeHitboxPrefab: {fileID: 0}
   projectilePrefab: {fileID: 0}
   shotgunSectorPrefab: {fileID: 0}
   dualWield: 0

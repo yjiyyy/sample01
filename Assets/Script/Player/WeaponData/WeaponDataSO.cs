@@ -111,6 +111,8 @@ public class WeaponDataSO : ScriptableObject
     public string projectileSpawnPointPathOrName = "";
 
     [Header("Attack Prefabs (완전 이관)")]
+    [Tooltip("true면 meleeHitboxPrefab 스폰 대신 무기 자체 HitBox 콜리더를 활성화. 무기 프리팹에 HitBox 자식(BoxCollider+HitBox_PC) 필요.")]
+    public bool useWeaponCollider = false;
     public GameObject meleeHitboxPrefab;
     public GameObject projectilePrefab;
     public GameObject shotgunSectorPrefab;

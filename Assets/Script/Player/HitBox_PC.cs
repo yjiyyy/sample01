@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,6 +18,9 @@ public class HitBox_PC : MonoBehaviour
     private readonly HashSet<EnemyHealth> overlapping = new();
     private readonly HashSet<EnemyHealth> alreadyHit = new();
     private Coroutine dupRoutine;
+
+    /// <summary> true면 넉백/랙돌 방향을 플레이어 중심(transform.root) 기준으로 계산. 무기 콜리더 전용. </summary>
+    private bool usePlayerCenterForDirection = false;
 
     // ───────── 오버로드 1: 즉발 1회 ─────────
     public void Initialize(float dmg, float rng, float kbPower, float life)
@@ -56,6 +59,23 @@ public class HitBox_PC : MonoBehaviour
     }
 
     public void SetWeapon(WeaponDataSO w) => weapon = w;
+
+    /// <summary>
+    /// 무기 콜리더에 붙어 있을 때 사용. Destroy 없이 lifetime 후 콜리더 비활성화는 호출자가 처리.
+    /// 넉백/랙돌 방향은 플레이어 중심 기준으로 계산.
+    /// </summary>
+    public void InitializeAttached(float dmg, float rng, float kbPower, float life)
+    {
+        damage = dmg;
+        range = rng;
+        knockbackPower = kbPower;
+        lifetime = life;
+        duplicateEnabled = false;
+        duplicateInterval = 0.2f;
+        usePlayerCenterForDirection = true;
+        overlapping.Clear();
+        alreadyHit.Clear();
+    }
 
     private void OnDisable()
     {
@@ -121,8 +141,9 @@ public class HitBox_PC : MonoBehaviour
     {
         if (hp == null) return;
 
-        // 방향 계산(수평)
-        Vector3 dir = (hp.transform.position - transform.position);
+        // 방향 계산(수평). 무기 콜리더는 플레이어 중심, 스폰 히트박스는 히트박스 위치
+        Vector3 origin = usePlayerCenterForDirection && transform.root != null ? transform.root.position : transform.position;
+        Vector3 dir = (hp.transform.position - origin);
         dir.y = 0f;
         if (dir.sqrMagnitude < 0.0001f) dir = Vector3.forward;
         dir.Normalize();

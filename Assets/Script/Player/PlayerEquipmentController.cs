@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using System.Collections.Generic;
 
@@ -196,6 +196,15 @@ public class PlayerEquipmentController : MonoBehaviour
             if (subAmmoAR != null) Destroy(subAmmoAR);
 
             AttachToMount(instSub.transform, subMount);
+
+            if (CurrentWeaponData.useWeaponCollider)
+            {
+                foreach (var hb in instSub.GetComponentsInChildren<HitBox_PC>(true))
+                {
+                    var col = hb.GetComponent<Collider>();
+                    if (col != null) col.enabled = false;
+                }
+            }
 
 #if UNITY_EDITOR
             if (debugLogs) Debug.Log("[Equip] DualWield: spawned secondary weapon model.");
