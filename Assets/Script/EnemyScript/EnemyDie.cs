@@ -473,20 +473,7 @@ public class EnemyDie : MonoBehaviour
             var partBodies = root.GetComponentsInChildren<Rigidbody>(true);
             var partCols = root.GetComponentsInChildren<Collider>(true);
 
-            foreach (var t in root.GetComponentsInChildren<Transform>(true))
-            {
-                if (t == null) continue;
-                var joints = t.GetComponents<Joint>();
-                foreach (var j in joints) { if (j == null) continue; j.connectedBody = null; Object.Destroy(j); }
-                var cfgs = t.GetComponentsInChildren<ConfigurableJoint>(true);
-                foreach (var c in cfgs) { if (c == null) continue; c.connectedBody = null; Object.Destroy(c); }
-                var chars = t.GetComponentsInChildren<CharacterJoint>(true);
-                foreach (var cj in chars) { if (cj == null) continue; cj.connectedBody = null; Object.Destroy(cj); }
-                var hinges = t.GetComponentsInChildren<HingeJoint>(true);
-                foreach (var hj in hinges) { if (hj == null) continue; hj.connectedBody = null; Object.Destroy(hj); }
-                var fixeds = t.GetComponentsInChildren<FixedJoint>(true);
-                foreach (var fj in fixeds) { if (fj == null) continue; fj.connectedBody = null; Object.Destroy(fj); }
-            }
+            DisconnectJointsFromSliceToBody(root, slicedSet);
 
             foreach (var col in partCols) { if (col != null) col.enabled = true; }
             foreach (var rb in partBodies)
@@ -621,20 +608,7 @@ public class EnemyDie : MonoBehaviour
             var partBodies = root.GetComponentsInChildren<Rigidbody>(true);
             var partCols = root.GetComponentsInChildren<Collider>(true);
 
-            foreach (var t in root.GetComponentsInChildren<Transform>(true))
-            {
-                if (t == null) continue;
-                var joints = t.GetComponents<Joint>();
-                foreach (var j in joints) { if (j == null) continue; j.connectedBody = null; Object.Destroy(j); }
-                var cfgs = t.GetComponentsInChildren<ConfigurableJoint>(true);
-                foreach (var c in cfgs) { if (c == null) continue; c.connectedBody = null; Object.Destroy(c); }
-                var chars = t.GetComponentsInChildren<CharacterJoint>(true);
-                foreach (var cj in chars) { if (cj == null) continue; cj.connectedBody = null; Object.Destroy(cj); }
-                var hinges = t.GetComponentsInChildren<HingeJoint>(true);
-                foreach (var hj in hinges) { if (hj == null) continue; hj.connectedBody = null; Object.Destroy(hj); }
-                var fixeds = t.GetComponentsInChildren<FixedJoint>(true);
-                foreach (var fj in fixeds) { if (fj == null) continue; fj.connectedBody = null; Object.Destroy(fj); }
-            }
+            DisconnectJointsFromSliceToBody(root, slicedSet);
 
             root.SetParent(null, worldPositionStays: true);
             root.gameObject.name = root.gameObject.name + "_Sliced";
@@ -748,6 +722,7 @@ public class EnemyDie : MonoBehaviour
         if (spin > 0f)
         {
             Vector3 axis = MakeRandomSpinAxisAvoidPitch(dir);
+            if (Random.value > 0.5f) axis = -axis;
 
             foreach (var rb in targets)
             {
@@ -766,6 +741,27 @@ public class EnemyDie : MonoBehaviour
                 }
 
                 rb.AddTorque(axis * (spin * factor), ForceMode.VelocityChange);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 슬라이스 파츠 내에서, 몸통과 연결된 Joint만 끊음. 파츠 내부 Joint(슬라이스↔슬라이스)는 유지하여 트리 구조 보존.
+    /// </summary>
+    private void DisconnectJointsFromSliceToBody(Transform sliceRoot, HashSet<Rigidbody> slicedSet)
+    {
+        foreach (var t in sliceRoot.GetComponentsInChildren<Transform>(true))
+        {
+            if (t == null) continue;
+            var joints = t.GetComponents<Joint>();
+            foreach (var j in joints)
+            {
+                if (j == null) continue;
+                if (j.connectedBody != null && !slicedSet.Contains(j.connectedBody))
+                {
+                    j.connectedBody = null;
+                    Object.Destroy(j);
+                }
             }
         }
     }

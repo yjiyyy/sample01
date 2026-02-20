@@ -134,7 +134,11 @@ public static class PlayerPrefabGenerator
         root.AddComponent<PlayerEquipmentController>();
 
         AddPlayerComponentProperties(root, rootAnim, rb, capsule);
-        BuildRagdoll(root, rootAnim, rb, fbxInstance.transform);
+        if (!BuildRagdoll(root, rootAnim, rb, fbxInstance.transform))
+        {
+            Object.DestroyImmediate(root);
+            return;
+        }
 
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, savePath, InteractionMode.AutomatedAction);
         Object.DestroyImmediate(root);
@@ -328,38 +332,46 @@ public static class PlayerPrefabGenerator
         return null;
     }
 
-    private static void BuildRagdoll(GameObject root, Animator animator, Rigidbody rootRb, Transform modelRoot)
+    private static bool BuildRagdoll(GameObject root, Animator animator, Rigidbody rootRb, Transform modelRoot)
     {
         RagdollBuildSettings settings = FindRagdollBuildSettings();
         // 에너미와 동일: Bip001이 있으면 BIP 경로 우선 (Humanoid여도 BIP 본 구조이므로 Pelvis에 조인트 안 붙음)
         Transform pelvisTr = FindBoneInChildren(modelRoot, "Bip001");
         if (pelvisTr != null)
         {
-            var playerSettings = ScriptableObject.CreateInstance<RagdollBuildSettings>();
-            if (settings != null)
+            if (settings == null)
             {
-                playerSettings.totalMass = settings.totalMass;
-                playerSettings.strength = settings.strength;
-                playerSettings.flipForward = settings.flipForward;
-                playerSettings.leftHips = settings.leftHips;
-                playerSettings.leftKnee = settings.leftKnee;
-                playerSettings.leftFoot = settings.leftFoot;
-                playerSettings.rightHips = settings.rightHips;
-                playerSettings.rightKnee = settings.rightKnee;
-                playerSettings.rightFoot = settings.rightFoot;
-                playerSettings.leftArm = settings.leftArm;
-                playerSettings.leftElbow = settings.leftElbow;
-                playerSettings.rightArm = settings.rightArm;
-                playerSettings.rightElbow = settings.rightElbow;
-                playerSettings.middleSpine = settings.middleSpine;
-                playerSettings.head = settings.head;
+                Debug.LogError("[PlayerPrefabGenerator] BIP 랙돌 빌드 실패: RagdollBuildSettings SO를 찾을 수 없습니다. Project에 RagdollBuildSettings를 생성·할당한 뒤 다시 시도하세요.");
+                return false;
             }
+            if (settings.boneOverrides == null || settings.boneOverrides.Length == 0)
+            {
+                Debug.LogError("[PlayerPrefabGenerator] BIP 랙돌 빌드 실패: RagdollBuildSettings의 boneOverrides가 비어 있습니다. boneOverrides에 값을 채운 뒤 다시 시도하세요.");
+                return false;
+            }
+            var playerSettings = ScriptableObject.CreateInstance<RagdollBuildSettings>();
+            playerSettings.totalMass = settings.totalMass;
+            playerSettings.strength = settings.strength;
+            playerSettings.flipForward = settings.flipForward;
+            playerSettings.leftHips = settings.leftHips;
+            playerSettings.leftKnee = settings.leftKnee;
+            playerSettings.leftFoot = settings.leftFoot;
+            playerSettings.rightHips = settings.rightHips;
+            playerSettings.rightKnee = settings.rightKnee;
+            playerSettings.rightFoot = settings.rightFoot;
+            playerSettings.leftArm = settings.leftArm;
+            playerSettings.leftElbow = settings.leftElbow;
+            playerSettings.rightArm = settings.rightArm;
+            playerSettings.rightElbow = settings.rightElbow;
+            playerSettings.middleSpine = settings.middleSpine;
+            playerSettings.head = settings.head;
             playerSettings.pelvis = "Bip001";
+            playerSettings.boneOverrides = settings.boneOverrides;
             BuildRagdollBIP(root, rootRb, modelRoot, playerSettings);
             RemoveCharacterJointFromBip001(modelRoot);
             EnsureRagdollOffState(root, rootRb, root.GetComponent<Collider>());
             Object.DestroyImmediate(playerSettings);
-            return;
+            return true;
         }
 
         // Bip001 없을 때만 Humanoid 경로 (fallback)
@@ -370,10 +382,11 @@ public static class PlayerPrefabGenerator
             BuildRagdollHumanoid(root, animator, rootRb, hipsTr, settings);
             RemoveCharacterJointFromBip001(modelRoot);
             EnsureRagdollOffState(root, rootRb, root.GetComponent<Collider>());
-            return;
+            return true;
         }
 
         Debug.LogWarning("[PlayerPrefabGenerator] Humanoid도 BIP 본(Bip001)을 찾지 못해 랙돌을 생성하지 않습니다.");
+        return true;
     }
 
     /// <summary> Bip001에 붙은 Character Joint를 제거 (자동 세팅이 되지 않을 경우 대비) </summary>
@@ -442,7 +455,8 @@ public static class PlayerPrefabGenerator
         float totalMass = settings != null ? settings.totalMass : 20f;
         float strength = settings != null ? settings.strength : 0f;
         float massPerBone = Mathf.Max(0.1f, totalMass / RagdollBones.Length);
-        float limitBase = 20f + strength;
+        float twist = (settings != null && settings.twistLimit > 0f) ? settings.twistLimit : (20f + strength);
+        float swing = (settings != null && settings.swingLimit > 0f) ? settings.swingLimit : Mathf.Min(90f, 30f + strength);
 
         var boneToRb = new Dictionary<Transform, Rigidbody>();
         foreach (HumanBodyBones boneType in RagdollBones)
@@ -528,10 +542,10 @@ public static class PlayerPrefabGenerator
             joint.anchor = Vector3.zero;
             joint.axis = new Vector3(0, 0, 1);
             joint.swingAxis = new Vector3(1, 0, 0);
-            joint.lowTwistLimit = new SoftJointLimit { limit = -limitBase };
-            joint.highTwistLimit = new SoftJointLimit { limit = limitBase };
-            joint.swing1Limit = new SoftJointLimit { limit = Mathf.Min(90f, 30f + strength) };
-            joint.swing2Limit = new SoftJointLimit { limit = Mathf.Min(90f, 30f + strength) };
+            joint.lowTwistLimit = new SoftJointLimit { limit = -twist };
+            joint.highTwistLimit = new SoftJointLimit { limit = twist };
+            joint.swing1Limit = new SoftJointLimit { limit = swing };
+            joint.swing2Limit = new SoftJointLimit { limit = swing };
             joint.enableProjection = true;
         }
         SetRagdollBonesLayer(root, boneToRb.Keys);
@@ -539,16 +553,21 @@ public static class PlayerPrefabGenerator
 
     private static void BuildRagdollBIP(GameObject root, Rigidbody rootRb, Transform modelRoot, RagdollBuildSettings settings)
     {
-        if (settings == null)
-            settings = ScriptableObject.CreateInstance<RagdollBuildSettings>();
-
-        float totalMass = Mathf.Max(0.1f, settings.totalMass);
-        float strength = settings.strength;
-        float limitBase = 20f + strength;
+        // SO의 boneOverrides만 사용. (caller에서 SO·boneOverrides 검증 후 호출)
+        var overrideDict = new Dictionary<string, RagdollBuildSettings.BoneOverride>();
+        if (settings.boneOverrides != null)
+        {
+            foreach (var o in settings.boneOverrides)
+            {
+                if (o != null && !string.IsNullOrEmpty(o.boneKey))
+                    overrideDict[o.boneKey] = o;
+            }
+        }
 
         var bones = new Dictionary<string, Transform>();
         string[] keys = { "Pelvis", "LeftHips", "LeftKnee", "LeftFoot", "RightHips", "RightKnee", "RightFoot", "LeftArm", "LeftElbow", "RightArm", "RightElbow", "MiddleSpine", "Head" };
-        string[] names = { settings.pelvis, settings.leftHips, settings.leftKnee, settings.leftFoot, settings.rightHips, settings.rightKnee, settings.rightFoot, settings.leftArm, settings.leftElbow, settings.rightArm, settings.rightElbow, settings.middleSpine, settings.head };
+        string pelvisName = !string.IsNullOrEmpty(settings.pelvis) ? settings.pelvis : "Bip001";
+        string[] names = { pelvisName, settings.leftHips, settings.leftKnee, settings.leftFoot, settings.rightHips, settings.rightKnee, settings.rightFoot, settings.leftArm, settings.leftElbow, settings.rightArm, settings.rightElbow, settings.middleSpine, settings.head };
         for (int i = 0; i < keys.Length; i++)
         {
             var tr = FindBoneInChildren(modelRoot, names[i]);
@@ -562,26 +581,38 @@ public static class PlayerPrefabGenerator
         }
 
         int count = bones.Count;
-        float massPerBone = totalMass / count;
         var boneToRb = new Dictionary<Transform, Rigidbody>();
 
         foreach (var kv in bones)
         {
             Transform tr = kv.Value;
             if (tr.gameObject == root) continue;
+            var o = overrideDict.TryGetValue(kv.Key, out var ov) ? ov : null;
+
             Rigidbody brb = tr.GetComponent<Rigidbody>();
             if (brb == null) brb = tr.gameObject.AddComponent<Rigidbody>();
             brb.useGravity = true;
             brb.isKinematic = true;
             brb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            brb.mass = massPerBone;
+            brb.mass = (o != null && o.mass > 0f) ? o.mass : 1f;
             brb.linearDamping = 0f;
             brb.angularDamping = 0.05f;
             boneToRb[tr] = brb;
 
-            if (tr.GetComponent<Collider>() == null)
+            // E_LV01_New04 기준: override가 있으면 무조건 적용 (기존 콜리더도 덮어씀)
+            float radius = 0.08f, height = 0.2f;
+            Vector3 center = Vector3.zero;
+            int dir = 0;
+            bool hasOverride = o != null && o.colliderRadius >= 0f && o.colliderHeight >= 0f;
+            if (hasOverride)
             {
-                float radius = 0.08f, height = 0.2f;
+                radius = o.colliderRadius;
+                height = o.colliderHeight;
+                center = o.colliderCenter;
+                dir = o.colliderDirection;
+            }
+            else if (tr.GetComponent<Collider>() == null)
+            {
                 switch (kv.Key)
                 {
                     case "Head": radius = 0.12f; height = 0.2f; break;
@@ -590,13 +621,20 @@ public static class PlayerPrefabGenerator
                     case "LeftArm": case "RightArm": case "LeftElbow": case "RightElbow": radius = 0.05f; height = 0.2f; break;
                     case "Pelvis": radius = 0.12f; height = 0.2f; break;
                 }
-                var col = tr.gameObject.AddComponent<CapsuleCollider>();
-                col.radius = radius;
-                col.height = height;
-                col.direction = 0;
-                col.center = Vector3.zero;
-                col.enabled = false;
             }
+
+            CapsuleCollider col = tr.GetComponent<CapsuleCollider>();
+            if (col == null)
+            {
+                var existing = tr.GetComponent<Collider>();
+                if (existing != null) Object.DestroyImmediate(existing);
+                col = tr.gameObject.AddComponent<CapsuleCollider>();
+            }
+            col.radius = radius;
+            col.height = height;
+            col.direction = dir;
+            col.center = center;
+            col.enabled = false;
         }
 
         var parentMap = new Dictionary<string, string>
@@ -615,32 +653,38 @@ public static class PlayerPrefabGenerator
             Transform tr = kv.Value;
             if (!boneToRb.TryGetValue(tr, out Rigidbody bodyRb)) continue;
             string parentKey = parentMap.TryGetValue(key, out var p) ? p : null;
-            // Pelvis(Bip001)에는 Character Joint를 붙이지 않음 — 수동 랙돌과 동일, 이동 오류 방지
             if (parentKey == null) continue;
             Rigidbody connected = null;
             if (bones.TryGetValue(parentKey, out Transform parentTr) && boneToRb.TryGetValue(parentTr, out connected)) { }
             if (connected == null) continue;
 
+            var o = overrideDict.TryGetValue(key, out var ov) ? ov : null;
+            float lowTwist = o != null && !float.IsNaN(o.lowTwistLimit) ? o.lowTwistLimit : -20f;
+            float highTwist = o != null && !float.IsNaN(o.highTwistLimit) ? o.highTwistLimit : 20f;
+            float s1 = o != null && !float.IsNaN(o.swing1Limit) ? o.swing1Limit : 30f;
+            float s2 = o != null && !float.IsNaN(o.swing2Limit) ? o.swing2Limit : 30f;
+            Vector3 axis = (o != null) ? o.jointAxis : new Vector3(0, 0, 1);
+            Vector3 swingAxis = (o != null) ? o.jointSwingAxis : new Vector3(1, 0, 0);
+
             CharacterJoint joint = tr.GetComponent<CharacterJoint>();
             if (joint == null) joint = tr.gameObject.AddComponent<CharacterJoint>();
             joint.connectedBody = connected;
             joint.anchor = Vector3.zero;
-            joint.axis = new Vector3(0, 0, 1);
-            joint.swingAxis = new Vector3(1, 0, 0);
-            joint.lowTwistLimit = new SoftJointLimit { limit = -limitBase };
-            joint.highTwistLimit = new SoftJointLimit { limit = limitBase };
-            joint.swing1Limit = new SoftJointLimit { limit = Mathf.Min(90f, 30f + strength) };
-            joint.swing2Limit = new SoftJointLimit { limit = Mathf.Min(90f, 30f + strength) };
+            joint.axis = axis;
+            joint.swingAxis = swingAxis;
+            joint.lowTwistLimit = new SoftJointLimit { limit = lowTwist };
+            joint.highTwistLimit = new SoftJointLimit { limit = highTwist };
+            joint.swing1Limit = new SoftJointLimit { limit = s1 };
+            joint.swing2Limit = new SoftJointLimit { limit = s2 };
             joint.enableProjection = true;
         }
 
-        // Bip001(Pelvis)에는 Character Joint 없음 — 첨부파일·몬스터 스타일 (이동 오류 방지)
         var pelvisTr = bones["Pelvis"];
         var existingCj = pelvisTr.GetComponent<CharacterJoint>();
         if (existingCj != null) Object.DestroyImmediate(existingCj);
 
         SetRagdollBonesLayer(root, boneToRb.Keys);
-        Debug.Log($"[PlayerPrefabGenerator] BIP 랙돌 생성 완료 (Total Mass={totalMass}, Strength={strength}, 본 수={count})");
+        Debug.Log($"[PlayerPrefabGenerator] BIP 랙돌 생성 완료 (본 수={count})");
     }
 
     private static Transform GetRagdollParentBone(Animator animator, HumanBodyBones bone)
