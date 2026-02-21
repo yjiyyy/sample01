@@ -252,6 +252,10 @@ public class PlayerHealth : MonoBehaviour
         foreach (var root in sliceRoots)
         {
             if (root == null) continue;
+
+            var spawner = rootTransform.GetComponentInChildren<SliceBloodEffectSpawner>();
+            if (spawner != null) spawner.SpawnBloodAtSlice(root);
+
             Vector3 worldPos = root.position;
             Quaternion worldRot = root.rotation;
 
@@ -355,6 +359,10 @@ public class PlayerHealth : MonoBehaviour
         foreach (var root in sliceRoots)
         {
             if (root == null) continue;
+
+            var spawner = rootTransform.GetComponentInChildren<SliceBloodEffectSpawner>();
+            if (spawner != null) spawner.SpawnBloodAtSlice(root);
+
             Vector3 worldPos = root.position;
             Quaternion worldRot = root.rotation;
             var partBodies = root.GetComponentsInChildren<Rigidbody>(true);

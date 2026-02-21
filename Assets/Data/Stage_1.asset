@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e47342bdd5555e47ac26b1ea9d21860, type: 3}
   m_Name: Stage_1
   m_EditorClassIdentifier: 
-  stageDuration: 50
+  stageDuration: 150
   monsterLevelUpInterval: 100
   stageName: Stage 1

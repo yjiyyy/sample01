@@ -467,6 +467,9 @@ public class EnemyDie : MonoBehaviour
         {
             if (root == null) continue;
 
+            var spawner = transform.root.GetComponentInChildren<SliceBloodEffectSpawner>();
+            if (spawner != null) spawner.SpawnBloodAtSlice(root);
+
             Vector3 worldPos = root.position;
             Quaternion worldRot = root.rotation;
 
@@ -601,6 +604,9 @@ public class EnemyDie : MonoBehaviour
         foreach (var root in sliceRoots)
         {
             if (root == null) continue;
+
+            var spawner = transform.root.GetComponentInChildren<SliceBloodEffectSpawner>();
+            if (spawner != null) spawner.SpawnBloodAtSlice(root);
 
             Vector3 worldPos = root.position;
             Quaternion worldRot = root.rotation;

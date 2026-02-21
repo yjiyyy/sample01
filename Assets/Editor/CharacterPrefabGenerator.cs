@@ -127,6 +127,13 @@ public static class EnemyPrefabGenerator
             return;
         }
 
+        var settings = FindRagdollBuildSettings();
+        if (settings != null)
+        {
+            BuildFXBloodDummies(fbxInstance.transform, settings);
+            AddSliceBloodEffectSpawner(root, settings);
+        }
+
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, savePath, InteractionMode.AutomatedAction);
         Object.DestroyImmediate(root);
         Debug.Log($"[EnemyPrefabGenerator] Enemy 프리팹 생성 완료: {savePath}");
@@ -587,6 +594,44 @@ public static class EnemyPrefabGenerator
         var hipsProp = so.FindProperty("hipsBody");
         if (hipsProp != null) hipsProp.objectReferenceValue = hipsRb;
         so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void BuildFXBloodDummies(Transform modelRoot, RagdollBuildSettings settings)
+    {
+        var entries = settings.fxBloodDummies != null && settings.fxBloodDummies.Length > 0
+            ? settings.fxBloodDummies
+            : RagdollBuildSettings.GetDefaultFXBloodDummies();
+        foreach (var e in entries)
+        {
+            if (string.IsNullOrEmpty(e.dummyName) || string.IsNullOrEmpty(e.parentBoneName)) continue;
+            Transform parent = FindBoneInChildren(modelRoot, e.parentBoneName);
+            if (parent == null) continue;
+            var existing = FindInChildrenByName(modelRoot, e.dummyName);
+            if (existing != null) continue;
+            var go = new GameObject(e.dummyName);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = e.localPosition;
+            go.transform.localEulerAngles = e.localEulerAngles;
+        }
+    }
+
+    private static Transform FindInChildrenByName(Transform root, string name)
+    {
+        if (root == null) return null;
+        if (root.name == name) return root;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            var f = FindInChildrenByName(root.GetChild(i), name);
+            if (f != null) return f;
+        }
+        return null;
+    }
+
+    private static void AddSliceBloodEffectSpawner(GameObject root, RagdollBuildSettings settings)
+    {
+        var spawner = root.AddComponent<SliceBloodEffectSpawner>();
+        if (settings.bloodGushPrefab != null)
+            spawner.bloodGushPrefab = settings.bloodGushPrefab;
     }
 
     private static Transform GetRagdollParentBone(Animator animator, HumanBodyBones bone)

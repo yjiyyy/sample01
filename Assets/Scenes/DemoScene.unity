@@ -5136,7 +5136,7 @@ MonoBehaviour:
   spawnPoints:
   - {fileID: 1171404612}
   enemyPrefabsByLevel:
-  - {fileID: 7971648289314035776, guid: 30097457f5950f9488557917b3d6090d, type: 3}
+  - {fileID: 1678229727666018899, guid: 2480c394cb1d30e4bb643a77de27eb95, type: 3}
   hpuiPrefab: {fileID: 5425390646291263780, guid: c221514702d57b44bac940471d983478, type: 3}
   spawnInterval: 5
   jitterRadius: 0.5

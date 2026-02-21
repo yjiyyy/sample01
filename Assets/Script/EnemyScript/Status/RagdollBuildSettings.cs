@@ -45,6 +45,23 @@ public class RagdollBuildSettings : ScriptableObject
     [Tooltip("비어 있으면 코드 preset 사용. '초기화' 버튼으로 채운 뒤 Inspector에서 각 본별 값 편집 가능.")]
     public BoneOverride[] boneOverrides;
 
+    [System.Serializable]
+    public class FXBloodDummyEntry
+    {
+        [Tooltip("더미 이름. 예: FX_Blood_Head01")]
+        public string dummyName;
+        [Tooltip("부모가 될 본 이름")]
+        public string parentBoneName;
+        public Vector3 localPosition;
+        public Vector3 localEulerAngles;
+    }
+
+    [Header("FX Blood (슬라이스 피 이펙트 더미)")]
+    [Tooltip("비어 있으면 기본값(10개) 사용. 빌드 시 각 본 아래 더미 생성.")]
+    public FXBloodDummyEntry[] fxBloodDummies;
+    [Tooltip("SliceBloodEffectSpawner에 할당할 피 이펙트 프리팹")]
+    public GameObject bloodGushPrefab;
+
     [Header("BIP 본 이름 (Transform 이름과 정확히 일치)")]
     public string pelvis = "Bip001";
     public string leftHips = "Bip001 L Thigh";
@@ -113,6 +130,24 @@ public class RagdollBuildSettings : ScriptableObject
             new BoneOverride { boneKey = "LeftElbow", mass = 2f, colliderRadius = 0.07f, colliderHeight = 0.2f, colliderDirection = 0, colliderCenter = new Vector3(-0.14f, 0f, 0f), jointAxis = new Vector3(0f, 0f, -1f), jointSwingAxis = new Vector3(1f, 0f, 0f), lowTwistLimit = 34.96f, highTwistLimit = 130.71f, swing1Limit = 30f, swing2Limit = 30f },
             new BoneOverride { boneKey = "RightArm", mass = 3f, colliderRadius = 0.08f, colliderHeight = 0.2f, colliderDirection = 0, colliderCenter = new Vector3(-0.15f, 0f, 0f), jointAxis = new Vector3(0f, -0.5f, 1f), jointSwingAxis = new Vector3(1f, 0f, 0f), lowTwistLimit = -90f, highTwistLimit = 90f, swing1Limit = 30f, swing2Limit = 30f },
             new BoneOverride { boneKey = "RightElbow", mass = 2f, colliderRadius = 0.07f, colliderHeight = 0.2f, colliderDirection = 0, colliderCenter = new Vector3(-0.1f, 0f, 0f), jointAxis = new Vector3(0f, 0f, 1f), jointSwingAxis = new Vector3(1f, 0f, 0f), lowTwistLimit = -89.07f, highTwistLimit = 2f, swing1Limit = 30f, swing2Limit = 30f },
+        };
+    }
+
+    /// <summary>FX_Blood 더미 기본값. 01=잘린 쪽, 02=몸통 쪽</summary>
+    public static FXBloodDummyEntry[] GetDefaultFXBloodDummies()
+    {
+        return new FXBloodDummyEntry[]
+        {
+            new FXBloodDummyEntry { dummyName = "FX_Blood_Head01", parentBoneName = "Bip001 HeadNub", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
+            new FXBloodDummyEntry { dummyName = "FX_Blood_Head02", parentBoneName = "Bip001 Neck", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
+            new FXBloodDummyEntry { dummyName = "FX_Blood_L_Arm01", parentBoneName = "Bip001 L Forearm", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
+            new FXBloodDummyEntry { dummyName = "FX_Blood_L_Arm02", parentBoneName = "Bip001", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
+            new FXBloodDummyEntry { dummyName = "FX_Blood_R_Arm01", parentBoneName = "Bip001 R Forearm", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
+            new FXBloodDummyEntry { dummyName = "FX_Blood_R_Arm02", parentBoneName = "Bip001", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
+            new FXBloodDummyEntry { dummyName = "FX_Blood_L_Leg01", parentBoneName = "Bip001 L Calf", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
+            new FXBloodDummyEntry { dummyName = "FX_Blood_L_Leg02", parentBoneName = "Bip001", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
+            new FXBloodDummyEntry { dummyName = "FX_Blood_R_Leg01", parentBoneName = "Bip001 R Calf", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
+            new FXBloodDummyEntry { dummyName = "FX_Blood_R_Leg02", parentBoneName = "Bip001", localPosition = Vector3.zero, localEulerAngles = Vector3.zero },
         };
     }
 }

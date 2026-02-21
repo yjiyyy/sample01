@@ -20,6 +20,17 @@ public class RagdollBuildSettingsEditor : Editor
         }
         EditorGUILayout.Space(4);
 
+        if (settings.fxBloodDummies == null || settings.fxBloodDummies.Length == 0)
+        {
+            if (GUILayout.Button("FX Blood 더미 초기화 (기본 10개)"))
+            {
+                Undo.RecordObject(settings, "FX Blood Dummies Init");
+                settings.fxBloodDummies = RagdollBuildSettings.GetDefaultFXBloodDummies();
+                EditorUtility.SetDirty(settings);
+            }
+        }
+        EditorGUILayout.Space(4);
+
         DrawDefaultInspector();
 
         serializedObject.ApplyModifiedProperties();
