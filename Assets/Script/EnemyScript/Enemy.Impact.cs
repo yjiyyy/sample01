@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 
 public class EnemyImpact : MonoBehaviour
@@ -38,6 +38,8 @@ public class EnemyImpact : MonoBehaviour
         // 데미지 단계에서 lethal이면 Dead로 이미 전환됐으므로 FaceHit가 호출되지 않음.
         // 여기서는 기존 흐름 유지(비치명 때만 회전)
         FaceHit(ctx, hitDir);
+        var ai = ctx.GetComponent<EnemyAI>();
+        if (ai != null) ai.SkipFindGoToCombat();
         impactRoutine = StartCoroutine(KnockbackThenStunRoutine(ctx, hitDir, knockbackPower, knockbackDuration, stunDuration));
     }
 
@@ -55,6 +57,8 @@ public class EnemyImpact : MonoBehaviour
         float pushDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
         float animationHoldDuration = weapon != null ? weapon.animationHoldDuration : 0f;
 
+        var ai = ctx.GetComponent<EnemyAI>();
+        if (ai != null) ai.SkipFindGoToCombat();
         pushRoutine = StartCoroutine(PushRoutine(ctx, hitDir, pushPower, pushDuration, animationHoldDuration));
     }
 

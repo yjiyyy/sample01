@@ -45,9 +45,11 @@ MonoBehaviour:
   - R_Hand_Weapon
   meleeSpawnPointPathOrName: 
   projectileSpawnPointPathOrName: 
+  useWeaponCollider: 0
   meleeHitboxPrefab: {fileID: 0}
   projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
   shotgunSectorPrefab: {fileID: 0}
+  hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
   dualWield: 0
   hitboxSpawnDelay2: 0
   meleeSpawnPoint2PathOrName: 

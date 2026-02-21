@@ -78,13 +78,15 @@ public class SuicideDroppedBomb : MonoBehaviour
             if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
             hitDir.Normalize();
 
+            Vector3? hitPoint = col.ClosestPoint(center);
+
             var ph = col.GetComponentInParent<PlayerHealth>() ?? col.GetComponent<PlayerHealth>();
             if (ph != null)
             {
                 if (!hitSeen.Contains(ph))
                 {
                     hitSeen.Add(ph);
-                    ApplyExplosionToPlayer(ph, actualDamage, hitDir, mul);
+                    ApplyExplosionToPlayer(ph, actualDamage, hitDir, mul, hitPoint);
                 }
                 continue;
             }
@@ -95,7 +97,7 @@ public class SuicideDroppedBomb : MonoBehaviour
                 if (eh != null && !hitSeen.Contains(eh))
                 {
                     hitSeen.Add(eh);
-                    ApplyExplosionToEnemy(eh, actualDamage, hitDir, mul);
+                    ApplyExplosionToEnemy(eh, actualDamage, hitDir, mul, hitPoint);
                 }
             }
         }
@@ -103,7 +105,7 @@ public class SuicideDroppedBomb : MonoBehaviour
         Destroy(gameObject);
     }
 
-    private void ApplyExplosionToPlayer(PlayerHealth ph, float dmg, Vector3 hitDir, float mul)
+    private void ApplyExplosionToPlayer(PlayerHealth ph, float dmg, Vector3 hitDir, float mul, System.Nullable<Vector3> hitPoint = null)
     {
         if (ph == null) return;
 
@@ -116,7 +118,7 @@ public class SuicideDroppedBomb : MonoBehaviour
         float stun = data.stunDuration * mul;
 
         var deathProxy = WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse);
-        ph.ApplyDamage(dmg, hitDir, deathProxy, 1f);
+        ph.ApplyDamage(dmg, hitDir, deathProxy, 1f, hitPoint);
 
         if (ph.GetCurrentHP() <= 0f)
             return;
@@ -132,7 +134,7 @@ public class SuicideDroppedBomb : MonoBehaviour
             pm.ApplyKnockback(hitDir, kbPower, kbDur, null);
     }
 
-    private void ApplyExplosionToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir, float mul)
+    private void ApplyExplosionToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir, float mul, System.Nullable<Vector3> hitPoint = null)
     {
         if (eh == null) return;
 
@@ -160,7 +162,7 @@ public class SuicideDroppedBomb : MonoBehaviour
             proxy.jerkIntensity = data.jerkIntensity;
             proxy.jerkDuration = data.jerkDuration;
 
-            eh.ApplyDamage(dmg, hitDir, proxy, 1f);
+            eh.ApplyDamage(dmg, hitDir, proxy, 1f, hitPoint);
 
             var e = eh.GetComponentInParent<Enemy>();
             if (e != null && e.CurrentState != Enemy.EnemyState.Dead)

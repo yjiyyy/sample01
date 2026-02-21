@@ -117,6 +117,9 @@ public class WeaponDataSO : ScriptableObject
     public GameObject projectilePrefab;
     public GameObject shotgunSectorPrefab;
 
+    [Tooltip("피격 시 타겟 표면에 스폰할 이펙트 프리팹. 비어있으면 이펙트 없음. ClosestPoint 기준 위치에 생성됨.")]
+    public GameObject hitEffectPrefab;
+
     // ---------------- Dual Wield ----------------
     [Header("Dual Wield (양손 옵션)")]
     [Tooltip("true면 1회 공격에서 스폰을 최대 2번(1번/2번) ���도합니다.\n" +
@@ -132,6 +135,16 @@ public class WeaponDataSO : ScriptableObject
 
     [Tooltip("원거리 스폰 포인트(2). 비워두면 2번째 원거리 스폰은 안 나갑니다. (무기 내부 기준 이름/경로)")]
     public string projectileSpawnPoint2PathOrName = "";
+
+    /// <summary>
+    /// 무기 SO의 hitEffectPrefab을 hitPoint 위치에 스폰. 비어있으면 무시.
+    /// </summary>
+    public static void TrySpawnHitEffectAt(WeaponDataSO weapon, System.Nullable<Vector3> hitPoint)
+    {
+        if (weapon == null || weapon.hitEffectPrefab == null || !hitPoint.HasValue) return;
+        Vector3 pos = hitPoint.Value + Random.insideUnitSphere * 0.05f;
+        Object.Instantiate(weapon.hitEffectPrefab, pos, Quaternion.identity);
+    }
 
     /// <summary>
     /// 몬스터 공격 데이터의 처치 연출(Death Mode, 랙돌, 슬라이스)로 런타임 프록시 WeaponDataSO 생성.

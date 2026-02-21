@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class HitBox_PC_Projectile : MonoBehaviour
@@ -150,7 +150,8 @@ public class HitBox_PC_Projectile : MonoBehaviour
         if (damageDir.sqrMagnitude < 0.0001f) damageDir = Vector3.back;
         damageDir = damageDir.normalized;
 
-        hp.ApplyDamage(damage, damageDir, weapon);
+        Vector3? hitPoint = other.ClosestPoint(transform.position);
+        hp.ApplyDamage(damage, damageDir, weapon, 1f, hitPoint);
         Debug.Log($"✅ [Projectile] EnemyHealth에 {damage} 데미지 적용!");
 
         // 2) 살아있으면만 넉백/푸시/회전 적용

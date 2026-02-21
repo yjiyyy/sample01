@@ -304,13 +304,15 @@ public partial class EnemyAttackController
             if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
             hitDir.Normalize();
 
+            Vector3? hitPoint = col.ClosestPoint(center);
+
             var ph = col.GetComponentInParent<PlayerHealth>() ?? col.GetComponent<PlayerHealth>();
             if (ph != null)
             {
                 if (!hitSeen.Contains(ph))
                 {
                     hitSeen.Add(ph);
-                    ApplyExplosionToPlayer(ph, actualDamage, hitDir, data, mul);
+                    ApplyExplosionToPlayer(ph, actualDamage, hitDir, data, mul, hitPoint);
                 }
                 continue;
             }
@@ -320,7 +322,7 @@ public partial class EnemyAttackController
                 if (!hitSeen.Contains(eh))
                 {
                     hitSeen.Add(eh);
-                    ApplyExplosionToEnemy(eh, actualDamage, hitDir, data, mul);
+                    ApplyExplosionToEnemy(eh, actualDamage, hitDir, data, mul, hitPoint);
                 }
             }
         }
@@ -330,7 +332,7 @@ public partial class EnemyAttackController
     // 네 기존 파일 내용 그대로 두면 되고, ForceKillOwner의 hitDir만 explodeCenter 기준으로 계산하는 게 가장 자연스러움.
     // (현재 대화에서 이미 반영해둔 버전이면 유지해도 OK)
 
-    private void ApplyExplosionToPlayer(PlayerHealth ph, float dmg, Vector3 hitDir, SuicideAttackData data, float mul)
+    private void ApplyExplosionToPlayer(PlayerHealth ph, float dmg, Vector3 hitDir, SuicideAttackData data, float mul, System.Nullable<Vector3> hitPoint = null)
     {
         if (ph == null) return;
 
@@ -343,7 +345,7 @@ public partial class EnemyAttackController
         float stun = data.stunDuration * mul;
 
         var deathProxy = WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse);
-        ph.ApplyDamage(dmg, hitDir, deathProxy, 1f);
+        ph.ApplyDamage(dmg, hitDir, deathProxy, 1f, hitPoint);
 
         if (ph.GetCurrentHP() <= 0f)
             return;
@@ -359,7 +361,7 @@ public partial class EnemyAttackController
             pm.ApplyKnockback(hitDir, kbPower, kbDur, enemy != null ? enemy.transform : null);
     }
 
-    private void ApplyExplosionToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir, SuicideAttackData data, float mul)
+    private void ApplyExplosionToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir, SuicideAttackData data, float mul, System.Nullable<Vector3> hitPoint = null)
     {
         if (eh == null) return;
 
@@ -387,7 +389,7 @@ public partial class EnemyAttackController
             proxy.jerkIntensity = data.jerkIntensity;
             proxy.jerkDuration = data.jerkDuration;
 
-            eh.ApplyDamage(dmg, hitDir, proxy, 1f);
+            eh.ApplyDamage(dmg, hitDir, proxy, 1f, hitPoint);
 
             var e = eh.GetComponentInParent<Enemy>();
             if (e != null && e.CurrentState != Enemy.EnemyState.Dead)

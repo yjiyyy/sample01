@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>
 /// 샷건(섹터·부채꼴) 전용 히트박스
@@ -101,8 +101,10 @@ public class HitBox_PC_Sector : MonoBehaviour
                 continue;
             }
 
+            Vector3? hitPoint = col.ClosestPoint(origin);
+
             // 1) 데미지 먼저 적용
-            hp.ApplyDamage(finalDmg, dir, weapon, weight);
+            hp.ApplyDamage(finalDmg, dir, weapon, weight, hitPoint);
             Debug.Log($"✅ [Shotgun] EnemyHealth에 {finalDmg} 데미지 적용!(w={weight:F2})");
 
             // 2) 사망 여부 확인 후 넉백/푸시 분기

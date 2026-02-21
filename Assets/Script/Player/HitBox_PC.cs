@@ -100,12 +100,12 @@ public class HitBox_PC : MonoBehaviour
             // 즉발 1회: 동일 대상 중복방지(멀티 콜라이더 보호)
             if (alreadyHit.Contains(hp)) return;
             alreadyHit.Add(hp);
-            ApplyHit(hp);
+            ApplyHit(hp, other);
             return;
         }
 
         // 중복 히트: 진입 즉시 1회 + 겹침 등록
-        ApplyHit(hp);
+        ApplyHit(hp, other);
         overlapping.Add(hp);
     }
 
@@ -132,12 +132,13 @@ public class HitBox_PC : MonoBehaviour
             foreach (var hp in snapshot)
             {
                 if (hp == null) continue;
-                ApplyHit(hp);
+                var col = hp.GetComponentInChildren<Collider>();
+                ApplyHit(hp, col);
             }
         }
     }
 
-    private void ApplyHit(EnemyHealth hp)
+    private void ApplyHit(EnemyHealth hp, Collider hitCollider)
     {
         if (hp == null) return;
 
@@ -148,8 +149,10 @@ public class HitBox_PC : MonoBehaviour
         if (dir.sqrMagnitude < 0.0001f) dir = Vector3.forward;
         dir.Normalize();
 
+        Vector3? hitPoint = hitCollider != null ? hitCollider.ClosestPoint(transform.position) : (Vector3?)null;
+
         // 1) 데미지 먼저 적용
-        hp.ApplyDamage(damage, dir, weapon);
+        hp.ApplyDamage(damage, dir, weapon, 1f, hitPoint);
         Debug.Log($"✅ [HitBox_PC] {hp.name} hit │ dmg:{damage}, dup:{duplicateEnabled}");
 
         // 2) 사망 여부 확인 후 넉백/푸시 분기

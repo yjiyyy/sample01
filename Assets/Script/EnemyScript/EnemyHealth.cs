@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -58,14 +58,16 @@ public class EnemyHealth : MonoBehaviour
     // -------------------------------------------------------
     // Public compatibility API (used by existing HitBox/UI code)
     // -------------------------------------------------------
-    public void ApplyDamage(float amount) => ApplyDamage(amount, Vector3.zero, null, 1f);
-    public void ApplyDamage(float amount, WeaponDataSO weapon) => ApplyDamage(amount, Vector3.zero, weapon, 1f);
-    public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon) => ApplyDamage(amount, hitDir, weapon, 1f);
+    public void ApplyDamage(float amount) => ApplyDamage(amount, Vector3.zero, null, 1f, null);
+    public void ApplyDamage(float amount, WeaponDataSO weapon) => ApplyDamage(amount, Vector3.zero, weapon, 1f, null);
+    public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon) => ApplyDamage(amount, hitDir, weapon, 1f, null);
 
     // Main damage entry point (preserves existing behavior: shield absorbs first, shieldBreak triggers, then HP)
-    public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon, float impactScale)
+    public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon, float impactScale, System.Nullable<Vector3> hitPoint = null)
     {
         if (amount <= 0f || currentHP <= 0f) return;
+
+        WeaponDataSO.TrySpawnHitEffectAt(weapon, hitPoint);
 
         float remaining = amount;
 

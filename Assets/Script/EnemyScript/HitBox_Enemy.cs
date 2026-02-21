@@ -67,12 +67,12 @@ public class HitBox_Enemy : MonoBehaviour
             // 즉발 1회: 동일 대상 중복 방지(멀티 콜라이더 보호)
             if (alreadyHit.Contains(hp)) return;
             alreadyHit.Add(hp);
-            ApplyHit(hp);
+            ApplyHit(hp, other);
             return;
         }
 
         // 드릴형: 진입 즉시 1회 + 겹침 등록
-        ApplyHit(hp);
+        ApplyHit(hp, other);
         overlapping.Add(hp);
     }
 
@@ -99,12 +99,13 @@ public class HitBox_Enemy : MonoBehaviour
             foreach (var hp in snapshot)
             {
                 if (hp == null) continue;
-                ApplyHit(hp);
+                var col = hp.GetComponentInChildren<Collider>();
+                ApplyHit(hp, col);
             }
         }
     }
 
-    private void ApplyHit(PlayerHealth hp)
+    private void ApplyHit(PlayerHealth hp, Collider hitCollider)
     {
         if (hp == null) return;
 
@@ -121,7 +122,9 @@ public class HitBox_Enemy : MonoBehaviour
         hitDirForDamage.y = 0f;
         if (hitDirForDamage.sqrMagnitude < 0.0001f) hitDirForDamage = Vector3.forward;
         hitDirForDamage.Normalize();
-        hp.ApplyDamage(damage, hitDirForDamage, playerDeathWeapon, 1f);
+
+        Vector3? hitPoint = hitCollider != null ? hitCollider.ClosestPoint(transform.position) : (Vector3?)null;
+        hp.ApplyDamage(damage, hitDirForDamage, playerDeathWeapon, 1f, hitPoint);
         Debug.Log($"✅ [HitBox_Enemy] PlayerHealth에 {damage} 데미지 적용! (dup:{duplicateEnabled})");
 
         // ✅ 핵심: HP가 0 이하로 떨어졌으면 넉백/스턴을 절대 실행하지 않음 (즉시 Death 우선)

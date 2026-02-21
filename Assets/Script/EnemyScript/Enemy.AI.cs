@@ -1,4 +1,4 @@
-﻿// 전체 파일(원본에 기능 추가한 버전)
+// 전체 파일(원본에 기능 추가한 버전)
 using System.Collections;
 using UnityEngine;
 
@@ -451,5 +451,20 @@ public class EnemyAI : MonoBehaviour
     {
         if (backstepping)
             ForceClearBackstep();
+    }
+
+    /// <summary>
+    /// Find를 건너뛰고 바로 Combat 모드로 전환. (Peace 중 피격 시 호출)
+    /// </summary>
+    public void SkipFindGoToCombat()
+    {
+        if (findingCoroutine != null)
+        {
+            StopCoroutine(findingCoroutine);
+            findingCoroutine = null;
+        }
+        aiState = AIState.Combat;
+        signedForwardSpeed = 0f;
+        forwardSpeedLerpT = 0f;
     }
 }

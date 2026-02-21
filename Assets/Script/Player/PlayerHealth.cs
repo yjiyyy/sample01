@@ -80,23 +80,26 @@ public class PlayerHealth : MonoBehaviour
     /* ───────── 피해 처리 ───────── */
     public void ApplyDamage(float amount)
     {
-        ApplyDamage(amount, Vector3.zero, null, 1f);
+        ApplyDamage(amount, Vector3.zero, null, 1f, null);
     }
 
     public void ApplyDamage(float amount, WeaponDataSO weapon)
     {
-        ApplyDamage(amount, Vector3.zero, weapon, 1f);
+        ApplyDamage(amount, Vector3.zero, weapon, 1f, null);
     }
 
     public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon)
     {
-        ApplyDamage(amount, hitDir, weapon, 1f);
+        ApplyDamage(amount, hitDir, weapon, 1f, null);
     }
 
-    public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon, float impactScale)
+    public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon, float impactScale, System.Nullable<Vector3> hitPoint = null)
     {
         // 이미 죽었으면 추가 데미지/넉백/로그 등 모두 무시
         if (deadProcessed) return;
+
+        // 피격 이펙트 (무기 SO에 hitEffectPrefab 있을 때, hitPoint가 있으면 해당 위치에 스폰)
+        TrySpawnHitEffect(weapon, hitPoint);
 
         currentHP -= amount;
         Debug.Log($"플레이어가 {amount:F1} 피해! scale:{impactScale:F2} | HP: {currentHP:F1}");
@@ -626,4 +629,9 @@ public class PlayerHealth : MonoBehaviour
     public float GetCurrentHP() => currentHP;
     public float GetMaxHP() => maxHP;
     public float GetWeight() => weight;
+
+    private static void TrySpawnHitEffect(WeaponDataSO weapon, System.Nullable<Vector3> hitPoint)
+    {
+        WeaponDataSO.TrySpawnHitEffectAt(weapon, hitPoint);
+    }
 }

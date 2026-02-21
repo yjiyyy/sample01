@@ -280,13 +280,13 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
                 if (alreadyHit.Contains(hp)) return;
                 alreadyHit.Add(hp);
 
-                ApplyHit(hp);
+                ApplyHit(hp, other);
                 Destroy(gameObject);
                 return;
             }
 
             // 드릴형: 진입 즉시 1회 + 겹침 등록(마무리는 수명/장애물에서)
-            ApplyHit(hp);
+            ApplyHit(hp, other);
             overlapping.Add(hp);
             return;
         }
@@ -334,12 +334,13 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
             foreach (var hp in snapshot)
             {
                 if (hp == null) continue;
-                ApplyHit(hp);
+                var col = hp.GetComponentInChildren<Collider>();
+                ApplyHit(hp, col);
             }
         }
     }
 
-    private void ApplyHit(PlayerHealth hp)
+    private void ApplyHit(PlayerHealth hp, Collider hitCollider)
     {
         if (hp == null) return;
 
@@ -355,7 +356,9 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         hitDir.y = 0f;
         if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
         hitDir.Normalize();
-        hp.ApplyDamage(damage, hitDir, playerDeathWeapon, 1f);
+
+        Vector3? hitPoint = hitCollider != null ? hitCollider.ClosestPoint(transform.position) : (Vector3?)null;
+        hp.ApplyDamage(damage, hitDir, playerDeathWeapon, 1f, hitPoint);
 
         // ✅ 핵심: HP 0이면 넉백/스턴 스킵 (즉시 Death 우선)
         if (hp.GetCurrentHP() <= 0f)

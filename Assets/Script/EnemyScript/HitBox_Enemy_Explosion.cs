@@ -103,6 +103,8 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
             hitDir.Normalize();
 
+            Vector3? hitPoint = col.ClosestPoint(center);
+
             // Player 처리
             if (ph != null && (data.explosionTargets == TimeProjectileAttackData.ExplosionTargetType.PlayerOnly || data.explosionTargets == TimeProjectileAttackData.ExplosionTargetType.Both))
             {
@@ -110,7 +112,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
                 {
                     hitSeen.Add(ph);
                     Debug.Log($"[Explosion] Applying {actualDamage:F2} dmg to Player '{ph.gameObject.name}' (dist={dist:F3})");
-                    TryApplyDamageToPlayer(ph, actualDamage, hitDir, mul);
+                    TryApplyDamageToPlayer(ph, actualDamage, hitDir, mul, hitPoint);
                 }
                 else
                 {
@@ -125,7 +127,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
                 {
                     hitSeen.Add(eh);
                     Debug.Log($"[Explosion] Applying {actualDamage:F2} dmg to Enemy '{eh.gameObject.name}' (dist={dist:F3})");
-                    TryApplyDamageToEnemy(eh, actualDamage, hitDir, mul);
+                    TryApplyDamageToEnemy(eh, actualDamage, hitDir, mul, hitPoint);
                 }
                 else
                 {
@@ -202,7 +204,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
         return null;
     }
 
-    private void TryApplyDamageToPlayer(PlayerHealth ph, float dmg, Vector3 hitDir, float mul)
+    private void TryApplyDamageToPlayer(PlayerHealth ph, float dmg, Vector3 hitDir, float mul, System.Nullable<Vector3> hitPoint = null)
     {
         if (ph == null) return;
 
@@ -220,7 +222,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
         try
         {
             var deathProxy = WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse);
-            ph.ApplyDamage(dmg, hitDir, deathProxy, 1f);
+            ph.ApplyDamage(dmg, hitDir, deathProxy, 1f, hitPoint);
             Debug.Log($"[Explosion] Player '{ph.gameObject.name}' ApplyDamage called successfully.");
         }
         catch (System.Exception ex)
@@ -263,7 +265,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
         }
     }
 
-    private void TryApplyDamageToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir, float mul)
+    private void TryApplyDamageToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir, float mul, System.Nullable<Vector3> hitPoint = null)
     {
         if (eh == null) return;
 
@@ -291,7 +293,7 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             proxy.jerkIntensity = data.jerkIntensity;
             proxy.jerkDuration = data.jerkDuration;
 
-            eh.ApplyDamage(dmg, hitDir, proxy, 1f);
+            eh.ApplyDamage(dmg, hitDir, proxy, 1f, hitPoint);
 
             var enemyT = eh.GetComponentInParent<Enemy>();
             if (enemyT != null && enemyT.CurrentState != Enemy.EnemyState.Dead)

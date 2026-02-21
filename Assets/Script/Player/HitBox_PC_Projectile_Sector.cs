@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -119,20 +119,21 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
             float t = Mathf.Clamp01(distance / cachedRadius);
             float finalDamage = Mathf.Lerp(cachedDamage * cachedEdgeMul, cachedDamage, 1f - t);
 
+            Vector3 center = transform.position;
+            Vector3? hitPoint = target.ClosestPoint(center);
+            Vector3 hitDir = (target.transform.position - center).normalized;
+            float impactScale = 1f;
+
             // 1) 데미지 먼저 적용
             if (target.TryGetComponent(out PlayerHealth playerHP))
             {
-                Vector3 hitDir = (target.transform.position - transform.position).normalized;
-                float impactScale = 1f;
-                playerHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale);
+                playerHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale, hitPoint);
                 Debug.Log($"✅ [Explosion] PlayerHealth에 {finalDamage} 데미지!");
                 // 플레이어는 넉백/푸시가 Enemy 로직과 다를 수 있으므로 여기서는 데미지만
             }
             else if (target.TryGetComponent(out EnemyHealth enemyHP))
             {
-                Vector3 hitDir = (target.transform.position - transform.position).normalized;
-                float impactScale = 1f;
-                enemyHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale);
+                enemyHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale, hitPoint);
                 Debug.Log($"✅ [Explosion] EnemyHealth에 {finalDamage} 데미지!");
 
                 // 2) 살아있으면만 넉백/푸시 분기
