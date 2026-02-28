@@ -17,7 +17,7 @@ MonoBehaviour:
   layer:
     serializedVersion: 2
     m_Bits: 128
-  maxHealth: 150
+  maxHealth: 100
   mass: 1
   useShield: 0
   maxShield: 10
