@@ -72,5 +72,11 @@ public class LobbyController : MonoBehaviour
         _spawnedCharacter.transform.SetParent(characterSpawnPoint);
         var displayName = !string.IsNullOrEmpty(data.displayName) ? data.displayName : data.name;
         _spawnedCharacter.name = $"Player_{displayName}";
+
+        // 로비에서는 이동·전투 입력 비활성화
+        var pm = _spawnedCharacter.GetComponentInChildren<PlayerMovement>();
+        if (pm != null) pm.enabled = false;
+        var pwc = _spawnedCharacter.GetComponentInChildren<PlayerWeaponController>();
+        if (pwc != null) pwc.enabled = false;
     }
 }

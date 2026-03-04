@@ -50,7 +50,7 @@ public static class CreateTitleStoryLobbyScenes
         canvasGO.AddComponent<GraphicRaycaster>();
 
         // EventSystem (Input System 전용 프로젝트에서는 InputSystemUIInputModule 사용)
-        if (Object.FindObjectOfType<EventSystem>() == null)
+        if (Object.FindFirstObjectByType<EventSystem>() == null)
         {
             var esGO = new GameObject("EventSystem");
             esGO.AddComponent<EventSystem>();
@@ -143,7 +143,7 @@ public static class CreateTitleStoryLobbyScenes
         scaler.matchWidthOrHeight = 0.5f;
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        if (Object.FindObjectOfType<EventSystem>() == null)
+        if (Object.FindFirstObjectByType<EventSystem>() == null)
         {
             var esGO = new GameObject("EventSystem");
             esGO.AddComponent<EventSystem>();
