@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a8a01c2de1d2c1b468ea045e65119ca9, type: 3}
-  m_Name: 002_SO
+  m_Name: 003_SO
   m_EditorClassIdentifier: 
-  portrait: {fileID: 21300000, guid: b875923194d2ebe4191469e170d1f8c0, type: 3}
-  modelPrefab: {fileID: 8479941418654662899, guid: c4efac06a00f2a247bb3f8d5df253beb, type: 3}
-  displayName: Wood Man
+  portrait: {fileID: 21300000, guid: a114b00427a0eb74d96b8f66711defc4, type: 3}
+  modelPrefab: {fileID: 7162835886033023559, guid: 5c74848b407ca4647958edb8e5bf0645, type: 3}
+  displayName: Sexy Woman

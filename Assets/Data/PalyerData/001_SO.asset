@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8a01c2de1d2c1b468ea045e65119ca9, type: 3}
   m_Name: 001_SO
   m_EditorClassIdentifier: 
-  portrait: {fileID: 21300000, guid: f1ef648dc046d5347929d3104f6f2134, type: 3}
-  modelPrefab: {fileID: 2035022492551130508, guid: 888b1a571bcb9f944a792b61836ba893, type: 3}
-  displayName: WIldMan
+  portrait: {fileID: 21300000, guid: 4c52d545c0ed428448aaf89ebc6b6512, type: 3}
+  modelPrefab: {fileID: 3560707078845203978, guid: 2bf576c0f66739345a8e646ab5e7a3ec, type: 3}
+  displayName: Panty Man
