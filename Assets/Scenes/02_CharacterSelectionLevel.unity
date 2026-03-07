@@ -1381,6 +1381,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 1c88ecc52063ad94e87ceba7614056b5, type: 2}
   - {fileID: 11400000, guid: 70dba6851f0cfe949a67887eca9d3135, type: 2}
   - {fileID: 11400000, guid: 26eaf267697608041b21b0f8ad3c70dc, type: 2}
+  - {fileID: 11400000, guid: e3aae664b764c004cb192ef48ca11106, type: 2}
   nextScene: 03_Lobby
   spawnPoint: {fileID: 1978186788}
   portraitGridParent: {fileID: 548137365}

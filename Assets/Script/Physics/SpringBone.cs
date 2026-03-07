@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class SpringBone : MonoBehaviour
 {
@@ -9,11 +9,15 @@ public class SpringBone : MonoBehaviour
     public Vector3 boneAxis = new Vector3(-1, 0, 0);
 
     [Header("힘 설정")]
+    [Tooltip("끝점을 기본 방향으로 당기는 힘. 높을수록 딱딱, 낮을수록 부드럽게 늘어남")]
     public float stiffness = 0.01f;
+    [Tooltip("움직임 감쇠. 높을수록 빨리 멈추고, 낮을수록 오래 흔들림")]
     public float drag = 0.4f;
-    public Vector3 externalForce = new Vector3(0, -0.0001f, 0);
+    [Tooltip("헤어/의상: (0,0,0) 권장. Y 음수면 아래로 당기는 힘(축 처짐 느낌)")]
+    public Vector3 externalForce = Vector3.zero;
 
     [Header("회전 혼합 비율")]
+    [Tooltip("흔들림 반영 비율. 1=100%, 0=흔들림 없음")]
     [Range(0f, 1f)] public float blend = 1f;
 
     private float boneLength;

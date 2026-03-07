@@ -2666,7 +2666,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c8ca97f2e8fc144c95840b4bc2c43f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 3560707078845203978, guid: 2bf576c0f66739345a8e646ab5e7a3ec, type: 3}
+  playerPrefab: {fileID: 7162835886033023559, guid: 5c74848b407ca4647958edb8e5bf0645, type: 3}
   followCamera: {fileID: 1661507712}
 --- !u!1 &1914551070
 GameObject:
@@ -2899,7 +2899,7 @@ MonoBehaviour:
   enemyPrefabsByLevel:
   - {fileID: 1793541852279191887, guid: 3d000b330de540f409706e2ea08384aa, type: 3}
   hpuiPrefab: {fileID: 5425390646291263780, guid: c221514702d57b44bac940471d983478, type: 3}
-  spawnInterval: 10
+  spawnInterval: 3
   jitterRadius: 0.5
   applyGroundRaycast: 0
   raycastHeight: 20
