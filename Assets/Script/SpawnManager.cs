@@ -1,17 +1,28 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
-using Unity.Cinemachine; // 꼭 이 네임스페이스 사용!
+using Unity.Cinemachine;
 
-// 실행 순서를 앞당겨 최초 프레임부터 playerTransform 준비 보장
+/// <summary>
+/// 스테이지 씬에서 플레이어 스폰.
+/// 로비에서 선택한 캐릭터가 있으면 그 캐릭터 사용, 없으면 playerPrefab (테스트용).
+/// </summary>
 [DefaultExecutionOrder(-100)]
 public class SpawnManager : MonoBehaviour
 {
+    [Tooltip("테스트용. Stage 씬을 직접 실행할 때만 사용. 로비→스테이지 흐름에서는 선택된 캐릭터가 스폰됩니다.")]
     public GameObject playerPrefab;
     public CinemachineCamera followCamera;
 
     void Start()
     {
-        GameObject player = Instantiate(playerPrefab, transform.position, transform.rotation);
+        var prefab = ResolvePlayerPrefab();
+        if (prefab == null)
+        {
+            Debug.LogError("[SpawnManager] 스폰할 플레이어 프리팹이 없습니다. playerPrefab을 지정하거나, 로비에서 캐릭터를 선택한 뒤 스테이지로 진입하세요.");
+            return;
+        }
+
+        GameObject player = Instantiate(prefab, transform.position, transform.rotation);
 
         // Follow 설정 (필수!)
         if (followCamera != null)
@@ -29,6 +40,14 @@ public class SpawnManager : MonoBehaviour
         {
             StartCoroutine(RegisterWhenGameManagerReady(player));
         }
+    }
+
+    private GameObject ResolvePlayerPrefab()
+    {
+        var data = GameState.Instance?.SelectedCharacter;
+        if (data != null && data.modelPrefab != null)
+            return data.modelPrefab;
+        return playerPrefab;
     }
 
     private void RegisterPlayerToGameManager(GameObject player)

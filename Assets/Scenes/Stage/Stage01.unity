@@ -2666,7 +2666,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c8ca97f2e8fc144c95840b4bc2c43f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 7162835886033023559, guid: 5c74848b407ca4647958edb8e5bf0645, type: 3}
+  playerPrefab: {fileID: 6551838243190283326, guid: 618caf26f5d2ff64abfd927541bd9de1, type: 3}
   followCamera: {fileID: 1661507712}
 --- !u!1 &1914551070
 GameObject:

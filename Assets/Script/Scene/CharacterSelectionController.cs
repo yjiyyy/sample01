@@ -188,6 +188,23 @@ public class CharacterSelectionController : MonoBehaviour
 
         _spawnedModel = Instantiate(prefab, spawnPoint.position, spawnPoint.rotation);
         _spawnedModel.transform.SetParent(spawnPoint);
+
+        // 캐릭터 선택 씬에서는 입력·이동 차단 (전시용)
+        DisableCharacterInput(_spawnedModel);
+    }
+
+    /// <summary>
+    /// 스폰된 캐릭터의 이동·입력 관련 컴포넌트 비활성화 (캐릭터 선택 씬 전용)
+    /// </summary>
+    private void DisableCharacterInput(GameObject model)
+    {
+        if (model == null) return;
+
+        var pm = model.GetComponentInChildren<PlayerMovement>();
+        if (pm != null) pm.enabled = false;
+
+        var rb = model.GetComponentInChildren<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
     }
 
     public void OnConfirmSelection()

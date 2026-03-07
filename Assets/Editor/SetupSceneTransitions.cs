@@ -22,6 +22,7 @@ public static class SetupSceneTransitions
     public static void Setup()
     {
         UpdateBuildSettings();
+        SetupStoryScene();
         SetupCharacterSelectionScene();
         SetupLobbyScene();
         AssetDatabase.Refresh();
@@ -63,6 +64,96 @@ public static class SetupSceneTransitions
 
         EditorBuildSettings.scenes = list.ToArray();
         Debug.Log($"[SetupSceneTransitions] Build Settings에 기본 {basePaths.Length}개 + Stage 폴더 {list.Count - basePaths.Length}개 씬 등록됨.");
+    }
+
+    /// <summary>
+    /// 01_Story 씬에 하단 고정 텍스트 박스(StoryTextPanel) 추가, StorySequenceController에 연결
+    /// </summary>
+    private static void SetupStoryScene()
+    {
+        var path = $"{ScenesRoot}/01_Story.unity";
+        if (!System.IO.File.Exists(path))
+        {
+            Debug.LogWarning($"[SetupSceneTransitions] {path}를 찾을 수 없습니다.");
+            return;
+        }
+
+        var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+        if (!scene.IsValid()) return;
+
+        var canvasGO = GameObject.Find("Canvas");
+        if (canvasGO == null)
+        {
+            Debug.LogWarning("[SetupSceneTransitions] 01_Story에 Canvas가 없습니다.");
+            return;
+        }
+
+        var storyTextGO = GameObject.Find("StoryTextPanel");
+        Text storyText = null;
+
+        if (storyTextGO == null)
+        {
+            // 하단 고정 텍스트 박스 생성
+            storyTextGO = new GameObject("StoryTextPanel");
+            storyTextGO.transform.SetParent(canvasGO.transform, false);
+            storyTextGO.transform.SetSiblingIndex(1); // StoryImage(0), StoryTextPanel(1), TapToAdvance(2)
+
+            var rect = storyTextGO.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0, 0);
+            rect.anchorMax = new Vector2(1, 0);
+            rect.pivot = new Vector2(0.5f, 0);
+            rect.anchoredPosition = new Vector2(0, 0);
+            rect.sizeDelta = new Vector2(0, 220);
+            rect.offsetMin = new Vector2(40, 24);   // 좌 40, 하단 24
+            rect.offsetMax = new Vector2(-40, 244); // 우 40, 상단 24+220 (높이 220)
+
+            var bgImg = storyTextGO.AddComponent<Image>();
+            bgImg.color = new Color(0, 0, 0, 0.6f);
+            bgImg.raycastTarget = false; // 클릭이 TapToAdvance로 전달되도록
+
+            var textGO = new GameObject("Text");
+            textGO.transform.SetParent(storyTextGO.transform, false);
+            var textRect = textGO.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(24, 16);
+            textRect.offsetMax = new Vector2(-24, -16);
+
+            storyText = textGO.AddComponent<Text>();
+            storyText.text = "";
+            storyText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            storyText.fontSize = 28;
+            storyText.color = Color.white;
+            storyText.alignment = TextAnchor.LowerLeft;
+            storyText.raycastTarget = false;
+        }
+        else
+        {
+            storyText = storyTextGO.GetComponentInChildren<Text>();
+            // 기존 패널의 RectTransform이 잘못된 경우(높이 0 등) 수정
+            var rect = storyTextGO.GetComponent<RectTransform>();
+            if (rect != null && rect.offsetMax.y <= rect.offsetMin.y + 1)
+            {
+                rect.offsetMin = new Vector2(40, 24);
+                rect.offsetMax = new Vector2(-40, 244);
+            }
+        }
+
+        var storyImageGO = GameObject.Find("StoryImage");
+        if (storyImageGO != null && storyText != null)
+        {
+            var ctrl = storyImageGO.GetComponent<StorySequenceController>();
+            if (ctrl != null)
+            {
+                var so = new SerializedObject(ctrl);
+                so.FindProperty("storyText").objectReferenceValue = storyText;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("[SetupSceneTransitions] 01_Story 씬에 StoryTextPanel 설정 완료.");
     }
 
     /// <summary>
@@ -283,232 +374,203 @@ public static class SetupSceneTransitions
         const float battleBtnW = 220f;
         const float battleBtnH = 60f;
 
-        // StageSelectPanel 생성 또는 재사용
-        var stagePanelTransform = canvasTransform.Find("StageSelectPanel");
-        GameObject stagePanelGO;
-        StageSelectPanel stagePanelComp = null;
-        if (stagePanelTransform == null)
+        // StageSelectPanel은 ShopPanel처럼 항상 삭제 후 새로 생성
+        var previousStagePanel = canvasTransform.Find("StageSelectPanel");
+        if (previousStagePanel != null)
+            Object.DestroyImmediate(previousStagePanel.gameObject);
+
+        var stagePanelGO = new GameObject("StageSelectPanel");
+        stagePanelGO.transform.SetParent(canvasTransform, false);
+        var stageRect = stagePanelGO.AddComponent<RectTransform>();
+        stageRect.anchorMin = Vector2.zero;
+        stageRect.anchorMax = Vector2.one;
+        stageRect.offsetMin = Vector2.zero;
+        stageRect.offsetMax = Vector2.zero;
+
+        var stageBgImg = stagePanelGO.AddComponent<Image>();
+        stageBgImg.color = new Color(0f, 0f, 0f, 0.6f);
+
+        var stagePanelComp = stagePanelGO.AddComponent<StageSelectPanel>();
+
+        // Content 패널 (실제 보이는 영역)
+        var contentGO = new GameObject("Content");
+        contentGO.transform.SetParent(stagePanelGO.transform, false);
+        var contentRect = contentGO.AddComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0.5f, 0.5f);
+        contentRect.anchorMax = new Vector2(0.5f, 0.5f);
+        contentRect.sizeDelta = new Vector2(640f, 420f);
+        var contentImg = contentGO.AddComponent<Image>();
+        contentImg.color = new Color(0.1f, 0.12f, 0.18f, 0.96f);
+
+        var viewportGO = new GameObject("Viewport");
+        viewportGO.transform.SetParent(contentGO.transform, false);
+        var viewportRect = viewportGO.AddComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.offsetMin = new Vector2(12f, 12f);
+        viewportRect.offsetMax = new Vector2(-28f, -12f);
+        var viewportImg = viewportGO.AddComponent<Image>();
+        viewportImg.color = new Color(0f, 0f, 0f, 0f);
+        viewportGO.AddComponent<RectMask2D>();
+
+        // 실제 그리드 콘텐츠
+        var gridGO = new GameObject("ContentGrid");
+        gridGO.transform.SetParent(viewportGO.transform, false);
+        var gridRect = gridGO.AddComponent<RectTransform>();
+        gridRect.anchorMin = new Vector2(0f, 1f);
+        gridRect.anchorMax = new Vector2(0f, 1f);
+        gridRect.pivot = new Vector2(0f, 1f);
+        gridRect.anchoredPosition = Vector2.zero;
+
+        // 2 x 5 고정 그리드 (정사각형 슬롯)
+        var grid = gridGO.AddComponent<GridLayoutGroup>();
+        grid.cellSize = new Vector2(160f, 160f);
+        grid.spacing = new Vector2(20f, 20f);
+        grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
+        grid.startAxis = GridLayoutGroup.Axis.Vertical;
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 2;
+
+        const int stageColumns = 2;
+        const int stageTotalButtons = 10;
+        int stageRows = Mathf.CeilToInt(stageTotalButtons / (float)stageColumns);
+        float gridContentW = stageColumns * grid.cellSize.x + (stageColumns - 1) * grid.spacing.x;
+        float gridContentH = stageRows * grid.cellSize.y + (stageRows - 1) * grid.spacing.y;
+        gridRect.sizeDelta = new Vector2(gridContentW, gridContentH);
+
+        var scrollbarGO = new GameObject("Scrollbar Vertical");
+        scrollbarGO.transform.SetParent(contentGO.transform, false);
+        var scrollbarRect = scrollbarGO.AddComponent<RectTransform>();
+        scrollbarRect.anchorMin = new Vector2(1f, 0f);
+        scrollbarRect.anchorMax = new Vector2(1f, 1f);
+        scrollbarRect.pivot = new Vector2(1f, 0.5f);
+        scrollbarRect.sizeDelta = new Vector2(16f, -24f);
+        scrollbarRect.anchoredPosition = new Vector2(-6f, 0f);
+        var scrollbarBgImg = scrollbarGO.AddComponent<Image>();
+        scrollbarBgImg.color = new Color(0f, 0f, 0f, 0.35f);
+        var scrollbar = scrollbarGO.AddComponent<Scrollbar>();
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+
+        var scrollRect = contentGO.AddComponent<ScrollRect>();
+        scrollRect.viewport = viewportRect;
+        scrollRect.content = gridRect;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.scrollSensitivity = 25f;
+        scrollRect.verticalScrollbar = scrollbar;
+        scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+
+        var handleGO = new GameObject("Handle");
+        handleGO.transform.SetParent(scrollbarGO.transform, false);
+        var handleRect = handleGO.AddComponent<RectTransform>();
+        handleRect.anchorMin = Vector2.zero;
+        handleRect.anchorMax = Vector2.one;
+        handleRect.offsetMin = Vector2.zero;
+        handleRect.offsetMax = Vector2.zero;
+        var handleImg = handleGO.AddComponent<Image>();
+        handleImg.color = new Color(0.8f, 0.8f, 0.9f, 0.9f);
+        scrollbar.targetGraphic = handleImg;
+        scrollbar.handleRect = handleRect;
+
+        // 스테이지 버튼 10개 생성 (1번: Stage01, 2~10: 비활성화)
+        string[] stageSceneNames = { "Stage01", "", "", "", "", "", "", "", "", "" };
+        for (int i = 0; i < 10; i++)
         {
-            stagePanelGO = new GameObject("StageSelectPanel");
-            stagePanelGO.transform.SetParent(canvasTransform, false);
-            var rect = stagePanelGO.AddComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
+            var btnGO = new GameObject($"StageButton_{i + 1}");
+            btnGO.transform.SetParent(gridGO.transform, false);
+            var btnRect = btnGO.AddComponent<RectTransform>();
+            btnRect.anchorMin = new Vector2(0.5f, 0.5f);
+            btnRect.anchorMax = new Vector2(0.5f, 0.5f);
+            btnRect.sizeDelta = grid.cellSize;
 
-            var bgImg = stagePanelGO.AddComponent<Image>();
-            bgImg.color = new Color(0f, 0f, 0f, 0.6f);
-
-            stagePanelComp = stagePanelGO.AddComponent<StageSelectPanel>();
-
-            // Content 패널 (실제 보이는 영역)
-            var contentGO = new GameObject("Content");
-            contentGO.transform.SetParent(stagePanelGO.transform, false);
-            var contentRect = contentGO.AddComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0.5f, 0.5f);
-            contentRect.anchorMax = new Vector2(0.5f, 0.5f);
-            contentRect.sizeDelta = new Vector2(640f, 420f);
-            var contentImg = contentGO.AddComponent<Image>();
-            // 살짝 파란 기가 도는 어두운 패널
-            contentImg.color = new Color(0.1f, 0.12f, 0.18f, 0.96f);
-
-            // 스크롤 가능한 영역(Viewport)
-            var viewportGO = new GameObject("Viewport");
-            viewportGO.transform.SetParent(contentGO.transform, false);
-            var viewportRect = viewportGO.AddComponent<RectTransform>();
-            viewportRect.anchorMin = Vector2.zero;
-            viewportRect.anchorMax = Vector2.one;
-            // 내부 여백
-            viewportRect.offsetMin = new Vector2(12f, 12f);
-            viewportRect.offsetMax = new Vector2(-28f, -12f); // 오른쪽은 스크롤바 영역을 위해 조금 더 여유
-            var viewportImg = viewportGO.AddComponent<Image>();
-            viewportImg.color = new Color(1f, 1f, 1f, 0f); // 마스크용 투명 이미지
-            var mask = viewportGO.AddComponent<Mask>();
-            mask.showMaskGraphic = false;
-
-            // 실제 그리드 콘텐츠
-            var gridGO = new GameObject("ContentGrid");
-            gridGO.transform.SetParent(viewportGO.transform, false);
-            var gridRect = gridGO.AddComponent<RectTransform>();
-            gridRect.anchorMin = new Vector2(0f, 1f);
-            gridRect.anchorMax = new Vector2(0f, 1f);
-            gridRect.pivot = new Vector2(0f, 1f);
-            gridRect.anchoredPosition = Vector2.zero;
-
-            // 2 x 5 고정 그리드 (정사각형 슬롯)
-            var grid = gridGO.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(160f, 160f);
-            grid.spacing = new Vector2(20f, 20f);
-            grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
-            grid.startAxis = GridLayoutGroup.Axis.Vertical;
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 2;
-
-            // 스크롤바 (세로)
-            var scrollbarGO = new GameObject("Scrollbar Vertical");
-            scrollbarGO.transform.SetParent(contentGO.transform, false);
-            var scrollbarRect = scrollbarGO.AddComponent<RectTransform>();
-            scrollbarRect.anchorMin = new Vector2(1f, 0f);
-            scrollbarRect.anchorMax = new Vector2(1f, 1f);
-            scrollbarRect.pivot = new Vector2(1f, 0.5f);
-            scrollbarRect.sizeDelta = new Vector2(16f, -24f); // 위/아래 여백 약간
-            scrollbarRect.anchoredPosition = new Vector2(-6f, 0f);
-            var scrollbarBgImg = scrollbarGO.AddComponent<Image>();
-            scrollbarBgImg.color = new Color(0f, 0f, 0f, 0.35f);
-            var scrollbar = scrollbarGO.AddComponent<Scrollbar>();
-            scrollbar.direction = Scrollbar.Direction.BottomToTop;
-
-            // ScrollRect 설정 (Content 패널 기준으로 스크롤)
-            var scrollRect = contentGO.AddComponent<ScrollRect>();
-            scrollRect.viewport = viewportRect;
-            scrollRect.content = gridRect;
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            scrollRect.scrollSensitivity = 25f;
-            scrollRect.verticalScrollbar = scrollbar;
-            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
-
-            // 스크롤 핸들
-            var handleGO = new GameObject("Handle");
-            handleGO.transform.SetParent(scrollbarGO.transform, false);
-            var handleRect = handleGO.AddComponent<RectTransform>();
-            handleRect.anchorMin = Vector2.zero;
-            handleRect.anchorMax = Vector2.one;
-            handleRect.offsetMin = Vector2.zero;
-            handleRect.offsetMax = Vector2.zero;
-            var handleImg = handleGO.AddComponent<Image>();
-            handleImg.color = new Color(0.8f, 0.8f, 0.9f, 0.9f);
-            scrollbar.targetGraphic = handleImg;
-            scrollbar.handleRect = handleRect;
-
-            // 스테이지 버튼 템플릿 (3레이어 구조: Bg + Thumbnail + Label)
-            var templateGO = new GameObject("StageButtonTemplate");
-            templateGO.transform.SetParent(gridGO.transform, false);
-            var templateRect = templateGO.AddComponent<RectTransform>();
-            templateRect.anchorMin = new Vector2(0.5f, 0.5f);
-            templateRect.anchorMax = new Vector2(0.5f, 0.5f);
-            templateRect.sizeDelta = new Vector2(160f, 160f);
-
-            // 루트에는 Button만 두고, 시각적인 그래픽은 Bg에 둡니다.
-            var templateBtn = templateGO.AddComponent<Button>();
-
-            // Bg - 실제 버튼 배경 (색/모서리/하이라이트)
-            var bgGO = new GameObject("Bg");
-            bgGO.transform.SetParent(templateGO.transform, false);
-            var bgRect = bgGO.AddComponent<RectTransform>();
-            bgRect.anchorMin = Vector2.zero;
-            bgRect.anchorMax = Vector2.one;
-            bgRect.offsetMin = Vector2.zero;
-            bgRect.offsetMax = Vector2.zero;
-            var slotBgImg = bgGO.AddComponent<Image>();
-            // 별도 스프라이트 없이 단색 사각형으로만 표시
-            // (Image는 sprite 없이도 color로 사각형을 렌더링합니다)
+            var slotBgImg = btnGO.AddComponent<Image>();
             slotBgImg.type = Image.Type.Simple;
-            slotBgImg.color = new Color(0.22f, 0.25f, 0.32f, 1f);
+            slotBgImg.color = (i == 0) ? new Color(0.22f, 0.25f, 0.32f, 1f) : new Color(0.15f, 0.15f, 0.18f, 1f);
 
-            // Button의 TargetGraphic을 Bg로 지정
-            templateBtn.targetGraphic = slotBgImg;
-            var colors = templateBtn.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = new Color(1.05f, 1.05f, 1.05f, 1f);
-            colors.pressedColor = new Color(0.9f, 0.9f, 0.9f, 1f);
-            colors.selectedColor = Color.white;
-            colors.disabledColor = new Color(0.7f, 0.7f, 0.7f, 0.7f);
-            templateBtn.colors = colors;
+            var stageBtn = btnGO.AddComponent<Button>();
+            stageBtn.targetGraphic = slotBgImg;
+            stageBtn.interactable = (i == 0);
+            var btnColors = stageBtn.colors;
+            btnColors.normalColor = Color.white;
+            btnColors.highlightedColor = new Color(1.05f, 1.05f, 1.05f, 1f);
+            btnColors.pressedColor = new Color(0.9f, 0.9f, 0.9f, 1f);
+            btnColors.disabledColor = new Color(0.5f, 0.5f, 0.52f, 0.8f);
+            stageBtn.colors = btnColors;
 
-            // 테두리 아웃라인 (Bg 기준)
-            var templateOutline = bgGO.AddComponent<Outline>();
-            templateOutline.effectColor = new Color(0f, 0f, 0f, 0.8f);
-            templateOutline.effectDistance = new Vector2(2f, -2f);
+            var outline = btnGO.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.8f);
+            outline.effectDistance = new Vector2(2f, -2f);
 
-            // Thumbnail - 나중에 썸네일이 들어갈 자리 (기본은 투명)
-            var thumbGO = new GameObject("Thumbnail");
-            thumbGO.transform.SetParent(bgGO.transform, false);
-            var thumbRect = thumbGO.AddComponent<RectTransform>();
-            thumbRect.anchorMin = new Vector2(0.1f, 0.1f);
-            thumbRect.anchorMax = new Vector2(0.9f, 0.9f);
-            thumbRect.offsetMin = Vector2.zero;
-            thumbRect.offsetMax = Vector2.zero;
-            var thumbImg = thumbGO.AddComponent<Image>();
-            thumbImg.color = new Color(1f, 1f, 1f, 0f); // 기본은 투명
-            thumbImg.preserveAspect = true;
-
-            // Label - 숫자/스테이지 이름 텍스트
             var labelGO = new GameObject("Label");
-            labelGO.transform.SetParent(bgGO.transform, false);
+            labelGO.transform.SetParent(btnGO.transform, false);
             var labelRect = labelGO.AddComponent<RectTransform>();
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = Vector2.one;
             labelRect.offsetMin = Vector2.zero;
             labelRect.offsetMax = Vector2.zero;
             var labelText = labelGO.AddComponent<Text>();
-            labelText.text = "1";
+            labelText.text = (i + 1).ToString();
             labelText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             labelText.fontSize = 26;
             labelText.alignment = TextAnchor.MiddleCenter;
-            labelText.color = Color.white;
+            labelText.color = (i == 0) ? Color.white : new Color(0.6f, 0.6f, 0.62f, 1f);
 
-            // 우측 상단 X 닫기 버튼 (Content 패널 안쪽에 배치)
-            var closeTopGO = new GameObject("CloseButtonTopRight");
-            closeTopGO.transform.SetParent(contentGO.transform, false);
-            var closeTopRect = closeTopGO.AddComponent<RectTransform>();
-            closeTopRect.anchorMin = new Vector2(1f, 1f);
-            closeTopRect.anchorMax = new Vector2(1f, 1f);
-            closeTopRect.pivot = new Vector2(1f, 1f);
-            closeTopRect.sizeDelta = new Vector2(52f, 52f);
-            closeTopRect.anchoredPosition = new Vector2(-8f, -8f);
-            var closeTopImg = closeTopGO.AddComponent<Image>();
-            // 진한 빨간색 원형 느낌
-            closeTopImg.color = new Color(0.8f, 0.2f, 0.25f, 1f);
-            var closeTopBtn = closeTopGO.AddComponent<Button>();
-            var closeColors = closeTopBtn.colors;
-            closeColors.normalColor = closeTopImg.color;
-            closeColors.highlightedColor = new Color(0.95f, 0.35f, 0.4f, 1f);
-            closeColors.pressedColor = new Color(0.6f, 0.15f, 0.18f, 1f);
-            closeColors.selectedColor = closeColors.normalColor;
-            closeColors.disabledColor = new Color(0.3f, 0.1f, 0.1f, 0.7f);
-            closeTopBtn.colors = closeColors;
-
-            var closeTopTextGO = new GameObject("Text");
-            closeTopTextGO.transform.SetParent(closeTopGO.transform, false);
-            var closeTopTextRect = closeTopTextGO.AddComponent<RectTransform>();
-            closeTopTextRect.anchorMin = Vector2.zero;
-            closeTopTextRect.anchorMax = Vector2.one;
-            closeTopTextRect.offsetMin = Vector2.zero;
-            closeTopTextRect.offsetMax = Vector2.zero;
-            var closeTopText = closeTopTextGO.AddComponent<Text>();
-            closeTopText.text = "X";
-            closeTopText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            closeTopText.fontSize = 30;
-            closeTopText.alignment = TextAnchor.MiddleCenter;
-            closeTopText.color = Color.white;
-            // X 버튼 아웃라인
-            var closeOutline = closeTopGO.AddComponent<Outline>();
-            closeOutline.effectColor = new Color(0f, 0f, 0f, 0.9f);
-            closeOutline.effectDistance = new Vector2(2f, -2f);
-
-            // StageSelectPanel 필드 연결
-            var soPanel = new SerializedObject(stagePanelComp);
-            // StageSelectPanel은 실제 그리드가 붙어 있는 RectTransform을 contentParent로 사용
-            soPanel.FindProperty("contentParent").objectReferenceValue = gridRect;
-            soPanel.FindProperty("stageButtonPrefab").objectReferenceValue = templateBtn;
-            soPanel.FindProperty("closeButton").objectReferenceValue = closeTopBtn;
-            soPanel.ApplyModifiedPropertiesWithoutUndo();
-
-            // X 버튼에 Hide 연결
-            UnityAction closeAction = stagePanelComp.Hide;
-            UnityEventTools.AddPersistentListener(closeTopBtn.onClick, closeAction);
-            EditorUtility.SetDirty(closeTopBtn);
-
-            stagePanelGO.SetActive(false);
+            if (!string.IsNullOrEmpty(stageSceneNames[i]))
+            {
+                var loadScene = btnGO.AddComponent<LoadSceneOnClick>();
+                var soLoad = new SerializedObject(loadScene);
+                soLoad.FindProperty("targetSceneName").stringValue = stageSceneNames[i];
+                soLoad.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
-        else
-        {
-            stagePanelGO = stagePanelTransform.gameObject;
-            stagePanelComp = stagePanelGO.GetComponent<StageSelectPanel>();
-        }
+
+        var closeTopGO = new GameObject("CloseButtonTopRight");
+        closeTopGO.transform.SetParent(contentGO.transform, false);
+        var closeTopRect = closeTopGO.AddComponent<RectTransform>();
+        closeTopRect.anchorMin = new Vector2(1f, 1f);
+        closeTopRect.anchorMax = new Vector2(1f, 1f);
+        closeTopRect.pivot = new Vector2(1f, 1f);
+        closeTopRect.sizeDelta = new Vector2(52f, 52f);
+        closeTopRect.anchoredPosition = new Vector2(-8f, -8f);
+        var closeTopImg = closeTopGO.AddComponent<Image>();
+        closeTopImg.color = new Color(0.8f, 0.2f, 0.25f, 1f);
+        var closeTopBtn = closeTopGO.AddComponent<Button>();
+        var closeColors = closeTopBtn.colors;
+        closeColors.normalColor = closeTopImg.color;
+        closeColors.highlightedColor = new Color(0.95f, 0.35f, 0.4f, 1f);
+        closeColors.pressedColor = new Color(0.6f, 0.15f, 0.18f, 1f);
+        closeColors.selectedColor = closeColors.normalColor;
+        closeColors.disabledColor = new Color(0.3f, 0.1f, 0.1f, 0.7f);
+        closeTopBtn.colors = closeColors;
+
+        var closeTopTextGO = new GameObject("Text");
+        closeTopTextGO.transform.SetParent(closeTopGO.transform, false);
+        var closeTopTextRect = closeTopTextGO.AddComponent<RectTransform>();
+        closeTopTextRect.anchorMin = Vector2.zero;
+        closeTopTextRect.anchorMax = Vector2.one;
+        closeTopTextRect.offsetMin = Vector2.zero;
+        closeTopTextRect.offsetMax = Vector2.zero;
+        var closeTopText = closeTopTextGO.AddComponent<Text>();
+        closeTopText.text = "X";
+        closeTopText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        closeTopText.fontSize = 30;
+        closeTopText.alignment = TextAnchor.MiddleCenter;
+        closeTopText.color = Color.white;
+        var closeOutline = closeTopGO.AddComponent<Outline>();
+        closeOutline.effectColor = new Color(0f, 0f, 0f, 0.9f);
+        closeOutline.effectDistance = new Vector2(2f, -2f);
+
+        // StageSelectPanel closeButton 연결
+        var soPanel = new SerializedObject(stagePanelComp);
+        soPanel.FindProperty("closeButton").objectReferenceValue = closeTopBtn;
+        soPanel.ApplyModifiedPropertiesWithoutUndo();
+
+        UnityAction stageCloseAction = stagePanelComp.Hide;
+        UnityEventTools.AddPersistentListener(closeTopBtn.onClick, stageCloseAction);
+        EditorUtility.SetDirty(closeTopBtn);
+
+        stagePanelGO.SetActive(false);
 
         // 상점 패널(ShopPanel)은 항상 최신 구조로 다시 생성 (기존 것이 있으면 제거)
         var previousShopPanel = canvasTransform.Find("ShopPanel");
