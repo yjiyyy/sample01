@@ -40,6 +40,16 @@ MonoBehaviour:
   globalPatternCooldown: 0
   defaultPatternHoldDuration: 0
   enablePerPatternHoldOverride: 0
+  totalDropCountMin: 30
+  totalDropCountMax: 50
+  dropEntries:
+  - itemPrefab: {fileID: 8987695404800486066, guid: 932d99dfdfecd3240bc4484283a64d08, type: 3}
+    dropChance: 0.8
+  - itemPrefab: {fileID: 1745013137664592741, guid: 1d5be34bf3b17d2419a9566ad03a8391, type: 3}
+    dropChance: 0.2
+  dropGroundLayerMask:
+    serializedVersion: 2
+    m_Bits: 29696
   partSlotCount: 0
   partSlots: []
   overrideController: {fileID: 0}

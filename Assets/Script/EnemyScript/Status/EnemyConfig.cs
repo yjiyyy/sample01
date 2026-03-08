@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 
 /// <summary>
@@ -24,6 +24,23 @@ public class EnemyPartSlot
 
     [Tooltip("부착 후 로컬 스케일.")]
     public Vector3 localScale = Vector3.one;
+}
+
+/// <summary>
+/// 몬스터 사망 시 드랍 풀에 등록할 아이템 한 종류 정의.
+/// - itemPrefab: 생성할 아이템 프리팹 (드래그로 할당).
+/// - dropChance: 이 슬롯에서 이 아이템이 뽑힐 확률 (0~1).
+/// 총 드랍 슬롯 수(totalDropCountMin~Max)만큼 확률 체크가 돌아가며, 여러 아이템이 동시에 드랍될 수 있음.
+/// </summary>
+[System.Serializable]
+public class ItemDropEntry
+{
+    [Tooltip("생성할 아이템 프리팹 (드래그로 할당).")]
+    public GameObject itemPrefab;
+
+    [Tooltip("드랍 확률 (0~1). 각 슬롯마다 이 확률로 체크되어, 통과하면 드랍.")]
+    [Range(0f, 1f)]
+    public float dropChance = 0.5f;
 }
 
 [CreateAssetMenu(menuName = "Enemy/EnemyConfig", fileName = "EnemyConfig_SO")]
@@ -94,6 +111,16 @@ public class EnemyConfig : ScriptableObject
     [Tooltip("If true, EnemyAttackController will honor per-pattern holdOverride field when present.")]
     public bool enablePerPatternHoldOverride = true;
 
+    [Header("Item Drop")]
+    [Tooltip("드랍할 총 아이템 개수 최소값. totalDropCountMin~Max 사이 랜덤.")]
+    public int totalDropCountMin = 1;
+    [Tooltip("드랍할 총 아이템 개수 최대값 (슬롯 수). 각 슬롯마다 등록된 아이템들이 확률 체크됨.")]
+    public int totalDropCountMax = 3;
+    [Tooltip("드랍 풀에 등록할 아이템 목록. (프리팹, 드랍 확률) 쌍. 추가 가능.")]
+    public ItemDropEntry[] dropEntries = new ItemDropEntry[0];
+    [Tooltip("착지 레이캐스트용 지면 레이어. 비탈/계단 포함. 0이면 DefaultRaycastLayers 사용.")]
+    public LayerMask dropGroundLayerMask = 0;
+
     [Header("Parts System")]
     [Tooltip("파츠 슬롯 개수.  이 값을 변경하면 OnValidate에서 배열 크기를 자동 조정합니다.")]
     public int partSlotCount = 0;
@@ -125,6 +152,9 @@ public class EnemyConfig : ScriptableObject
         defaultPatternHoldDuration = Mathf.Max(0f, defaultPatternHoldDuration);
 
         mass = Mathf.Max(0.0001f, mass);
+
+        totalDropCountMin = Mathf.Max(0, totalDropCountMin);
+        totalDropCountMax = Mathf.Max(totalDropCountMin, totalDropCountMax);
 
         // Parts System:  partSlotCount 변경 시 배열 크기 자동 조정
         partSlotCount = Mathf.Max(0, partSlotCount);
