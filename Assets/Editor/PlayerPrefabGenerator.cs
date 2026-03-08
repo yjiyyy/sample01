@@ -132,6 +132,7 @@ public static class PlayerPrefabGenerator
         root.AddComponent<PlayerFacade>();
         root.AddComponent<PlayerStats>();
         root.AddComponent<PlayerEquipmentController>();
+        root.AddComponent<SubWeaponController>();
 
         AddPlayerComponentProperties(root, rootAnim, rb, capsule);
         if (!BuildRagdoll(root, rootAnim, rb, fbxInstance.transform))

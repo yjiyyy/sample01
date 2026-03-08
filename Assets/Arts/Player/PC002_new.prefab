@@ -24,6 +24,7 @@ GameObject:
   - component: {fileID: 5640525338457432051}
   - component: {fileID: 1093233150566418284}
   - component: {fileID: 7772719689253405231}
+  - component: {fileID: 3675675576881036744}
   m_Layer: 6
   m_Name: PC002_new
   m_TagString: Player
@@ -331,6 +332,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7e111c425f55404f87d6ff777bee636, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &3675675576881036744
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6551838243190283326}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57d897c4af56e5147bb1945e480644f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  orbitDiameter: 2
+  rotationSpeedDegPerSec: 90
+  orbitCenterBoneName: Root_dummy
+  initialSlots:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
 --- !u!1001 &7313196903365259018
 PrefabInstance:
   m_ObjectHideFlags: 0

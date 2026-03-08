@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cc5c6f419b04c14588a1e9452415c74, type: 3}
+  m_Name: Sub_04
+  m_EditorClassIdentifier: 
+  id: 
+  displayName: New SubWeapon
+  icon: {fileID: 0}
+  prefab: {fileID: 3300799546944532708, guid: b5a85490c717c88408f046479f4e1b8a, type: 3}
+  damage: 10
+  cooldown: 1
+  range: 5
+  healAmount: 5

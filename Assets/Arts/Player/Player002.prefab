@@ -335,6 +335,7 @@ GameObject:
   - component: {fileID: 7965512505428438830}
   - component: {fileID: 6548813720220608194}
   - component: {fileID: 1311591343820914455}
+  - component: {fileID: 6270762342520555077}
   m_Layer: 6
   m_Name: Player002
   m_TagString: Player
@@ -655,6 +656,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   bloodGushPrefab: {fileID: 2174314246831670090, guid: dd29497a8a22e0d46a7b9f8432a5a107, type: 3}
+--- !u!114 &6270762342520555077
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8479941418654662899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57d897c4af56e5147bb1945e480644f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  orbitDiameter: 2
+  rotationSpeedDegPerSec: 90
+  orbitCenterBoneName: Root_dummy
+  initialSlots:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
 --- !u!1001 &2315224077214167961
 PrefabInstance:
   m_ObjectHideFlags: 0
