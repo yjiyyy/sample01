@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 58bec28319cf04d92ac4113db49950f9
+timeCreated: 1473869750
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 75225
+  packageName: 'Essential : Zombies Games'
+  packageVersion: 1.1
+  assetPath: Assets/Target Zombie Games/Assets/scenes/01_Demo_Script.unity
+  uploadId: 664196

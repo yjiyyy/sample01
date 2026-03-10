@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: b2ff2be3a98f545c8bb6cb5d2eb662c2
+timeCreated: 1513704674
+licenseType: Store
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 75225
+  packageName: 'Essential : Zombies Games'
+  packageVersion: 1.1
+  assetPath: Assets/Target Zombie Games/Assets/Scripts/Demo/Target_Play.cs
+  uploadId: 664196

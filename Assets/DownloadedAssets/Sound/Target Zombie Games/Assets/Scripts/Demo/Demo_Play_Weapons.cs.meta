@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: d73a393aa03234f04b46c47da1e99866
+timeCreated: 1513863918
+licenseType: Store
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 75225
+  packageName: 'Essential : Zombies Games'
+  packageVersion: 1.1
+  assetPath: Assets/Target Zombie Games/Assets/Scripts/Demo/Demo_Play_Weapons.cs
+  uploadId: 664196

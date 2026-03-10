@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: 152edadbd7beb404fba54d211beae7b9
+timeCreated: 1513863307
+licenseType: Store
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 75225
+  packageName: 'Essential : Zombies Games'
+  packageVersion: 1.1
+  assetPath: Assets/Target Zombie Games/Assets/Scripts/Demo/Weapon/Demo_ChangeWeapon.cs
+  uploadId: 664196

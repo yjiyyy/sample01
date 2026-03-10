@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5611c6066b1f03544be3ef46a390afda
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4890085278179872738
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 75225
+  packageName: 'Essential : Zombies Games'
+  packageVersion: 1.1
+  assetPath: Assets/Target Zombie Games/Assets/scenes/02_Demo_Script_WeaponsSettings.lighting
+  uploadId: 664196

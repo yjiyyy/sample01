@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0aca34217216b4ad1a189e277a27011b
+timeCreated: 1474549508
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 75225
+  packageName: 'Essential : Zombies Games'
+  packageVersion: 1.1
+  assetPath: Assets/Target Zombie Games/Assets/Animation/Viewport.controller
+  uploadId: 664196

@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: e47bf87889b7242ca977c6f811d6cf09
+timeCreated: 1513866398
+licenseType: Store
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 75225
+  packageName: 'Essential : Zombies Games'
+  packageVersion: 1.1
+  assetPath: Assets/Target Zombie Games/Assets/Scripts/Target_Audio_Scripts/Weapon/Target_Weapon_Type_3.cs
+  uploadId: 664196
