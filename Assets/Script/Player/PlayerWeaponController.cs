@@ -238,6 +238,26 @@ public class PlayerWeaponController : MonoBehaviour
 
             System.Action preEvadeCleanup = () =>
             {
+                // Evade 우선: 콤보 중이면 회피 버튼으로 콤보를 끊어야
+                // (콤보가 애니메이션/상태를 다시 덮어써서 Evade 표시가 안 되는 문제 방지)
+                try
+                {
+                    var wb = equipComp?.WeaponBehavior;
+                    var comboComp = wb != null ? wb.GetComponent<MeleeComboBehavior>() : null;
+                    if (comboComp != null)
+                    {
+                        // 콤보가 내부적으로 상태 전환(ChangeState)을 호출할 수 있으므로
+                        // 해당 호출이 Evade를 덮어쓰지 못하게 suppression을 잠깐 켠다.
+                        suppressStateChangeRequests = true;
+                        try { comboComp.CancelCombo(); } catch { }
+                        suppressStateChangeRequests = false;
+                    }
+                }
+                catch
+                {
+                    suppressStateChangeRequests = false;
+                }
+
                 if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
                 if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
                 movement?.CancelKnockback();
@@ -308,7 +328,8 @@ public class PlayerWeaponController : MonoBehaviour
     private void ChangeState(PlayerState newState)
     {
         // 상태 변경 요청이 일시 차단되어 있으면 무시합니다.
-        if (suppressStateChangeRequests)
+        // Evade는 "어떤 상태에서도 우선"이므로 suppression에 예외로 둔다.
+        if (suppressStateChangeRequests && newState != PlayerState.Evade)
         {
             if (debugMode) Debug.Log($"[PlayerWeaponController] ChangeState suppressed: {newState}");
             return;

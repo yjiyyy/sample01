@@ -30,6 +30,8 @@ public class PlayerHealth : MonoBehaviour
     private Collider rootCollider;
     private Animator animator;
     private bool ragdollInitialized = false;
+    // 랙돌 상태에서 충돌로 생기는 회전 스핀(Y angularVelocity)만 빠르게 줄이기
+    private bool ragdollSpinKillActive = false;
 
     private const string kHeadName = "Bip001 Head";
     private const string kLeftArmName = "Bip001 L UpperArm";
@@ -48,6 +50,7 @@ public class PlayerHealth : MonoBehaviour
         rootCollider = rootTransform.GetComponent<Collider>();
         animator = rootTransform.GetComponentInChildren<Animator>();
         CollectRagdollParts();
+        ragdollSpinKillActive = false;
     }
 
     private void CollectRagdollParts()
@@ -174,6 +177,7 @@ public class PlayerHealth : MonoBehaviour
                 foreach (var rb in ragdollBodies) { if (rb != null) rb.isKinematic = false; }
                 foreach (var col in ragdollColliders) { if (col != null) col.enabled = true; }
                 ApplyRagdollImpulse(hitDir, weapon, impactScale);
+                ragdollSpinKillActive = true;
             }
             if (rootTransform != null) Destroy(rootTransform.gameObject, DESTROY_DELAY);
             else Destroy(gameObject, DESTROY_DELAY);
@@ -212,6 +216,26 @@ public class PlayerHealth : MonoBehaviour
         }
         if (root != null) Destroy(root.gameObject, 5f);
         else Destroy(gameObject, 5f);
+    }
+
+    private void FixedUpdate()
+    {
+        if (!ragdollSpinKillActive) return;
+        if (ragdollBodies == null || ragdollBodies.Count == 0) return;
+
+        // 회전 축이 충돌로 흔들려 "빙글빙글" 보일 때를 줄인다.
+        // 완전 고정은 아니라 Y 회전 성분만 제거(스핀만 억제).
+        for (int i = 0; i < ragdollBodies.Count; i++)
+        {
+            var rb = ragdollBodies[i];
+            if (rb == null) continue;
+            Vector3 av = rb.angularVelocity;
+            if (!Mathf.Approximately(av.y, 0f))
+            {
+                av.y = 0f;
+                rb.angularVelocity = av;
+            }
+        }
     }
 
     private void PerformSliceWithAnimationBody(Vector3 hitDir, WeaponDataSO weapon, float impactScale)

@@ -65,13 +65,15 @@ public class PlayerMovement : MonoBehaviour
 
     private float prevLowerBodySpeed = -1f;
 
-    // --- New: external override & multiplier support for charge rotations/movement ---
-    // If lookOverrideActive=true, HandleRotation uses lookOverrideDir as rotation target (overrides _lastLookDirection)
+    // External override & multiplier support for charge rotations/movement
     private bool lookOverrideActive = false;
     private Vector3 lookOverrideDir = Vector3.zero;
 
     // Rotation multiplier (applied to rotationSpeedDegPerSec). Default 1.0f
     private float rotationMultiplier = 1f;
+
+    // NOTE: 플레이어는 몬스터 밀집 충돌로 Y 스핀이 생기기 쉬워,
+    // 물리 회전은 고정하고(FreezeRotationY) 방향 전환은 코드로만 처리합니다.
 
     void Awake()
     {
@@ -95,7 +97,7 @@ public class PlayerMovement : MonoBehaviour
             rb.isKinematic = false;
             rb.useGravity = true;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
         _lastLookDirection = transform.forward;
@@ -129,8 +131,8 @@ public class PlayerMovement : MonoBehaviour
         Vector2 raw = InputManager.Instance.GetMoveInput();
         lastInput = new Vector3(raw.x, 0f, raw.y);
 
-        // 변경: 공격 중(일반 Attack)에는 입력으로 _lastLookDirection을 갱신하지 않음.
-        // 단, AR 발사 중이고 ARAllowMoveWhileFiring가 true인 경우만 예외적으로 허용.
+        // 공격 중에는 입력으로 _lastLookDirection을 갱신하지 않음.
+        // 단, AR 발사 중이고 이동 허용인 경우만 예외.
         bool isARFiring = weaponCtrl != null && weaponCtrl.IsARFiring;
         bool arAllowMove = weaponCtrl != null && weaponCtrl.ARAllowMoveWhileFiring;
         bool inAttackState = weaponCtrl != null && weaponCtrl.CurrentState == PlayerState.Attack;
@@ -147,7 +149,7 @@ public class PlayerMovement : MonoBehaviour
                 }
             }
         }
-        // else: 공격 중이면 _lastLookDirection 유지(회전 고정)
+        // else: 공격 중이면 _lastLookDirection 유지
     }
 
     void FixedUpdate()
@@ -164,6 +166,10 @@ public class PlayerMovement : MonoBehaviour
             HandleHorizontal();
             HandleRotation(isARFiring);
         }
+
+        // 물리 회전(충돌 토크) 잔여 제거
+        if (rb != null)
+            rb.angularVelocity = Vector3.zero;
 
         // 지면에 붙어 있을 때 위쪽으로 쌓이는 속도 제거 (충돌 해소로 인한 계속 떠오름 방지)
         if (rb != null && !suspendFalling && movementSettings != null && movementSettings.floorMask != 0 && IsGrounded())
@@ -595,7 +601,11 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleRotation(bool isARFiring)
     {
-        if (weaponCtrl != null && weaponCtrl.CurrentState == PlayerState.Evade)
+        // Attack/Stun/Evade 중에는 회전 보정 스킵
+        if (weaponCtrl != null &&
+            (weaponCtrl.CurrentState == PlayerState.Attack ||
+             weaponCtrl.CurrentState == PlayerState.Stun ||
+             weaponCtrl.CurrentState == PlayerState.Evade))
             return;
 
         // If look override is active, prefer it (used by charge controller)
@@ -786,8 +796,11 @@ public class PlayerMovement : MonoBehaviour
     // Knockback (mass-aware)
     public void ApplyKnockback(Vector3 dir, float force, float duration, Transform attacker = null)
     {
-        // Ensure facing matches knockback (same semantics as EnemyImpact.FaceHit)
-        FaceKnockback(dir);
+        // Ensure facing matches knockback, but only when the knockback is starting.
+        // If we call FaceKnockback every hit while knockback is already active,
+        // multiple monsters around the player can keep changing the facing and look like "spin".
+        if (!isKnockbacked)
+            FaceKnockback(dir);
 
         if (knockbackRoutine != null) StopCoroutine(knockbackRoutine);
         if (debugLogs) Debug.Log($"[PM KNOCK] start dir={dir}, force={force}, dur={duration}, rb.mass={(rb != null ? rb.mass : -1f)}");
@@ -851,19 +864,8 @@ public class PlayerMovement : MonoBehaviour
         // 물리 친화 회전 스냅
         Quaternion target = Quaternion.LookRotation(look, Vector3.up);
 
-        if (rb != null)
-        {
-            // 남아있는 회전 관성 제거(느린 회전 지속 방지)
-            rb.angularVelocity = Vector3.zero;
-
-            // 물리 프레임에서 즉시 반영되는 안전한 회전 API
-            rb.MoveRotation(target);
-        }
-        else
-        {
-            // 리지드바디가 없으면 트랜스폼으로 폴백
-            transform.rotation = target;
-        }
+        // FreezeRotationY 상태이므로 transform.rotation으로 방향 전환만 적용
+        transform.rotation = target;
 
         // 이후 로직에서 이 전방을 참조하도록 업데이트
         _lastLookDirection = look;

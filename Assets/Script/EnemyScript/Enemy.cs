@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -189,6 +189,18 @@ public class Enemy : MonoBehaviour
             Vector3 ld = desiredLookDir; ld.y = 0f;
             Quaternion target = Quaternion.LookRotation(ld.normalized, Vector3.up);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, target, ROT_SPEED_DEG_PER_SEC * dt);
+        }
+
+        // 충돌로 인해 생기는 "회전 스핀"만 빠르게 감쇠한다.
+        // (X/Z 회전은 Rigidbody constraints에서 이미 고정하지만, 충돌 토크로 Y 회전 성분이 누적될 수 있음)
+        if (rb != null)
+        {
+            Vector3 av = rb.angularVelocity;
+            if (!Mathf.Approximately(av.y, 0f))
+            {
+                av.y = 0f;
+                rb.angularVelocity = av;
+            }
         }
 
         hasMoveRequest = false;

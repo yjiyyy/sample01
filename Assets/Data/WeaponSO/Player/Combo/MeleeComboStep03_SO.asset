@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animClip: {fileID: 1827226128182048838, guid: c4de3e9a7e3196e409323282342bee7e, type: 3}
   cooldown: 0
-  damage: 200
+  damage: 1
   range: 3
   hitboxSpawnDelay: 0.27
   hitBoxLifetime: 0.1
