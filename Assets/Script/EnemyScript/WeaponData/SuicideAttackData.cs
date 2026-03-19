@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/SuicideAttackData", fileName = "SuicideAttackData_SO")]
 public class SuicideAttackData : ScriptableObject
@@ -99,7 +100,8 @@ public class SuicideAttackData : ScriptableObject
     public List<SliceTarget> sliceTargets = new List<SliceTarget>();
     public float sliceImpulse = 0f;
 
-    public float animationHoldDuration = 0f;
+    [FormerlySerializedAs("animationHoldDuration")]
+    public float targetHoldDuration = 0f;
     public bool usePushInsteadOfKnockback = false;
     public float jerkIntensity = 1f;
     public float jerkDuration = 0.2f;
@@ -138,7 +140,7 @@ public class SuicideAttackData : ScriptableObject
         ragdollSpinTorque = Mathf.Max(0f, ragdollSpinTorque);
         sliceImpulse = Mathf.Max(0f, sliceImpulse);
 
-        animationHoldDuration = Mathf.Max(0f, animationHoldDuration);
+        targetHoldDuration = Mathf.Max(0f, targetHoldDuration);
         jerkIntensity = Mathf.Max(0f, jerkIntensity);
         jerkDuration = Mathf.Max(0f, jerkDuration);
 

@@ -11,6 +11,21 @@ public class EnemyImpact : MonoBehaviour
     private const float FACE_ANGLE_THRESHOLD = 30f;
     private const float EPS = 0.0001f;
 
+    private static float ResolveTargetAnimationHold(WeaponDataSO weapon)
+    {
+        if (weapon == null) return 0f;
+        if (weapon.targetHoldDuration > 0f) return weapon.targetHoldDuration;
+        if (weapon.targetAnimationHoldDuration > 0f) return weapon.targetAnimationHoldDuration;
+        return 0f;
+    }
+
+    private static float ResolveTargetStateHold(WeaponDataSO weapon)
+    {
+        if (weapon == null) return 0f;
+        if (weapon.targetHoldDuration > 0f) return weapon.targetHoldDuration;
+        return weapon.targetStateHoldDuration;
+    }
+
     public void ApplyKnockback(Enemy ctx, Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (ctx == null || ctx.CurrentState == Enemy.EnemyState.Dead) return;
@@ -24,6 +39,8 @@ public class EnemyImpact : MonoBehaviour
         float knockbackPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
         float knockbackDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
         float stunDuration = weapon != null ? weapon.stunDuration * impactScale : 0f;
+        float targetStateHoldDuration = ResolveTargetStateHold(weapon);
+        float targetAnimationHoldDuration = ResolveTargetAnimationHold(weapon);
 
         // Super-armor check: consider both shield (EnemyHealth) and manual super armor (Enemy)
         bool hasSuperArmor = ctx.HasAnySuperArmor();
@@ -40,7 +57,7 @@ public class EnemyImpact : MonoBehaviour
         FaceHit(ctx, hitDir);
         var ai = ctx.GetComponent<EnemyAI>();
         if (ai != null) ai.SkipFindGoToCombat();
-        impactRoutine = StartCoroutine(KnockbackThenStunRoutine(ctx, hitDir, knockbackPower, knockbackDuration, stunDuration));
+        impactRoutine = StartCoroutine(KnockbackThenStunRoutine(ctx, hitDir, knockbackPower, knockbackDuration, stunDuration, targetAnimationHoldDuration, targetStateHoldDuration));
     }
 
     public void ApplyPush(Enemy ctx, Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
@@ -55,11 +72,12 @@ public class EnemyImpact : MonoBehaviour
 
         float pushPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
         float pushDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
-        float animationHoldDuration = weapon != null ? weapon.animationHoldDuration : 0f;
+        float targetStateHoldDuration = ResolveTargetStateHold(weapon);
+        float targetAnimationHoldDuration = ResolveTargetAnimationHold(weapon);
 
         var ai = ctx.GetComponent<EnemyAI>();
         if (ai != null) ai.SkipFindGoToCombat();
-        pushRoutine = StartCoroutine(PushRoutine(ctx, hitDir, pushPower, pushDuration, animationHoldDuration));
+        pushRoutine = StartCoroutine(PushRoutine(ctx, hitDir, pushPower, pushDuration, targetAnimationHoldDuration, targetStateHoldDuration));
     }
 
     private void FaceHit(Enemy ctx, Vector3 hitDir)
@@ -112,12 +130,18 @@ public class EnemyImpact : MonoBehaviour
         impactRoutine = null;
     }
 
-    private IEnumerator KnockbackThenStunRoutine(Enemy ctx, Vector3 hitDir, float power, float knockDuration, float stunDuration)
+    private IEnumerator KnockbackThenStunRoutine(Enemy ctx, Vector3 hitDir, float power, float knockDuration, float stunDuration, float targetAnimationHoldDuration, float targetStateHoldDuration)
     {
         if (ctx == null) yield break;
 
         ctx.SetState(Enemy.EnemyState.Knockback, true);
         ctx.animCtrl?.PlayKnockback();
+
+        // Apply holds after Knockback state transition so animator.speed reset does not cancel hold.
+        if (targetAnimationHoldDuration > 0f)
+            ctx.animCtrl?.StartAnimationHold(targetAnimationHoldDuration);
+        if (targetStateHoldDuration > 0f)
+            ctx.StartStateHold(targetStateHoldDuration);
 
         float timer = 0f;
         Vector3 knockDir = hitDir.normalized;
@@ -132,6 +156,12 @@ public class EnemyImpact : MonoBehaviour
 
         while (timer < dur && ctx.CurrentState == Enemy.EnemyState.Knockback)
         {
+            if (ctx.IsStateHoldActive)
+            {
+                yield return new WaitForFixedUpdate();
+                continue;
+            }
+
             float t = Mathf.Clamp01(timer / dur);
             float currentSpeed = initialSpeed * (1f - t); // 60fps/30fps 동일한 이동량
             Vector3 disp = knockDir * currentSpeed * Time.fixedDeltaTime;
@@ -170,7 +200,7 @@ public class EnemyImpact : MonoBehaviour
         impactRoutine = null;
     }
 
-    private IEnumerator PushRoutine(Enemy ctx, Vector3 hitDir, float power, float duration, float animationHoldDuration)
+    private IEnumerator PushRoutine(Enemy ctx, Vector3 hitDir, float power, float duration, float animationHoldDuration, float stateHoldDuration)
     {
         if (ctx == null) yield break;
 
@@ -187,6 +217,8 @@ public class EnemyImpact : MonoBehaviour
 
         if (animationHoldDuration > 0f)
             ctx.animCtrl?.StartAnimationHold(animationHoldDuration);
+        if (stateHoldDuration > 0f)
+            ctx.StartStateHold(stateHoldDuration);
 
         while (timer < dur && ctx != null && ctx.CurrentState != Enemy.EnemyState.Dead)
         {

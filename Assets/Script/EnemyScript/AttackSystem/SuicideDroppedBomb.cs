@@ -152,7 +152,7 @@ public class SuicideDroppedBomb : MonoBehaviour
             proxy.sliceTargets = data.sliceTargets != null ? new List<SliceTarget>(data.sliceTargets) : new List<SliceTarget>();
             proxy.sliceImpulse = data.sliceImpulse;
 
-            proxy.animationHoldDuration = data.animationHoldDuration;
+            proxy.targetHoldDuration = data.targetHoldDuration;
             proxy.usePushInsteadOfKnockback = data.usePushInsteadOfKnockback;
 
             proxy.knockbackPower = data.knockbackPower * mul;

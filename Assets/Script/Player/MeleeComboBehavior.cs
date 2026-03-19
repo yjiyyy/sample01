@@ -386,7 +386,8 @@ public class MeleeComboBehavior : MonoBehaviour
 
         proxy.usePushInsteadOfKnockback = step.usePushInsteadOfKnockback;
 
-        proxy.animationHoldDuration = step.animationHoldDuration >= 0f ? step.animationHoldDuration : (weaponDefault != null ? weaponDefault.animationHoldDuration : 0f);
+        proxy.targetHoldDuration = step.targetHoldDuration >= 0f ? step.targetHoldDuration : (weaponDefault != null ? weaponDefault.targetHoldDuration : 0f);
+        proxy.attackerHoldDuration = step.attackerHoldDuration >= 0f ? step.attackerHoldDuration : (weaponDefault != null ? weaponDefault.attackerHoldDuration : 0f);
 
         proxy.deathMode = step.deathMode;
         proxy.ragdollImpulse = step.ragdollImpulse >= 0f ? step.ragdollImpulse : (weaponDefault != null ? weaponDefault.ragdollImpulse : 0f);

@@ -80,6 +80,12 @@ public partial class EnemyAttackController
         float elapsed = 0f;
         while (elapsed < data.prepareDuration)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+
             // 준비 구간에서는 더 이상 매 프레임 플레이어를 바라보지 않습니다.
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
@@ -509,6 +515,12 @@ public partial class EnemyAttackController
         // Use FixedUpdate sync for physics-consistent movement
         while (flightElapsed < tTotal)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return new WaitForFixedUpdate();
+                continue;
+            }
+
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
@@ -683,6 +695,12 @@ public partial class EnemyAttackController
         float waited = 0f;
         while (waited < data.endDuration)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {

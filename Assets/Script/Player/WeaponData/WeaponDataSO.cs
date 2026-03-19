@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using UnityEngine.Serialization;
 
 /// <summary>
 /// Weapon data ScriptableObject (common for most weapons)
@@ -70,8 +69,17 @@ public class WeaponDataSO : ScriptableObject
     [Header("Push(밀림) 옵션")]
     public bool usePushInsteadOfKnockback = false;
 
-    [FormerlySerializedAs("hitstopTime")]
-    public float animationHoldDuration = 0f;
+    [Header("Time Control (Hit Stop)")]
+    [Tooltip("피격 대상 홀드 시간(초). 상태/애니메이션 모두 동일하게 적용. 0이면 비활성")]
+    public float targetHoldDuration = 0f;
+    [Tooltip("공격자 홀드 시간(초). 상태/애니메이션 모두 동일하게 적용. 0이면 비활성")]
+    public float attackerHoldDuration = 0f;
+
+    // Legacy split fields kept for data migration only.
+    [HideInInspector] public float targetStateHoldDuration = 0f;
+    [HideInInspector] public float targetAnimationHoldDuration = 0f;
+    [HideInInspector] public float attackerStateHoldDuration = 0f;
+    [HideInInspector] public float attackerAnimationHoldDuration = 0f;
 
     [Header("처치 연출 선택")]
     public DeathMode deathMode = DeathMode.Animation;
@@ -183,7 +191,19 @@ public class WeaponDataSO : ScriptableObject
         recoilStartDelay = Mathf.Max(0f, recoilStartDelay);
         recoilDuration = Mathf.Max(0f, recoilDuration);
 
-        animationHoldDuration = Mathf.Max(0f, animationHoldDuration);
+        // Migration: if unified fields are empty, pull from legacy split values.
+        if (targetHoldDuration <= 0f)
+            targetHoldDuration = Mathf.Max(targetStateHoldDuration, targetAnimationHoldDuration);
+        if (attackerHoldDuration <= 0f)
+            attackerHoldDuration = Mathf.Max(attackerStateHoldDuration, attackerAnimationHoldDuration);
+
+        targetHoldDuration = Mathf.Max(0f, targetHoldDuration);
+        attackerHoldDuration = Mathf.Max(0f, attackerHoldDuration);
+
+        targetStateHoldDuration = Mathf.Max(0f, targetStateHoldDuration);
+        targetAnimationHoldDuration = Mathf.Max(0f, targetAnimationHoldDuration);
+        attackerStateHoldDuration = Mathf.Max(0f, attackerStateHoldDuration);
+        attackerAnimationHoldDuration = Mathf.Max(0f, attackerAnimationHoldDuration);
 
         ragdollImpulse = Mathf.Max(0f, ragdollImpulse);
         ragdollUpImpulse = Mathf.Max(0f, ragdollUpImpulse);

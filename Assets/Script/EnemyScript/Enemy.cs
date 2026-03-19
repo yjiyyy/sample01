@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -47,9 +48,12 @@ public class Enemy : MonoBehaviour
     private float lookLockExpireTime = -1f;
 
     private HashSet<SuperArmorSource> manualSuperArmor = new HashSet<SuperArmorSource>();
+    private int stateHoldCount = 0;
 
     private const float ROT_SPEED_DEG_PER_SEC = 720f;
     private const float EPS = 0.0001f;
+
+    public bool IsStateHoldActive => stateHoldCount > 0;
 
     private Rigidbody rb;
     private CapsuleCollider capsule;
@@ -148,6 +152,7 @@ public class Enemy : MonoBehaviour
 
         if (CurrentState == EnemyState.Dead || player == null) return;
         if (CurrentState == EnemyState.ShieldBreak) return;
+        if (IsStateHoldActive) return;
 
         ai?.Tick(this, player);
     }
@@ -155,6 +160,7 @@ public class Enemy : MonoBehaviour
     private void FixedUpdate()
     {
         if (CurrentState == EnemyState.Dead) return;
+        if (IsStateHoldActive) return;
 
         float dt = Time.fixedDeltaTime;
 
@@ -257,11 +263,34 @@ public class Enemy : MonoBehaviour
             case EnemyState.Dead:
                 attackCtrl?.InterruptCooldown();
                 if (animator) animator.speed = 1f;
+                stateHoldCount = 0;
                 UnlockLookDirection();
                 ai?.ForceClearBackstep();
                 animCtrl?.SetSignedSpeed(0f);
                 break;
         }
+    }
+
+    public void StartStateHold(float duration)
+    {
+        if (duration <= 0f || CurrentState == EnemyState.Dead) return;
+        stateHoldCount = Mathf.Max(0, stateHoldCount) + 1;
+        StartCoroutine(StateHoldRoutine(duration));
+    }
+
+    public void ReleaseStateHold()
+    {
+        if (stateHoldCount <= 0) return;
+        stateHoldCount--;
+        if (stateHoldCount < 0) stateHoldCount = 0;
+    }
+
+    private IEnumerator StateHoldRoutine(float duration)
+    {
+        float end = Time.time + duration;
+        while (Time.time < end)
+            yield return null;
+        ReleaseStateHold();
     }
 
     public void ApplyKnockback(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
@@ -749,6 +778,7 @@ public class Enemy : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (IsStateHoldActive) return;
         if (!lookLockActive) return;
 
         if (lookLockExpireTime >= 0f && Time.time >= lookLockExpireTime)
@@ -762,6 +792,7 @@ public class Enemy : MonoBehaviour
 
     private void OnAnimatorIK(int layerIndex)
     {
+        if (IsStateHoldActive) return;
         if (!lookLockActive) return;
 
         if (lookLockExpireTime >= 0f && Time.time >= lookLockExpireTime)

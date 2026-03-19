@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/TimeProjectileAttackData")]
 public class TimeProjectileAttackData : ScriptableObject
@@ -124,7 +125,8 @@ public class TimeProjectileAttackData : ScriptableObject
     public float sliceImpulse = 0f;
 
     [Tooltip("???????/????? ??????(??) - death ???? ???? ???")]
-    public float animationHoldDuration = 0f;
+    [FormerlySerializedAs("animationHoldDuration")]
+    public float targetHoldDuration = 0f;
 
     [Tooltip("??? ??? push(???)?? ??????? ???? (EnemyImpact.ApplyPush ???)")]
     public bool usePushInsteadOfKnockback = false;
@@ -164,7 +166,7 @@ public class TimeProjectileAttackData : ScriptableObject
         ragdollUpImpulse = Mathf.Max(0f, ragdollUpImpulse);
         ragdollSpinTorque = Mathf.Max(0f, ragdollSpinTorque);
         sliceImpulse = Mathf.Max(0f, sliceImpulse);
-        animationHoldDuration = Mathf.Max(0f, animationHoldDuration);
+        targetHoldDuration = Mathf.Max(0f, targetHoldDuration);
         jerkIntensity = Mathf.Max(0f, jerkIntensity);
         jerkDuration = Mathf.Max(0f, jerkDuration);
     }

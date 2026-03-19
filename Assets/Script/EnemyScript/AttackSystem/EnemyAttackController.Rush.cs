@@ -52,6 +52,12 @@ public partial class EnemyAttackController
         float elapsed = 0f;
         while (elapsed < data.prepareDuration)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+
             if (rushTarget != null)
             {
                 Vector3 dir = rushTarget.position - transform.position;
@@ -112,6 +118,12 @@ public partial class EnemyAttackController
         // FixedUpdate ��� �̵�(�÷���/������ ����)
         while (elapsed < data.attackDuration)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return new WaitForFixedUpdate();
+                continue;
+            }
+
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
@@ -175,6 +187,12 @@ public partial class EnemyAttackController
 
         while (elapsed < dur)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return new WaitForFixedUpdate();
+                continue;
+            }
+
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {

@@ -128,12 +128,14 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
             if (target.TryGetComponent(out PlayerHealth playerHP))
             {
                 playerHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale, hitPoint);
+                ApplyAttackerHoldFromWeapon();
                 Debug.Log($"✅ [Explosion] PlayerHealth에 {finalDamage} 데미지!");
                 // 플레이어는 넉백/푸시가 Enemy 로직과 다를 수 있으므로 여기서는 데미지만
             }
             else if (target.TryGetComponent(out EnemyHealth enemyHP))
             {
                 enemyHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale, hitPoint);
+                ApplyAttackerHoldFromWeapon();
                 Debug.Log($"✅ [Explosion] EnemyHealth에 {finalDamage} 데미지!");
 
                 // 2) 살아있으면만 넉백/푸시 분기
@@ -153,6 +155,24 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
         }
 
         Destroy(gameObject);
+    }
+
+    private void ApplyAttackerHoldFromWeapon()
+    {
+        if (weaponData == null) return;
+
+        float hold = weaponData.attackerHoldDuration;
+        if (hold <= 0f)
+            hold = Mathf.Max(weaponData.attackerStateHoldDuration, weaponData.attackerAnimationHoldDuration);
+        if (hold <= 0f) return;
+
+        var attackerCtrl = transform.root != null ? transform.root.GetComponentInChildren<PlayerWeaponController>() : null;
+        if (attackerCtrl == null)
+            attackerCtrl = GameObject.FindWithTag("Player")?.GetComponentInChildren<PlayerWeaponController>();
+        if (attackerCtrl == null) return;
+
+        attackerCtrl.StartStateHold(hold);
+        attackerCtrl.StartAnimationHold(hold);
     }
 
     private void OnDrawGizmosSelected()

@@ -54,6 +54,12 @@ public partial class EnemyAttackController
         float elapsed = 0f;
         while (elapsed < data.prepareDuration)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+
             if (IsOwnerDead())
             {
                 if (data.debugLogs) Log("SUICIDE owner dead during prepare -> drop bomb");
@@ -96,7 +102,7 @@ public partial class EnemyAttackController
             enemy.animator.Play(data.chaseLoopClip.name, 0, 0f);
         }
 
-        float startTime = Time.time;
+        float chaseElapsed = 0f;
 
         Vector3 moveDir = transform.forward;
         moveDir.y = 0f;
@@ -109,6 +115,12 @@ public partial class EnemyAttackController
 
         while (!suicideExploded)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return new WaitForFixedUpdate();
+                continue;
+            }
+
             if (IsOwnerDead())
             {
                 if (data.debugLogs) Log("SUICIDE owner dead during chase -> drop bomb");
@@ -125,7 +137,7 @@ public partial class EnemyAttackController
                 yield break;
             }
 
-            if (data.maxChaseTime > 0f && Time.time - startTime >= data.maxChaseTime)
+            if (data.maxChaseTime > 0f && chaseElapsed >= data.maxChaseTime)
             {
                 if (data.debugLogs) Log("SUICIDE explode: timeout");
                 ExplodeNow(data);
@@ -169,6 +181,7 @@ public partial class EnemyAttackController
             enemy.MoveFilteredDisplacement(disp);
 
             lastMoveDir = moveDir;
+            chaseElapsed += Time.fixedDeltaTime;
 
             yield return new WaitForFixedUpdate();
         }
@@ -379,7 +392,7 @@ public partial class EnemyAttackController
             proxy.sliceTargets = data.sliceTargets != null ? new List<SliceTarget>(data.sliceTargets) : new List<SliceTarget>();
             proxy.sliceImpulse = data.sliceImpulse;
 
-            proxy.animationHoldDuration = data.animationHoldDuration;
+            proxy.targetHoldDuration = data.targetHoldDuration;
             proxy.usePushInsteadOfKnockback = data.usePushInsteadOfKnockback;
 
             proxy.knockbackPower = data.knockbackPower * mul;
@@ -422,7 +435,7 @@ public partial class EnemyAttackController
         proxy.sliceTargets = data.sliceTargets != null ? new List<SliceTarget>(data.sliceTargets) : new List<SliceTarget>();
         proxy.sliceImpulse = data.sliceImpulse;
 
-        proxy.animationHoldDuration = data.animationHoldDuration;
+        proxy.targetHoldDuration = data.targetHoldDuration;
         proxy.usePushInsteadOfKnockback = data.usePushInsteadOfKnockback;
         proxy.jerkIntensity = data.jerkIntensity;
         proxy.jerkDuration = data.jerkDuration;

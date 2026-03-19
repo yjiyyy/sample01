@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -43,9 +43,17 @@ public class MeleeComboStepSO : ScriptableObject
     [Header("Push(밀림) 옵션")]
     public bool usePushInsteadOfKnockback = false;
 
-    [Header("애니메이션 홀드 (히트스탑)")]
-    [Tooltip("피격 대상을 잠깐 멈추는 시간(초). 0이면 비활성")]
-    public float animationHoldDuration = -1f;
+    [Header("Time Control (Hit Stop)")]
+    [Tooltip("피격 대상 홀드 시간(초). 음수면 무기 기본값 사용")]
+    public float targetHoldDuration = -1f;
+    [Tooltip("공격자 홀드 시간(초). 음수면 무기 기본값 사용")]
+    public float attackerHoldDuration = -1f;
+
+    // Legacy split fields kept for compatibility.
+    [HideInInspector] public float targetStateHoldDuration = -1f;
+    [HideInInspector] public float targetAnimationHoldDuration = -1f;
+    [HideInInspector] public float attackerStateHoldDuration = -1f;
+    [HideInInspector] public float attackerAnimationHoldDuration = -1f;
 
     [Header("처치 연출 선택")]
     public DeathMode deathMode = DeathMode.Animation;

@@ -49,6 +49,12 @@ public partial class EnemyAttackController
 
             while (elapsed < data.prepareTime)
             {
+                if (enemy != null && enemy.IsStateHoldActive)
+                {
+                    yield return null;
+                    continue;
+                }
+
                 if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                     enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
                 {
@@ -94,6 +100,12 @@ public partial class EnemyAttackController
 
         while (atkElapsed < atkReq)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {

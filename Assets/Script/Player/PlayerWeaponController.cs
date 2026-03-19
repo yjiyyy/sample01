@@ -75,6 +75,10 @@ public class PlayerWeaponController : MonoBehaviour
     // 콤보를 강제로 취소할 때 콤보 내부에서 호출하는 ChangeState 호출이 넉백/스턴을 덮어쓰지 못하도록
     // 아주 짧은 구간(콤보 Cancel 직전/직후) 동안 ChangeState를 무시하도록 사용합니다.
     private bool suppressStateChangeRequests = false;
+    private int stateHoldCount = 0;
+    private int animationHoldCount = 0;
+    private float savedAnimatorSpeed = 1f;
+    public bool IsTimeHoldActive => stateHoldCount > 0 || animationHoldCount > 0;
 
     // ------------------ Public compatibility APIs ------------------
 
@@ -91,6 +95,8 @@ public class PlayerWeaponController : MonoBehaviour
             if (debugMode) Debug.Log("[PlayerWeaponController] ForceApplyKnockback ignored because state==Dead");
             return;
         }
+
+        ClearAllHolds();
 
         // 취소/정리
         if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
@@ -175,6 +181,80 @@ public class PlayerWeaponController : MonoBehaviour
         recoilComp.StartRecoil(data, () => state == PlayerState.Attack, transform);
     }
 
+    public void StartStateHold(float duration)
+    {
+        if (duration <= 0f || state == PlayerState.Dead) return;
+        stateHoldCount = Mathf.Max(0, stateHoldCount) + 1;
+        StartCoroutine(StateHoldRoutine(duration));
+    }
+
+    public void StartAnimationHold(float duration)
+    {
+        if (duration <= 0f || state == PlayerState.Dead) return;
+
+        var animator = animationController != null ? animationController.GetAnimator() : null;
+        if (animator == null) return;
+
+        if (animationHoldCount == 0)
+            savedAnimatorSpeed = animator.speed;
+
+        animationHoldCount = Mathf.Max(0, animationHoldCount) + 1;
+        animator.speed = 0f;
+        StartCoroutine(AnimationHoldRoutine(duration));
+    }
+
+    private IEnumerator StateHoldRoutine(float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (state == PlayerState.Dead) break;
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        ReleaseStateHold();
+    }
+
+    private IEnumerator AnimationHoldRoutine(float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (state == PlayerState.Dead) break;
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        ReleaseAnimationHold();
+    }
+
+    private void ReleaseStateHold()
+    {
+        if (stateHoldCount <= 0) return;
+        stateHoldCount--;
+        if (stateHoldCount < 0) stateHoldCount = 0;
+    }
+
+    private void ReleaseAnimationHold()
+    {
+        if (animationHoldCount <= 0) return;
+        animationHoldCount--;
+        if (animationHoldCount < 0) animationHoldCount = 0;
+
+        if (animationHoldCount == 0)
+        {
+            var animator = animationController != null ? animationController.GetAnimator() : null;
+            if (animator != null) animator.speed = savedAnimatorSpeed;
+        }
+    }
+
+    private void ClearAllHolds()
+    {
+        stateHoldCount = 0;
+        animationHoldCount = 0;
+        var animator = animationController != null ? animationController.GetAnimator() : null;
+        if (animator != null) animator.speed = 1f;
+    }
+
     // ------------------ End compatibility APIs ------------------
 
     private void Awake()
@@ -227,6 +307,7 @@ public class PlayerWeaponController : MonoBehaviour
     private void Update()
     {
         if (state == PlayerState.Dead) return;
+        if (stateHoldCount > 0) return;
 
         chargeComp?.Tick();
         evadeComp?.TickRecharge(Time.deltaTime);
@@ -319,6 +400,7 @@ public class PlayerWeaponController : MonoBehaviour
 
     private bool IsActionBlocking()
     {
+        if (stateHoldCount > 0) return true;
         return state == PlayerState.Attack ||
                state == PlayerState.Knockback ||
                state == PlayerState.Stun ||
@@ -343,6 +425,7 @@ public class PlayerWeaponController : MonoBehaviour
             newState == PlayerState.Stun ||
             newState == PlayerState.Dead)
         {
+            ClearAllHolds();
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
             chargeComp?.CancelAll();
@@ -541,7 +624,19 @@ public class PlayerWeaponController : MonoBehaviour
         StartRecoilIfNeeded(data);
         equipComp.WeaponBehavior?.AttackHit();
 
-        yield return new WaitForSeconds(data.cooldown);
+        float elapsed = 0f;
+        float wait = Mathf.Max(0f, data.cooldown);
+        while (elapsed < wait)
+        {
+            if (state == PlayerState.Dead) yield break;
+            if (stateHoldCount > 0)
+            {
+                yield return null;
+                continue;
+            }
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
 
         equipComp.WeaponBehavior?.DisableTrail();
         ChangeState(PlayerState.Idle);
@@ -643,6 +738,12 @@ public class PlayerWeaponController : MonoBehaviour
         float waitDur = Mathf.Max(0f, duration);
         while (elapsed < waitDur)
         {
+            if (stateHoldCount > 0)
+            {
+                yield return null;
+                continue;
+            }
+
             if (state == PlayerState.Dead)
             {
                 if (debugMode) Debug.Log("[PlayerWeaponController] KnockbackRoutine_Internal interrupted by Dead state during wait.");
@@ -667,6 +768,12 @@ public class PlayerWeaponController : MonoBehaviour
             float stunElapsed = 0f;
             while (stunElapsed < stun)
             {
+                if (stateHoldCount > 0)
+                {
+                    yield return null;
+                    continue;
+                }
+
                 if (state == PlayerState.Dead)
                 {
                     if (debugMode) Debug.Log("[PlayerWeaponController] Stun interrupted by Dead state.");
@@ -735,6 +842,13 @@ public class PlayerWeaponController : MonoBehaviour
 
         while (true)
         {
+            if (stateHoldCount > 0)
+            {
+                nextTime += Time.deltaTime;
+                yield return null;
+                continue;
+            }
+
             if (state == PlayerState.Knockback || state == PlayerState.Stun || state == PlayerState.Dead || state == PlayerState.Evade)
                 break;
 

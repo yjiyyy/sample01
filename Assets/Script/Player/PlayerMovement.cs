@@ -126,6 +126,7 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         if (!enabled) return;
+        if (weaponCtrl != null && weaponCtrl.IsTimeHoldActive) return;
         if (isKnockbacked) return;
 
         Vector2 raw = InputManager.Instance.GetMoveInput();
@@ -155,6 +156,7 @@ public class PlayerMovement : MonoBehaviour
     void FixedUpdate()
     {
         if (!enabled) return;
+        if (weaponCtrl != null && weaponCtrl.IsTimeHoldActive) return;
 
         bool isARFiring = weaponCtrl != null && weaponCtrl.IsARFiring;
         bool arAllowMove = weaponCtrl != null && weaponCtrl.ARAllowMoveWhileFiring;

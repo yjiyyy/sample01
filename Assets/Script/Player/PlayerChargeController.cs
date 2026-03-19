@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,7 +18,7 @@ public class PlayerChargeController : MonoBehaviour
 
     // 내부 상태
     private bool chargeHoldActive = false;
-    private float chargeHoldStartTime = 0f;
+    private float chargeHoldElapsed = 0f;
     private bool chargeStartMsgDone = false;
     private bool chargeSuccessMsgDone = false;
     private bool chargeExecuted = false;
@@ -35,9 +35,10 @@ public class PlayerChargeController : MonoBehaviour
     private Coroutine faceNearestRoutine; // NEW: nearest facing coroutine
     private bool continuousActive = false;
     private PlayerChargeAttackSO activeContinuousSlot = null;
-    private float superArmorEndTime = 0f;
+    private float superArmorRemaining = 0f;
 
     private WeaponDataSO chargeWeaponProxy;
+    private PlayerWeaponController weaponCtrl;
 
     public void Setup(
         PlayerAnimationController animCtrl,
@@ -57,6 +58,13 @@ public class PlayerChargeController : MonoBehaviour
         setInvincible = setInvincibleAction;
         enableChargeMessages = enableMessages;
         debugMode = debug;
+        weaponCtrl = GetComponent<PlayerWeaponController>();
+    }
+
+    private bool IsHoldActive()
+    {
+        if (weaponCtrl == null) weaponCtrl = GetComponent<PlayerWeaponController>();
+        return weaponCtrl != null && weaponCtrl.IsTimeHoldActive;
     }
 
     public void Tick()
@@ -78,7 +86,7 @@ public class PlayerChargeController : MonoBehaviour
             else
             {
                 chargeHoldActive = true;
-                chargeHoldStartTime = Time.time;
+                chargeHoldElapsed = 0f;
                 chargeStartMsgDone = false;
                 chargeSuccessMsgDone = false;
                 chargeExecuted = false;
@@ -90,7 +98,9 @@ public class PlayerChargeController : MonoBehaviour
         // Hold 유지: 메시지/성공 플래그
         if (chargeHoldActive && InputManager.Instance.GetAttack())
         {
-            float held = Time.time - chargeHoldStartTime;
+            if (!IsHoldActive())
+                chargeHoldElapsed += Time.deltaTime;
+            float held = chargeHoldElapsed;
 
             if (enableChargeMessages && !chargeStartMsgDone && held >= 1.0f)
             {
@@ -176,6 +186,7 @@ public class PlayerChargeController : MonoBehaviour
 
             // 플래그 리셋
             chargeHoldActive = false;
+            chargeHoldElapsed = 0f;
             chargeStartMsgDone = false;
             chargeSuccessMsgDone = false;
             chargeReady = false;
@@ -189,6 +200,7 @@ public class PlayerChargeController : MonoBehaviour
     {
         // 홀드/플래그
         chargeHoldActive = false;
+        chargeHoldElapsed = 0f;
         chargeStartMsgDone = false;
         chargeSuccessMsgDone = false;
         chargeReady = false;
@@ -352,6 +364,12 @@ public class PlayerChargeController : MonoBehaviour
 
         while (elapsed < duration)
         {
+            if (IsHoldActive())
+            {
+                yield return null;
+                continue;
+            }
+
             var s = getState != null ? getState() : PlayerState.Idle;
             if (s == PlayerState.Knockback || s == PlayerState.Stun ||
                 s == PlayerState.Dead || s == PlayerState.Evade)
@@ -401,7 +419,7 @@ public class PlayerChargeController : MonoBehaviour
 
         EnsureChargeWeaponProxy(slot);
 
-        float startTime = Time.time;
+        float cycleElapsed = 0f;
 
         for (int i = 0; i < delays.Count; i++)
         {
@@ -414,11 +432,15 @@ public class PlayerChargeController : MonoBehaviour
                 continue;
             }
 
-            float targetTime = startTime + d;
-
-            // Wait until targetTime, checking cancel conditions each frame
-            while (Time.time < targetTime)
+            // Wait until target delay, checking cancel conditions each frame
+            while (cycleElapsed < d)
             {
+                if (IsHoldActive())
+                {
+                    yield return null;
+                    continue;
+                }
+
                 var s = getState != null ? getState() : PlayerState.Idle;
                 if (s == PlayerState.Knockback || s == PlayerState.Stun ||
                     s == PlayerState.Dead || s == PlayerState.Evade)
@@ -428,6 +450,7 @@ public class PlayerChargeController : MonoBehaviour
                     yield break;
                 }
 
+                cycleElapsed += Time.deltaTime;
                 yield return null;
             }
 
@@ -493,17 +516,22 @@ public class PlayerChargeController : MonoBehaviour
         Transform spawn = spawnPoint != null ? spawnPoint : transform;
         EnsureChargeWeaponProxy(slot);
 
-        float cycleStart = Time.time;
+        float cycleElapsed = 0f;
 
         for (int i = 0; i < delays.Count; i++)
         {
             float d = delays[i];
             if (d > maxDuration) continue;
-            float target = cycleStart + d;
-            while (Time.time < target)
+            while (cycleElapsed < d)
             {
+                if (IsHoldActive())
+                {
+                    yield return null;
+                    continue;
+                }
+
                 var s = getState != null ? getState() : PlayerState.Idle;
-                bool inSuper = slot.grantSuperArmor && Time.time < superArmorEndTime;
+                bool inSuper = slot.grantSuperArmor && superArmorRemaining > 0f;
                 if (!inSuper && (s == PlayerState.Knockback || s == PlayerState.Stun ||
                     s == PlayerState.Dead || s == PlayerState.Evade))
                 {
@@ -511,6 +539,9 @@ public class PlayerChargeController : MonoBehaviour
                     perCycleSpawnRoutine = null;
                     yield break;
                 }
+                cycleElapsed += Time.deltaTime;
+                if (slot.grantSuperArmor && superArmorRemaining > 0f)
+                    superArmorRemaining = Mathf.Max(0f, superArmorRemaining - Time.deltaTime);
                 yield return null;
             }
 
@@ -561,6 +592,12 @@ public class PlayerChargeController : MonoBehaviour
         var wait = new WaitForFixedUpdate();
         while (elapsed < maxDuration && continuousActive && InputManager.Instance.GetAttack())
         {
+            if (IsHoldActive())
+            {
+                yield return wait;
+                continue;
+            }
+
             // Respect player's input direction; use camera relative mapping to match PlayerMovement semantics
             Vector2 raw = InputManager.Instance.GetMoveInput();
             Vector3 inputVec = new Vector3(raw.x, 0f, raw.y);
@@ -661,6 +698,12 @@ public class PlayerChargeController : MonoBehaviour
 
         while (elapsed < maxDuration && continuousActive && InputManager.Instance.GetAttack())
         {
+            if (IsHoldActive())
+            {
+                yield return wait;
+                continue;
+            }
+
             // 상태 취소 검사
             var s = getState != null ? getState() : PlayerState.Idle;
             if (s == PlayerState.Knockback || s == PlayerState.Stun ||
@@ -779,7 +822,11 @@ public class PlayerChargeController : MonoBehaviour
         // SuperArmor
         if (slot.grantSuperArmor)
         {
-            superArmorEndTime = Time.time + Mathf.Max(0f, slot.superArmorDuration);
+            superArmorRemaining = Mathf.Max(0f, slot.superArmorDuration);
+        }
+        else
+        {
+            superArmorRemaining = 0f;
         }
 
         PlayerMovement pm = GetComponent<PlayerMovement>();
@@ -871,8 +918,14 @@ public class PlayerChargeController : MonoBehaviour
                 float dur = Mathf.Max(0.0001f, slot.duration);
                 while (elapsed < dur)
                 {
+                    if (IsHoldActive())
+                    {
+                        yield return null;
+                        continue;
+                    }
+
                     var s = getState != null ? getState() : PlayerState.Idle;
-                    bool inSuper = slot.grantSuperArmor && Time.time < superArmorEndTime;
+                    bool inSuper = slot.grantSuperArmor && superArmorRemaining > 0f;
                     if (!inSuper && (s == PlayerState.Knockback || s == PlayerState.Stun ||
                         s == PlayerState.Dead || s == PlayerState.Evade))
                     {
@@ -888,6 +941,8 @@ public class PlayerChargeController : MonoBehaviour
                     }
 
                     elapsed += Time.deltaTime;
+                    if (slot.grantSuperArmor && superArmorRemaining > 0f)
+                        superArmorRemaining = Mathf.Max(0f, superArmorRemaining - Time.deltaTime);
                     yield return null;
                 }
 
@@ -937,8 +992,13 @@ public class PlayerChargeController : MonoBehaviour
         chargeWeaponProxy.knockbackDuration = slot.knockbackDuration;
         chargeWeaponProxy.stunDuration = slot.stunDuration;
 
-        // --- animationHoldDuration(구 hitstopTime) 복사 ---
-        chargeWeaponProxy.animationHoldDuration = slot.animationHoldDuration;
+        chargeWeaponProxy.targetHoldDuration = slot.targetHoldDuration;
+        chargeWeaponProxy.attackerHoldDuration = slot.attackerHoldDuration;
+        // Legacy mirror for compatibility with any remaining old reads.
+        chargeWeaponProxy.targetStateHoldDuration = slot.targetHoldDuration;
+        chargeWeaponProxy.targetAnimationHoldDuration = slot.targetHoldDuration;
+        chargeWeaponProxy.attackerStateHoldDuration = slot.attackerHoldDuration;
+        chargeWeaponProxy.attackerAnimationHoldDuration = slot.attackerHoldDuration;
 
         // --- 처치 연출 관련 필드 복사 (PlayerChargeAttackSO에서 설정한 값이 그대로 반영되도록) ---
         chargeWeaponProxy.deathMode = slot.deathMode;
@@ -988,7 +1048,17 @@ public class PlayerChargeController : MonoBehaviour
 
     private IEnumerator EndInvincibleLater(float duration)
     {
-        yield return new WaitForSeconds(duration);
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (IsHoldActive())
+            {
+                yield return null;
+                continue;
+            }
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
         setInvincible?.Invoke(false);
     }
 }

@@ -105,6 +105,7 @@ public class HitBox_PC_Sector : MonoBehaviour
 
             // 1) 데미지 먼저 적용
             hp.ApplyDamage(finalDmg, dir, weapon, weight, hitPoint);
+            ApplyAttackerHoldFromWeapon();
             Debug.Log($"✅ [Shotgun] EnemyHealth에 {finalDmg} 데미지 적용!(w={weight:F2})");
 
             // 2) 사망 여부 확인 후 넉백/푸시 분기
@@ -129,5 +130,23 @@ public class HitBox_PC_Sector : MonoBehaviour
                 enemy.ApplyKnockback(knockDir, weapon, weight);
             }
         }
+    }
+
+    private void ApplyAttackerHoldFromWeapon()
+    {
+        if (weapon == null) return;
+
+        float hold = weapon.attackerHoldDuration;
+        if (hold <= 0f)
+            hold = Mathf.Max(weapon.attackerStateHoldDuration, weapon.attackerAnimationHoldDuration);
+        if (hold <= 0f) return;
+
+        var attackerCtrl = transform.root != null ? transform.root.GetComponentInChildren<PlayerWeaponController>() : null;
+        if (attackerCtrl == null)
+            attackerCtrl = GameObject.FindWithTag("Player")?.GetComponentInChildren<PlayerWeaponController>();
+        if (attackerCtrl == null) return;
+
+        attackerCtrl.StartStateHold(hold);
+        attackerCtrl.StartAnimationHold(hold);
     }
 }

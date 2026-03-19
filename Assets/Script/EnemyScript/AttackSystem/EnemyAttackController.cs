@@ -170,6 +170,8 @@ public partial class EnemyAttackController : MonoBehaviour
 
     private void Update()
     {
+        if (enemy != null && enemy.IsStateHoldActive) return;
+
         TickMeleeUpdate();
 
         if (holdActive && !IsAttackExecuting && !pendingExecuted && Time.time >= holdExpireTime)

@@ -18,6 +18,7 @@ public class HitBox_Enemy : MonoBehaviour
     private readonly HashSet<PlayerHealth> overlapping = new();
     private readonly HashSet<PlayerHealth> alreadyHit = new();
     private Coroutine dupRoutine;
+    private Enemy ownerEnemy;
 
     public void Initialize(
         float dmg, float rng, float kbPower, float kbDuration, float lifetime, float stun = 0f,
@@ -52,6 +53,12 @@ public class HitBox_Enemy : MonoBehaviour
         }
         overlapping.Clear();
         alreadyHit.Clear();
+    }
+
+    private void Start()
+    {
+        if (ownerEnemy == null)
+            ownerEnemy = GetComponentInParent<Enemy>();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -90,7 +97,18 @@ public class HitBox_Enemy : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(duplicateInterval);
+            float elapsed = 0f;
+            while (elapsed < duplicateInterval)
+            {
+                if (ownerEnemy != null && ownerEnemy.IsStateHoldActive)
+                {
+                    yield return null;
+                    continue;
+                }
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
 
             if (overlapping.Count == 0) continue;
 

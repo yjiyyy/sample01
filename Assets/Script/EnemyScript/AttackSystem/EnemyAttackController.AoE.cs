@@ -19,6 +19,22 @@ public partial class EnemyAttackController
     private float aoeStartTime = 0f;
     private bool animFrozenByAoE = false;
 
+    private IEnumerator WaitWithStateHold(float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
     private void StartAoE(AoEAttackData data, Transform target, int index)
     {
         if (data == null) return;
@@ -65,7 +81,7 @@ public partial class EnemyAttackController
     {
         float elapsed = Time.time - aoeStartTime;
         float toWait = clipLen - elapsed;
-        if (toWait > 0f) yield return new WaitForSeconds(toWait);
+        if (toWait > 0f) yield return StartCoroutine(WaitWithStateHold(toWait));
 
         float elapsedTotal = Time.time - aoeStartTime;
         if (elapsedTotal < data.attackDuration && enemy != null && enemy.animator != null)
@@ -80,7 +96,7 @@ public partial class EnemyAttackController
     {
         // 1) Prepare (prepareDuration)
         float prep = Mathf.Max(0f, data.prepareDuration);
-        if (prep > 0f) yield return new WaitForSeconds(prep);
+        if (prep > 0f) yield return StartCoroutine(WaitWithStateHold(prep));
 
         // 2) spawn base 결정 (플레이어 위치는 SpawnHitboxesSequence에서 매 스폰마다 재조회)
         Vector3 spawnBase = transform.position;
@@ -106,7 +122,7 @@ public partial class EnemyAttackController
         if (remaining > 0f)
         {
             Log($"AOE waiting remaining attackDuration: {remaining:F2}s");
-            yield return new WaitForSeconds(remaining);
+            yield return StartCoroutine(WaitWithStateHold(remaining));
         }
 
         // 애니메이터/상태 정리
@@ -181,7 +197,7 @@ public partial class EnemyAttackController
             if (data.hitboxActivationDelay > 0f)
             {
                 // 클램프는 하지 않음(사용자 의도: delay 동안 스폰을 미룸). 단, 너무 길면 공격이 끝난 뒤에도 계속 스폰됨.
-                yield return new WaitForSeconds(data.hitboxActivationDelay);
+                yield return StartCoroutine(WaitWithStateHold(data.hitboxActivationDelay));
             }
             else
             {
@@ -201,7 +217,7 @@ public partial class EnemyAttackController
 
             // spawnInterval 대기 (다음 스폰 위치/마커를 위한 간격)
             if (data.spawnInterval > 0f)
-                yield return new WaitForSeconds(data.spawnInterval);
+                yield return StartCoroutine(WaitWithStateHold(data.spawnInterval));
             else
                 yield return null;
         }

@@ -18,6 +18,7 @@ public class HitBox_PC : MonoBehaviour
     private readonly HashSet<EnemyHealth> overlapping = new();
     private readonly HashSet<EnemyHealth> alreadyHit = new();
     private Coroutine dupRoutine;
+    private PlayerWeaponController cachedAttackerCtrl;
 
     /// <summary> true면 넉백/랙돌 방향을 플레이어 중심(transform.root) 기준으로 계산. 무기 콜리더 전용. </summary>
     private bool usePlayerCenterForDirection = false;
@@ -123,7 +124,18 @@ public class HitBox_PC : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(duplicateInterval);
+            float elapsed = 0f;
+            while (elapsed < duplicateInterval)
+            {
+                if (IsAttackerTimeHoldActive())
+                {
+                    yield return null;
+                    continue;
+                }
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
 
             if (overlapping.Count == 0) continue;
 
@@ -136,6 +148,16 @@ public class HitBox_PC : MonoBehaviour
                 ApplyHit(hp, col);
             }
         }
+    }
+
+    private bool IsAttackerTimeHoldActive()
+    {
+        if (cachedAttackerCtrl == null && transform.root != null)
+            cachedAttackerCtrl = transform.root.GetComponentInChildren<PlayerWeaponController>();
+        if (cachedAttackerCtrl == null)
+            cachedAttackerCtrl = GameObject.FindWithTag("Player")?.GetComponentInChildren<PlayerWeaponController>();
+
+        return cachedAttackerCtrl != null && cachedAttackerCtrl.IsTimeHoldActive;
     }
 
     private void ApplyHit(EnemyHealth hp, Collider hitCollider)
@@ -153,6 +175,7 @@ public class HitBox_PC : MonoBehaviour
 
         // 1) 데미지 먼저 적용
         hp.ApplyDamage(damage, dir, weapon, 1f, hitPoint);
+        ApplyAttackerHoldFromWeapon();
         Debug.Log($"✅ [HitBox_PC] {hp.name} hit │ dmg:{damage}, dup:{duplicateEnabled}");
 
         // 2) 사망 여부 확인 후 넉백/푸시 분기
@@ -175,5 +198,23 @@ public class HitBox_PC : MonoBehaviour
             // 기존 넉백 동작(상태 변화, 스턴 등)
             enemy.ApplyKnockback(dir, weapon);
         }
+    }
+
+    private void ApplyAttackerHoldFromWeapon()
+    {
+        if (weapon == null) return;
+
+        float hold = weapon.attackerHoldDuration;
+        if (hold <= 0f)
+            hold = Mathf.Max(weapon.attackerStateHoldDuration, weapon.attackerAnimationHoldDuration);
+        if (hold <= 0f) return;
+
+        var attackerCtrl = transform.root != null ? transform.root.GetComponentInChildren<PlayerWeaponController>() : null;
+        if (attackerCtrl == null)
+            attackerCtrl = GameObject.FindWithTag("Player")?.GetComponentInChildren<PlayerWeaponController>();
+        if (attackerCtrl == null) return;
+
+        attackerCtrl.StartStateHold(hold);
+        attackerCtrl.StartAnimationHold(hold);
     }
 }

@@ -27,11 +27,21 @@ public class WeaponBehavior : MonoBehaviour
 
     /* ─ 트레일 (공격 시 on/off) ─ */
     private WeaponTrailController trailController;
+    private PlayerWeaponController cachedPlayerCtrl;
 
     [Header("발사 옵션")]
     public bool preserveVertical = false;
 
     private bool initializedOnce = false;
+
+    private bool IsPlayerTimeHoldActive()
+    {
+        if (cachedPlayerCtrl == null)
+            cachedPlayerCtrl = GetComponentInParent<PlayerWeaponController>();
+        if (cachedPlayerCtrl == null && transform.root != null)
+            cachedPlayerCtrl = transform.root.GetComponentInChildren<PlayerWeaponController>();
+        return cachedPlayerCtrl != null && cachedPlayerCtrl.IsTimeHoldActive;
+    }
 
     void Awake()
     {
@@ -270,7 +280,20 @@ public class WeaponBehavior : MonoBehaviour
     {
         float delay = useSecond ? data.hitboxSpawnDelay2 : data.hitboxSpawnDelay;
         if (delay > 0f)
-            yield return new WaitForSeconds(delay);
+        {
+            float elapsed = 0f;
+            while (elapsed < delay)
+            {
+                if (IsPlayerTimeHoldActive())
+                {
+                    yield return null;
+                    continue;
+                }
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+        }
 
         if (data is WeaponDataSO_Melee) { SpawnMeleeHitbox(useSecond); yield break; }
         if (data is WeaponDataSO_Gun) { SpawnProjectile(useSecond); yield break; }
@@ -343,7 +366,22 @@ public class WeaponBehavior : MonoBehaviour
 
     private IEnumerator DisableHitboxAfterLifetime(Collider col, float lifetime)
     {
-        yield return new WaitForSeconds(lifetime);
+        float elapsed = 0f;
+        while (elapsed < lifetime)
+        {
+            if (col == null)
+                yield break;
+
+            if (IsPlayerTimeHoldActive())
+            {
+                yield return null;
+                continue;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
         if (col != null)
             col.enabled = false;
     }

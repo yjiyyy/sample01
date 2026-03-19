@@ -92,12 +92,21 @@ public partial class EnemyAttackController : MonoBehaviour
             var slot = slots[i];
             if (slot == null) continue;
 
+            while (enemy != null && enemy.IsStateHoldActive)
+                yield return null;
+
             // Delegate to Melee StartMelee (pass -1 so per-slot readyTimes are not affected)
             StartMelee(slot, -1);
 
             // Wait until this melee finishes (attackInProgress becomes false)
             while (attackInProgress)
             {
+                if (enemy != null && enemy.IsStateHoldActive)
+                {
+                    yield return null;
+                    continue;
+                }
+
                 // If externally interrupted, clean up
                 if (!isRunningCombo)
                 {

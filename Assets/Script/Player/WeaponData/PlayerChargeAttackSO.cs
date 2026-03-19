@@ -1,6 +1,5 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
-using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Player/ChargeAttack")]
 public class PlayerChargeAttackSO : ScriptableObject { 
@@ -27,9 +26,17 @@ public class PlayerChargeAttackSO : ScriptableObject {
     [Header("Push(밀림) 옵션")]
     [Tooltip("체크하면 이 차지 공격은 상태 변화(넉백) 대신 단순 Push로 동작합니다.")]
     public bool usePushInsteadOfKnockback = false;
-    [FormerlySerializedAs("hitstopTime")]
-    [Tooltip("피격 대상만 애니메이션을 잠깐 멈추는 시간(초). 0이면 비활성")]
-    public float animationHoldDuration = 0f;
+    [Header("Time Control (Hit Stop)")]
+    [Tooltip("피격 대상 홀드 시간(초). 상태/애니메이션 모두 동일하게 적용. 0이면 비활성")]
+    public float targetHoldDuration = 0f;
+    [Tooltip("공격자 홀드 시간(초). 상태/애니메이션 모두 동일하게 적용. 0이면 비활성")]
+    public float attackerHoldDuration = 0f;
+
+    // Legacy split fields kept for data migration only.
+    [HideInInspector] public float targetStateHoldDuration = 0f;
+    [HideInInspector] public float targetAnimationHoldDuration = 0f;
+    [HideInInspector] public float attackerStateHoldDuration = 0f;
+    [HideInInspector] public float attackerAnimationHoldDuration = 0f;
     [Header("발동 무적 (A안: 차지 성공 즉시부터 적용)")]
     public float invincibilityDuration = 0.3f;
     [Header("스폰 포인트")]
@@ -77,5 +84,30 @@ public class PlayerChargeAttackSO : ScriptableObject {
     [Header("연속 차지 추가 옵션")]
     [Tooltip("체크하면 연속 차지 중 가장 가까운 몬스터를 항상 바라보며 주변을 돈다. 범위는 'range' 필드를 사용합니다.")]
     public bool faceNearestWhileHeld = false;
-    private void OnValidate() { }
+    private void OnValidate()
+    {
+        holdSuccessTime = Mathf.Max(0f, holdSuccessTime);
+        duration = Mathf.Max(0f, duration);
+        range = Mathf.Max(0f, range);
+        hitBoxLifetime = Mathf.Max(0.01f, hitBoxLifetime);
+        knockbackDuration = Mathf.Max(0f, knockbackDuration);
+        stunDuration = Mathf.Max(0f, stunDuration);
+        if (targetHoldDuration <= 0f)
+            targetHoldDuration = Mathf.Max(targetStateHoldDuration, targetAnimationHoldDuration);
+        if (attackerHoldDuration <= 0f)
+            attackerHoldDuration = Mathf.Max(attackerStateHoldDuration, attackerAnimationHoldDuration);
+
+        targetHoldDuration = Mathf.Max(0f, targetHoldDuration);
+        attackerHoldDuration = Mathf.Max(0f, attackerHoldDuration);
+
+        targetStateHoldDuration = Mathf.Max(0f, targetStateHoldDuration);
+        targetAnimationHoldDuration = Mathf.Max(0f, targetAnimationHoldDuration);
+        attackerStateHoldDuration = Mathf.Max(0f, attackerStateHoldDuration);
+        attackerAnimationHoldDuration = Mathf.Max(0f, attackerAnimationHoldDuration);
+        invincibilityDuration = Mathf.Max(0f, invincibilityDuration);
+        spawnCount = Mathf.Max(1, spawnCount);
+        dotDamagePerTick = Mathf.Max(0f, dotDamagePerTick);
+        dotTickInterval = Mathf.Max(0.01f, dotTickInterval);
+        superArmorDuration = Mathf.Max(0f, superArmorDuration);
+    }
 }

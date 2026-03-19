@@ -19,17 +19,22 @@ MonoBehaviour:
   weaponPrefab: {fileID: 1412765267159074636, guid: da5351bfe81789e4eb5a3e1466486ee0, type: 3}
   overrideController: {fileID: 22100000, guid: fed68105d96fde44c80e322c00b03b08, type: 2}
   cooldown: 0.5
-  damage: 50
+  damage: 10
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.15
-  knockbackDuration: 0.5
-  knockbackPower: 10
+  knockbackDuration: 1
+  knockbackPower: 5
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 0
-  usePushInsteadOfKnockback: 0
-  animationHoldDuration: 0.1
+  usePushInsteadOfKnockback: 1
+  targetHoldDuration: 0.2
+  attackerHoldDuration: 0.1
+  targetStateHoldDuration: 0.2
+  targetAnimationHoldDuration: 0.2
+  attackerStateHoldDuration: 0.1
+  attackerAnimationHoldDuration: 0.1
   deathMode: 1
   ragdollImpulse: 10
   ragdollUpImpulse: 7

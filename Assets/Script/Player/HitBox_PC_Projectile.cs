@@ -152,6 +152,7 @@ public class HitBox_PC_Projectile : MonoBehaviour
 
         Vector3? hitPoint = other.ClosestPoint(transform.position);
         hp.ApplyDamage(damage, damageDir, weapon, 1f, hitPoint);
+        ApplyAttackerHoldFromWeapon();
         Debug.Log($"✅ [Projectile] EnemyHealth에 {damage} 데미지 적용!");
 
         // 2) 살아있으면만 넉백/푸시/회전 적용
@@ -199,5 +200,23 @@ public class HitBox_PC_Projectile : MonoBehaviour
                 return;
             }
         }
+    }
+
+    private void ApplyAttackerHoldFromWeapon()
+    {
+        if (weapon == null) return;
+
+        float hold = weapon.attackerHoldDuration;
+        if (hold <= 0f)
+            hold = Mathf.Max(weapon.attackerStateHoldDuration, weapon.attackerAnimationHoldDuration);
+        if (hold <= 0f) return;
+
+        var attackerCtrl = transform.root != null ? transform.root.GetComponentInChildren<PlayerWeaponController>() : null;
+        if (attackerCtrl == null)
+            attackerCtrl = GameObject.FindWithTag("Player")?.GetComponentInChildren<PlayerWeaponController>();
+        if (attackerCtrl == null) return;
+
+        attackerCtrl.StartStateHold(hold);
+        attackerCtrl.StartAnimationHold(hold);
     }
 }

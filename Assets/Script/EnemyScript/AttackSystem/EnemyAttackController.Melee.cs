@@ -5,16 +5,17 @@ public partial class EnemyAttackController
 {
     /* Melee */
     private bool attackInProgress = false;
-    private float attackEndTime;
     private bool meleeHitboxSpawned = false;
 
     private float meleeRequestedDuration;
     private float meleeClipLength;
-    private float meleeFreezeStartTime;
+    private float meleeFreezeStartElapsed;
+    private float meleeElapsed;
     private bool meleeWillFreeze;
     private bool meleeFrozenApplied;
     private Coroutine meleeHitDelayRoutine;
     private Coroutine meleeMoveRoutine;
+    private Coroutine attackHitDeferredRoutine;
 
     // --- Combo / override helpers ---
     // When true, FinishMelee will NOT apply per-attack cooldown. Used by combo mode.
@@ -46,14 +47,18 @@ public partial class EnemyAttackController
     {
         if (attackInProgress && !IsRushing && rangedRoutine == null && !IsJumping)
         {
-            if (meleeWillFreeze && !meleeFrozenApplied && Time.time >= meleeFreezeStartTime)
+            // Hold is handled at EnemyAttackController.Update() level (early return),
+            // so this elapsed timer only advances while gameplay logic is running.
+            meleeElapsed += Time.deltaTime;
+
+            if (meleeWillFreeze && !meleeFrozenApplied && meleeElapsed >= meleeFreezeStartElapsed)
             {
                 if (enemy?.animator != null)
                     enemy.animator.speed = 0f;
                 meleeFrozenApplied = true;
             }
 
-            if (Time.time >= attackEndTime)
+            if (meleeElapsed >= meleeRequestedDuration)
             {
                 FinishMelee(true);
             }
@@ -66,6 +71,15 @@ public partial class EnemyAttackController
         if (!attackInProgress) return;
         if (!(currentAttack is MeleeAttackData data)) return;
         if (meleeHitboxSpawned) return;
+
+        if (enemy != null && enemy.IsStateHoldActive)
+        {
+            if (attackHitDeferredRoutine != null)
+                StopCoroutine(attackHitDeferredRoutine);
+            attackHitDeferredRoutine = StartCoroutine(DeferredAttackHitSpawn(data));
+            return;
+        }
+
         SpawnMeleeHitbox(data);
     }
     #endregion
@@ -75,7 +89,26 @@ public partial class EnemyAttackController
     {
         float delay = (data != null && data.hitboxSpawnDelay > 0f) ? data.hitboxSpawnDelay : 0f;
         if (delay > 0f)
-            yield return new WaitForSeconds(delay);
+        {
+            float waited = 0f;
+            while (waited < delay)
+            {
+                if (enemy != null && enemy.IsStateHoldActive)
+                {
+                    yield return null;
+                    continue;
+                }
+
+                if (!attackInProgress) { meleeHitDelayRoutine = null; yield break; }
+                if (currentAttack != data) { meleeHitDelayRoutine = null; yield break; }
+
+                waited += Time.deltaTime;
+                yield return null;
+            }
+        }
+
+        while (enemy != null && enemy.IsStateHoldActive)
+            yield return null;
 
         if (!attackInProgress) { meleeHitDelayRoutine = null; yield break; }
         if (currentAttack != data) { meleeHitDelayRoutine = null; yield break; }
@@ -83,6 +116,19 @@ public partial class EnemyAttackController
 
         SpawnMeleeHitbox(data);
         meleeHitDelayRoutine = null;
+    }
+
+    private IEnumerator DeferredAttackHitSpawn(MeleeAttackData data)
+    {
+        while (enemy != null && enemy.IsStateHoldActive)
+            yield return null;
+
+        if (!attackInProgress) { attackHitDeferredRoutine = null; yield break; }
+        if (currentAttack != data) { attackHitDeferredRoutine = null; yield break; }
+        if (meleeHitboxSpawned) { attackHitDeferredRoutine = null; yield break; }
+
+        SpawnMeleeHitbox(data);
+        attackHitDeferredRoutine = null;
     }
 
     private void SpawnMeleeHitbox(MeleeAttackData data)
@@ -149,6 +195,11 @@ public partial class EnemyAttackController
             StopCoroutine(meleeHitDelayRoutine);
             meleeHitDelayRoutine = null;
         }
+        if (attackHitDeferredRoutine != null)
+        {
+            StopCoroutine(attackHitDeferredRoutine);
+            attackHitDeferredRoutine = null;
+        }
 
         if (meleeMoveRoutine != null)
         {
@@ -164,17 +215,17 @@ public partial class EnemyAttackController
 
         meleeRequestedDuration = data.attackTime > 0f ? data.attackTime : 0.8f;
         meleeClipLength = GetMeleeClipLength(data);
+        meleeElapsed = 0f;
 
         if (meleeRequestedDuration > meleeClipLength)
         {
             meleeWillFreeze = true;
-            meleeFreezeStartTime = Time.time + meleeClipLength;
-            attackEndTime = Time.time + meleeRequestedDuration;
+            meleeFreezeStartElapsed = meleeClipLength;
         }
         else
         {
             meleeWillFreeze = false;
-            attackEndTime = Time.time + meleeRequestedDuration;
+            meleeFreezeStartElapsed = meleeRequestedDuration;
         }
         meleeFrozenApplied = false;
 
@@ -274,6 +325,7 @@ public partial class EnemyAttackController
         meleeHitboxSpawned = false;
         meleeWillFreeze = false;
         meleeFrozenApplied = false;
+        meleeElapsed = 0f;
 
         if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
             enemy.SetState(Enemy.EnemyState.Chase);
@@ -299,11 +351,18 @@ public partial class EnemyAttackController
             if (playerT != null) targetPos = playerT.position;
         }
 
-        float applyAt = Time.time + Mathf.Max(0f, data.forceApplyTime);
+        float waitToApply = Mathf.Max(0f, data.forceApplyTime);
+        float waitElapsed = 0f;
 
         // Wait until applyAt (if > now). If lockTiming is JustBeforeImpulse keep updating targetPos.
-        while (Time.time < applyAt)
+        while (waitElapsed < waitToApply)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+
             if (!attackInProgress) yield break;
             if (enemy.CurrentState != Enemy.EnemyState.Attack || enemy.CurrentState == Enemy.EnemyState.ShieldBreak) yield break;
 
@@ -312,6 +371,7 @@ public partial class EnemyAttackController
                 if (playerT != null) targetPos = playerT.position;
             }
 
+            waitElapsed += Time.deltaTime;
             yield return null;
         }
 
@@ -336,7 +396,7 @@ public partial class EnemyAttackController
         // optionally lock look direction shortly (handled by caller or elsewhere)
         if (data.lockTiming == MeleeAttackData.MovementLockTiming.JustBeforeImpulse)
         {
-            float remaining = Mathf.Max(0f, attackEndTime - Time.time);
+            float remaining = Mathf.Max(0f, meleeRequestedDuration - meleeElapsed);
             enemy.LockLookDirection(dir, remaining);
         }
 
@@ -368,6 +428,12 @@ public partial class EnemyAttackController
         // Movement loop: approach until within buffer, then apply damped residual movement for remaining time
         while (elapsed < dur)
         {
+            if (enemy != null && enemy.IsStateHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+
             if (!attackInProgress) break;
             if (enemy.CurrentState != Enemy.EnemyState.Attack || enemy.CurrentState == Enemy.EnemyState.ShieldBreak) break;
 
