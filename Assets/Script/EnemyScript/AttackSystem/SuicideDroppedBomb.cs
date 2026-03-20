@@ -11,6 +11,7 @@ public class SuicideDroppedBomb : MonoBehaviour
 {
     private SuicideAttackData data;
     private float explodeAtTime;
+    private Enemy attackerEnemy;
 
     private static readonly Collider[] s_overlap = new Collider[256];
     private bool exploded;
@@ -18,10 +19,12 @@ public class SuicideDroppedBomb : MonoBehaviour
     // ✅ 스폰 시 살짝 위로 던지는 속도(m/s). (VelocityChange라 질량 영향 없음)
     private const float SPAWN_UP_VELOCITY = 1.5f;
 
-    public void Initialize(SuicideAttackData data, float explodeAtTime)
+    /// <param name="attackerOrNull">자폭 몬스터(드롭 직후 사망 가능). 공격자 히트스톱용.</param>
+    public void Initialize(SuicideAttackData data, float explodeAtTime, Enemy attackerOrNull = null)
     {
         this.data = data;
         this.explodeAtTime = explodeAtTime;
+        this.attackerEnemy = attackerOrNull;
         exploded = false;
 
         // ✅ 리지드바디가 있으면 스폰 직후 살짝 위로 튀게
@@ -123,15 +126,22 @@ public class SuicideDroppedBomb : MonoBehaviour
         if (ph.GetCurrentHP() <= 0f)
             return;
 
-        if (pwc != null)
-        {
-            pwc.ForceApplyKnockback(hitDir, kbPower, kbDur, stun);
-            return;
-        }
-
+        float targetHold = data.targetHoldDuration * mul;
+        float attackerHold = data.attackerHoldDuration * mul;
         var pm = ph.GetComponentInParent<PlayerMovement>() ?? ph.GetComponent<PlayerMovement>();
-        if (pm != null)
-            pm.ApplyKnockback(hitDir, kbPower, kbDur, null);
+
+        EnemyPlayerHitEffectApplier.ApplyCrowdControlAndTargetHitstop(
+            pwc,
+            pm,
+            hitDir,
+            kbPower,
+            kbDur,
+            stun,
+            data.usePushInsteadOfKnockback,
+            targetHold,
+            null,
+            attackerEnemy,
+            attackerHold);
     }
 
     private void ApplyExplosionToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir, float mul, System.Nullable<Vector3> hitPoint = null)

@@ -27,9 +27,9 @@ MonoBehaviour:
   knockbackPower: 5
   jerkIntensity: 1
   jerkDuration: 0.2
-  stunDuration: 0
-  usePushInsteadOfKnockback: 1
-  targetHoldDuration: 0.2
+  stunDuration: 5
+  usePushInsteadOfKnockback: 0
+  targetHoldDuration: 0.1
   attackerHoldDuration: 0.1
   targetStateHoldDuration: 0.2
   targetAnimationHoldDuration: 0.2
@@ -39,7 +39,7 @@ MonoBehaviour:
   ragdollImpulse: 10
   ragdollUpImpulse: 7
   ragdollSpinTorque: 10000
-  sliceTargets: 00000000
+  sliceTargets: 0000000001000000020000000400000003000000
   sliceImpulse: 10
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}

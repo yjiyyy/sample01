@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/JumpAttackData")]
 public class JumpAttackData : ScriptableObject
@@ -43,6 +43,14 @@ public class JumpAttackData : ScriptableObject
     public float knockbackPower = 6f;
     public float knockbackDuration = 0.2f;
     public float stunDuration = 0.4f;
+
+    [Header("Push / Hitstop (플레이어 피격 시)")]
+    [Tooltip("true면 넉백+스턴 대신 밀림(Push)만 적용. 플레이어 SO와 동일.")]
+    public bool usePushInsteadOfKnockback = false;
+    [Tooltip("피격 시 플레이어 Hitstop 시간(초). 0이면 비활성.")]
+    public float targetHoldDuration = 0f;
+    [Tooltip("공격 적중 시 공격자(몬스터) Hitstop 시간(초). 플레이어 SO attackerHoldDuration과 동일.")]
+    public float attackerHoldDuration = 0f;
 
     [Header("Dup hit options (for area dot, drill etc.)")]
     public bool allowDuplicateHit = false;

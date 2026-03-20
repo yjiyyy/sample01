@@ -347,8 +347,7 @@ public partial class EnemyAttackController
     {
         if (ps == null) return null;
 
-        // HitBox_Enemy.Initialize signature:
-        // Initialize(float dmg, float rng, float kbPower, float kbDuration, float lifetime, float stun = 0f, bool allowDup = false, float dupInterval = 0f)
+        // HitBox_Enemy.Initialize: ... deathWeapon, hitstopDuration, usePush, attackerHoldDuration
         var list = new List<object>();
 
         for (int i = 0; i < ps.Length; i++)
@@ -357,17 +356,22 @@ public partial class EnemyAttackController
 
             if (ptype == typeof(float))
             {
-                if (i == 0) list.Add(data.damage);                // dmg
-                else if (i == 1) list.Add(data.spawnRadius);     // rng
-                else if (i == 2) list.Add(data.knockbackPower);  // kbPower
-                else if (i == 3) list.Add(data.knockbackDuration); // kbDuration
-                else if (i == 4) list.Add(data.hitBoxLifetime);  // lifetime
-                else if (i == 5) list.Add(data.stunDuration);    // stun
+                if (i == 0) list.Add(data.damage);
+                else if (i == 1) list.Add(data.spawnRadius);
+                else if (i == 2) list.Add(data.knockbackPower);
+                else if (i == 3) list.Add(data.knockbackDuration);
+                else if (i == 4) list.Add(data.hitBoxLifetime);
+                else if (i == 5) list.Add(data.stunDuration);
+                else if (i == 7) list.Add(data.duplicateHitInterval);
+                else if (i == 9) list.Add(data.targetHoldDuration);
+                else if (i == 11) list.Add(data.attackerHoldDuration);
                 else list.Add(0f);
             }
             else if (ptype == typeof(bool))
             {
-                list.Add(data.allowDuplicateHit);
+                if (i == 6) list.Add(data.allowDuplicateHit);
+                else if (i == 10) list.Add(data.usePushInsteadOfKnockback);
+                else list.Add(false);
             }
             else if (ptype == typeof(int))
             {
@@ -375,7 +379,7 @@ public partial class EnemyAttackController
             }
             else if (ptype == typeof(WeaponDataSO))
             {
-                list.Add(null); // AoE: 처치 연출 없음이면 Animation 죽음
+                list.Add(null);
             }
             else
             {

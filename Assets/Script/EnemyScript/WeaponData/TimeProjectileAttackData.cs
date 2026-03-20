@@ -127,6 +127,8 @@ public class TimeProjectileAttackData : ScriptableObject
     [Tooltip("???????/????? ??????(??) - death ???? ???? ???")]
     [FormerlySerializedAs("animationHoldDuration")]
     public float targetHoldDuration = 0f;
+    [Tooltip("공격 적중 시 공격자(몬스터) Hitstop 시간(초). 플레이어 SO attackerHoldDuration과 동일.")]
+    public float attackerHoldDuration = 0f;
 
     [Tooltip("??? ??? push(???)?? ??????? ???? (EnemyImpact.ApplyPush ???)")]
     public bool usePushInsteadOfKnockback = false;
@@ -167,6 +169,7 @@ public class TimeProjectileAttackData : ScriptableObject
         ragdollSpinTorque = Mathf.Max(0f, ragdollSpinTorque);
         sliceImpulse = Mathf.Max(0f, sliceImpulse);
         targetHoldDuration = Mathf.Max(0f, targetHoldDuration);
+        attackerHoldDuration = Mathf.Max(0f, attackerHoldDuration);
         jerkIntensity = Mathf.Max(0f, jerkIntensity);
         jerkDuration = Mathf.Max(0f, jerkDuration);
     }

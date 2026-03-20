@@ -221,7 +221,10 @@ public class RushAttackBehavior : MonoBehaviour
                 data.stunDuration,
                 data.allowDuplicateHit,
                 data.duplicateHitInterval,
-                null
+                null,
+                data.targetHoldDuration,
+                data.usePushInsteadOfKnockback,
+                data.attackerHoldDuration
             );
         }
     }

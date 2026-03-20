@@ -40,8 +40,8 @@ MonoBehaviour:
   globalPatternCooldown: 0
   defaultPatternHoldDuration: 0
   enablePerPatternHoldOverride: 0
-  totalDropCountMin: 30
-  totalDropCountMax: 50
+  totalDropCountMin: 3
+  totalDropCountMax: 6
   dropEntries:
   - itemPrefab: {fileID: 8987695404800486066, guid: 932d99dfdfecd3240bc4484283a64d08, type: 3}
     dropChance: 0.8

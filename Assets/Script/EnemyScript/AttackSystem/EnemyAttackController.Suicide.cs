@@ -256,12 +256,12 @@ public partial class EnemyAttackController
 
         if (bomb.TryGetComponent<SuicideDroppedBomb>(out var dropped))
         {
-            dropped.Initialize(data, explodeAt);
+            dropped.Initialize(data, explodeAt, enemy);
         }
         else
         {
             dropped = bomb.AddComponent<SuicideDroppedBomb>();
-            dropped.Initialize(data, explodeAt);
+            dropped.Initialize(data, explodeAt, enemy);
         }
     }
 
@@ -363,15 +363,22 @@ public partial class EnemyAttackController
         if (ph.GetCurrentHP() <= 0f)
             return;
 
-        if (pwc != null)
-        {
-            pwc.ForceApplyKnockback(hitDir, kbPower, kbDur, stun);
-            return;
-        }
-
+        float targetHold = data.targetHoldDuration * mul;
+        float attackerHold = data.attackerHoldDuration * mul;
         var pm = ph.GetComponentInParent<PlayerMovement>() ?? ph.GetComponent<PlayerMovement>();
-        if (pm != null)
-            pm.ApplyKnockback(hitDir, kbPower, kbDur, enemy != null ? enemy.transform : null);
+
+        EnemyPlayerHitEffectApplier.ApplyCrowdControlAndTargetHitstop(
+            pwc,
+            pm,
+            hitDir,
+            kbPower,
+            kbDur,
+            stun,
+            data.usePushInsteadOfKnockback,
+            targetHold,
+            enemy != null ? enemy.transform : null,
+            enemy,
+            attackerHold);
     }
 
     private void ApplyExplosionToEnemy(EnemyHealth eh, float dmg, Vector3 hitDir, SuicideAttackData data, float mul, System.Nullable<Vector3> hitPoint = null)

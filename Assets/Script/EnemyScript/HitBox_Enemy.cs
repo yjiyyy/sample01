@@ -9,6 +9,9 @@ public class HitBox_Enemy : MonoBehaviour
     private float knockbackDuration;
     private float stunDuration;
     private WeaponDataSO playerDeathWeapon;
+    private float targetHoldDuration;
+    private float attackerHoldDuration;
+    private bool usePushInsteadOfKnockback;
 
     // 드릴형 중복 히트 옵션
     private bool duplicateEnabled = false;
@@ -22,13 +25,17 @@ public class HitBox_Enemy : MonoBehaviour
 
     public void Initialize(
         float dmg, float rng, float kbPower, float kbDuration, float lifetime, float stun = 0f,
-        bool allowDup = false, float dupInterval = 0f, WeaponDataSO deathWeapon = null)
+        bool allowDup = false, float dupInterval = 0f, WeaponDataSO deathWeapon = null,
+        float hitstopDuration = 0f, bool usePush = false, float attackerHitstop = 0f)
     {
         damage = dmg;
         knockbackPower = kbPower;
         knockbackDuration = kbDuration;
         stunDuration = stun;
         playerDeathWeapon = deathWeapon;
+        targetHoldDuration = Mathf.Max(0f, hitstopDuration);
+        attackerHoldDuration = Mathf.Max(0f, attackerHitstop);
+        usePushInsteadOfKnockback = usePush;
 
         duplicateEnabled = allowDup;
         duplicateInterval = Mathf.Max(0.01f, dupInterval);
@@ -127,6 +134,9 @@ public class HitBox_Enemy : MonoBehaviour
     {
         if (hp == null) return;
 
+        if (ownerEnemy == null)
+            ownerEnemy = GetComponentInParent<Enemy>();
+
         // 무적 상태(회피 무적) 체크
         var weaponController = hp.GetComponent<PlayerWeaponController>() ?? hp.GetComponentInParent<PlayerWeaponController>();
         if (weaponController != null && weaponController.IsInvincible())
@@ -153,26 +163,31 @@ public class HitBox_Enemy : MonoBehaviour
             return;
         }
 
-        // 2) 넉백/스턴 처리
         Vector3 hitDir = (hp.transform.position - transform.position);
         hitDir.y = 0f;
         if (hitDir.sqrMagnitude < 0.0001f) hitDir = Vector3.forward;
         hitDir.Normalize();
 
-        if (weaponController != null)
-        {
+        var playerMove = hp.GetComponent<PlayerMovement>() ?? hp.GetComponentInChildren<PlayerMovement>();
+
+        if (usePushInsteadOfKnockback && Debug.isDebugBuild)
+            Debug.Log("[HitBox_Enemy] 플레이어 Push 적용");
+        else if (!usePushInsteadOfKnockback && weaponController != null)
             Debug.Log($"[HitBox_Enemy] 플레이어 공격! 넉백: {knockbackPower}, 스턴: {stunDuration}");
-            weaponController.ForceApplyKnockback(hitDir, knockbackPower, knockbackDuration, stunDuration);
-        }
-        else
-        {
-            // 백업: PlayerMovement가 있을 경우 밀기
-            var playerMove = hp.GetComponent<PlayerMovement>() ?? hp.GetComponentInChildren<PlayerMovement>();
-            if (playerMove != null)
-            {
-                playerMove.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
-                Debug.Log("[HitBox_Enemy] PlayerMovement 백업 넉백 실행");
-            }
-        }
+        else if (!usePushInsteadOfKnockback && weaponController == null && playerMove != null && Debug.isDebugBuild)
+            Debug.Log("[HitBox_Enemy] PlayerMovement 백업 넉백 실행");
+
+        EnemyPlayerHitEffectApplier.ApplyCrowdControlAndTargetHitstop(
+            weaponController,
+            playerMove,
+            hitDir,
+            knockbackPower,
+            knockbackDuration,
+            stunDuration,
+            usePushInsteadOfKnockback,
+            targetHoldDuration,
+            transform,
+            ownerEnemy,
+            attackerHoldDuration);
     }
 }

@@ -291,7 +291,10 @@ public partial class EnemyAttackController
                 data.stunDuration,
                 data.allowDuplicateHit,
                 data.duplicateHitInterval,
-                null
+                null,
+                data.targetHoldDuration,
+                data.usePushInsteadOfKnockback,
+                data.attackerHoldDuration
             );
         }
     }

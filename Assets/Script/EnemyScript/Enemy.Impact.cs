@@ -6,6 +6,9 @@ public class EnemyImpact : MonoBehaviour
     private Coroutine impactRoutine;
     private Coroutine pushRoutine;
 
+    // 스턴 게이지 동안(넉백→스턴 체인 포함) 들어오는 CC(넉백/스턴/CC푸시 등) 중복 적용을 막기 위한 잠금 시간
+    private float stunCCLockUntilTime = 0f;
+
     private const float SOFT_KNOCK_DURATION = 0.12f;
     private const float SOFT_KNOCK_POWER_RATIO = 0.5f;
     private const float FACE_ANGLE_THRESHOLD = 30f;
@@ -26,9 +29,36 @@ public class EnemyImpact : MonoBehaviour
         return weapon.targetStateHoldDuration;
     }
 
+    private static void ApplyTargetHoldsOnly(Enemy ctx, WeaponDataSO weapon, float impactScale)
+    {
+        if (ctx == null || weapon == null) return;
+
+        float stateHold = ResolveTargetStateHold(weapon) * Mathf.Max(0f, impactScale);
+        float animHold = ResolveTargetAnimationHold(weapon) * Mathf.Max(0f, impactScale);
+
+        if (animHold > 0f) ctx.animCtrl?.StartAnimationHold(animHold);
+        if (stateHold > 0f) ctx.StartStateHold(stateHold);
+    }
+
     public void ApplyKnockback(Enemy ctx, Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (ctx == null || ctx.CurrentState == Enemy.EnemyState.Dead) return;
+
+        // 스턴 게이지 잠금이 걸려있는 동안에는 HP만 들어가고 CC(넉백/스턴 등)는 중복 적용하지 않음.
+        // 단, 타격감용 홀드(hitstop)는 허용.
+        if (Time.time < stunCCLockUntilTime)
+        {
+            ApplyTargetHoldsOnly(ctx, weapon, impactScale);
+            return;
+        }
+
+        // Stun 상태에서는 “HP만” 들어가고 넉백/스턴 CC 중복 적용 금지.
+        // 단, 타격감용 홀드(hitstop)는 허용.
+        if (ctx.CurrentState == Enemy.EnemyState.Stunned)
+        {
+            ApplyTargetHoldsOnly(ctx, weapon, impactScale);
+            return;
+        }
 
         if (impactRoutine != null)
         {
@@ -52,6 +82,14 @@ public class EnemyImpact : MonoBehaviour
             return;
         }
 
+        // 새 스턴 CC를 시작하는 경우에만 잠금 시간 설정(넉백→스턴 체인 포함)
+        if (stunDuration > 0f)
+        {
+            float kbDurForLock = Mathf.Max(knockbackDuration, EPS);
+            float stunDurForLock = Mathf.Max(0f, stunDuration);
+            stunCCLockUntilTime = Time.time + kbDurForLock + stunDurForLock;
+        }
+
         // 데미지 단계에서 lethal이면 Dead로 이미 전환됐으므로 FaceHit가 호출되지 않음.
         // 여기서는 기존 흐름 유지(비치명 때만 회전)
         FaceHit(ctx, hitDir);
@@ -63,6 +101,22 @@ public class EnemyImpact : MonoBehaviour
     public void ApplyPush(Enemy ctx, Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (ctx == null || ctx.CurrentState == Enemy.EnemyState.Dead) return;
+
+        // 스턴 게이지 잠금이 걸려있는 동안에는 CC푸시도 적용하지 않음.
+        // 단, 타격감용 홀드(hitstop)는 허용.
+        if (Time.time < stunCCLockUntilTime)
+        {
+            ApplyTargetHoldsOnly(ctx, weapon, impactScale);
+            return;
+        }
+
+        // Stun 상태에서는 밀림(Push)도 적용하지 않음.
+        // 단, 타격감용 홀드(hitstop)는 허용.
+        if (ctx.CurrentState == Enemy.EnemyState.Stunned)
+        {
+            ApplyTargetHoldsOnly(ctx, weapon, impactScale);
+            return;
+        }
 
         if (pushRoutine != null)
         {
@@ -180,6 +234,14 @@ public class EnemyImpact : MonoBehaviour
 
         if (stunDuration > 0f)
         {
+            // Stun 시작 시점에 이미 실행 중인 Push가 있다면 끊어서
+            // 스턴 게이지 동안 밀림이 계속 들어가지 않게 함.
+            if (pushRoutine != null)
+            {
+                StopCoroutine(pushRoutine);
+                pushRoutine = null;
+            }
+
             ctx.SetState(Enemy.EnemyState.Stunned, true);
             ctx.animCtrl?.PlayStun(true);
             yield return new WaitForSeconds(stunDuration);

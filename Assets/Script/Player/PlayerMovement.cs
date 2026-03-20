@@ -603,9 +603,10 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleRotation(bool isARFiring)
     {
-        // Attack/Stun/Evade 중에는 회전 보정 스킵
+        // Attack/Knockback/Stun/Evade 중에는 회전 보정 스킵
         if (weaponCtrl != null &&
             (weaponCtrl.CurrentState == PlayerState.Attack ||
+             weaponCtrl.CurrentState == PlayerState.Knockback ||
              weaponCtrl.CurrentState == PlayerState.Stun ||
              weaponCtrl.CurrentState == PlayerState.Evade))
             return;
@@ -798,6 +799,13 @@ public class PlayerMovement : MonoBehaviour
     // Knockback (mass-aware)
     public void ApplyKnockback(Vector3 dir, float force, float duration, Transform attacker = null)
     {
+        // 넉백 시작 자체는 허용한다.
+        // (CC 중복 차단은 PlayerWeaponController.ForceApplyKnockback 진입부에서 처리)
+        if (weaponCtrl != null)
+        {
+            if (weaponCtrl.CurrentState == PlayerState.Dead) return;
+        }
+
         // Ensure facing matches knockback, but only when the knockback is starting.
         // If we call FaceKnockback every hit while knockback is already active,
         // multiple monsters around the player can keep changing the facing and look like "spin".
@@ -824,6 +832,14 @@ public class PlayerMovement : MonoBehaviour
 
         while (elapsed < duration)
         {
+            // 타격감 일관성: 홀드(히트스톱) 중에는 푸시/넉백 이동을 잠시 멈춘다.
+            // elapsed를 증가시키지 않아 홀드가 끝난 뒤 남은 이동이 이어진다.
+            if (weaponCtrl != null && weaponCtrl.IsTimeHoldActive)
+            {
+                yield return new WaitForFixedUpdate();
+                continue;
+            }
+
             float t = 1f - Mathf.Clamp01(elapsed / Mathf.Max(duration, EPS));
             // mass-aware speed: heavier => smaller speed for a given impulse/power
             float currentSpeed = (force / massVal) * t;

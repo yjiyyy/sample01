@@ -56,6 +56,10 @@ public class PlayerWeaponController : MonoBehaviour
     private Coroutine knockbackRoutine;
     private Coroutine arFireRoutine;
 
+    // Enemy hit 연출에서 "hold -> CC" 순서를 유지해야 할 때,
+    // 다음 CC 상태 전환(Knockback/Stun)에서만 홀드 클리어를 1회 건너뛴다.
+    private bool preserveHoldsForNextCCStateChange = false;
+
     // AR 관련 플래그(외부에서 사용되는 프로퍼티 제공)
     private bool arRotationLocked = false;
     private Vector3 arLockedForward;
@@ -80,14 +84,20 @@ public class PlayerWeaponController : MonoBehaviour
     private float savedAnimatorSpeed = 1f;
     public bool IsTimeHoldActive => stateHoldCount > 0 || animationHoldCount > 0;
 
+    // Stun 게이지 동안(넉백→스턴 체인 포함) 들어오는 CC(넉백/스턴/CC푸시 등) 중복 적용을 막기 위한 잠금 시간
+    private float stunCCLockUntilTime = 0f;
+
+    // 외부(PlayerMovement 등)에서 “지금 CC 잠금이 걸려있는지” 확인용
+    public bool IsStunLockedForIncomingCC() => Time.time < stunCCLockUntilTime;
+
     // ------------------ Public compatibility APIs ------------------
 
     // Invincibility check used by enemy hitboxes / other systems
     public bool IsInvincible() => (evadeComp?.IsInvincible() ?? false) || chargeInvincible;
 
     // ForceApplyKnockback: 적 공격(폭발/충격 등)이 플레이어에 넉백을 바로 적용할 때 외부에서 호출
-    // 시그니처: (Vector3 dir, float power, float duration, float stun)
-    public void ForceApplyKnockback(Vector3 dir, float power, float duration, float stun)
+    // 시그니처: (Vector3 dir, float power, float duration, float stun, bool clearExistingHolds=true)
+    public void ForceApplyKnockback(Vector3 dir, float power, float duration, float stun, bool clearExistingHolds = true)
     {
         // Dead 상태면 무시
         if (state == PlayerState.Dead)
@@ -96,7 +106,26 @@ public class PlayerWeaponController : MonoBehaviour
             return;
         }
 
-        ClearAllHolds();
+        // 스턴 게이지 잠금이 걸려있는 동안에는 HP만 들어가고 CC(넉백/스턴 등)는 중복 적용하지 않음
+        if (IsStunLockedForIncomingCC())
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] ForceApplyKnockback ignored because stunCCLock active");
+            return;
+        }
+
+        // 새로 스턴 CC를 시작하는 경우에만 잠금 시간 설정
+        // stun==0이면 “스턴 잠금”이 아니라 기존 넉백 로직은 그대로 중복 허용(요구사항에 맞춰)
+        if (stun > 0f)
+        {
+            float kbDur = Mathf.Max(0f, duration);
+            float stunDur = Mathf.Max(0f, stun);
+            stunCCLockUntilTime = Time.time + kbDur + stunDur;
+        }
+
+        preserveHoldsForNextCCStateChange = !clearExistingHolds;
+
+        if (clearExistingHolds)
+            ClearAllHolds();
 
         // 취소/정리
         if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
@@ -307,53 +336,22 @@ public class PlayerWeaponController : MonoBehaviour
     private void Update()
     {
         if (state == PlayerState.Dead) return;
-        if (stateHoldCount > 0) return;
 
-        chargeComp?.Tick();
-        evadeComp?.TickRecharge(Time.deltaTime);
-        AutoResumeReloadIfNeeded();
+        bool holdBlocksMainTick = stateHoldCount > 0;
 
-        if (InputManager.Instance.GetEvadeInput() && (evadeComp?.CanEvade() ?? false) && state != PlayerState.Evade)
+        if (holdBlocksMainTick)
+            evadeComp?.TickRecharge(Time.deltaTime);
+        else
         {
-            Vector2 currentMoveInput = InputManager.Instance.GetMoveInput();
-
-            System.Action preEvadeCleanup = () =>
-            {
-                // Evade 우선: 콤보 중이면 회피 버튼으로 콤보를 끊어야
-                // (콤보가 애니메이션/상태를 다시 덮어써서 Evade 표시가 안 되는 문제 방지)
-                try
-                {
-                    var wb = equipComp?.WeaponBehavior;
-                    var comboComp = wb != null ? wb.GetComponent<MeleeComboBehavior>() : null;
-                    if (comboComp != null)
-                    {
-                        // 콤보가 내부적으로 상태 전환(ChangeState)을 호출할 수 있으므로
-                        // 해당 호출이 Evade를 덮어쓰지 못하게 suppression을 잠깐 켠다.
-                        suppressStateChangeRequests = true;
-                        try { comboComp.CancelCombo(); } catch { }
-                        suppressStateChangeRequests = false;
-                    }
-                }
-                catch
-                {
-                    suppressStateChangeRequests = false;
-                }
-
-                if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
-                if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
-                movement?.CancelKnockback();
-
-                if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
-                EndARFireState();
-
-                CancelRecoil();
-                equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
-                equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
-            };
-
-            evadeComp.PerformEvade(currentMoveInput, preEvadeCleanup);
-            return;
+            chargeComp?.Tick();
+            evadeComp?.TickRecharge(Time.deltaTime);
+            AutoResumeReloadIfNeeded();
         }
+
+        if (TryProcessEvadeInput())
+            return;
+
+        if (holdBlocksMainTick) return;
 
         switch (state)
         {
@@ -382,6 +380,52 @@ public class PlayerWeaponController : MonoBehaviour
             case PlayerState.Evade:
                 break;
         }
+    }
+
+    /// <summary>히트스톱(상태 홀드) 중에도 회피 입력을 받을 수 있게 분리.</summary>
+    private bool TryProcessEvadeInput()
+    {
+        if (!InputManager.Instance.GetEvadeInput()) return false;
+        if (!(evadeComp?.CanEvade() ?? false)) return false;
+        if (state == PlayerState.Evade) return false;
+
+        Vector2 currentMoveInput = InputManager.Instance.GetMoveInput();
+
+        System.Action preEvadeCleanup = () =>
+        {
+            ClearAllHolds();
+
+            // Evade 우선: 콤보 중이면 회피 버튼으로 콤보를 끊어야
+            try
+            {
+                var wb = equipComp?.WeaponBehavior;
+                var comboComp = wb != null ? wb.GetComponent<MeleeComboBehavior>() : null;
+                if (comboComp != null)
+                {
+                    suppressStateChangeRequests = true;
+                    try { comboComp.CancelCombo(); } catch { }
+                    suppressStateChangeRequests = false;
+                }
+            }
+            catch
+            {
+                suppressStateChangeRequests = false;
+            }
+
+            if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
+            if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
+            movement?.CancelKnockback();
+
+            if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
+            EndARFireState();
+
+            CancelRecoil();
+            equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
+            equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
+        };
+
+        evadeComp.PerformEvade(currentMoveInput, preEvadeCleanup);
+        return true;
     }
 
     private void HandleIdle()
@@ -421,11 +465,26 @@ public class PlayerWeaponController : MonoBehaviour
         state = newState;
         fsm?.Set(newState);
 
+        // 회피로 스턴을 벗어난 경우, 스턴 CC 잠금을 즉시 해제해
+        // 이후 들어오는 넉백/CC가 정상 적용되도록 한다.
+        if (newState == PlayerState.Evade || newState == PlayerState.Dead)
+            stunCCLockUntilTime = 0f;
+
+        // 회피 진입 시 히트스톱 등 상태·애니 홀드 해제 (다른 경로로 Evade 전환될 때도 안전)
+        if (newState == PlayerState.Evade)
+            ClearAllHolds();
+
+        bool isCCState = newState == PlayerState.Knockback || newState == PlayerState.Stun;
+        bool skipClearForThisCC = isCCState && preserveHoldsForNextCCStateChange;
+        if (isCCState)
+            preserveHoldsForNextCCStateChange = false;
+
         if (newState == PlayerState.Knockback ||
             newState == PlayerState.Stun ||
             newState == PlayerState.Dead)
         {
-            ClearAllHolds();
+            if (!skipClearForThisCC)
+                ClearAllHolds();
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
             chargeComp?.CancelAll();

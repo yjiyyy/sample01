@@ -19,6 +19,9 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
     private float knockbackPower;
     private float knockbackDuration;
     private float stunDuration;
+    private float targetHoldDuration;
+    private float attackerHoldDuration;
+    private bool usePushInsteadOfKnockback;
 
     // 중복 히트 옵션
     private bool duplicateEnabled;
@@ -95,7 +98,8 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         // 회전/장애물 옵션
         bool faceMove, bool spin, Vector3 spinAxis, float spinSpd,
         bool destroyObstacle, LayerMask obstacleMask,
-        WeaponDataSO deathWeapon = null
+        WeaponDataSO deathWeapon = null,
+        float hitstopDuration = 0f, bool usePush = false, float attackerHitstop = 0f
     )
     {
         damage = dmg;
@@ -105,6 +109,9 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         knockbackPower = kbPower;
         knockbackDuration = kbDuration;
         stunDuration = stun;
+        targetHoldDuration = Mathf.Max(0f, hitstopDuration);
+        attackerHoldDuration = Mathf.Max(0f, attackerHitstop);
+        usePushInsteadOfKnockback = usePush;
 
         duplicateEnabled = allowDup;
         duplicateInterval = Mathf.Max(0.01f, dupInterval);
@@ -378,18 +385,22 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         if (hp.GetCurrentHP() <= 0f)
             return;
 
-        // 2) 넉백/스턴 (hitDir는 위에서 이미 계산됨)
-        if (pwc != null)
-        {
-            pwc.ForceApplyKnockback(hitDir, knockbackPower, knockbackDuration, stunDuration);
-        }
-        else
-        {
-            var move = hp.GetComponent<PlayerMovement>() ?? hp.GetComponentInChildren<PlayerMovement>();
-            if (move != null)
-            {
-                move.ApplyKnockback(hitDir, knockbackPower, knockbackDuration, this.transform);
-            }
-        }
+        if (ownerEnemy == null)
+            ownerEnemy = GetComponentInParent<Enemy>();
+
+        var move = hp.GetComponent<PlayerMovement>() ?? hp.GetComponentInChildren<PlayerMovement>();
+
+        EnemyPlayerHitEffectApplier.ApplyCrowdControlAndTargetHitstop(
+            pwc,
+            move,
+            hitDir,
+            knockbackPower,
+            knockbackDuration,
+            stunDuration,
+            usePushInsteadOfKnockback,
+            targetHoldDuration,
+            transform,
+            ownerEnemy,
+            attackerHoldDuration);
     }
 }

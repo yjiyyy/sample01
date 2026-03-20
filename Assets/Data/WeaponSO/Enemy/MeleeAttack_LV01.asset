@@ -18,14 +18,17 @@ MonoBehaviour:
   damage: 1
   range: 1
   cooldown: 0
-  attackTime: 3
+  attackTime: 0.8
   clip: {fileID: 1827226128182048838, guid: ba08b59e514e8fb48965ea1fc597534c, type: 3}
   hitboxSpawnDelay: 0.3
   hitBoxLifetime: 0.1
   attachHitboxToEnemy: 1
   knockbackPower: 10
-  knockbackDuration: 1
-  stunDuration: 0
+  knockbackDuration: 0.1
+  stunDuration: 10
+  usePushInsteadOfKnockback: 0
+  targetHoldDuration: 0.1
+  attackerHoldDuration: 0.1
   allowDuplicateHit: 0
   duplicateHitInterval: 0.1
   deathMode: 1

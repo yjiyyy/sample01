@@ -236,32 +236,32 @@ public class HitBox_Enemy_Explosion : MonoBehaviour
             return;
         }
 
-        if (pwc != null)
-        {
-            try
-            {
-                pwc.ForceApplyKnockback(hitDir, kbPower, kbDuration, stun);
-                Debug.Log($"[Explosion] Player '{ph.gameObject.name}' ForceApplyKnockback called: power={kbPower}, dur={kbDuration}, stun={stun}");
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"[Explosion] Exception while applying ForceApplyKnockback to Player '{ph.gameObject.name}': {ex}");
-            }
-            return;
-        }
-
+        float targetHold = data.targetHoldDuration * mul;
+        float attackerHold = data.attackerHoldDuration * mul;
         var pm = ph.GetComponentInParent<PlayerMovement>() ?? ph.GetComponent<PlayerMovement>();
-        if (pm != null)
+
+        try
         {
-            try
-            {
-                pm.ApplyKnockback(hitDir, kbPower, kbDuration, enemyOwner != null ? enemyOwner.transform : null);
-                Debug.Log($"[Explosion] Player '{ph.gameObject.name}' Movement.ApplyKnockback called: power={kbPower}, dur={kbDuration}");
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"[Explosion] Exception while applying Movement.ApplyKnockback to Player '{ph.gameObject.name}': {ex}");
-            }
+            EnemyPlayerHitEffectApplier.ApplyCrowdControlAndTargetHitstop(
+                pwc,
+                pm,
+                hitDir,
+                kbPower,
+                kbDuration,
+                stun,
+                data.usePushInsteadOfKnockback,
+                targetHold,
+                enemyOwner != null ? enemyOwner.transform : null,
+                enemyOwner,
+                attackerHold);
+            if (VERBOSE && data.usePushInsteadOfKnockback)
+                Debug.Log($"[Explosion] Player '{ph.gameObject.name}' Push applied");
+            else if (VERBOSE && pwc != null && !data.usePushInsteadOfKnockback)
+                Debug.Log($"[Explosion] Player '{ph.gameObject.name}' ForceApplyKnockback called: power={kbPower}, dur={kbDuration}, stun={stun}");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[Explosion] Exception applying CC/hitstop to Player '{ph.gameObject.name}': {ex}");
         }
     }
 
