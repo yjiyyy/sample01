@@ -2889,7 +2889,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2011634752}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 988a5263a13ce084995dfde7aa02d6e5, type: 3}
   m_Name: 
@@ -2897,9 +2897,9 @@ MonoBehaviour:
   spawnPoints:
   - {fileID: 1171404612}
   enemyPrefabsByLevel:
-  - {fileID: 1968776640636413112, guid: b87ff50877aff904788ba17b1694337a, type: 3}
+  - {fileID: 1793541852279191887, guid: 3d000b330de540f409706e2ea08384aa, type: 3}
   hpuiPrefab: {fileID: 5425390646291263780, guid: c221514702d57b44bac940471d983478, type: 3}
-  spawnInterval: 50
+  spawnInterval: 5
   jitterRadius: 0.5
   applyGroundRaycast: 0
   raycastHeight: 20

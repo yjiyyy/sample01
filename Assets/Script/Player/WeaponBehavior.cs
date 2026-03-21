@@ -25,8 +25,9 @@ public class WeaponBehavior : MonoBehaviour
     private Material previewMat;
     private const int kPreviewSegments = 36;
 
-    /* ─ 트레일 (공격 시 on/off) ─ */
+    /* ─ 트레일 (SO 기준 발동 타이밍) ─ */
     private WeaponTrailController trailController;
+    private Coroutine trailEmitRoutine;
     private PlayerWeaponController cachedPlayerCtrl;
 
     [Header("발사 옵션")]
@@ -221,22 +222,89 @@ public class WeaponBehavior : MonoBehaviour
         trailController = GetComponent<WeaponTrailController>();
     }
 
-    /// <summary>공격 시작 시 호출. WeaponTrailController가 있으면 트레일을 켭니다.</summary>
+    /// <summary>단타: WeaponDataSO의 trailEmitDuration&gt;0일 때만 지연 후 기록 시작·유지. 콤보 무기는 사용하지 않음.</summary>
+    public void StartTrailEmitFromWeaponData(WeaponDataSO weaponData)
+    {
+        if (weaponData == null) return;
+        StartTrailEmitWindow(weaponData.trailEmitStartDelay, weaponData.trailEmitDuration);
+    }
+
+    /// <summary>콤보 스텝 등: 시작 지연 후 emitDuration 동안 트레일 기록. duration≤0이면 무시. 새 호출 시 이전 발동 코루틴은 중단.</summary>
+    public void StartTrailEmitWindow(float startDelay, float emitDuration)
+    {
+        if (emitDuration <= 0f) return;
+        EnsureTrail();
+        if (trailController == null) return;
+
+        if (trailEmitRoutine != null)
+        {
+            StopCoroutine(trailEmitRoutine);
+            trailEmitRoutine = null;
+        }
+
+        trailEmitRoutine = StartCoroutine(TrailEmitRoutine(Mathf.Max(0f, startDelay), emitDuration));
+    }
+
+    private IEnumerator TrailEmitRoutine(float startDelay, float emitDuration)
+    {
+        if (emitDuration <= 0f)
+        {
+            trailEmitRoutine = null;
+            yield break;
+        }
+
+        float waitStart = 0f;
+        while (waitStart < startDelay)
+        {
+            if (IsPlayerTimeHoldActive())
+            {
+                yield return null;
+                continue;
+            }
+            waitStart += Time.deltaTime;
+            yield return null;
+        }
+
+        EnsureTrail();
+        trailController?.EnableTrail();
+
+        float emitted = 0f;
+        while (emitted < emitDuration)
+        {
+            if (IsPlayerTimeHoldActive())
+            {
+                yield return null;
+                continue;
+            }
+            emitted += Time.deltaTime;
+            yield return null;
+        }
+
+        DisableTrail();
+        trailEmitRoutine = null;
+    }
+
+    /// <summary>트레일 기록 즉시 시작(외부 수동 제어용).</summary>
     public void EnableTrail()
     {
         EnsureTrail();
         trailController?.EnableTrail();
     }
 
-    /// <summary>공격 종료 시 호출. WeaponTrailController가 있으면 트레일을 끕니다.</summary>
+    /// <summary>트레일 기록 중단(잔상은 trailLifetime 동안 페이드).</summary>
     public void DisableTrail()
     {
         trailController?.DisableTrail();
     }
 
-    /// <summary>회피/넉백/스턴 등으로 공격이 끊길 때 호출. 트레일을 즉시 비웁니다.</summary>
+    /// <summary>회피/넉백/스턴 등으로 공격이 끊길 때 호출. 발동 코루틴 중단 및 트레일 즉시 비움.</summary>
     public void CancelTrailImmediate()
     {
+        if (trailEmitRoutine != null)
+        {
+            StopCoroutine(trailEmitRoutine);
+            trailEmitRoutine = null;
+        }
         trailController?.CancelTrailImmediate();
     }
 
@@ -306,9 +374,9 @@ public class WeaponBehavior : MonoBehaviour
 
     private void SpawnMeleeHitbox(bool useSecond)
     {
-        if (data != null && data.useWeaponCollider)
+        if (data != null && data.UseWeaponCollider)
         {
-            UseWeaponCollider(useSecond);
+            UseWeaponCollider(useSecond, statsForHit: null, lifetimeOverride: null);
             return;
         }
 
@@ -332,9 +400,31 @@ public class WeaponBehavior : MonoBehaviour
         }
     }
 
-    private void UseWeaponCollider(bool useSecond)
+    /// <summary>
+    /// 근접 콤보 스텝 등: 무기가 WeaponCollider 모드일 때 HitBox_PC를 활성화합니다.
+    /// statsForHit에 콤보 스텝 프록시를 넘기면 데미지/넉백 등이 스텝 기준으로 적용됩니다.
+    /// (콤보 애니에 AttackHit 이벤트가 있으면 이중 활성화될 수 있으니 콤보 클립에서는 제거 권장)
+    /// </summary>
+    public void ActivateMeleeColliderHitboxForCombo(WeaponDataSO statsForHit, float lifetime)
+    {
+        if (data == null || statsForHit == null) return;
+        if (!data.UseWeaponCollider) return;
+
+        float life = Mathf.Max(0.01f, lifetime);
+        UseWeaponCollider(useSecond: false, statsForHit, life);
+        if (data.dualWield)
+            UseWeaponCollider(useSecond: true, statsForHit, life);
+    }
+
+    /// <param name="statsForHit">null이면 장착 무기 data 사용(일반 AttackHit 경로)</param>
+    /// <param name="lifetimeOverride">null이면 statsForHit.hitBoxLifetime 사용</param>
+    private void UseWeaponCollider(bool useSecond, WeaponDataSO statsForHit, float? lifetimeOverride)
     {
         if (data == null) return;
+
+        WeaponDataSO stats = statsForHit != null ? statsForHit : data;
+        float life = lifetimeOverride ?? stats.hitBoxLifetime;
+        life = Mathf.Max(0.01f, life);
 
         Transform weaponRoot = transform;
         if (useSecond && data.dualWield)
@@ -347,21 +437,21 @@ public class WeaponBehavior : MonoBehaviour
         var hitbox = weaponRoot.GetComponentInChildren<HitBox_PC>(true);
         if (hitbox == null)
         {
-            Debug.LogWarning("[WeaponBehavior] useWeaponCollider=true인데 무기에 HitBox_PC 없음");
+            Debug.LogWarning("[WeaponBehavior] meleeHitboxMode=WeaponCollider인데 무기에 HitBox_PC 없음");
             return;
         }
 
         var col = hitbox.GetComponent<Collider>();
         if (col == null)
         {
-            Debug.LogWarning("[WeaponBehavior] useWeaponCollider=true인데 HitBox_PC에 Collider 없음");
+            Debug.LogWarning("[WeaponBehavior] meleeHitboxMode=WeaponCollider인데 HitBox_PC에 Collider 없음");
             return;
         }
 
         col.enabled = true;
-        hitbox.SetWeapon(data);
-        hitbox.InitializeAttached(data.damage, data.range, data.knockbackPower, data.hitBoxLifetime);
-        StartCoroutine(DisableHitboxAfterLifetime(col, data.hitBoxLifetime));
+        hitbox.SetWeapon(stats);
+        hitbox.InitializeAttached(stats.damage, stats.range, stats.knockbackPower, life);
+        StartCoroutine(DisableHitboxAfterLifetime(col, life));
     }
 
     private IEnumerator DisableHitboxAfterLifetime(Collider col, float lifetime)
@@ -388,7 +478,7 @@ public class WeaponBehavior : MonoBehaviour
 
     private void EnsureWeaponHitboxDisabled()
     {
-        if (data == null || !data.useWeaponCollider) return;
+        if (data == null || !data.UseWeaponCollider) return;
         foreach (var hb in GetComponentsInChildren<HitBox_PC>(true))
         {
             var col = hb.GetComponent<Collider>();

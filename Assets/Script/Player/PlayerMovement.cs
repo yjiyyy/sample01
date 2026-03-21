@@ -220,7 +220,8 @@ public class PlayerMovement : MonoBehaviour
         PlayerState state = weaponCtrl.CurrentState;
         bool isARFiring = weaponCtrl.IsARFiring;
         bool arAllowMove = weaponCtrl != null && weaponCtrl.ARAllowMoveWhileFiring;
-        bool attackBlocking = state == PlayerState.Attack && !(isARFiring && arAllowMove);
+        bool meleeComboAllowMove = weaponCtrl != null && weaponCtrl.MeleeComboAllowMove;
+        bool attackBlocking = state == PlayerState.Attack && !(isARFiring && arAllowMove) && !meleeComboAllowMove;
 
         if (attackBlocking ||
             state == PlayerState.Knockback ||
@@ -796,8 +797,15 @@ public class PlayerMovement : MonoBehaviour
         return inputMag * currentMoveSpeed;
     }
 
+    /// <summary>이동 입력이 있는지 여부 (차단 여부와 무관). 콤보 윈도우에서 Move 상태 전환 판정용.</summary>
+    public bool HasMovementInput() => lastInput.sqrMagnitude > EPS;
+
+    /// <summary>저장된 입력을 초기화. enabled=false 구간 후 복구 시 잔여 입력으로 인한 잘못된 이동 방지.</summary>
+    public void ClearStoredInput() => lastInput = Vector3.zero;
+
     // Knockback (mass-aware)
-    public void ApplyKnockback(Vector3 dir, float force, float duration, Transform attacker = null)
+    /// <param name="faceHitDirection">true면 피격 방향으로 회전. Push·슈퍼아머·공격 중에는 false.</param>
+    public void ApplyKnockback(Vector3 dir, float force, float duration, Transform attacker = null, bool faceHitDirection = true)
     {
         // 넉백 시작 자체는 허용한다.
         // (CC 중복 차단은 PlayerWeaponController.ForceApplyKnockback 진입부에서 처리)
@@ -806,10 +814,8 @@ public class PlayerMovement : MonoBehaviour
             if (weaponCtrl.CurrentState == PlayerState.Dead) return;
         }
 
-        // Ensure facing matches knockback, but only when the knockback is starting.
-        // If we call FaceKnockback every hit while knockback is already active,
-        // multiple monsters around the player can keep changing the facing and look like "spin".
-        if (!isKnockbacked)
+        // 확실한 넉백 판정일 때만 피격 방향으로 회전 (Push·슈퍼아머·공격 중은 유지)
+        if (faceHitDirection && !isKnockbacked)
             FaceKnockback(dir);
 
         if (knockbackRoutine != null) StopCoroutine(knockbackRoutine);

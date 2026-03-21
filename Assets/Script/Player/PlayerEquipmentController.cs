@@ -197,7 +197,7 @@ public class PlayerEquipmentController : MonoBehaviour
 
             AttachToMount(instSub.transform, subMount);
 
-            if (CurrentWeaponData.useWeaponCollider)
+            if (CurrentWeaponData.UseWeaponCollider)
             {
                 foreach (var hb in instSub.GetComponentsInChildren<HitBox_PC>(true))
                 {

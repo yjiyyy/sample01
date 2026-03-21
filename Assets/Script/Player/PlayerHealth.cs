@@ -616,9 +616,9 @@ public class PlayerHealth : MonoBehaviour
         if (dir.sqrMagnitude > 0.0001f) dir = dir.normalized;
         else dir = Vector3.forward;
 
-        float horiz = (weapon != null ? weapon.ragdollImpulse : 0f) * Mathf.Clamp(impactScale, 0f, 10f);
-        float up = (weapon != null ? weapon.ragdollUpImpulse : 0f) * Mathf.Clamp(impactScale, 0f, 10f);
-        float spin = (weapon != null ? weapon.ragdollSpinTorque : 0f) * Mathf.Clamp(impactScale, 0f, 10f);
+        float horiz = Randomize20Percent(weapon != null ? weapon.ragdollImpulse : 0f) * Mathf.Clamp(impactScale, 0f, 10f);
+        float up = Randomize20Percent(weapon != null ? weapon.ragdollUpImpulse : 0f) * Mathf.Clamp(impactScale, 0f, 10f);
+        float spin = Randomize20Percent(weapon != null ? weapon.ragdollSpinTorque : 0f) * Mathf.Clamp(impactScale, 0f, 10f);
 
         Vector3 vel = Vector3.zero;
         if (horiz > 0f && dir.sqrMagnitude > 0f) vel += dir * horiz;

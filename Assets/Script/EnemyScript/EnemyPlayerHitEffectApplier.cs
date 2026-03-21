@@ -32,7 +32,7 @@ public static class EnemyPlayerHitEffectApplier
         if (usePushInsteadOfKnockback)
         {
             if (playerMovement != null)
-                playerMovement.ApplyKnockback(hitDirection, knockbackPower, knockbackDuration, knockbackRelativeTransform);
+                playerMovement.ApplyKnockback(hitDirection, knockbackPower, knockbackDuration, knockbackRelativeTransform, faceHitDirection: false);
         }
         else if (playerWeaponController != null)
         {

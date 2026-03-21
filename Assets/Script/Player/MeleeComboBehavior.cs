@@ -6,7 +6,7 @@ using UnityEngine;
 
 /// <summary>
 /// MeleeComboBehavior
-/// - WeaponBehavior에서 콤보 동작을 담당합니다.
+/// - WeaponBehavior???? ??? ?????? ???????.
 /// </summary>
 [DisallowMultipleComponent]
 public class MeleeComboBehavior : MonoBehaviour
@@ -37,6 +37,10 @@ public class MeleeComboBehavior : MonoBehaviour
     // defensive
     private bool debugMode = false;
 
+    /// <summary>ignoreTimeAfterInput ???? ?? ????(??) ??? ????? ????. ???? ??? ?????.</summary>
+    private const float MOVEMENT_UNLOCK_DELAY = 0.1f;
+    private const float NO_MOVE_SWITCH_NEAR_STEP_END = 0.1f;
+
     public void Setup(
         MeleeComboSO combo,
         PlayerAnimationController anim,
@@ -60,6 +64,9 @@ public class MeleeComboBehavior : MonoBehaviour
 
         EnsureProxies(force: true);
     }
+
+    /// <summary>??? ???? ?? ????. ??? ?? ???? ??? ?????? ???.</summary>
+    public bool IsComboActive => comboActive;
 
     public void OnPress()
     {
@@ -111,6 +118,8 @@ public class MeleeComboBehavior : MonoBehaviour
             didDisableMovementForCombo = false;
         }
 
+        ownerController?.SetMeleeComboAllowMove(false);
+
         // Set owner state to Attack
         changeState?.Invoke(PlayerState.Attack);
 
@@ -147,6 +156,14 @@ public class MeleeComboBehavior : MonoBehaviour
             activeStepRoutine = null;
         }
 
+        ownerController?.SetMeleeComboAllowMove(false);
+        if (playerMovement != null && didDisableMovementForCombo == false)
+        {
+            playerMovement.enabled = false;
+            didDisableMovementForCombo = true;
+        }
+
+        changeState?.Invoke(PlayerState.Attack);
         currentStepIndex++;
         if (currentStepIndex >= comboData.steps.Count)
         {
@@ -180,8 +197,13 @@ public class MeleeComboBehavior : MonoBehaviour
             yield break;
         }
 
+        // ??? ???? ????? (???? SO?? ???, trailEmitDuration>0?? ????)
+        var wbTrail = GetComponent<WeaponBehavior>();
+        if (wbTrail != null && step.trailEmitDuration > 0f)
+            wbTrail.StartTrailEmitWindow(step.trailEmitStartDelay, step.trailEmitDuration);
+
         // Play animation
-        // 변경: 이제 animClip이 존재할 때만 애니메이션 재생을 시도합니다. (폴백 문자열 사용 안함)
+        // ????: ???? animClip?? ?????? ???? ??????? ????? ???????. (???? ????? ??? ????)
         if (step.animClip != null)
         {
             string animName = step.animClip.name;
@@ -193,7 +215,7 @@ public class MeleeComboBehavior : MonoBehaviour
         }
         else
         {
-            // animClip이 없으면 아무것도 재생하지 않습니다 (요청하신 동작)
+            // animClip?? ?????? ?????? ??????? ?????? (?????? ????)
             if (debugMode) Debug.Log("[Combo] step has no animClip -> no animation will be played for this step.");
         }
 
@@ -255,6 +277,33 @@ public class MeleeComboBehavior : MonoBehaviour
                 }
             }
         }
+        else if (weapon != null && weapon.UseWeaponCollider)
+        {
+            // Bat ??: ???? ???? HitBox_PC ?????? ???? (?????? ???? ??)
+            EnsureProxies(force: false);
+
+            WeaponDataSO proxy = (stepIndex < stepProxies.Count && stepProxies[stepIndex] != null) ? stepProxies[stepIndex] : null;
+            if (proxy == null)
+            {
+                proxy = ScriptableObject.CreateInstance<WeaponDataSO>();
+                proxy.weaponName = "ComboStepProxy";
+                CopyStepToProxy(step, proxy, weapon);
+            }
+
+            if (step.allowDuplicateHit && debugMode)
+                Debug.Log("[Combo] allowDuplicateHit?? ???? ?????? ??????? ??????? ??????.");
+
+            float colliderLife = Mathf.Max(0.01f, step.hitBoxLifetime > 0f ? step.hitBoxLifetime : weapon.hitBoxLifetime);
+            var wb = GetComponent<WeaponBehavior>();
+            if (wb != null)
+                wb.ActivateMeleeColliderHitboxForCombo(proxy, colliderLife);
+            else
+                Debug.LogWarning("[Combo] ???? WeaponCollider ??????? WeaponBehavior?? ???????.");
+        }
+        else if (weapon != null)
+        {
+            Debug.LogWarning($"[Combo] '{step.name}': SpawnPrefab ??????? hitBoxPrefab/meleeHitboxPrefab?? ??? ??????.");
+        }
 
         // Step timing loop
         stepElapsed = 0f;
@@ -267,6 +316,25 @@ public class MeleeComboBehavior : MonoBehaviour
             {
                 EndCombo();
                 yield break;
+            }
+
+            float movementUnlockAt = step.ignoreTimeAfterInput + MOVEMENT_UNLOCK_DELAY;
+            bool inMovementWindow = stepElapsed >= movementUnlockAt;
+            bool nearStepEnd = stepElapsed >= dur - NO_MOVE_SWITCH_NEAR_STEP_END;
+            if (inMovementWindow)
+            {
+                if (didDisableMovementForCombo)
+                {
+                    ownerController?.SetMeleeComboAllowMove(true);
+                    if (playerMovement != null)
+                    {
+                        playerMovement.enabled = prevMovementEnabled;
+                        playerMovement.ClearStoredInput();
+                        didDisableMovementForCombo = false;
+                    }
+                }
+                if (!nearStepEnd && playerMovement != null && playerMovement.HasMovementInput() && changeState != null)
+                    changeState(PlayerState.Move);
             }
 
             stepElapsed += Time.deltaTime;
@@ -282,6 +350,7 @@ public class MeleeComboBehavior : MonoBehaviour
         if (!comboActive) return;
 
         comboActive = false;
+        ownerController?.SetMeleeComboAllowMove(false);
 
         if (activeStepRoutine != null)
         {
@@ -293,6 +362,7 @@ public class MeleeComboBehavior : MonoBehaviour
         if (playerMovement != null && didDisableMovementForCombo)
         {
             playerMovement.enabled = prevMovementEnabled;
+            playerMovement.ClearStoredInput();
         }
 
         if (changeState != null)
@@ -399,6 +469,10 @@ public class MeleeComboBehavior : MonoBehaviour
         proxy.recoilStartDelay = step.recoilStartDelay >= 0f ? step.recoilStartDelay : (weaponDefault != null ? weaponDefault.recoilStartDelay : 0f);
         proxy.recoilPower = step.recoilPower >= 0f ? step.recoilPower : (weaponDefault != null ? weaponDefault.recoilPower : 0f);
         proxy.recoilDuration = step.recoilDuration >= 0f ? step.recoilDuration : (weaponDefault != null ? weaponDefault.recoilDuration : 0f);
+
+        proxy.hitEffectPrefab = step.hitEffectPrefab != null
+            ? step.hitEffectPrefab
+            : (weaponDefault != null ? weaponDefault.hitEffectPrefab : null);
     }
 
     private void CleanupProxies()

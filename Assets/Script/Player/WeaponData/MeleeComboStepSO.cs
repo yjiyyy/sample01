@@ -31,6 +31,16 @@ public class MeleeComboStepSO : ScriptableObject
     [Tooltip("이 스텝에서 사용할 히트박스 프리팹 (비어있으면 무기 SO의 meleeHitboxPrefab으로 폴백)")]
     public GameObject hitBoxPrefab;
 
+    [Header("피격 이펙트")]
+    [Tooltip("적 피격 시 표면에 스폰할 이펙트. 비어있으면 무기 SO의 hitEffectPrefab 사용.")]
+    public GameObject hitEffectPrefab;
+
+    [Header("무기 트레일 (콤보 스텝)")]
+    [Tooltip("스텝 시작 후 트레일 기록 시작까지 지연(초). trailEmitDuration>0일 때만 사용.")]
+    public float trailEmitStartDelay = 0f;
+    [Tooltip("트레일 기록 유지 시간(초). 0 이하면 이 스텝에서 트레일 없음. 콤보 무기는 스텝 값만 사용.")]
+    public float trailEmitDuration = 0f;
+
     [Header("넉백 / 저크")]
     public float knockbackDuration = -1f;
     public float knockbackPower = -1f;
@@ -87,6 +97,10 @@ public class MeleeComboStepSO : ScriptableObject
         hitboxSpawnDelay = Mathf.Max(0f, hitboxSpawnDelay);
         hitBoxLifetime = Mathf.Max(0.01f, hitBoxLifetime);
         duplicateInterval = Mathf.Max(0.01f, duplicateInterval);
+
+        trailEmitStartDelay = Mathf.Max(0f, trailEmitStartDelay);
+        if (trailEmitDuration < 0f)
+            trailEmitDuration = 0f;
 
         // 음수로 남긴 필드는 "미설정" 의미로 유지 (프로그램에서 무기 SO 값으로 폴백)
     }

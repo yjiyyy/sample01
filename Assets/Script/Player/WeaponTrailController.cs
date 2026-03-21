@@ -28,11 +28,8 @@ public class WeaponTrailController : MonoBehaviour
     [Tooltip("새 포인트를 추가하기 위한 최소 이동 거리")]
     public float minPointDistance = 0.015f;
 
-    [Tooltip("트레일이 남아있는 시간(초)")]
+    [Tooltip("트레일이 남아있는 시간(초) — 기록 중단 후 잔상이 사라지는 속도(비주얼)")]
     public float trailLifetime = 0.25f;
-
-    [Tooltip("트레일 기록 시간(초). 0이면 애니메이션 전체. >0이면 이 시간 이후 기록 중단")]
-    public float trailDrawDuration = 0f;
 
     [Header("부드러운 곡선")]
     [Tooltip("세그먼트당 보간 점 수. 높을수록 곡선이 부드러워지고 빠른 움직임에도 각지지 않음")]
@@ -47,7 +44,6 @@ public class WeaponTrailController : MonoBehaviour
     private readonly List<Vector3> pointsEnd = new List<Vector3>();
     private readonly List<float> pointsTime = new List<float>();
     private bool isEmitting;
-    private float enableTrailTime;
     private Mesh trailMesh;
     private int materialColorId;
 
@@ -93,10 +89,6 @@ public class WeaponTrailController : MonoBehaviour
             UpdateTrailFade();
             return;
         }
-
-        // trailDrawDuration > 0이면 지정 시간 이후 기록 중단
-        if (trailDrawDuration > 0f && (Time.time - enableTrailTime) >= trailDrawDuration)
-            isEmitting = false;
 
         PruneExpiredPoints();
         TryAddPoint();
@@ -254,7 +246,6 @@ public class WeaponTrailController : MonoBehaviour
         }
         EnsureComponents();
         isEmitting = true;
-        enableTrailTime = Time.time;
     }
 
     /// <summary>공격 종료 시 호출. 트레일 기록을 중단합니다. 기존 트레일은 lifetime 동안 페이드됩니다.</summary>

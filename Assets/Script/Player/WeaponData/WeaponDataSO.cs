@@ -31,6 +31,15 @@ public enum SliceTarget
     All
 }
 
+/// <summary>근접 히트박스 방식. 둘 중 하나만 선택.</summary>
+public enum MeleeHitboxMode
+{
+    [Tooltip("스폰 포인트에 프리팹 생성 (충격파, 범위형 등)")]
+    SpawnPrefab,
+    [Tooltip("무기 프리팹에 붙은 HitBox 콜라이더 활성화")]
+    WeaponCollider
+}
+
 [CreateAssetMenu(menuName = "Weapon/WeaponDataSO")]
 public class WeaponDataSO : ScriptableObject
 {
@@ -56,6 +65,12 @@ public class WeaponDataSO : ScriptableObject
     [Header("히트박스 타이밍 및 지속")]
     public float hitboxSpawnDelay = 0f;
     public float hitBoxLifetime = 0.2f;
+
+    [Header("무기 트레일 (단타, 콤보 없을 때만)")]
+    [Tooltip("공격 시작 후 트레일 기록 시작까지 지연(초). trailEmitDuration>0일 때만 사용.")]
+    public float trailEmitStartDelay = 0f;
+    [Tooltip("트레일 기록 유지 시간(초). 0 이하면 트레일 미사용. 무기 프리팹에 WeaponTrailController 필요.")]
+    public float trailEmitDuration = 0f;
 
     [Header("넉백 / 저크")]
     public float knockbackDuration = 0.2f;
@@ -119,9 +134,16 @@ public class WeaponDataSO : ScriptableObject
     public string projectileSpawnPointPathOrName = "";
 
     [Header("Attack Prefabs (완전 이관)")]
-    [Tooltip("true면 meleeHitboxPrefab 스폰 대신 무기 자체 HitBox 콜리더를 활성화. 무기 프리팹에 HitBox 자식(BoxCollider+HitBox_PC) 필요.")]
-    public bool useWeaponCollider = false;
+    [Tooltip("근접 히트박스 방식. SpawnPrefab=스폰 포인트에 프리팹 생성, WeaponCollider=무기에 붙은 콜라이더 활성화")]
+    public MeleeHitboxMode meleeHitboxMode = MeleeHitboxMode.SpawnPrefab;
+    [Tooltip("meleeHitboxMode가 SpawnPrefab일 때 사용. 비어있으면 경고.")]
     public GameObject meleeHitboxPrefab;
+
+    /// <summary>무기 콜라이더 사용 여부. meleeHitboxMode 또는 레거시 useWeaponCollider 기준.</summary>
+    public bool UseWeaponCollider => _useWeaponColliderLegacy || meleeHitboxMode == MeleeHitboxMode.WeaponCollider;
+    [SerializeField, HideInInspector]
+    [UnityEngine.Serialization.FormerlySerializedAs("useWeaponCollider")]
+    private bool _useWeaponColliderLegacy = false;
     public GameObject projectilePrefab;
     public GameObject shotgunSectorPrefab;
 
@@ -212,6 +234,17 @@ public class WeaponDataSO : ScriptableObject
         sliceImpulse = Mathf.Max(0f, sliceImpulse);
 
         hitboxSpawnDelay2 = Mathf.Max(0f, hitboxSpawnDelay2);
+
+        trailEmitStartDelay = Mathf.Max(0f, trailEmitStartDelay);
+        if (trailEmitDuration < 0f)
+            trailEmitDuration = 0f;
+
+        // 레거시 useWeaponCollider → meleeHitboxMode 마이그레이션
+        if (_useWeaponColliderLegacy)
+        {
+            meleeHitboxMode = MeleeHitboxMode.WeaponCollider;
+            _useWeaponColliderLegacy = false;
+        }
 
         if (string.IsNullOrEmpty(id))
             Debug.LogWarning($"WeaponDataSO '{name}' has empty id. Please set a unique id for inventory/DB usage.");

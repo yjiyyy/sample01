@@ -71,7 +71,6 @@ MonoBehaviour:
   maxPoints: 5
   minPointDistance: 0.001
   trailLifetime: 0.1
-  trailDrawDuration: 0.25
   smoothSegments: 7
 --- !u!1 &1412765267159074637
 GameObject:

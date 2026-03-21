@@ -37,6 +37,9 @@ public class PlayerChargeController : MonoBehaviour
     private PlayerChargeAttackSO activeContinuousSlot = null;
     private float superArmorRemaining = 0f;
 
+    /// <summary>차지 공격 중 슈퍼아머 유효 여부. ForceApplyKnockback 시 방향 전환 스킵용.</summary>
+    public bool HasSuperArmorActive => superArmorRemaining > 0f;
+
     private WeaponDataSO chargeWeaponProxy;
     private PlayerWeaponController weaponCtrl;
 

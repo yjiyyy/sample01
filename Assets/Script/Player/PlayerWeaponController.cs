@@ -66,6 +66,9 @@ public class PlayerWeaponController : MonoBehaviour
     private bool arAllowMoveWhileFiringFlag = false;
     private bool arAutoResumeWhileHeld = false;
 
+    // Melee 콤보: ignoreTimeAfterInput ~ stepDuration 구간에서만 이동 허용 (MeleeComboBehavior가 설정)
+    private bool meleeComboAllowMoveFlag = false;
+
     private Transform meleeSpawnPointCache;
     private float lastReloadMsgTime = -999f;
     private const float RELOAD_MSG_COOLDOWN = 0.3f;
@@ -113,6 +116,12 @@ public class PlayerWeaponController : MonoBehaviour
             return;
         }
 
+        // 방향 전환 스킵: 슈퍼아머·단타 공격 중은 바라보는 방향 유지. 콤보 중 넉백은 넉백 우선이라 회전함.
+        var wbForCombo = equipComp?.WeaponBehavior;
+        var comboComp = wbForCombo != null ? wbForCombo.GetComponent<MeleeComboBehavior>() : null;
+        bool wasInCombo = comboComp != null && comboComp.IsComboActive;
+        bool skipFaceHit = (state == PlayerState.Attack && !wasInCombo) || (chargeComp != null && chargeComp.HasSuperArmorActive);
+
         // 새로 스턴 CC를 시작하는 경우에만 잠금 시간 설정
         // stun==0이면 “스턴 잠금”이 아니라 기존 넉백 로직은 그대로 중복 허용(요구사항에 맞춰)
         if (stun > 0f)
@@ -144,8 +153,6 @@ public class PlayerWeaponController : MonoBehaviour
         //     콤보 종료 도중 상태 변경이 넉백을 덮어쓰지 않도록 일시적으로 차단합니다.
         try
         {
-            var wb = equipComp?.WeaponBehavior;
-            var comboComp = wb != null ? wb.GetComponent<MeleeComboBehavior>() : null;
             if (comboComp != null)
             {
                 if (debugMode) Debug.Log("[PlayerWeaponController] ForceApplyKnockback -> cancelling combo immediately");
@@ -162,7 +169,7 @@ public class PlayerWeaponController : MonoBehaviour
 
         // 기존 넉백 코루틴 정리 후 새로 시작
         if (knockbackRoutine != null) { StopCoroutine(knockbackRoutine); knockbackRoutine = null; }
-        knockbackRoutine = StartCoroutine(KnockbackRoutine_Internal(dir, power, duration, stun));
+        knockbackRoutine = StartCoroutine(KnockbackRoutine_Internal(dir, power, duration, stun, skipFaceHit));
     }
 
     // AR state exposers used by PlayerMovement
@@ -170,6 +177,10 @@ public class PlayerWeaponController : MonoBehaviour
     public bool ARAllowMoveWhileFiring => arAllowMoveWhileFiringFlag && IsARFiring;
     public bool ARIsRotationLocked => arRotationLocked && IsARFiring;
     public Vector3 ARLockedForward => arLockedForward;
+
+    // Melee 콤보 입력 윈도우 구간에서만 이동 허용 (PlayerMovement.IsMovementBlocked에서 사용)
+    public bool MeleeComboAllowMove => meleeComboAllowMoveFlag;
+    public void SetMeleeComboAllowMove(bool allow) => meleeComboAllowMoveFlag = allow;
 
     // Evade gauge accessors used by UI
     public float GetEvadeGauge() => evadeComp != null ? evadeComp.GetEvadeGauge() : 0f;
@@ -678,7 +689,7 @@ public class PlayerWeaponController : MonoBehaviour
     private IEnumerator AttackRoutine(WeaponDataSO data)
     {
         ChangeState(PlayerState.Attack);
-        equipComp.WeaponBehavior?.EnableTrail();
+        equipComp.WeaponBehavior?.StartTrailEmitFromWeaponData(data);
         animationController?.PlayAttack(data);
         StartRecoilIfNeeded(data);
         equipComp.WeaponBehavior?.AttackHit();
@@ -697,7 +708,6 @@ public class PlayerWeaponController : MonoBehaviour
             yield return null;
         }
 
-        equipComp.WeaponBehavior?.DisableTrail();
         ChangeState(PlayerState.Idle);
         animationController?.EndAttack();
         CancelRecoil();
@@ -754,7 +764,7 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     #region Knockback / CC (internal coroutine used by ForceApplyKnockback)
-    private IEnumerator KnockbackRoutine_Internal(Vector3 dir, float power, float duration, float stun)
+    private IEnumerator KnockbackRoutine_Internal(Vector3 dir, float power, float duration, float stun, bool skipFaceHit = false)
     {
         if (state == PlayerState.Dead)
         {
@@ -767,13 +777,12 @@ public class PlayerWeaponController : MonoBehaviour
 
         Vector3 knockDir = dir.normalized; knockDir.y = 0f;
 
-        if (movement != null)
+        // 확실한 넉백일 때만 피격 방향으로 회전 (슈퍼아머·공격 중은 스킵)
+        if (!skipFaceHit)
         {
-            movement.FaceKnockback(dir);
-        }
-        else
-        {
-            if (knockDir.sqrMagnitude > 0.01f)
+            if (movement != null)
+                movement.FaceKnockback(dir);
+            else if (knockDir.sqrMagnitude > 0.01f)
                 transform.rotation = Quaternion.LookRotation(-knockDir);
         }
 
@@ -786,7 +795,7 @@ public class PlayerWeaponController : MonoBehaviour
 
         if (movement != null && movement.enabled)
         {
-            movement.ApplyKnockback(knockDir, power, duration, null);
+            movement.ApplyKnockback(knockDir, power, duration, null, faceHitDirection: false);
         }
         else
         {
