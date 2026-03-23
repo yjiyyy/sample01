@@ -117,6 +117,7 @@ public class WeaponDataSO : ScriptableObject
 
     [Header("리코일(자기 반동)")]
     public float recoilStartDelay = 0f;
+    [Tooltip("양수: 뒤로 밀림, 음수: 앞으로 밀림")]
     public float recoilPower = 0f;
     public float recoilDuration = 0f;
 

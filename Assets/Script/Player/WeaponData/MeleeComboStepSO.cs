@@ -76,9 +76,12 @@ public class MeleeComboStepSO : ScriptableObject
     public float sliceImpulse = -1f;
 
     [Header("리코일 (자기 반동)")]
-    public float recoilStartDelay = -1f;
-    public float recoilPower = -1f;
-    public float recoilDuration = -1f;
+    [Tooltip("0 이상=지연(초). 음수면 0으로 처리")]
+    public float recoilStartDelay = 0f;
+    [Tooltip("0이면 리코일 없음. 그 외: 양수=뒤로, 음수=앞으로 (예: -1=앞으로 1)")]
+    public float recoilPower = 0f;
+    [Tooltip("0 이하면 0으로 처리. 리코일 쓰려면 0 초과로 설정")]
+    public float recoilDuration = 0f;
 
     [Header("중복 히트 옵션")]
     public bool allowDuplicateHit = false;

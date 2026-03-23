@@ -256,6 +256,7 @@ public class MeleeComboBehavior : MonoBehaviour
                     }
 
                     hitbox.SetWeapon(proxy);
+                    ownerController?.StartRecoilIfNeeded(proxy);
 
                     float dmg = proxy != null ? proxy.damage : 0f;
                     float rng = proxy != null ? proxy.range : 2.5f;
@@ -296,7 +297,10 @@ public class MeleeComboBehavior : MonoBehaviour
             float colliderLife = Mathf.Max(0.01f, step.hitBoxLifetime > 0f ? step.hitBoxLifetime : weapon.hitBoxLifetime);
             var wb = GetComponent<WeaponBehavior>();
             if (wb != null)
+            {
                 wb.ActivateMeleeColliderHitboxForCombo(proxy, colliderLife);
+                ownerController?.StartRecoilIfNeeded(proxy);
+            }
             else
                 Debug.LogWarning("[Combo] ???? WeaponCollider ??????? WeaponBehavior?? ???????.");
         }
@@ -466,9 +470,19 @@ public class MeleeComboBehavior : MonoBehaviour
         proxy.sliceTargets = (step.sliceTargets != null && step.sliceTargets.Count > 0) ? new List<SliceTarget>(step.sliceTargets) : (weaponDefault != null ? new List<SliceTarget>(weaponDefault.sliceTargets) : new List<SliceTarget>());
         proxy.sliceImpulse = step.sliceImpulse >= 0f ? step.sliceImpulse : (weaponDefault != null ? weaponDefault.sliceImpulse : 0f);
 
-        proxy.recoilStartDelay = step.recoilStartDelay >= 0f ? step.recoilStartDelay : (weaponDefault != null ? weaponDefault.recoilStartDelay : 0f);
-        proxy.recoilPower = step.recoilPower >= 0f ? step.recoilPower : (weaponDefault != null ? weaponDefault.recoilPower : 0f);
-        proxy.recoilDuration = step.recoilDuration >= 0f ? step.recoilDuration : (weaponDefault != null ? weaponDefault.recoilDuration : 0f);
+        // 리코일: 무기 기본값 폴백 없음. recoilPower == 0 이면 리코일 없음(-1 등 부호 값 사용 가능).
+        if (Mathf.Approximately(step.recoilPower, 0f))
+        {
+            proxy.recoilStartDelay = 0f;
+            proxy.recoilPower = 0f;
+            proxy.recoilDuration = 0f;
+        }
+        else
+        {
+            proxy.recoilStartDelay = step.recoilStartDelay >= 0f ? step.recoilStartDelay : 0f;
+            proxy.recoilPower = step.recoilPower;
+            proxy.recoilDuration = step.recoilDuration >= 0f ? step.recoilDuration : 0f;
+        }
 
         proxy.hitEffectPrefab = step.hitEffectPrefab != null
             ? step.hitEffectPrefab
