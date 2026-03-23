@@ -83,9 +83,7 @@ public class WeaponBehavior : MonoBehaviour
     {
         if (data == null) return;
 
-        string meleeKey = string.IsNullOrEmpty(data.meleeSpawnPointPathOrName) ? "Root_dummy" : data.meleeSpawnPointPathOrName;
-        meleeKey = NormalizePath(meleeKey);
-
+        const string meleeKey = "Root_dummy";
         meleeSpawnPoint = FindByNameOrPath(transform.root, meleeKey);
         if (meleeSpawnPoint == null)
             Debug.LogWarning($"[WeaponBehavior] meleeSpawnPoint(1) 못 찾음 (playerRoot): '{meleeKey}'.");
@@ -97,17 +95,10 @@ public class WeaponBehavior : MonoBehaviour
         if (projectileSpawnPoint == null)
             Debug.LogWarning($"[WeaponBehavior] projectileSpawnPoint(1) 못 찾음 (weapon): '{projKey}'.");
 
-        if (!string.IsNullOrEmpty(data.meleeSpawnPoint2PathOrName))
-        {
-            string melee2Key = NormalizePath(data.meleeSpawnPoint2PathOrName);
-            meleeSpawnPoint2 = FindByNameOrPath(transform.root, melee2Key);
-            if (meleeSpawnPoint2 == null)
-                Debug.LogWarning($"[WeaponBehavior] meleeSpawnPoint(2) 못 찾음 (playerRoot): '{melee2Key}'.");
-        }
-        else
-        {
-            meleeSpawnPoint2 = null;
-        }
+        // dualWield일 때 2번째 근접도 같은 Root_dummy 사용
+        meleeSpawnPoint2 = data.dualWield ? FindByNameOrPath(transform.root, meleeKey) : null;
+        if (data.dualWield && meleeSpawnPoint2 == null)
+            Debug.LogWarning($"[WeaponBehavior] meleeSpawnPoint(2) 못 찾음 (playerRoot): '{meleeKey}'.");
 
         projectileSpawnPoint2 = ResolveSecondProjectileSpawnPoint();
     }
@@ -338,10 +329,94 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
+        ScheduleAttackFXFromData(data);
+
         StartCoroutine(DelayedHitbox(useSecond: false));
 
         if (data.dualWield)
             StartCoroutine(DelayedHitbox(useSecond: true));
+    }
+
+    /// <summary>
+    /// AR 연사 전용: Gun의 <see cref="AttackHit"/>과 같이 공격 FX 스케줄 후 <see cref="WeaponDataSO.hitboxSpawnDelay"/>만큼 대기한 뒤
+    /// <see cref="FireProjectileForced"/>로 탄을 낸다. (DelayedHitbox의 SpawnProjectile 경로와 달리 스프레드/방향 유지)
+    /// </summary>
+    public void ARAttackHit(Vector3 shootDir, bool preserveVerticalLocal)
+    {
+        if (data == null)
+        {
+            Debug.LogWarning("⚠ WeaponDataSO가 비어 있습니다.");
+            return;
+        }
+
+        if (!(data is WeaponDataSO_AR))
+        {
+            Debug.LogWarning("[WeaponBehavior] ARAttackHit는 WeaponDataSO_AR일 때만 사용하세요.");
+            return;
+        }
+
+        ScheduleAttackFXFromData(data);
+        StartCoroutine(DelayedARProjectileFire(shootDir, preserveVerticalLocal));
+    }
+
+    private IEnumerator DelayedARProjectileFire(Vector3 shootDir, bool preserveVerticalLocal)
+    {
+        if (data == null) yield break;
+
+        float delay = data.hitboxSpawnDelay;
+        if (delay > 0f)
+        {
+            float elapsed = 0f;
+            while (elapsed < delay)
+            {
+                if (IsPlayerTimeHoldActive())
+                {
+                    yield return null;
+                    continue;
+                }
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+        }
+
+        FireProjectileForced(shootDir, preserveVerticalLocal);
+    }
+
+    /// <summary>공격 FX 스케줄. data.attackFX 사용.</summary>
+    private void ScheduleAttackFXFromData(WeaponDataSO weaponData)
+    {
+        if (weaponData == null || weaponData.attackFX == null || weaponData.attackFX.Count == 0) return;
+        AttackFXEntry.ScheduleAttackFX(this, weaponData.attackFX, ResolveAttackFXRoot, IsPlayerTimeHoldActive);
+    }
+
+    /// <summary>플레이어 무기 기준 AttackFX 항목 -> Transform. Custom 경로 비어 있으면 캐릭터 루트.</summary>
+    public Transform ResolveAttackFXRoot(AttackFXEntry entry)
+    {
+        if (entry == null) return GetCharacterRootTransform();
+
+        Transform GetCharacterRootTransform() => transform.root != null ? transform.root : transform;
+
+        switch (entry.attachRoot)
+        {
+            case AttackFXAttachRoot.AttackerRoot:
+                return GetCharacterRootTransform();
+
+            case AttackFXAttachRoot.FirePoint:
+                return projectileSpawnPoint != null ? projectileSpawnPoint : GetCharacterRootTransform();
+
+            case AttackFXAttachRoot.Custom:
+                {
+                    string path = NormalizePath(entry.attachPathOrName);
+                    if (string.IsNullOrEmpty(path))
+                        return GetCharacterRootTransform();
+                    var found = FindByNameOrPath(transform.root, path);
+                    return found != null ? found : GetCharacterRootTransform();
+                }
+
+            default:
+                return GetCharacterRootTransform();
+        }
     }
 
     private IEnumerator DelayedHitbox(bool useSecond)

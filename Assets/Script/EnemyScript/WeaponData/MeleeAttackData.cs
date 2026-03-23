@@ -25,6 +25,10 @@ public class MeleeAttackData : ScriptableObject
     public float hitboxSpawnDelay = 0f;
     public float hitBoxLifetime = 0.2f;
 
+    [Header("공격 FX")]
+    [Tooltip("공격 시 스폰할 FX 목록. attachRoot, prefab, startDelay 지정.")]
+    public List<AttackFXEntry> attackFX = new List<AttackFXEntry>();
+
     // New: whether spawned hitbox should be attached to the enemy (local) or left in world space
     [Header("히트박스 스폰 옵션")]
     [Tooltip("히트박스를 적의 자식으로 붙일지 여부. true이면 적의 자식으로 붙고, false이면 월드 고정으로 스폰됩니다.")]

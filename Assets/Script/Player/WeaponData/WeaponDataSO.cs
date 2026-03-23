@@ -126,10 +126,6 @@ public class WeaponDataSO : ScriptableObject
 
     // ---------------- 완전 이관: Spawn points & prefabs ----------------
     [Header("Attack Spawn Points (완전 이관)")]
-    [Tooltip("근접 히트박스 스폰 포인트(1). 비워두면 플레이어 루트에서 'Root_dummy'를 자동 사용.\n" +
-             "값을 넣으면 플레이어 루트 기준으로 해당 이름/경로를 찾아 사용합니다.")]
-    public string meleeSpawnPointPathOrName = "";
-
     [Tooltip("원거리 스폰 포인트(1). 비워두면 무기(프리팹) 내부에서 'Fire_Point'를 자동 사용.\n" +
              "값을 넣으면 무기(프리팹) 기준으로 해당 이름/경로를 찾아 사용합니다.")]
     public string projectileSpawnPointPathOrName = "";
@@ -151,19 +147,20 @@ public class WeaponDataSO : ScriptableObject
     [Tooltip("피격 시 타겟 표면에 스폰할 이펙트 프리팹. 비어있으면 이펙트 없음. ClosestPoint 기준 위치에 생성됨.")]
     public GameObject hitEffectPrefab;
 
+    [Header("공격 FX (Attack Prefabs 아래)")]
+    [Tooltip("공격 시 스폰할 FX 목록. attachRoot, prefab, startDelay 지정.")]
+    public List<AttackFXEntry> attackFX = new List<AttackFXEntry>();
+
     // ---------------- Dual Wield ----------------
     [Header("Dual Wield (양손 옵션)")]
     [Tooltip("true면 1회 공격에서 스폰을 최대 2번(1번/2번) ���도합니다.\n" +
-             "2번 스폰은 2번째 스폰포인트가 입력된 경우에만 나갑니다.")]
+             "근접은 항상 'Root_dummy' 기준, 원거리는 projectileSpawnPoint2 사용.")]
     public bool dualWield = false;
 
     [Tooltip("2번째 스폰 딜레이(초). 0이면 거의 동시에 나갑니다.")]
     public float hitboxSpawnDelay2 = 0f;
 
     [Header("Dual Wield - Second Spawn Points")]
-    [Tooltip("근접 스폰 포인트(2). 비워두면 2번째 근접 스폰은 안 나갑니다. (플레이어 루트 기준 이름/경로)")]
-    public string meleeSpawnPoint2PathOrName = "";
-
     [Tooltip("원거리 스폰 포인트(2). 비워두면 2번째 원거리 스폰은 안 나갑니다. (무기 내부 기준 이름/경로)")]
     public string projectileSpawnPoint2PathOrName = "";
 

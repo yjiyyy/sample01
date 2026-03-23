@@ -320,6 +320,45 @@ public class Enemy : MonoBehaviour
     {
         if (CurrentState == EnemyState.Dead) return;
 
+        float stateHold = ResolveTargetStateHold(weapon) * Mathf.Max(0f, impactScale);
+        float animHold = ResolveTargetAnimationHold(weapon) * Mathf.Max(0f, impactScale);
+        float holdDuration = Mathf.Max(stateHold, animHold);
+
+        if (holdDuration > 0f)
+        {
+            StartCoroutine(DieAfterHoldRoutine(hitDir, weapon, impactScale, stateHold, animHold, holdDuration));
+            return;
+        }
+
+        DoActualDeath(hitDir, weapon, impactScale);
+    }
+
+    private static float ResolveTargetStateHold(WeaponDataSO weapon)
+    {
+        if (weapon == null) return 0f;
+        if (weapon.targetHoldDuration > 0f) return weapon.targetHoldDuration;
+        return weapon.targetStateHoldDuration;
+    }
+
+    private static float ResolveTargetAnimationHold(WeaponDataSO weapon)
+    {
+        if (weapon == null) return 0f;
+        if (weapon.targetHoldDuration > 0f) return weapon.targetHoldDuration;
+        return weapon.targetAnimationHoldDuration;
+    }
+
+    private IEnumerator DieAfterHoldRoutine(Vector3 hitDir, WeaponDataSO weapon, float impactScale, float stateHold, float animHold, float holdDuration)
+    {
+        if (animHold > 0f) animCtrl?.StartAnimationHold(animHold);
+        if (stateHold > 0f) StartStateHold(stateHold);
+
+        yield return new WaitForSeconds(holdDuration);
+
+        DoActualDeath(hitDir, weapon, impactScale);
+    }
+
+    private void DoActualDeath(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
+    {
         var mode = weapon != null ? weapon.deathMode : DeathMode.Animation;
 
         if (mode == DeathMode.Animation)

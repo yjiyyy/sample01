@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -185,6 +186,71 @@ public partial class EnemyAttackController
 
         Log("MELEE HITBOX spawned");
     }
+
+    /// <summary>몬스터 기준 AttackFX 항목 -> Transform. Custom 경로 비어 있으면 캐릭터 루트.</summary>
+    private Transform ResolveEnemyAttackFXEntry(AttackFXEntry entry)
+    {
+        if (transform == null) return null;
+        if (entry == null) return transform;
+
+        switch (entry.attachRoot)
+        {
+            case AttackFXAttachRoot.AttackerRoot:
+                return transform;
+
+            case AttackFXAttachRoot.FirePoint:
+                {
+                    var fp = FindDeepChild(transform, "Fire_Point");
+                    return fp != null ? fp : transform;
+                }
+
+            case AttackFXAttachRoot.Custom:
+                {
+                    string path = NormalizeAttackFxPath(entry.attachPathOrName);
+                    if (string.IsNullOrEmpty(path))
+                        return transform;
+                    var found = FindByNameOrPathForAttackFx(transform, path);
+                    return found != null ? found : transform;
+                }
+
+            default:
+                return transform;
+        }
+    }
+
+    private static string NormalizeAttackFxPath(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return s;
+        return s.Replace("\\", "/").Trim();
+    }
+
+    private static Transform FindByNameOrPathForAttackFx(Transform parent, string pathOrName)
+    {
+        if (parent == null || string.IsNullOrEmpty(pathOrName)) return null;
+
+        if (pathOrName.Contains("/"))
+        {
+            var byPath = parent.Find(pathOrName);
+            if (byPath != null) return byPath;
+
+            string lastName = pathOrName.Substring(pathOrName.LastIndexOf('/') + 1);
+            return FindDeepChild(parent, lastName);
+        }
+
+        return FindDeepChild(parent, pathOrName);
+    }
+
+    private static Transform FindDeepChild(Transform parent, string name)
+    {
+        if (parent == null || string.IsNullOrEmpty(name)) return null;
+        if (parent.name == name) return parent;
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            var t = FindDeepChild(parent.GetChild(i), name);
+            if (t != null) return t;
+        }
+        return null;
+    }
     #endregion
 
     #region Melee
@@ -215,6 +281,13 @@ public partial class EnemyAttackController
 
         currentAttack = data;
         currentAttackIndex = index;
+
+        // 공격 FX 스케줄
+        if (data.attackFX != null && data.attackFX.Count > 0)
+        {
+            bool IsHold() => enemy != null && enemy.IsStateHoldActive;
+            AttackFXEntry.ScheduleAttackFX(this, data.attackFX, ResolveEnemyAttackFXEntry, IsHold);
+        }
 
         meleeRequestedDuration = data.attackTime > 0f ? data.attackTime : 0.8f;
         meleeClipLength = GetMeleeClipLength(data);

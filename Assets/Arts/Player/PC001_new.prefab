@@ -57,6 +57,7 @@ GameObject:
   - component: {fileID: 2487375954420778682}
   - component: {fileID: 3563181287857945690}
   - component: {fileID: 8639734067044390176}
+  - component: {fileID: 7085716935313712670}
   m_Layer: 6
   m_Name: PC001_new
   m_TagString: Player
@@ -396,6 +397,21 @@ MonoBehaviour:
   initialSlots:
   - {fileID: 11400000, guid: 36a751f92f474ec4cbf2bf6ea6df3a42, type: 2}
   - {fileID: 0}
+--- !u!114 &7085716935313712670
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2035022492551130508}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be31a6d8b0de95549911b4f98d49ba6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pickupMagnetRadius: 3
+  money: 0
+  jam: 0
 --- !u!1 &2445362061317164732
 GameObject:
   m_ObjectHideFlags: 0

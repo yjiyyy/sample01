@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -38,6 +39,11 @@ public class EnemyHealth : MonoBehaviour
     // shield break state
     private bool isShieldBreak = false;
     private Coroutine shieldRechargeRoutine;
+
+    /// <summary>HP가 0이 되어 Die가 확정될 때 1회 호출 (enemy.Die 직전).</summary>
+    public event Action OnDeath;
+
+    private bool deathInvoked;
 
     // Public read-only property to indicate super-armor state: shield > 0 => super-armor
     public bool HasSuperArmor => useShield && currentShield > 0f;
@@ -156,6 +162,11 @@ public class EnemyHealth : MonoBehaviour
 
     private void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
+        if (deathInvoked) return;
+        deathInvoked = true;
+
+        OnDeath?.Invoke();
+
         if (enemy != null)
             enemy.Die(hitDir, weapon, impactScale);
     }

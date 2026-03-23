@@ -951,7 +951,7 @@ public class PlayerWeaponController : MonoBehaviour
                             : baseDir;
 
                         animationController?.PlayAttack(ar, true);
-                        wb.FireProjectileForced(shootDir, ar.spread3D);
+                        wb.ARAttackHit(shootDir, ar.spread3D);
 
                         lastAttackTime = Time.time;
 

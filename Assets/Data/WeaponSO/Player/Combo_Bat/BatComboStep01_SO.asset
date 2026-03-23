@@ -20,6 +20,7 @@ MonoBehaviour:
   hitBoxLifetime: 0.15
   hitBoxPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 4021103657954561961, guid: 967fe2f9ebe788e4d845ea91c92ffaea, type: 3}
+  attackFX: []
   trailEmitStartDelay: 0.1
   trailEmitDuration: 0.2
   knockbackDuration: 0.5
@@ -41,8 +42,8 @@ MonoBehaviour:
   sliceTargets: 
   sliceImpulse: -1
   recoilStartDelay: 0
-  recoilPower: 0
-  recoilDuration: 0
+  recoilPower: -0.5
+  recoilDuration: 0.1
   allowDuplicateHit: 0
   duplicateInterval: 0.2
   stepDuration: 1

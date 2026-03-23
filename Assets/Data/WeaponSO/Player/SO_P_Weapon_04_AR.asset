@@ -18,18 +18,25 @@ MonoBehaviour:
   category: 0
   weaponPrefab: {fileID: 2514819526148707759, guid: c0f820a178d62374b8956a70ad8f2e54, type: 3}
   overrideController: {fileID: 22100000, guid: 2b3ac060d9ca91c46be6af90e3b9cf71, type: 2}
-  cooldown: 0.2
+  cooldown: 0.5
   damage: 1
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.1
+  trailEmitStartDelay: 0
+  trailEmitDuration: 0
   knockbackDuration: 0.2
   knockbackPower: 5
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 0
   usePushInsteadOfKnockback: 1
-  animationHoldDuration: 0.1
+  targetHoldDuration: 0
+  attackerHoldDuration: 0
+  targetStateHoldDuration: 0
+  targetAnimationHoldDuration: 0
+  attackerStateHoldDuration: 0
+  attackerAnimationHoldDuration: 0
   deathMode: 0
   ragdollImpulse: 5
   ragdollUpImpulse: 0
@@ -39,18 +46,25 @@ MonoBehaviour:
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}
   recoilStartDelay: 0
-  recoilPower: 0.1
-  recoilDuration: 0.1
+  recoilPower: 0
+  recoilDuration: 0
   socketNames:
   - R_Hand_Weapon
-  meleeSpawnPointPathOrName: 
   projectileSpawnPointPathOrName: 
+  meleeHitboxMode: 0
   meleeHitboxPrefab: {fileID: 0}
+  _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
   shotgunSectorPrefab: {fileID: 0}
+  hitEffectPrefab: {fileID: 0}
+  attackFX:
+  - attachRoot: 1
+    attachPathOrName: 
+    prefab: {fileID: 8078720523478869859, guid: 4f5fc4bbd01b03a4499a6ed77f175fc7, type: 3}
+    startDelay: 0.1
+    parentToAttachPoint: 0
   dualWield: 0
   hitboxSpawnDelay2: 0
-  meleeSpawnPoint2PathOrName: 
   projectileSpawnPoint2PathOrName: 
   lockRotationDuringFiring: 1
   allowMoveWhileFiring: 1

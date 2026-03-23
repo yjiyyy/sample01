@@ -197,10 +197,18 @@ public class MeleeComboBehavior : MonoBehaviour
             yield break;
         }
 
-        // ??? ???? ????? (???? SO?? ???, trailEmitDuration>0?? ????)
-        var wbTrail = GetComponent<WeaponBehavior>();
-        if (wbTrail != null && step.trailEmitDuration > 0f)
-            wbTrail.StartTrailEmitWindow(step.trailEmitStartDelay, step.trailEmitDuration);
+        // 트레일 기록 (스텝 SO 값 사용, trailEmitDuration>0일 때만)
+        var wb = GetComponent<WeaponBehavior>();
+        if (wb != null && step.trailEmitDuration > 0f)
+            wb.StartTrailEmitWindow(step.trailEmitStartDelay, step.trailEmitDuration);
+
+        // 공격 FX 스케줄 (스텝 attackFX 비어있으면 무기 attackFX 사용)
+        var fxList = (step.attackFX != null && step.attackFX.Count > 0) ? step.attackFX : (getWeaponData?.Invoke()?.attackFX);
+        if (wb != null && fxList != null && fxList.Count > 0)
+        {
+            bool IsHold() => ownerController != null && ownerController.IsTimeHoldActive;
+            AttackFXEntry.ScheduleAttackFX(wb, fxList, wb.ResolveAttackFXRoot, IsHold);
+        }
 
         // Play animation
         // ????: ???? animClip?? ?????? ???? ??????? ????? ???????. (???? ????? ??? ????)
@@ -295,7 +303,6 @@ public class MeleeComboBehavior : MonoBehaviour
                 Debug.Log("[Combo] allowDuplicateHit?? ???? ?????? ??????? ??????? ??????.");
 
             float colliderLife = Mathf.Max(0.01f, step.hitBoxLifetime > 0f ? step.hitBoxLifetime : weapon.hitBoxLifetime);
-            var wb = GetComponent<WeaponBehavior>();
             if (wb != null)
             {
                 wb.ActivateMeleeColliderHitboxForCombo(proxy, colliderLife);

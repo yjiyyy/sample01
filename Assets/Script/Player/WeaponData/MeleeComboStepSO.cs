@@ -35,6 +35,10 @@ public class MeleeComboStepSO : ScriptableObject
     [Tooltip("적 피격 시 표면에 스폰할 이펙트. 비어있으면 무기 SO의 hitEffectPrefab 사용.")]
     public GameObject hitEffectPrefab;
 
+    [Header("공격 FX")]
+    [Tooltip("이 스텝에서 스폰할 FX 목록. 비어있으면 무기 SO의 attackFX 사용.")]
+    public List<AttackFXEntry> attackFX = new List<AttackFXEntry>();
+
     [Header("무기 트레일 (콤보 스텝)")]
     [Tooltip("스텝 시작 후 트레일 기록 시작까지 지연(초). trailEmitDuration>0일 때만 사용.")]
     public float trailEmitStartDelay = 0f;

@@ -19,7 +19,7 @@ MonoBehaviour:
   weaponPrefab: {fileID: 1412765267159074636, guid: da5351bfe81789e4eb5a3e1466486ee0, type: 3}
   overrideController: {fileID: 22100000, guid: fed68105d96fde44c80e322c00b03b08, type: 2}
   cooldown: 1
-  damage: 10
+  damage: 50
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.15
@@ -44,14 +44,13 @@ MonoBehaviour:
   sliceTargets: 0000000001000000020000000400000003000000
   sliceImpulse: 10
   chargeSlot: {fileID: 0}
-  comboSlot: {fileID: 11400000, guid: 30ca78fbe55880a4e918d5b431cb93f1, type: 2}
+  comboSlot: {fileID: 0}
   recoilStartDelay: 0
   recoilPower: 0
   recoilDuration: 0
   socketNames:
   - R_Hand_Weapon
   - Bip001 L Hand
-  meleeSpawnPointPathOrName: 
   projectileSpawnPointPathOrName: 
   meleeHitboxMode: 1
   meleeHitboxPrefab: {fileID: 0}
@@ -59,7 +58,7 @@ MonoBehaviour:
   projectilePrefab: {fileID: 0}
   shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
+  attackFX: []
   dualWield: 0
   hitboxSpawnDelay2: 0
-  meleeSpawnPoint2PathOrName: 
   projectileSpawnPoint2PathOrName: 
