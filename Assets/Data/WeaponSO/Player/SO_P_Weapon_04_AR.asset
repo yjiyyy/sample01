@@ -57,12 +57,14 @@ MonoBehaviour:
   projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
   shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 0}
-  attackFX:
-  - attachRoot: 1
-    attachPathOrName: 
-    prefab: {fileID: 8078720523478869859, guid: 4f5fc4bbd01b03a4499a6ed77f175fc7, type: 3}
-    startDelay: 0.1
-    parentToAttachPoint: 0
+  attackFXPhases:
+  - phase: 0
+    entries:
+    - attachRoot: 1
+      attachPathOrName: 
+      prefab: {fileID: 8078720523478869859, guid: 4f5fc4bbd01b03a4499a6ed77f175fc7, type: 3}
+      startDelay: 0
+      parentToAttachPoint: 0
   dualWield: 0
   hitboxSpawnDelay2: 0
   projectileSpawnPoint2PathOrName: 

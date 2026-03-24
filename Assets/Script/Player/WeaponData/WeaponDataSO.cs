@@ -148,8 +148,8 @@ public class WeaponDataSO : ScriptableObject
     public GameObject hitEffectPrefab;
 
     [Header("공격 FX (Attack Prefabs 아래)")]
-    [Tooltip("공격 시 스폰할 FX 목록. attachRoot, prefab, startDelay 지정.")]
-    public List<AttackFXEntry> attackFX = new List<AttackFXEntry>();
+    [Tooltip("페이즈별 공격 FX 목록. 플레이어 단일 공격은 Attack 페이즈만 사용하면 됩니다.")]
+    public List<AttackFXPhaseSet> attackFXPhases = new List<AttackFXPhaseSet>();
 
     // ---------------- Dual Wield ----------------
     [Header("Dual Wield (양손 옵션)")]

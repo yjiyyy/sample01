@@ -44,7 +44,7 @@ MonoBehaviour:
   sliceTargets: 0000000001000000020000000400000003000000
   sliceImpulse: 10
   chargeSlot: {fileID: 0}
-  comboSlot: {fileID: 0}
+  comboSlot: {fileID: 11400000, guid: 30ca78fbe55880a4e918d5b431cb93f1, type: 2}
   recoilStartDelay: 0
   recoilPower: 0
   recoilDuration: 0
@@ -58,7 +58,7 @@ MonoBehaviour:
   projectilePrefab: {fileID: 0}
   shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
-  attackFX: []
+  attackFXPhases: []
   dualWield: 0
   hitboxSpawnDelay2: 0
   projectileSpawnPoint2PathOrName: 

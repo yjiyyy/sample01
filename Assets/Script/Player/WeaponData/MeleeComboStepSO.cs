@@ -36,8 +36,8 @@ public class MeleeComboStepSO : ScriptableObject
     public GameObject hitEffectPrefab;
 
     [Header("공격 FX")]
-    [Tooltip("이 스텝에서 스폰할 FX 목록. 비어있으면 무기 SO의 attackFX 사용.")]
-    public List<AttackFXEntry> attackFX = new List<AttackFXEntry>();
+    [Tooltip("이 스텝의 페이즈별 공격 FX. 콤보 단타는 Attack 페이즈를 주로 사용.")]
+    public List<AttackFXPhaseSet> attackFXPhases = new List<AttackFXPhaseSet>();
 
     [Header("무기 트레일 (콤보 스텝)")]
     [Tooltip("스텝 시작 후 트레일 기록 시작까지 지연(초). trailEmitDuration>0일 때만 사용.")]

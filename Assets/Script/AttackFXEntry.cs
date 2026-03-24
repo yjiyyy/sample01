@@ -65,10 +65,129 @@ public class AttackFXEntry
         if (root != null)
         {
             if (entry.parentToAttachPoint)
-                UnityEngine.Object.Instantiate(entry.prefab, root.position, root.rotation, root);
+            {
+                var inst = UnityEngine.Object.Instantiate(entry.prefab, root.position, root.rotation, root);
+                StartAutoCleanupIfNeeded(inst);
+            }
             else
-                UnityEngine.Object.Instantiate(entry.prefab, root.position, root.rotation);
+            {
+                var inst = UnityEngine.Object.Instantiate(entry.prefab, root.position, root.rotation);
+                StartAutoCleanupIfNeeded(inst);
+            }
         }
+    }
+
+    private static void StartAutoCleanupIfNeeded(GameObject inst)
+    {
+        if (inst == null) return;
+
+        var runner = inst.GetComponent<AttackFXAutoCleanupRunner>();
+        if (runner == null)
+            runner = inst.AddComponent<AttackFXAutoCleanupRunner>();
+        runner.Begin();
+    }
+}
+
+[Serializable]
+public class AttackFXPhaseSet
+{
+    [Tooltip("이 FX 묶음이 발동할 공격 페이즈")]
+    public AttackFXPhase phase = AttackFXPhase.Attack;
+
+    [Tooltip("해당 페이즈에서 실행할 FX 목록")]
+    public List<AttackFXEntry> entries = new List<AttackFXEntry>();
+}
+
+public enum AttackFXPhase
+{
+    Attack,
+    Prepare,
+    Windup,
+    Active,
+    Recovery,
+    Finish,
+    ChargeStart,
+    ChargeLoop,
+    ChargeRelease,
+    ReloadStart,
+    ReloadLoop,
+    ReloadEnd,
+    Custom1,
+    Custom2,
+}
+
+public static class AttackFXPhaseResolver
+{
+    /// <summary>
+    /// phase 목록에서 해당 페이즈의 FX를 찾습니다.
+    /// </summary>
+    public static IReadOnlyList<AttackFXEntry> Resolve(
+        List<AttackFXPhaseSet> phases,
+        AttackFXPhase phase)
+    {
+        if (phases != null)
+        {
+            for (int i = 0; i < phases.Count; i++)
+            {
+                var set = phases[i];
+                if (set == null) continue;
+                if (set.phase != phase) continue;
+                if (set.entries != null && set.entries.Count > 0)
+                    return set.entries;
+            }
+        }
+        return null;
+    }
+}
+
+/// <summary>
+/// 스폰된 FX 인스턴스의 파티클 재생이 끝나면 자동 삭제.
+/// 루프 파티클은 삭제하지 않으며, 외부 수명/삭제 정책을 따른다.
+/// </summary>
+public class AttackFXAutoCleanupRunner : MonoBehaviour
+{
+    private bool started;
+
+    public void Begin()
+    {
+        if (started) return;
+        started = true;
+        StartCoroutine(CleanupRoutine());
+    }
+
+    private IEnumerator CleanupRoutine()
+    {
+        var systems = GetComponentsInChildren<ParticleSystem>(true);
+        if (systems == null || systems.Length == 0)
+            yield break;
+
+        // 루프 파티클이 있으면 자동 삭제하지 않음
+        for (int i = 0; i < systems.Length; i++)
+        {
+            if (systems[i] != null && systems[i].main.loop)
+                yield break;
+        }
+
+        while (true)
+        {
+            bool anyAlive = false;
+            for (int i = 0; i < systems.Length; i++)
+            {
+                var ps = systems[i];
+                if (ps == null) continue;
+                if (ps.IsAlive(true))
+                {
+                    anyAlive = true;
+                    break;
+                }
+            }
+
+            if (!anyAlive) break;
+            yield return null;
+        }
+
+        if (this != null && gameObject != null)
+            Destroy(gameObject);
     }
 }
 

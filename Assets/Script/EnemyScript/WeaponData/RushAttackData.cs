@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -66,6 +67,10 @@ public class RushAttackData : ScriptableObject
 
     [Tooltip("??????(????) ???????? ????? ???(?????? ????)")]
     public AnimationClip finishClip;
+
+    [Header("Attack FX (Phase)")]
+    [Tooltip("러시 공격 페이즈별 FX. Prepare/Attack/Finish 페이즈를 주로 사용합니다.")]
+    public List<AttackFXPhaseSet> attackFXPhases = new List<AttackFXPhaseSet>();
 
     private void OnValidate()
     {

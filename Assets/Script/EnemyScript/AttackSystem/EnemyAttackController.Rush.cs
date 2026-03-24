@@ -32,6 +32,8 @@ public partial class EnemyAttackController
 
     private IEnumerator RushPrepareRoutine(RushAttackData data)
     {
+        ScheduleRushAttackFX(data, AttackFXPhase.Prepare);
+
         if (enemy.animator)
         {
             // �Ķ���Ͱ� ��� Play������ �����ϵ���
@@ -86,6 +88,7 @@ public partial class EnemyAttackController
     private IEnumerator RushAttackRoutine(RushAttackData data)
     {
         IsRushing = true;
+        ScheduleRushAttackFX(data, AttackFXPhase.Attack);
 
         if (enemy.animator)
         {
@@ -167,6 +170,8 @@ public partial class EnemyAttackController
 
     private IEnumerator RushFinishRoutine(RushAttackData data, Vector3 dir)
     {
+        ScheduleRushAttackFX(data, AttackFXPhase.Finish);
+
         // ������ Ŭ��(����) ���
         if (enemy.animator && data.finishClip != null)
         {
@@ -304,6 +309,15 @@ public partial class EnemyAttackController
         if (spawnedRushHitbox != null)
             Destroy(spawnedRushHitbox);
         spawnedRushHitbox = null;
+    }
+
+    private void ScheduleRushAttackFX(RushAttackData data, AttackFXPhase phase)
+    {
+        if (data == null) return;
+        var fxList = AttackFXPhaseResolver.Resolve(data.attackFXPhases, phase);
+        if (fxList == null || fxList.Count == 0) return;
+        bool IsHold() => enemy != null && enemy.IsStateHoldActive;
+        AttackFXEntry.ScheduleAttackFX(this, fxList, ResolveEnemyAttackFXEntry, IsHold);
     }
 
     public void StopRushExternally(bool noCooldown)

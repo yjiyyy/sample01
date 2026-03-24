@@ -202,8 +202,11 @@ public class MeleeComboBehavior : MonoBehaviour
         if (wb != null && step.trailEmitDuration > 0f)
             wb.StartTrailEmitWindow(step.trailEmitStartDelay, step.trailEmitDuration);
 
-        // 공격 FX 스케줄 (스텝 attackFX 비어있으면 무기 attackFX 사용)
-        var fxList = (step.attackFX != null && step.attackFX.Count > 0) ? step.attackFX : (getWeaponData?.Invoke()?.attackFX);
+        // 공격 FX 스케줄 (스텝 phase 우선 -> 무기 phase)
+        var weaponForFx = getWeaponData?.Invoke();
+        var fxList = AttackFXPhaseResolver.Resolve(step.attackFXPhases, AttackFXPhase.Attack);
+        if (fxList == null || fxList.Count == 0)
+            fxList = AttackFXPhaseResolver.Resolve(weaponForFx != null ? weaponForFx.attackFXPhases : null, AttackFXPhase.Attack);
         if (wb != null && fxList != null && fxList.Count > 0)
         {
             bool IsHold() => ownerController != null && ownerController.IsTimeHoldActive;

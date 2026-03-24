@@ -329,7 +329,7 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        ScheduleAttackFXFromData(data);
+        ScheduleAttackFXFromData(data, AttackFXPhase.Attack);
 
         StartCoroutine(DelayedHitbox(useSecond: false));
 
@@ -355,7 +355,7 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        ScheduleAttackFXFromData(data);
+        ScheduleAttackFXFromData(data, AttackFXPhase.Attack);
         StartCoroutine(DelayedARProjectileFire(shootDir, preserveVerticalLocal));
     }
 
@@ -383,11 +383,13 @@ public class WeaponBehavior : MonoBehaviour
         FireProjectileForced(shootDir, preserveVerticalLocal);
     }
 
-    /// <summary>공격 FX 스케줄. data.attackFX 사용.</summary>
-    private void ScheduleAttackFXFromData(WeaponDataSO weaponData)
+    /// <summary>공격 FX 스케줄. phase 목록 사용.</summary>
+    private void ScheduleAttackFXFromData(WeaponDataSO weaponData, AttackFXPhase phase)
     {
-        if (weaponData == null || weaponData.attackFX == null || weaponData.attackFX.Count == 0) return;
-        AttackFXEntry.ScheduleAttackFX(this, weaponData.attackFX, ResolveAttackFXRoot, IsPlayerTimeHoldActive);
+        if (weaponData == null) return;
+        var fxList = AttackFXPhaseResolver.Resolve(weaponData.attackFXPhases, phase);
+        if (fxList == null || fxList.Count == 0) return;
+        AttackFXEntry.ScheduleAttackFX(this, fxList, ResolveAttackFXRoot, IsPlayerTimeHoldActive);
     }
 
     /// <summary>플레이어 무기 기준 AttackFX 항목 -> Transform. Custom 경로 비어 있으면 캐릭터 루트.</summary>

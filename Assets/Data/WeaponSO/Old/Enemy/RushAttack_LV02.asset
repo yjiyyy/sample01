@@ -26,6 +26,9 @@ MonoBehaviour:
   knockbackPower: 5
   knockbackDuration: 0.3
   stunDuration: 1
+  usePushInsteadOfKnockback: 0
+  targetHoldDuration: 0
+  attackerHoldDuration: 0
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   hitBoxLifetime: 5
   allowDuplicateHit: 1
@@ -33,3 +36,6 @@ MonoBehaviour:
   prepareClip: {fileID: 1827226128182048838, guid: 59c1d881e1ecc404c9c84dd33426d3e0, type: 3}
   attackClip: {fileID: 1827226128182048838, guid: 0b03ce1535eeda149ae4b809a52ba031, type: 3}
   finishClip: {fileID: -2341748306902204784, guid: d70dd3821b73cad4daddc9ac206e2bdb, type: 3}
+  attackFXPhases:
+  - phase: 0
+    entries: []

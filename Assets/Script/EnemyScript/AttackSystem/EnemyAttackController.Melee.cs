@@ -282,11 +282,12 @@ public partial class EnemyAttackController
         currentAttack = data;
         currentAttackIndex = index;
 
-        // 공격 FX 스케줄
-        if (data.attackFX != null && data.attackFX.Count > 0)
+        // 공격 FX 스케줄 (Attack phase)
+        var fxList = AttackFXPhaseResolver.Resolve(data.attackFXPhases, AttackFXPhase.Attack);
+        if (fxList != null && fxList.Count > 0)
         {
             bool IsHold() => enemy != null && enemy.IsStateHoldActive;
-            AttackFXEntry.ScheduleAttackFX(this, data.attackFX, ResolveEnemyAttackFXEntry, IsHold);
+            AttackFXEntry.ScheduleAttackFX(this, fxList, ResolveEnemyAttackFXEntry, IsHold);
         }
 
         meleeRequestedDuration = data.attackTime > 0f ? data.attackTime : 0.8f;
