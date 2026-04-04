@@ -564,7 +564,17 @@ public class PlayerAnimationController : MonoBehaviour
     {
         if (animator == null) return;
 
-        float randomIndex = UnityEngine.Random.Range(0, 3);
+        int variantCount = weaponData != null ? weaponData.attackAnimVariantCount : 3;
+        if (variantCount < 1) variantCount = 3;
+        float randomIndex = UnityEngine.Random.Range(0, variantCount);
+
+        if (weaponBehavior != null)
+        {
+            if (weaponData != null)
+                weaponBehavior.SetPendingAttackVariantHandMode(weaponData.GetAttackVariantHandMode((int)randomIndex));
+            else
+                weaponBehavior.ClearPendingAttackVariantHandMode();
+        }
 
         if (upperBodyOnly)
         {

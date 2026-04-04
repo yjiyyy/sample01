@@ -40,6 +40,17 @@ public enum MeleeHitboxMode
     WeaponCollider
 }
 
+/// <summary>
+/// 공격 블렌드 슬롯(AttackIndex)별 히트/발사에 사용할 손.
+/// 듀얼이 아닐 때 OffOnly는 메인 손으로 폴백합니다.
+/// </summary>
+public enum AttackVariantHandMode
+{
+    MainOnly,
+    OffOnly,
+    Both
+}
+
 [CreateAssetMenu(menuName = "Weapon/WeaponDataSO")]
 public class WeaponDataSO : ScriptableObject
 {
@@ -56,6 +67,17 @@ public class WeaponDataSO : ScriptableObject
 
     [Header("애니메이션 세트 (Animator Override Controller 방식)")]
     public AnimatorOverrideController overrideController;
+
+    [Tooltip("공격 블렌드 트리(Animator 파라미터 AttackIndex)에서 랜덤으로 쓸 모션 개수.\n" +
+             "코드에서 Random.Range(0, 이 값)과 같습니다. 맨손 3·나이프 4처럼 무기마다 설정.\n" +
+             "1 미만이면 3으로 처리합니다.")]
+    [Min(1)]
+    public int attackAnimVariantCount = 3;
+
+    [Tooltip("AttackIndex 랜덤 슬롯(0,1,…)마다 히트/발사에 쓸 손.\n" +
+             "attackAnimVariantCount와 길이를 맞추는 것을 권장.\n" +
+             "비어있거나 인덱스가 범위 밖이면: 듀얼이면 Both, 아니면 MainOnly.")]
+    public List<AttackVariantHandMode> attackVariantHandModes = new List<AttackVariantHandMode>();
 
     [Header("전투 관련")]
     public float cooldown = 1.0f;
@@ -157,12 +179,26 @@ public class WeaponDataSO : ScriptableObject
              "근접은 항상 'Root_dummy' 기준, 원거리는 projectileSpawnPoint2 사용.")]
     public bool dualWield = false;
 
+    [Tooltip("듀얼일 때 왼손(서브)에 붙일 프리팹. 비우면 메인 weaponPrefab과 동일한 프리팹을 복제해 사용합니다.")]
+    public GameObject dualWeaponPrefab;
+
     [Tooltip("2번째 스폰 딜레이(초). 0이면 거의 동시에 나갑니다.")]
     public float hitboxSpawnDelay2 = 0f;
 
     [Header("Dual Wield - Second Spawn Points")]
     [Tooltip("원거리 스폰 포인트(2). 비워두면 2번째 원거리 스폰은 안 나갑니다. (무기 내부 기준 이름/경로)")]
     public string projectileSpawnPoint2PathOrName = "";
+
+    /// <summary>
+    /// 랜덤 공격 슬롯 인덱스에 대응하는 손 모드. 목록이 짧으면 듀얼=Both, 단일=MainOnly 기본값.
+    /// </summary>
+    public AttackVariantHandMode GetAttackVariantHandMode(int variantIndex)
+    {
+        if (variantIndex < 0) variantIndex = 0;
+        if (attackVariantHandModes != null && variantIndex < attackVariantHandModes.Count)
+            return attackVariantHandModes[variantIndex];
+        return dualWield ? AttackVariantHandMode.Both : AttackVariantHandMode.MainOnly;
+    }
 
     /// <summary>
     /// 무기 SO의 hitEffectPrefab을 hitPoint 위치에 스폰. 비어있으면 무시.

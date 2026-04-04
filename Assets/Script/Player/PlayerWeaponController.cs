@@ -55,6 +55,9 @@ public class PlayerWeaponController : MonoBehaviour
     private Coroutine attackRoutine;
     private Coroutine knockbackRoutine;
     private Coroutine arFireRoutine;
+    private Coroutine secondaryTrailEmitRoutine;
+
+    private static readonly int HashAttackIndex = Animator.StringToHash("AttackIndex");
 
     // Enemy hit 연출에서 "hold -> CC" 순서를 유지해야 할 때,
     // 다음 CC 상태 전환(Knockback/Stun)에서만 홀드 클리어를 1회 건너뛴다.
@@ -430,6 +433,7 @@ public class PlayerWeaponController : MonoBehaviour
             if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
             EndARFireState();
 
+            CancelAllWeaponTrailsImmediate();
             CancelRecoil();
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
@@ -502,10 +506,10 @@ public class PlayerWeaponController : MonoBehaviour
             ExecutePendingSwitchIfAnyImmediate();
         }
 
-        // 회피/넉백/스턴/사망 시 트레일 즉시 제거
+        // 회피/넉백/스턴/사망 시 트레일 즉시 제거 (메인 + 서브 코루틴)
         if (newState == PlayerState.Evade || newState == PlayerState.Knockback ||
             newState == PlayerState.Stun || newState == PlayerState.Dead)
-            equipComp.WeaponBehavior?.CancelTrailImmediate();
+            CancelAllWeaponTrailsImmediate();
 
         if (newState != PlayerState.Attack)
             CancelRecoil();
@@ -686,11 +690,117 @@ public class PlayerWeaponController : MonoBehaviour
         attackRoutine = StartCoroutine(AttackRoutine(data));
     }
 
+    private WeaponTrailController GetSecondaryWeaponTrailController()
+    {
+        return equipComp != null && equipComp.SecondaryWeapon != null
+            ? equipComp.SecondaryWeapon.GetComponentInChildren<WeaponTrailController>(true)
+            : null;
+    }
+
+    private void CancelAllWeaponTrailsImmediate()
+    {
+        equipComp?.WeaponBehavior?.CancelTrailImmediate();
+        if (secondaryTrailEmitRoutine != null)
+        {
+            StopCoroutine(secondaryTrailEmitRoutine);
+            secondaryTrailEmitRoutine = null;
+        }
+        GetSecondaryWeaponTrailController()?.CancelTrailImmediate();
+    }
+
+    private int ReadAttackIndexFromAnimator()
+    {
+        var anim = animationController != null ? animationController.GetAnimator() : null;
+        if (anim == null) return 0;
+        foreach (var p in anim.parameters)
+        {
+            if (p.nameHash == HashAttackIndex && p.type == AnimatorControllerParameterType.Float)
+                return Mathf.Max(0, Mathf.FloorToInt(anim.GetFloat(HashAttackIndex)));
+        }
+        return 0;
+    }
+
+    private void StartTrailEmitForAttackVariant(WeaponDataSO data)
+    {
+        if (data == null || data.trailEmitDuration <= 0f) return;
+
+        int idx = ReadAttackIndexFromAnimator();
+        var mode = data.GetAttackVariantHandMode(idx);
+        float sd = data.trailEmitStartDelay;
+        float ed = data.trailEmitDuration;
+
+        if (secondaryTrailEmitRoutine != null)
+        {
+            StopCoroutine(secondaryTrailEmitRoutine);
+            secondaryTrailEmitRoutine = null;
+        }
+
+        var secTrail = GetSecondaryWeaponTrailController();
+        var mainWb = equipComp?.WeaponBehavior;
+
+        switch (mode)
+        {
+            case AttackVariantHandMode.MainOnly:
+                mainWb?.StartTrailEmitWindow(sd, ed);
+                break;
+            case AttackVariantHandMode.OffOnly:
+                if (secTrail != null)
+                    secondaryTrailEmitRoutine = StartCoroutine(TrailEmitOnControllerRoutine(secTrail, sd, ed));
+                else
+                    mainWb?.StartTrailEmitWindow(sd, ed);
+                break;
+            case AttackVariantHandMode.Both:
+            default:
+                mainWb?.StartTrailEmitWindow(sd, ed);
+                if (secTrail != null)
+                    secondaryTrailEmitRoutine = StartCoroutine(TrailEmitOnControllerRoutine(secTrail, sd, ed));
+                break;
+        }
+    }
+
+    private IEnumerator TrailEmitOnControllerRoutine(WeaponTrailController tc, float startDelay, float emitDuration)
+    {
+        if (tc == null || emitDuration <= 0f)
+        {
+            secondaryTrailEmitRoutine = null;
+            yield break;
+        }
+
+        float waitStart = 0f;
+        while (waitStart < Mathf.Max(0f, startDelay))
+        {
+            if (IsTimeHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+            waitStart += Time.deltaTime;
+            yield return null;
+        }
+
+        tc.EnableTrail();
+
+        float emitted = 0f;
+        while (emitted < emitDuration)
+        {
+            if (IsTimeHoldActive)
+            {
+                yield return null;
+                continue;
+            }
+            emitted += Time.deltaTime;
+            yield return null;
+        }
+
+        tc.DisableTrail();
+        secondaryTrailEmitRoutine = null;
+    }
+
     private IEnumerator AttackRoutine(WeaponDataSO data)
     {
         ChangeState(PlayerState.Attack);
-        equipComp.WeaponBehavior?.StartTrailEmitFromWeaponData(data);
         animationController?.PlayAttack(data);
+        StartTrailEmitForAttackVariant(data);
         StartRecoilIfNeeded(data);
         equipComp.WeaponBehavior?.AttackHit();
 

@@ -35,6 +35,9 @@ public class WeaponBehavior : MonoBehaviour
 
     private bool initializedOnce = false;
 
+    /// <summary>PlayAttack에서 설정, AttackHit에서 소비. AR 등 AttackHit을 쓰지 않는 경로에서는 무시됨.</summary>
+    private AttackVariantHandMode? pendingAttackHandMode = null;
+
     private bool IsPlayerTimeHoldActive()
     {
         if (cachedPlayerCtrl == null)
@@ -69,6 +72,7 @@ public class WeaponBehavior : MonoBehaviour
             return;
 
         data = newData;
+        ClearPendingAttackVariantHandMode();
 
         ResolveSpawnPointsFromSO();
         EnsurePreviewLine();
@@ -321,6 +325,47 @@ public class WeaponBehavior : MonoBehaviour
         }
     }
 
+    public void SetPendingAttackVariantHandMode(AttackVariantHandMode mode) => pendingAttackHandMode = mode;
+
+    public void ClearPendingAttackVariantHandMode() => pendingAttackHandMode = null;
+
+    private AttackVariantHandMode ConsumePendingOrDefaultHandMode()
+    {
+        if (pendingAttackHandMode.HasValue)
+        {
+            var m = pendingAttackHandMode.Value;
+            pendingAttackHandMode = null;
+            return m;
+        }
+
+        return data != null && data.dualWield ? AttackVariantHandMode.Both : AttackVariantHandMode.MainOnly;
+    }
+
+    private void ScheduleDelayedHitboxesForHandMode(AttackVariantHandMode mode)
+    {
+        if (data == null) return;
+        bool dual = data.dualWield;
+
+        switch (mode)
+        {
+            case AttackVariantHandMode.MainOnly:
+                StartCoroutine(DelayedHitbox(false));
+                break;
+            case AttackVariantHandMode.OffOnly:
+                if (dual)
+                    StartCoroutine(DelayedHitbox(true));
+                else
+                    StartCoroutine(DelayedHitbox(false));
+                break;
+            case AttackVariantHandMode.Both:
+            default:
+                StartCoroutine(DelayedHitbox(false));
+                if (dual)
+                    StartCoroutine(DelayedHitbox(true));
+                break;
+        }
+    }
+
     public void AttackHit()
     {
         if (data == null)
@@ -331,10 +376,7 @@ public class WeaponBehavior : MonoBehaviour
 
         ScheduleAttackFXFromData(data, AttackFXPhase.Attack);
 
-        StartCoroutine(DelayedHitbox(useSecond: false));
-
-        if (data.dualWield)
-            StartCoroutine(DelayedHitbox(useSecond: true));
+        ScheduleDelayedHitboxesForHandMode(ConsumePendingOrDefaultHandMode());
     }
 
     /// <summary>
@@ -348,6 +390,8 @@ public class WeaponBehavior : MonoBehaviour
             Debug.LogWarning("⚠ WeaponDataSO가 비어 있습니다.");
             return;
         }
+
+        ClearPendingAttackVariantHandMode();
 
         if (!(data is WeaponDataSO_AR))
         {
@@ -488,9 +532,27 @@ public class WeaponBehavior : MonoBehaviour
         if (!data.UseWeaponCollider) return;
 
         float life = Mathf.Max(0.01f, lifetime);
-        UseWeaponCollider(useSecond: false, statsForHit, life);
-        if (data.dualWield)
-            UseWeaponCollider(useSecond: true, statsForHit, life);
+        bool dual = data.dualWield;
+        var mode = ConsumePendingOrDefaultHandMode();
+
+        switch (mode)
+        {
+            case AttackVariantHandMode.MainOnly:
+                UseWeaponCollider(false, statsForHit, life);
+                break;
+            case AttackVariantHandMode.OffOnly:
+                if (dual)
+                    UseWeaponCollider(true, statsForHit, life);
+                else
+                    UseWeaponCollider(false, statsForHit, life);
+                break;
+            case AttackVariantHandMode.Both:
+            default:
+                UseWeaponCollider(false, statsForHit, life);
+                if (dual)
+                    UseWeaponCollider(true, statsForHit, life);
+                break;
+        }
     }
 
     /// <param name="statsForHit">null이면 장착 무기 data 사용(일반 AttackHit 경로)</param>

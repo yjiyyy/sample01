@@ -18,11 +18,14 @@ MonoBehaviour:
   category: 0
   weaponPrefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
   overrideController: {fileID: 0}
+  attackAnimVariantCount: 4
   cooldown: 0.5
   damage: 20
   range: 2.5
   hitboxSpawnDelay: 0.13
   hitBoxLifetime: 0.1
+  trailEmitStartDelay: 0
+  trailEmitDuration: 0
   knockbackDuration: 0.3
   knockbackPower: 10
   jerkIntensity: 1
@@ -48,14 +51,14 @@ MonoBehaviour:
   recoilDuration: 0
   socketNames:
   - R_Hand_Weapon
-  meleeSpawnPointPathOrName: 
   projectileSpawnPointPathOrName: 
-  useWeaponCollider: 0
+  meleeHitboxMode: 0
   meleeHitboxPrefab: {fileID: 1988047932026333537, guid: 4f98ed13c83d79348b3d04aa2cd0e190, type: 3}
+  _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 0}
   shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 0}
+  attackFXPhases: []
   dualWield: 0
   hitboxSpawnDelay2: 0
-  meleeSpawnPoint2PathOrName: 
   projectileSpawnPoint2PathOrName: 

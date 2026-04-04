@@ -45,7 +45,7 @@ public class RushAttackData : ScriptableObject
     public bool usePushInsteadOfKnockback = false;
     [Tooltip("??? ?? ??????? Hitstop ????(??). 0??? ?????.")]
     public float targetHoldDuration = 0f;
-    [Tooltip("°ø°Ý ÀûÁß ½Ã °ø°ÝÀÚ(¸ó½ºÅÍ) Hitstop ½Ã°£(ÃÊ). ÇÃ·¹ÀÌ SO attackerHoldDuration°ú µ¿ÀÏ.")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½) Hitstop ï¿½Ã°ï¿½(ï¿½ï¿½). ï¿½Ã·ï¿½ï¿½ï¿½ SO attackerHoldDurationï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.")]
     public float attackerHoldDuration = 0f;
 
     [Header("??????")]
@@ -69,7 +69,7 @@ public class RushAttackData : ScriptableObject
     public AnimationClip finishClip;
 
     [Header("Attack FX (Phase)")]
-    [Tooltip("·¯½Ã °ø°Ý ÆäÀÌÁîº° FX. Prepare/Attack/Finish ÆäÀÌÁî¸¦ ÁÖ·Î »ç¿ëÇÕ´Ï´Ù.")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½îº° FX. Prepare/Attack/Finish ï¿½ï¿½ï¿½ï¿½ï¿½î¸¦ ï¿½Ö·ï¿½ ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.")]
     public List<AttackFXPhaseSet> attackFXPhases = new List<AttackFXPhaseSet>();
 
     private void OnValidate()

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 246c3cb45d6b4964e80f98bee71652db, type: 3}
   m_Name: BatComboStep02_SO
   m_EditorClassIdentifier: 
-  animClip: {fileID: 1827226128182048838, guid: 98d422c7e8d499242bf48a9ceec7ffdf, type: 3}
+  animClip: {fileID: 1827226128182048838, guid: 6111149b924858b4e9f1d4b663a5c696, type: 3}
   cooldown: 1
   damage: 1
   range: 1
@@ -20,7 +20,7 @@ MonoBehaviour:
   hitBoxLifetime: 0.1
   hitBoxPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 4021103657954561961, guid: 967fe2f9ebe788e4d845ea91c92ffaea, type: 3}
-  attackFX: []
+  attackFXPhases: []
   trailEmitStartDelay: 0.1
   trailEmitDuration: 0.2
   knockbackDuration: 0.5

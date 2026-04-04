@@ -182,8 +182,12 @@ public class PlayerEquipmentController : MonoBehaviour
                 return;
             }
 
-            GameObject instSub = Instantiate(weaponPrefab, playerRoot, false);
-            instSub.name = weaponPrefab.name + "_Sub";
+            GameObject subPrefab = CurrentWeaponData.dualWeaponPrefab != null
+                ? CurrentWeaponData.dualWeaponPrefab
+                : weaponPrefab;
+
+            GameObject instSub = Instantiate(subPrefab, playerRoot, false);
+            instSub.name = subPrefab.name + "_Sub";
             SecondaryWeapon = instSub;
 
             var subWB = instSub.GetComponent<WeaponBehavior>();
