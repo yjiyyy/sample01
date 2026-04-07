@@ -9,30 +9,30 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e994ae4a4936deb43b2ab49330ac05e8, type: 3}
-  m_Name: SO_P_10_D_Pistol
+  m_Script: {fileID: 11500000, guid: e8aecbbdb3fa87b4c977aab945b07586, type: 3}
+  m_Name: SO_P_10_DPistol
   m_EditorClassIdentifier: 
-  id: SO_P_Weapon_02_Pistol_Dual
-  weaponName: Gun_Base
+  id: Weapon_10_AR
+  weaponName: DPistol
   icon: {fileID: 21300000, guid: 7c3f77ceb62f700458884433ca1701b1, type: 3}
   category: 0
   weaponPrefab: {fileID: 7696554681474183416, guid: f702a545a1cd45741aef21d94d1dfc0a, type: 3}
-  overrideController: {fileID: 22100000, guid: c4ecbdf1ac950334a81e5c66d1b9e96d, type: 2}
-  attackAnimVariantCount: 3
+  overrideController: {fileID: 22100000, guid: 719939beeb031714fb456d6e5ad12e9d, type: 2}
+  attackAnimVariantCount: 1
   attackVariantHandModes: 
-  cooldown: 0.5
-  damage: 1
-  range: 2.5
+  cooldown: 0.8
+  damage: 1.5
+  range: 5
   hitboxSpawnDelay: 0.1
-  hitBoxLifetime: 0.2
+  hitBoxLifetime: 0.1
   trailEmitStartDelay: 0
   trailEmitDuration: 0
   knockbackDuration: 0.2
   knockbackPower: 5
   jerkIntensity: 1
   jerkDuration: 0.2
-  stunDuration: 2
-  usePushInsteadOfKnockback: 0
+  stunDuration: 0
+  usePushInsteadOfKnockback: 1
   targetHoldDuration: 0
   attackerHoldDuration: 0
   targetStateHoldDuration: 0
@@ -40,11 +40,11 @@ MonoBehaviour:
   attackerStateHoldDuration: 0
   attackerAnimationHoldDuration: 0
   deathMode: 0
-  ragdollImpulse: 2
-  ragdollUpImpulse: 15
-  ragdollSpinTorque: 5000
+  ragdollImpulse: 5
+  ragdollUpImpulse: 0
+  ragdollSpinTorque: 0
   sliceTargets: 
-  sliceImpulse: 15
+  sliceImpulse: 0
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}
   recoilStartDelay: 0
@@ -59,21 +59,39 @@ MonoBehaviour:
   _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
   shotgunSectorPrefab: {fileID: 0}
-  hitEffectPrefab: {fileID: 0}
-  attackFXPhases: []
+  hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
+  attackFXPhases:
+  - phase: 0
+    entries:
+    - attachRoot: 1
+      attachPathOrName: 
+      prefab: {fileID: 8078720523478869859, guid: 4f5fc4bbd01b03a4499a6ed77f175fc7, type: 3}
+      startDelay: 0.1
+      applyToOffHandWhenDual: 1
+      offHandStartDelay: 0.2
+      firePointHand: 0
+      parentToAttachPoint: 0
   dualWield: 1
   dualWeaponPrefab: {fileID: 0}
   hitboxSpawnDelay2: 0.2
-  projectileSpawnPoint2PathOrName: 
-  projectileLifetime: 5
-  projectileSpeed: 20
-  pierceCount: 1
-  aimScanAngle: 90
-  aimScanDistance: 15
+  projectileSpawnPoint2PathOrName: Fire_Point
+  fireInputMode: 1
+  facingMode: 1
+  lockRotationDuringFiring: 1
+  allowMoveWhileFiring: 1
+  projectileSpeed: 40
+  projectileLifetime: 1
+  pierceCount: 0
   usesAmmo: 1
-  magazineSize: 10
-  initialReserve: 30
+  magazineSize: 50
+  initialReserve: 20
   infiniteReserve: 0
-  reloadTime: 3
+  reloadTime: 1
   consumePerShot: 1
   autoReloadOnEmpty: 1
+  autoReloadResumeWhileHeld: 0
+  tapFireDuration: 1
+  spreadAngle: 0
+  spread3D: 0
+  moveSpeedWhileFiring: 0.5
+  animPlaybackSpeedWhileFiring: 1

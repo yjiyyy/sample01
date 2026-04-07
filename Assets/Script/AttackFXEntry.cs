@@ -21,8 +21,35 @@ public class AttackFXEntry
     [Tooltip("공격 시작 후 스폰까지 지연(초)")]
     public float startDelay;
 
+    [Tooltip("듀얼 무기에서 FirePoint FX를 왼손 Fire_Point에도 자동 스폰할지 여부")]
+    public bool applyToOffHandWhenDual = false;
+
+    [Tooltip("왼손(Fire_Point2) FX 지연(초). 메인 startDelay와 독립적으로 적용됩니다.")]
+    public float offHandStartDelay = 0f;
+
+    [Tooltip("FirePoint 사용 시 어느 손의 Fire_Point를 쓸지. 일반 설정에서는 Main 유지 권장.")]
+    public AttackFXFirePointHand firePointHand = AttackFXFirePointHand.Main;
+
     [Tooltip("체크 시 소켓/본의 자식으로 붙어서 따라감. 해제 시 스폰 순간 위치·회전만 맞추고 월드에 고정.")]
     public bool parentToAttachPoint = false;
+
+    /// <summary>
+    /// 현재 항목을 기반으로 왼손 FirePoint 스폰용 복사본을 만듭니다.
+    /// </summary>
+    public AttackFXEntry CreateOffHandClone()
+    {
+        return new AttackFXEntry
+        {
+            attachRoot = attachRoot,
+            attachPathOrName = attachPathOrName,
+            prefab = prefab,
+            startDelay = offHandStartDelay,
+            applyToOffHandWhenDual = false,
+            offHandStartDelay = offHandStartDelay,
+            firePointHand = AttackFXFirePointHand.OffHand,
+            parentToAttachPoint = parentToAttachPoint
+        };
+    }
 
     /// <summary>
     /// attackFX 리스트를 스케줄. 공격 시작 시 호출.
@@ -202,4 +229,11 @@ public enum AttackFXAttachRoot
 
     [Tooltip("attachPathOrName으로 본/소켓 검색(비어 있으면 캐릭터 루트)")]
     Custom
+}
+
+/// <summary>FirePoint 사용 시 적용 손 선택.</summary>
+public enum AttackFXFirePointHand
+{
+    Main,
+    OffHand
 }

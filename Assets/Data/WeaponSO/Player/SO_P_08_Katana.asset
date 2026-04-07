@@ -10,36 +10,36 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7788451254e4c054eaa62791988c9e6e, type: 3}
-  m_Name: SO_P_05_Knife
+  m_Name: SO_P_08_Katana
   m_EditorClassIdentifier: 
-  id: Weapon_05_Knife
-  weaponName: Knife
-  icon: {fileID: 21300000, guid: a634407387f703940a842ddc1cf582eb, type: 3}
+  id: Weapon_08_Katana
+  weaponName: Katana
+  icon: {fileID: 21300000, guid: d3125ccb643a81145abbdefcdabaace0, type: 3}
   category: 0
-  weaponPrefab: {fileID: 7915004520250278488, guid: 9b5fc49388ff07341aa97e025ee15a9b, type: 3}
-  overrideController: {fileID: 22100000, guid: 5c86630a3e0679d429c889705b784cb1, type: 2}
-  attackAnimVariantCount: 3
-  attackVariantHandModes: 000000000000000000000000
-  cooldown: 0.5
-  damage: 1
+  weaponPrefab: {fileID: 3664053158159759860, guid: 7e9f32e31cf53424cbabfadfe88394ff, type: 3}
+  overrideController: {fileID: 22100000, guid: 7b26443918c412e498884a1d95344e2c, type: 2}
+  attackAnimVariantCount: 1
+  attackVariantHandModes: 00000000
+  cooldown: 1
+  damage: 50
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.15
   trailEmitStartDelay: 0.1
   trailEmitDuration: 0.2
-  knockbackDuration: 0.5
+  knockbackDuration: 1
   knockbackPower: 5
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 5
-  usePushInsteadOfKnockback: 1
+  usePushInsteadOfKnockback: 0
   targetHoldDuration: 0.1
   attackerHoldDuration: 0.1
   targetStateHoldDuration: 0.2
   targetAnimationHoldDuration: 0.2
   attackerStateHoldDuration: 0.1
   attackerAnimationHoldDuration: 0.1
-  deathMode: 0
+  deathMode: 1
   ragdollImpulse: 10
   ragdollUpImpulse: 7
   ragdollSpinTorque: 10000
@@ -52,7 +52,6 @@ MonoBehaviour:
   recoilDuration: 0
   socketNames:
   - R_Hand_Weapon
-  - L_Hand_Weapon
   projectileSpawnPointPathOrName: 
   meleeHitboxMode: 1
   meleeHitboxPrefab: {fileID: 0}
@@ -62,6 +61,6 @@ MonoBehaviour:
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
   attackFXPhases: []
   dualWield: 0
-  dualWeaponPrefab: {fileID: 7915004520250278488, guid: bdc48dea2ce0f8845a2a8b31695cdbc3, type: 3}
-  hitboxSpawnDelay2: 0.1
+  dualWeaponPrefab: {fileID: 0}
+  hitboxSpawnDelay2: 0
   projectileSpawnPoint2PathOrName: 

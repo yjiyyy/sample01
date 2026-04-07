@@ -374,9 +374,9 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        ScheduleAttackFXFromData(data, AttackFXPhase.Attack);
-
-        ScheduleDelayedHitboxesForHandMode(ConsumePendingOrDefaultHandMode());
+        var handMode = ConsumePendingOrDefaultHandMode();
+        ScheduleAttackFXFromData(data, AttackFXPhase.Attack, handMode);
+        ScheduleDelayedHitboxesForHandMode(handMode);
     }
 
     /// <summary>
@@ -399,7 +399,8 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        ScheduleAttackFXFromData(data, AttackFXPhase.Attack);
+        var handMode = data.dualWield ? AttackVariantHandMode.Both : AttackVariantHandMode.MainOnly;
+        ScheduleAttackFXFromData(data, AttackFXPhase.Attack, handMode);
         StartCoroutine(DelayedARProjectileFire(shootDir, preserveVerticalLocal));
     }
 
@@ -407,11 +408,23 @@ public class WeaponBehavior : MonoBehaviour
     {
         if (data == null) yield break;
 
-        float delay = data.hitboxSpawnDelay;
-        if (delay > 0f)
+        // AR 듀얼은 메인/오프핸드 지연을 분리 적용:
+        // - 메인: hitboxSpawnDelay
+        // - 오프핸드: hitboxSpawnDelay2
+        StartCoroutine(DelayedForcedProjectileByHand(shootDir, preserveVerticalLocal, useSecond: false, delay: data.hitboxSpawnDelay));
+        if (data.dualWield)
+            StartCoroutine(DelayedForcedProjectileByHand(shootDir, preserveVerticalLocal, useSecond: true, delay: data.hitboxSpawnDelay2));
+
+        yield break;
+    }
+
+    private IEnumerator DelayedForcedProjectileByHand(Vector3 shootDir, bool preserveVerticalLocal, bool useSecond, float delay)
+    {
+        float d = Mathf.Max(0f, delay);
+        if (d > 0f)
         {
             float elapsed = 0f;
-            while (elapsed < delay)
+            while (elapsed < d)
             {
                 if (IsPlayerTimeHoldActive())
                 {
@@ -424,16 +437,61 @@ public class WeaponBehavior : MonoBehaviour
             }
         }
 
-        FireProjectileForced(shootDir, preserveVerticalLocal);
+        FireProjectileForced(shootDir, preserveVerticalLocal, useSecond);
     }
 
     /// <summary>공격 FX 스케줄. phase 목록 사용.</summary>
-    private void ScheduleAttackFXFromData(WeaponDataSO weaponData, AttackFXPhase phase)
+    private void ScheduleAttackFXFromData(WeaponDataSO weaponData, AttackFXPhase phase, AttackVariantHandMode handMode)
     {
         if (weaponData == null) return;
         var fxList = AttackFXPhaseResolver.Resolve(weaponData.attackFXPhases, phase);
         if (fxList == null || fxList.Count == 0) return;
-        AttackFXEntry.ScheduleAttackFX(this, fxList, ResolveAttackFXRoot, IsPlayerTimeHoldActive);
+
+        bool dual = weaponData.dualWield;
+        bool includeOffHand = IncludesOffHand(handMode, dual);
+        bool includeMainHand = IncludesMainHand(handMode, dual);
+
+        var runtimeList = new List<AttackFXEntry>(fxList.Count * 2);
+        for (int i = 0; i < fxList.Count; i++)
+        {
+            var entry = fxList[i];
+            if (entry == null || entry.prefab == null) continue;
+
+            // 메인 손 FX(기본)
+            if (includeMainHand)
+                runtimeList.Add(entry);
+
+            // 체크된 FirePoint FX만 듀얼의 왼손에 자동 복제
+            if (includeOffHand &&
+                dual &&
+                entry.attachRoot == AttackFXAttachRoot.FirePoint &&
+                entry.applyToOffHandWhenDual)
+            {
+                runtimeList.Add(entry.CreateOffHandClone());
+            }
+        }
+
+        if (runtimeList.Count == 0) return;
+        AttackFXEntry.ScheduleAttackFX(this, runtimeList, ResolveAttackFXRoot, IsPlayerTimeHoldActive);
+    }
+
+    private static bool IncludesMainHand(AttackVariantHandMode mode, bool dual)
+    {
+        switch (mode)
+        {
+            case AttackVariantHandMode.OffOnly:
+                return !dual;
+            case AttackVariantHandMode.MainOnly:
+            case AttackVariantHandMode.Both:
+            default:
+                return true;
+        }
+    }
+
+    private static bool IncludesOffHand(AttackVariantHandMode mode, bool dual)
+    {
+        if (!dual) return false;
+        return mode == AttackVariantHandMode.OffOnly || mode == AttackVariantHandMode.Both;
     }
 
     /// <summary>플레이어 무기 기준 AttackFX 항목 -> Transform. Custom 경로 비어 있으면 캐릭터 루트.</summary>
@@ -449,6 +507,13 @@ public class WeaponBehavior : MonoBehaviour
                 return GetCharacterRootTransform();
 
             case AttackFXAttachRoot.FirePoint:
+                if (entry.firePointHand == AttackFXFirePointHand.OffHand)
+                {
+                    if (projectileSpawnPoint2 != null) return projectileSpawnPoint2;
+                    if (projectileSpawnPoint != null) return projectileSpawnPoint;
+                    return GetCharacterRootTransform();
+                }
+
                 return projectileSpawnPoint != null ? projectileSpawnPoint : GetCharacterRootTransform();
 
             case AttackFXAttachRoot.Custom:
@@ -907,7 +972,7 @@ public class WeaponBehavior : MonoBehaviour
 #endif
     }
 
-    public void FireProjectileForced(Vector3 shootDir, bool preserveVerticalLocal = false)
+    public void FireProjectileForced(Vector3 shootDir, bool preserveVerticalLocal = false, bool useSecond = false)
     {
         if (data == null)
         {
@@ -922,8 +987,23 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        Transform spawnPoint = projectileSpawnPoint != null ? projectileSpawnPoint
-                            : (meleeSpawnPoint != null ? meleeSpawnPoint : transform);
+        Transform spawnPoint;
+        if (useSecond)
+        {
+            if (projectileSpawnPoint2 == null)
+                projectileSpawnPoint2 = ResolveSecondProjectileSpawnPoint();
+
+            // 왼손 스폰포인트를 못 찾으면 강제 발사를 생략(오른손 중복 발사 방지)
+            if (projectileSpawnPoint2 == null)
+                return;
+
+            spawnPoint = projectileSpawnPoint2;
+        }
+        else
+        {
+            spawnPoint = projectileSpawnPoint != null ? projectileSpawnPoint
+                        : (meleeSpawnPoint != null ? meleeSpawnPoint : transform);
+        }
 
         Vector3 dir = shootDir;
         if (!preserveVerticalLocal) dir.y = 0f;

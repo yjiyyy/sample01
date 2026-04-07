@@ -6,12 +6,14 @@ AnimatorOverrideController:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: AOC_Gun_New
+  m_Name: AOC_Knife
   m_Controller: {fileID: 9100000, guid: 040e64a34f0e23848a2f7dbeea3566d1, type: 2}
   m_Clips:
   - m_OriginalClip: {fileID: 1827226128182048838, guid: 13daa9d01d93b2849ab6521506de9fa1, type: 3}
-    m_OverrideClip: {fileID: 1827226128182048838, guid: db596e0a5a76272459661b53f0ee24c1, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: dc814ec35c087c344a301f6d52ce6d56, type: 3}
   - m_OriginalClip: {fileID: 1827226128182048838, guid: d420c0775da9771489cd4d1b2ab3e005, type: 3}
-    m_OverrideClip: {fileID: 1827226128182048838, guid: db596e0a5a76272459661b53f0ee24c1, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 687481afbdb45444fb5b04b850fd830e, type: 3}
   - m_OriginalClip: {fileID: 1827226128182048838, guid: 9fbc2a70bf41db648b423ce7c6ea45fa, type: 3}
-    m_OverrideClip: {fileID: 1827226128182048838, guid: db596e0a5a76272459661b53f0ee24c1, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 88d420f6aafe51b4198f8bc4bad206d5, type: 3}
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: 73605151411929840aa25afce1a7d5ef, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 6066736bc607f1d42aa9f6edaac2efd6, type: 3}

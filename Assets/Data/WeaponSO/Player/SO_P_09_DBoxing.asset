@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7788451254e4c054eaa62791988c9e6e, type: 3}
-  m_Name: SO_P_05_Knife
+  m_Name: SO_P_09_DBoxing
   m_EditorClassIdentifier: 
-  id: Weapon_05_Knife
-  weaponName: Knife
-  icon: {fileID: 21300000, guid: a634407387f703940a842ddc1cf582eb, type: 3}
+  id: Weapon_09_DBoxing
+  weaponName: DBoxing
+  icon: {fileID: 21300000, guid: da200a80c0ee7e9468a359e1da09cb69, type: 3}
   category: 0
-  weaponPrefab: {fileID: 7915004520250278488, guid: 9b5fc49388ff07341aa97e025ee15a9b, type: 3}
-  overrideController: {fileID: 22100000, guid: 5c86630a3e0679d429c889705b784cb1, type: 2}
-  attackAnimVariantCount: 3
-  attackVariantHandModes: 000000000000000000000000
+  weaponPrefab: {fileID: 5160777796813185063, guid: e34dbfeab0e8ecd4998bf18e1688d186, type: 3}
+  overrideController: {fileID: 22100000, guid: 94322b86abc45a04b98bb7d002a160ca, type: 2}
+  attackAnimVariantCount: 2
+  attackVariantHandModes: 00000000000000000100000001000000
   cooldown: 0.5
   damage: 1
   range: 2.5
@@ -61,7 +61,7 @@ MonoBehaviour:
   shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
   attackFXPhases: []
-  dualWield: 0
-  dualWeaponPrefab: {fileID: 7915004520250278488, guid: bdc48dea2ce0f8845a2a8b31695cdbc3, type: 3}
+  dualWield: 1
+  dualWeaponPrefab: {fileID: 127521127449397818, guid: 0bf664ac03e75ad429108b2b3ae51386, type: 3}
   hitboxSpawnDelay2: 0.1
   projectileSpawnPoint2PathOrName: 

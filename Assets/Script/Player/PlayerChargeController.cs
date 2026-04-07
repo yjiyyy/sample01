@@ -73,11 +73,7 @@ public class PlayerChargeController : MonoBehaviour
     public void Tick()
     {
         var data = getWeaponData != null ? getWeaponData() : null;
-        // ---- 변경: AR 무기일 경우 차지 슬롯을 무시하도록 처리 ----
-        PlayerChargeAttackSO slot = null;
-        if (data != null && !(data is WeaponDataSO_AR))
-            slot = data.chargeSlot;
-        // ----------------------------------------------------
+        PlayerChargeAttackSO slot = GetChargeSlotForCurrentWeapon(data);
 
         // Down: 홀드 시작
         if (!chargeHoldActive && InputManager.Instance.GetAttackDown())
@@ -154,10 +150,8 @@ public class PlayerChargeController : MonoBehaviour
         {
             bool fired = false;
 
-            // ---- 변경: Up 시에도 current weapon이 AR이면 차지 슬롯 무시 ----
             var data2 = getWeaponData != null ? getWeaponData() : null;
-            var slot2 = (data2 != null && !(data2 is WeaponDataSO_AR)) ? data2.chargeSlot : null;
-            // ------------------------------------------------------------
+            var slot2 = GetChargeSlotForCurrentWeapon(data2);
 
             // If continuous loop is active for this slot, stop it and don't fire single shot
             if (slot2 != null && slot2.continuousWhileHeld && continuousActive)
@@ -197,6 +191,16 @@ public class PlayerChargeController : MonoBehaviour
 
             if (fired && debugMode) Debug.Log("[Charge] 릴리스 → 발사 완료");
         }
+    }
+
+    private static PlayerChargeAttackSO GetChargeSlotForCurrentWeapon(WeaponDataSO data)
+    {
+        if (data == null) return null;
+
+        if (data is WeaponDataSO_AR ar && ar.fireInputMode == ARFireInputMode.HoldWhilePressed)
+            return null; // 기존 AR 홀드 연사 방식은 차지 비허용
+
+        return data.chargeSlot;
     }
 
     public void CancelAll()

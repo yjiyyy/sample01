@@ -605,12 +605,15 @@ public class PlayerMovement : MonoBehaviour
     private void HandleRotation(bool isARFiring)
     {
         // Attack/Knockback/Stun/Evade 중에는 회전 보정 스킵
-        if (weaponCtrl != null &&
-            (weaponCtrl.CurrentState == PlayerState.Attack ||
-             weaponCtrl.CurrentState == PlayerState.Knockback ||
-             weaponCtrl.CurrentState == PlayerState.Stun ||
-             weaponCtrl.CurrentState == PlayerState.Evade))
-            return;
+        if (weaponCtrl != null)
+        {
+            bool blockByAttack = weaponCtrl.CurrentState == PlayerState.Attack && !weaponCtrl.IsARFiring;
+            bool blockByCC = weaponCtrl.CurrentState == PlayerState.Knockback ||
+                             weaponCtrl.CurrentState == PlayerState.Stun ||
+                             weaponCtrl.CurrentState == PlayerState.Evade;
+            if (blockByAttack || blockByCC)
+                return;
+        }
 
         // If look override is active, prefer it (used by charge controller)
         Vector3 desiredDir = lookOverrideActive ? lookOverrideDir : _lastLookDirection;

@@ -13,11 +13,13 @@ MonoBehaviour:
   m_Name: SO_P_02_Pistol
   m_EditorClassIdentifier: 
   id: Weapon_02_Pistol
-  weaponName: Gun_Base
+  weaponName: Pistol
   icon: {fileID: 21300000, guid: ad8bf8234a4f49a47b98e99d47be68a0, type: 3}
   category: 0
   weaponPrefab: {fileID: 7696554681474183416, guid: 883d112363ed4164eaf30bb461f2d266, type: 3}
   overrideController: {fileID: 22100000, guid: 0988f3fddfb565b49a069a2e45c6a10b, type: 2}
+  attackAnimVariantCount: 3
+  attackVariantHandModes: 
   cooldown: 0.5
   damage: 1
   range: 2.5
@@ -57,13 +59,9 @@ MonoBehaviour:
   projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
   shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
-  attackFX:
-  - attachRoot: 1
-    attachPathOrName: 
-    prefab: {fileID: 8078720523478869859, guid: 4f5fc4bbd01b03a4499a6ed77f175fc7, type: 3}
-    startDelay: 0.1
-    parentToAttachPoint: 0
+  attackFXPhases: []
   dualWield: 0
+  dualWeaponPrefab: {fileID: 0}
   hitboxSpawnDelay2: 0
   projectileSpawnPoint2PathOrName: 
   projectileLifetime: 5

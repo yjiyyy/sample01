@@ -12,20 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7788451254e4c054eaa62791988c9e6e, type: 3}
   m_Name: SO_P_07_BattleAxe
   m_EditorClassIdentifier: 
-  id: Weapon_05_Axe
-  weaponName: Axe
+  id: Weapon_07_BatttleAxe
+  weaponName: BatttleAxe
   icon: {fileID: 21300000, guid: 4a647d503799194488c131694edd25ee, type: 3}
   category: 0
   weaponPrefab: {fileID: 7349134072108011570, guid: dcbbf2d8c54a6cd4a9302b78a0c2523d, type: 3}
-  overrideController: {fileID: 22100000, guid: fed68105d96fde44c80e322c00b03b08, type: 2}
-  attackAnimVariantCount: 3
+  overrideController: {fileID: 22100000, guid: 0fdebf9f2c67b1f45a5e23c535a3a847, type: 2}
+  attackAnimVariantCount: 1
   attackVariantHandModes: 
   cooldown: 1
   damage: 50
   range: 2.5
-  hitboxSpawnDelay: 0.1
+  hitboxSpawnDelay: 0.2
   hitBoxLifetime: 0.15
-  trailEmitStartDelay: 0.1
+  trailEmitStartDelay: 0.2
   trailEmitDuration: 0.2
   knockbackDuration: 1
   knockbackPower: 5
@@ -46,7 +46,7 @@ MonoBehaviour:
   sliceTargets: 0000000001000000020000000400000003000000
   sliceImpulse: 10
   chargeSlot: {fileID: 0}
-  comboSlot: {fileID: 11400000, guid: 30ca78fbe55880a4e918d5b431cb93f1, type: 2}
+  comboSlot: {fileID: 0}
   recoilStartDelay: 0
   recoilPower: 0
   recoilDuration: 0

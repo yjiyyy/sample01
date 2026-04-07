@@ -68,6 +68,10 @@ public class PlayerWeaponController : MonoBehaviour
     private Vector3 arLockedForward;
     private bool arAllowMoveWhileFiringFlag = false;
     private bool arAutoResumeWhileHeld = false;
+    private ARFacingMode arFacingMode = ARFacingMode.LockAtStart;
+    private float arTapModeEndTime = 0f;
+    private float arTapNextExtendAllowedTime = 0f;
+    private bool arTapQueuedShot = false;
 
     // Melee 콤보: ignoreTimeAfterInput ~ stepDuration 구간에서만 이동 허용 (MeleeComboBehavior가 설정)
     private bool meleeComboAllowMoveFlag = false;
@@ -387,6 +391,14 @@ public class PlayerWeaponController : MonoBehaviour
                             }
                         }
                     }
+
+                    // 탭 연사형 AR은 Attack 상태에서도 재탭으로 유지시간을 리셋 갱신할 수 있게 허용
+                    if (data is WeaponDataSO_AR arData &&
+                        arData.fireInputMode == ARFireInputMode.TapTimed &&
+                        InputManager.Instance.GetAttackInput())
+                    {
+                        TryQueueARTapPress(arData);
+                    }
                 }
                 break;
             case PlayerState.Knockback:
@@ -633,6 +645,12 @@ public class PlayerWeaponController : MonoBehaviour
 
         if (data is WeaponDataSO_AR arData)
         {
+            if (arData.fireInputMode == ARFireInputMode.TapTimed && arFireRoutine != null)
+            {
+                TryQueueARTapPress(arData);
+                return;
+            }
+
             float delta = Time.time - lastAttackTime;
             if (delta < arData.cooldown) return;
             lastAttackTime = Time.time;
@@ -1011,7 +1029,11 @@ public class PlayerWeaponController : MonoBehaviour
     {
         arAllowMoveWhileFiringFlag = arData.allowMoveWhileFiring;
         arAutoResumeWhileHeld = arData.autoReloadResumeWhileHeld;
-        arRotationLocked = arData.lockRotationDuringFiring;
+        arFacingMode = arData.facingMode;
+        arRotationLocked = arFacingMode == ARFacingMode.LockAtStart && arData.lockRotationDuringFiring;
+        arTapModeEndTime = 0f;
+        arTapNextExtendAllowedTime = 0f;
+        arTapQueuedShot = false;
 
         Vector3 fwd = transform.forward; fwd.y = 0f;
         if (fwd.sqrMagnitude < 0.0001f) fwd = Vector3.forward;
@@ -1023,6 +1045,11 @@ public class PlayerWeaponController : MonoBehaviour
         arRotationLocked = false;
         arAllowMoveWhileFiringFlag = false;
         arAutoResumeWhileHeld = false;
+        arFacingMode = ARFacingMode.LockAtStart;
+        arTapModeEndTime = 0f;
+        arTapNextExtendAllowedTime = 0f;
+        arTapQueuedShot = false;
+        movement?.ClearLookOverride();
     }
 
     private IEnumerator AssaultRifleFireRoutine(WeaponDataSO_AR ar)
@@ -1030,6 +1057,13 @@ public class PlayerWeaponController : MonoBehaviour
         ChangeState(PlayerState.Attack);
         animationController?.PlayAttack(ar, true);
         BeginARFireState(ar);
+        bool tapMode = ar.fireInputMode == ARFireInputMode.TapTimed;
+        if (tapMode)
+        {
+            arTapModeEndTime = Time.time + Mathf.Max(0.05f, ar.tapFireDuration);
+            arTapNextExtendAllowedTime = Time.time + Mathf.Max(0.01f, ar.cooldown);
+            arTapQueuedShot = true; // 첫 탭은 즉시 1발 처리
+        }
 
         var wb = equipComp.WeaponBehavior;
         if (wb == null)
@@ -1059,12 +1093,18 @@ public class PlayerWeaponController : MonoBehaviour
             if (state == PlayerState.Knockback || state == PlayerState.Stun || state == PlayerState.Dead || state == PlayerState.Evade)
                 break;
 
-            bool holding = InputManager.Instance.GetAttack();
-            if (!holding) break;
+            bool intentActive = tapMode ? (Time.time < arTapModeEndTime) : InputManager.Instance.GetAttack();
+            if (!intentActive) break;
+
+            Vector3 aimDir = ResolveARAimDirection(ar);
+            if (!arRotationLocked)
+                movement?.SetLookOverride(aimDir);
+            else
+                movement?.ClearLookOverride();
 
             if (ammo.IsReloading)
             {
-                if (arAutoResumeWhileHeld && ar.lockRotationDuringFiring)
+                if (arAutoResumeWhileHeld && intentActive && ar.lockRotationDuringFiring)
                 {
                     yield return null;
                     continue;
@@ -1072,7 +1112,19 @@ public class PlayerWeaponController : MonoBehaviour
                 break;
             }
 
-            if (Time.time >= nextTime)
+            bool shouldAttemptShot = false;
+            if (tapMode)
+            {
+                bool tapPressed = arTapQueuedShot || InputManager.Instance.GetAttackInput();
+                arTapQueuedShot = false;
+                shouldAttemptShot = tapPressed && Time.time >= nextTime;
+            }
+            else
+            {
+                shouldAttemptShot = Time.time >= nextTime;
+            }
+
+            if (shouldAttemptShot)
             {
                 if (ammo.CanFire(ar.consumePerShot))
                 {
@@ -1080,7 +1132,7 @@ public class PlayerWeaponController : MonoBehaviour
                     {
                         StartRecoilIfNeeded(ar);
 
-                        Vector3 baseDir = arRotationLocked ? arLockedForward : transform.forward;
+                        Vector3 baseDir = aimDir;
                         baseDir.y = 0f;
                         if (baseDir.sqrMagnitude < 0.0001f) baseDir = Vector3.forward;
                         baseDir.Normalize();
@@ -1110,7 +1162,7 @@ public class PlayerWeaponController : MonoBehaviour
                     if (ar.autoReloadOnEmpty && ammo.HasAnyReserveOrInfinite())
                     {
                         ammo.TryStartReload();
-                        if (arAutoResumeWhileHeld && holding && ar.lockRotationDuringFiring)
+                        if (!tapMode && arAutoResumeWhileHeld && intentActive && ar.lockRotationDuringFiring)
                         {
                             nextTime = Time.time;
                             yield return null;
@@ -1125,7 +1177,8 @@ public class PlayerWeaponController : MonoBehaviour
                             RequestSwitchToDefault();
                         }
                     }
-                    break;
+                    if (!tapMode)
+                        break;
                 }
             }
 
@@ -1140,6 +1193,76 @@ public class PlayerWeaponController : MonoBehaviour
 
         EndARFireState();
         arFireRoutine = null;
+    }
+
+    private void TryQueueARTapPress(WeaponDataSO_AR ar)
+    {
+        if (ar == null || ar.fireInputMode != ARFireInputMode.TapTimed) return;
+        if (Time.time < arTapNextExtendAllowedTime) return;
+
+        arTapModeEndTime = Time.time + Mathf.Max(0.05f, ar.tapFireDuration); // 리셋형 갱신
+        arTapNextExtendAllowedTime = Time.time + Mathf.Max(0.01f, ar.cooldown); // 연장 입력 간격도 cooldown 사용
+        arTapQueuedShot = true;
+    }
+
+    private Vector3 ResolveARAimDirection(WeaponDataSO_AR ar)
+    {
+        if (arRotationLocked)
+            return arLockedForward;
+
+        Vector3 fallback = transform.forward;
+        fallback.y = 0f;
+        if (fallback.sqrMagnitude < 0.0001f) fallback = Vector3.forward;
+        fallback.Normalize();
+
+        if (ar == null) return fallback;
+
+        if (arFacingMode == ARFacingMode.NearestTargetAutoAim)
+        {
+            Vector3 toTarget = GetNearestTargetDirection(Mathf.Max(0.1f, ar.range));
+            if (toTarget.sqrMagnitude > 0.0001f) return toTarget;
+        }
+
+        if (arFacingMode == ARFacingMode.MoveDirection)
+        {
+            Vector2 input = InputManager.Instance != null ? InputManager.Instance.GetMoveInput() : Vector2.zero;
+            Vector3 moveDir = movement != null ? movement.CameraRelative(new Vector3(input.x, 0f, input.y)) : new Vector3(input.x, 0f, input.y);
+            moveDir.y = 0f;
+            if (moveDir.sqrMagnitude > 0.0001f) return moveDir.normalized;
+        }
+
+        return fallback;
+    }
+
+    private Vector3 GetNearestTargetDirection(float maxRange)
+    {
+        if (enemyDetector == null) return Vector3.zero;
+
+        var list = enemyDetector.GetEnemiesInRange(maxRange);
+        if (list == null || list.Count == 0) return Vector3.zero;
+
+        Transform nearest = null;
+        float nearestSqr = float.MaxValue;
+        Vector3 origin = transform.position;
+        for (int i = 0; i < list.Count; i++)
+        {
+            var t = list[i];
+            if (t == null) continue;
+            Vector3 d = t.position - origin;
+            d.y = 0f;
+            float sq = d.sqrMagnitude;
+            if (sq < nearestSqr)
+            {
+                nearestSqr = sq;
+                nearest = t;
+            }
+        }
+
+        if (nearest == null) return Vector3.zero;
+
+        Vector3 dir = nearest.position - origin;
+        dir.y = 0f;
+        return dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero;
     }
 
     private Vector3 RandomDirectionInCone(Vector3 baseDir, float halfAngleDeg)

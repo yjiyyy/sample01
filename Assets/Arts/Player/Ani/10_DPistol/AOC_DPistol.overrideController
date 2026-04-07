@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AOC_DPistol
+  m_Controller: {fileID: 9100000, guid: 040e64a34f0e23848a2f7dbeea3566d1, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: 13daa9d01d93b2849ab6521506de9fa1, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 6e371fd3eb69fff4b8a73e5fd0f8ba66, type: 3}
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: c7901f99bca228b4ca4f3514d32a3c42, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 6ad86ffbb95b51c40b0c60254b66fb41, type: 3}
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: b6eace43f44756a4d9c59c7a8c8c6ba7, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 5a9d07af5963fa747a42b4ca8f62958d, type: 3}

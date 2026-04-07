@@ -13,23 +13,32 @@ MonoBehaviour:
   m_Name: SO_P_03_Shotgun
   m_EditorClassIdentifier: 
   id: Weapon_03_Shotgun
-  weaponName: Shotgun_Base
+  weaponName: Shotgun
   icon: {fileID: 21300000, guid: 419adb5ccb916e74b84ffa872297305b, type: 3}
   category: 0
   weaponPrefab: {fileID: 4959760178822361355, guid: c46fd77d1b3ee4247b34e4e23bf0f0b7, type: 3}
   overrideController: {fileID: 22100000, guid: f29704bd29fef8b4dba8ec467d06cdb0, type: 2}
+  attackAnimVariantCount: 3
+  attackVariantHandModes: 
   cooldown: 1
   damage: 10
   range: 2.5
   hitboxSpawnDelay: 0.15
   hitBoxLifetime: 0.1
+  trailEmitStartDelay: 0
+  trailEmitDuration: 0
   knockbackDuration: 1
   knockbackPower: 10
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 2
   usePushInsteadOfKnockback: 0
-  animationHoldDuration: 0.2
+  targetHoldDuration: 0
+  attackerHoldDuration: 0
+  targetStateHoldDuration: 0
+  targetAnimationHoldDuration: 0
+  attackerStateHoldDuration: 0
+  attackerAnimationHoldDuration: 0
   deathMode: 0
   ragdollImpulse: 5
   ragdollUpImpulse: 0
@@ -43,14 +52,17 @@ MonoBehaviour:
   recoilDuration: 0.2
   socketNames:
   - R_Hand_Weapon
-  meleeSpawnPointPathOrName: 
   projectileSpawnPointPathOrName: 
+  meleeHitboxMode: 0
   meleeHitboxPrefab: {fileID: 0}
+  _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 0}
   shotgunSectorPrefab: {fileID: 6927439261670298432, guid: 2730b5bd2ecc78e458f6958bad2bc16d, type: 3}
+  hitEffectPrefab: {fileID: 0}
+  attackFXPhases: []
   dualWield: 0
+  dualWeaponPrefab: {fileID: 0}
   hitboxSpawnDelay2: 0
-  meleeSpawnPoint2PathOrName: 
   projectileSpawnPoint2PathOrName: 
   shotgunRadius: 60
   shotgunAngle: 60
