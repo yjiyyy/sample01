@@ -182,6 +182,70 @@ public class MeleeComboBehavior : MonoBehaviour
         activeStepRoutine = StartCoroutine(StepRoutine(currentStepIndex));
     }
 
+    private void SpawnComboHitboxPrefabsForHand(MeleeComboStepSO step, int stepIndex, WeaponDataSO weapon, GameObject prefabToSpawn, AttackVariantHandMode hand)
+    {
+        if (prefabToSpawn == null || step == null) return;
+
+        var equip = transform.root.GetComponent<PlayerEquipmentController>();
+        bool hasSub = equip != null && equip.SecondaryWeapon != null;
+
+        Vector3 mainPos = spawnPoint != null ? spawnPoint.position : transform.position;
+        Quaternion mainRot = spawnPoint != null ? spawnPoint.rotation : transform.rotation;
+
+        void SpawnAt(Vector3 pos, Quaternion rot)
+        {
+            GameObject hb = Instantiate(prefabToSpawn, pos, rot);
+            if (hb == null) return;
+            if (!hb.TryGetComponent<HitBox_PC>(out var hitbox))
+            {
+                Debug.LogWarning("[Combo] HitBox prefab missing HitBox_PC component.");
+                return;
+            }
+
+            EnsureProxies(force: false);
+
+            WeaponDataSO proxy = (stepIndex < stepProxies.Count && stepProxies[stepIndex] != null) ? stepProxies[stepIndex] : null;
+            if (proxy == null)
+            {
+                proxy = ScriptableObject.CreateInstance<WeaponDataSO>();
+                proxy.weaponName = "ComboStepProxy";
+                CopyStepToProxy(step, proxy, weapon);
+            }
+
+            hitbox.SetWeapon(proxy);
+            ownerController?.StartRecoilIfNeeded(proxy);
+
+            float dmg = proxy != null ? proxy.damage : 0f;
+            float rng = proxy != null ? proxy.range : 2.5f;
+            float kb = proxy != null ? proxy.knockbackPower : 0f;
+            float life = Mathf.Max(0.01f, step.hitBoxLifetime > 0f ? step.hitBoxLifetime : (weapon != null ? weapon.hitBoxLifetime : 0.15f));
+
+            if (step.allowDuplicateHit)
+                hitbox.Initialize(dmg, rng, kb, life, allowDup: true, dupInterval: step.duplicateInterval);
+            else
+                hitbox.Initialize(dmg, rng, kb, life);
+        }
+
+        switch (hand)
+        {
+            case AttackVariantHandMode.MainOnly:
+                SpawnAt(mainPos, mainRot);
+                break;
+            case AttackVariantHandMode.OffOnly:
+                if (hasSub)
+                    SpawnAt(equip.SecondaryWeapon.transform.position, equip.SecondaryWeapon.transform.rotation);
+                else
+                    SpawnAt(mainPos, mainRot);
+                break;
+            case AttackVariantHandMode.Both:
+            default:
+                SpawnAt(mainPos, mainRot);
+                if (hasSub)
+                    SpawnAt(equip.SecondaryWeapon.transform.position, equip.SecondaryWeapon.transform.rotation);
+                break;
+        }
+    }
+
     private IEnumerator StepRoutine(int stepIndex)
     {
         if (comboData == null || stepIndex < 0 || stepIndex >= comboData.steps.Count)
@@ -197,10 +261,15 @@ public class MeleeComboBehavior : MonoBehaviour
             yield break;
         }
 
-        // 트레일 기록 (스텝 SO 값 사용, trailEmitDuration>0일 때만)
+        // 트레일 기록 (스텝 SO 값 + 손 모드; PlayerWeaponController가 있으면 서브 트레일 분기)
         var wb = GetComponent<WeaponBehavior>();
-        if (wb != null && step.trailEmitDuration > 0f)
-            wb.StartTrailEmitWindow(step.trailEmitStartDelay, step.trailEmitDuration);
+        if (step.trailEmitDuration > 0f)
+        {
+            if (ownerController != null)
+                ownerController.StartComboStepTrailEmit(step.trailEmitStartDelay, step.trailEmitDuration, step.comboStepHandMode);
+            else if (wb != null)
+                wb.StartTrailEmitWindow(step.trailEmitStartDelay, step.trailEmitDuration);
+        }
 
         // 공격 FX 스케줄 (스텝 phase 우선 -> 무기 phase)
         var weaponForFx = getWeaponData?.Invoke();
@@ -250,45 +319,7 @@ public class MeleeComboBehavior : MonoBehaviour
             prefabToSpawn = weapon.meleeHitboxPrefab;
 
         if (prefabToSpawn != null)
-        {
-            GameObject hb = Instantiate(prefabToSpawn, spawnPoint != null ? spawnPoint.position : transform.position, spawnPoint != null ? spawnPoint.rotation : transform.rotation);
-            if (hb != null)
-            {
-                if (hb.TryGetComponent<HitBox_PC>(out var hitbox))
-                {
-                    EnsureProxies(force: false);
-
-                    WeaponDataSO proxy = (stepIndex < stepProxies.Count && stepProxies[stepIndex] != null) ? stepProxies[stepIndex] : null;
-                    if (proxy == null)
-                    {
-                        proxy = ScriptableObject.CreateInstance<WeaponDataSO>();
-                        proxy.weaponName = "ComboStepProxy";
-                        CopyStepToProxy(step, proxy, weapon);
-                    }
-
-                    hitbox.SetWeapon(proxy);
-                    ownerController?.StartRecoilIfNeeded(proxy);
-
-                    float dmg = proxy != null ? proxy.damage : 0f;
-                    float rng = proxy != null ? proxy.range : 2.5f;
-                    float kb = proxy != null ? proxy.knockbackPower : 0f;
-                    float life = Mathf.Max(0.01f, step.hitBoxLifetime > 0f ? step.hitBoxLifetime : (weapon != null ? weapon.hitBoxLifetime : 0.15f));
-
-                    if (step.allowDuplicateHit)
-                    {
-                        hitbox.Initialize(dmg, rng, kb, life, allowDup: true, dupInterval: step.duplicateInterval);
-                    }
-                    else
-                    {
-                        hitbox.Initialize(dmg, rng, kb, life);
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning("[Combo] HitBox prefab missing HitBox_PC component.");
-                }
-            }
-        }
+            SpawnComboHitboxPrefabsForHand(step, stepIndex, weapon, prefabToSpawn, step.comboStepHandMode);
         else if (weapon != null && weapon.UseWeaponCollider)
         {
             // Bat ??: ???? ???? HitBox_PC ?????? ???? (?????? ???? ??)
@@ -308,7 +339,7 @@ public class MeleeComboBehavior : MonoBehaviour
             float colliderLife = Mathf.Max(0.01f, step.hitBoxLifetime > 0f ? step.hitBoxLifetime : weapon.hitBoxLifetime);
             if (wb != null)
             {
-                wb.ActivateMeleeColliderHitboxForCombo(proxy, colliderLife);
+                wb.ActivateMeleeColliderHitboxForCombo(proxy, colliderLife, step.comboStepHandMode);
                 ownerController?.StartRecoilIfNeeded(proxy);
             }
             else

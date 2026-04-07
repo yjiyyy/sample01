@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d38a679b8895334f8b59a65572d35ad, type: 3}
+  m_Name: SO_P_00_Charged
+  m_EditorClassIdentifier: 
+  holdSuccessTime: 2
+  chargedClip: {fileID: 1827226128182048838, guid: a3eb200cda49cf842aa70b8fde8dcc58, type: 3}
+  chargedStateName: Attack_Charged01
+  hitBoxPrefab: {fileID: 4874105736294604296, guid: 0d26afa0cfa1f7c448bd54a078bfae5a, type: 3}
+  damage: 50
+  duration: 0.8
+  range: 2.5
+  hitBoxLifetime: 1
+  knockbackPower: 1
+  knockbackDuration: 0.3
+  stunDuration: 1
+  usePushInsteadOfKnockback: 0
+  targetHoldDuration: 0.2
+  attackerHoldDuration: 0.1
+  targetStateHoldDuration: 0
+  targetAnimationHoldDuration: 0
+  attackerStateHoldDuration: 0
+  attackerAnimationHoldDuration: 0
+  invincibilityDuration: 0.5
+  meleeSpawnPointName: Root_dummy
+  spawnCount: 1
+  spawnDelays:
+  - 0.1
+  enableAreaDot: 1
+  dotDamagePerTick: 20
+  dotTickInterval: 0.05
+  deathMode: 1
+  ragdollImpulse: 3
+  ragdollUpImpulse: 5
+  ragdollSpinTorque: 0
+  sliceTargets: 00000000
+  sliceImpulse: 15
+  continuousWhileHeld: 0
+  moveDuringAttack: 0
+  moveSpeedDuringAttack: 1
+  grantSuperArmor: 0
+  superArmorDuration: 0
+  faceNearestWhileHeld: 0

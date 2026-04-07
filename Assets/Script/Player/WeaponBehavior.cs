@@ -526,16 +526,15 @@ public class WeaponBehavior : MonoBehaviour
     /// statsForHit에 콤보 스텝 프록시를 넘기면 데미지/넉백 등이 스텝 기준으로 적용됩니다.
     /// (콤보 애니에 AttackHit 이벤트가 있으면 이중 활성화될 수 있으니 콤보 클립에서는 제거 권장)
     /// </summary>
-    public void ActivateMeleeColliderHitboxForCombo(WeaponDataSO statsForHit, float lifetime)
+    public void ActivateMeleeColliderHitboxForCombo(WeaponDataSO statsForHit, float lifetime, AttackVariantHandMode handMode)
     {
         if (data == null || statsForHit == null) return;
         if (!data.UseWeaponCollider) return;
 
         float life = Mathf.Max(0.01f, lifetime);
         bool dual = data.dualWield;
-        var mode = ConsumePendingOrDefaultHandMode();
 
-        switch (mode)
+        switch (handMode)
         {
             case AttackVariantHandMode.MainOnly:
                 UseWeaponCollider(false, statsForHit, life);

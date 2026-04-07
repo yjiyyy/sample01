@@ -9,6 +9,12 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Player/MeleeComboStep", fileName = "MeleeComboStep_SO")]
 public class MeleeComboStepSO : ScriptableObject
 {
+    [Header("손 (히트 / 트레일)")]
+    [Tooltip("이 스텝의 히트(콜라이더·프리팹 스폰)와 트레일을 어느 무기 기준으로 쓸지.\n" +
+             "듀얼이 아니면 Sub/Both의 서브 쪽은 메인으로 폴백합니다.\n" +
+             "기본 Both: 예전(듀얼 시 양손 콜라이더) 동작에 가깝습니다.")]
+    public AttackVariantHandMode comboStepHandMode = AttackVariantHandMode.Both;
+
     [Header("Animation")]
     [Tooltip("우선 재생할 애니메이션 클립(클립 이름을 재생에 사용).")]
     public AnimationClip animClip;

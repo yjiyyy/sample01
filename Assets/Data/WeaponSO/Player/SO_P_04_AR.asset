@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8aecbbdb3fa87b4c977aab945b07586, type: 3}
+  m_Name: SO_P_04_AR
+  m_EditorClassIdentifier: 
+  id: Weapon_04_AR
+  weaponName: AR_Base
+  icon: {fileID: 21300000, guid: 11d8677ec0e09024d8d623faa359e265, type: 3}
+  category: 0
+  weaponPrefab: {fileID: 2514819526148707759, guid: c0f820a178d62374b8956a70ad8f2e54, type: 3}
+  overrideController: {fileID: 22100000, guid: 2b3ac060d9ca91c46be6af90e3b9cf71, type: 2}
+  cooldown: 0.5
+  damage: 1
+  range: 2.5
+  hitboxSpawnDelay: 0.1
+  hitBoxLifetime: 0.1
+  trailEmitStartDelay: 0
+  trailEmitDuration: 0
+  knockbackDuration: 0.2
+  knockbackPower: 5
+  jerkIntensity: 1
+  jerkDuration: 0.2
+  stunDuration: 0
+  usePushInsteadOfKnockback: 1
+  targetHoldDuration: 0
+  attackerHoldDuration: 0
+  targetStateHoldDuration: 0
+  targetAnimationHoldDuration: 0
+  attackerStateHoldDuration: 0
+  attackerAnimationHoldDuration: 0
+  deathMode: 0
+  ragdollImpulse: 5
+  ragdollUpImpulse: 0
+  ragdollSpinTorque: 0
+  sliceTargets: 
+  sliceImpulse: 0
+  chargeSlot: {fileID: 0}
+  comboSlot: {fileID: 0}
+  recoilStartDelay: 0
+  recoilPower: 0
+  recoilDuration: 0
+  socketNames:
+  - R_Hand_Weapon
+  projectileSpawnPointPathOrName: 
+  meleeHitboxMode: 0
+  meleeHitboxPrefab: {fileID: 0}
+  _useWeaponColliderLegacy: 0
+  projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
+  shotgunSectorPrefab: {fileID: 0}
+  hitEffectPrefab: {fileID: 0}
+  attackFXPhases:
+  - phase: 0
+    entries:
+    - attachRoot: 1
+      attachPathOrName: 
+      prefab: {fileID: 8078720523478869859, guid: 4f5fc4bbd01b03a4499a6ed77f175fc7, type: 3}
+      startDelay: 0
+      parentToAttachPoint: 0
+  dualWield: 0
+  hitboxSpawnDelay2: 0
+  projectileSpawnPoint2PathOrName: 
+  lockRotationDuringFiring: 1
+  allowMoveWhileFiring: 1
+  projectileSpeed: 40
+  projectileLifetime: 5
+  pierceCount: 0
+  usesAmmo: 1
+  magazineSize: 50
+  initialReserve: 20
+  infiniteReserve: 0
+  reloadTime: 1
+  consumePerShot: 1
+  autoReloadOnEmpty: 1
+  autoReloadResumeWhileHeld: 0
+  spreadAngle: 24
+  spread3D: 1
+  moveSpeedWhileFiring: 0.2
+  animPlaybackSpeedWhileFiring: 1

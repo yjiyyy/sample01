@@ -343,7 +343,7 @@ public class PlayerWeaponController : MonoBehaviour
 
     private void Start()
     {
-        EquipWeapon(null);
+        EquipWeapon((GameObject)null);
         ChangeState(PlayerState.Idle);
     }
 
@@ -548,7 +548,7 @@ public class PlayerWeaponController : MonoBehaviour
         if (shouldSwitch)
         {
             if (debugMode) Debug.Log("[PlayerWeaponController] pending switch → default weapon");
-            EquipWeapon(null);
+            EquipWeapon((GameObject)null);
         }
         else
         {
@@ -575,6 +575,21 @@ public class PlayerWeaponController : MonoBehaviour
         }
 
         equipComp?.EquipPrefab(weaponPrefab, this.transform.root);
+    }
+
+    /// <summary>
+    /// 무기 SO 기준 장착 — AOC/CurrentWeaponData/WeaponBehavior.ApplyData가 맞게 갱신됩니다.
+    /// (프리팹만 넘기는 EquipPrefab 경로와 달리 PlayerAnimationTester의 EquipByData와 동일합니다.)
+    /// </summary>
+    public void EquipWeapon(WeaponDataSO weaponData)
+    {
+        if (weaponData == null)
+        {
+            equipComp?.EquipDefault(this.transform.root);
+            return;
+        }
+
+        equipComp?.EquipByData(weaponData, this.transform.root);
     }
 
     // PlayAttack: 콤보 무기면 WeaponDataSO.cooldown을 사용하지 않고 MeleeComboBehavior에 위임
@@ -647,7 +662,7 @@ public class PlayerWeaponController : MonoBehaviour
                 if (!ammoShotgun.HasAnyReserveOrInfinite())
                 {
                     Debug.Log("[Ammo] Shotgun out of ammo → switch to default");
-                    if (state == PlayerState.Attack) RequestSwitchToDefault(); else EquipWeapon(null);
+                    if (state == PlayerState.Attack) RequestSwitchToDefault(); else EquipWeapon((GameObject)null);
                     return;
                 }
                 ammoShotgun.TryStartReload();
@@ -674,7 +689,7 @@ public class PlayerWeaponController : MonoBehaviour
                 if (!ammoGun.HasAnyReserveOrInfinite())
                 {
                     Debug.Log("[Ammo] Gun out of ammo → switch to default");
-                    if (state == PlayerState.Attack) RequestSwitchToDefault(); else EquipWeapon(null);
+                    if (state == PlayerState.Attack) RequestSwitchToDefault(); else EquipWeapon((GameObject)null);
                     return;
                 }
                 ammoGun.TryStartReload();
@@ -726,8 +741,22 @@ public class PlayerWeaponController : MonoBehaviour
 
         int idx = ReadAttackIndexFromAnimator();
         var mode = data.GetAttackVariantHandMode(idx);
-        float sd = data.trailEmitStartDelay;
-        float ed = data.trailEmitDuration;
+        StartTrailEmitForHandMode(data.trailEmitStartDelay, data.trailEmitDuration, mode);
+    }
+
+    /// <summary>콤보 스텝 등: 스텝 SO의 트레일 지연/유지와 손 모드로 트레일 기록.</summary>
+    public void StartComboStepTrailEmit(float startDelay, float emitDuration, AttackVariantHandMode handMode)
+    {
+        if (emitDuration <= 0f) return;
+        StartTrailEmitForHandMode(startDelay, emitDuration, handMode);
+    }
+
+    private void StartTrailEmitForHandMode(float startDelay, float emitDuration, AttackVariantHandMode mode)
+    {
+        if (emitDuration <= 0f) return;
+
+        float sd = startDelay;
+        float ed = emitDuration;
 
         if (secondaryTrailEmitRoutine != null)
         {

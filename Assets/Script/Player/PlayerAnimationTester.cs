@@ -7,14 +7,10 @@ public class PlayerAnimationTester : MonoBehaviour
     [SerializeField] private WeaponDataSO[] testWeapons;
 
     private PlayerWeaponController weaponController;
-    private PlayerEquipmentController equip;
-    private PlayerHealth health;
 
     void Awake()
     {
         weaponController = GetComponent<PlayerWeaponController>();
-        equip = GetComponent<PlayerEquipmentController>();
-        health = GetComponent<PlayerHealth>();
     }
 
     void Update()
@@ -33,13 +29,6 @@ public class PlayerAnimationTester : MonoBehaviour
         // 공격 테스트 (0번 키)
         if (InputManager.Instance != null && InputManager.Instance.GetKeyDown(KeyCode.Alpha0))
             weaponController.PlayAttack();
-
-        // 체력 0 → 사망 테스트 (K키)
-        if (InputManager.Instance != null && InputManager.Instance.GetKeyDown(KeyCode.K) && health != null)
-        {
-            health.SetHealth(0);
-            Debug.Log("☠️ 체력을 0으로 설정 → 사망");
-        }
     }
 
     private void EquipBySO(WeaponDataSO so)
@@ -56,14 +45,14 @@ public class PlayerAnimationTester : MonoBehaviour
             return;
         }
 
-        if (equip == null)
+        if (weaponController == null)
         {
-            Debug.LogWarning("[PlayerAnimationTester] PlayerEquipmentController를 찾을 수 없습니다.");
+            Debug.LogWarning("[PlayerAnimationTester] PlayerWeaponController를 찾을 수 없습니다.");
             return;
         }
 
-        // ✅ 핵심: SO 기준으로 장착 (CurrentWeaponData/AOC/UI가 같이 갱신됨)
-        equip.EquipByData(so, transform.root, debugLogs: true);
+        // PlayerWeaponController.EquipWeapon(WeaponDataSO) → EquipByData (AOC/idle 동기화)
+        weaponController.EquipWeapon(so);
 
         Debug.Log($"[PlayerAnimationTester] Equip SO: {so.weaponName} ({so.name})");
     }
