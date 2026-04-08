@@ -603,7 +603,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: WalkB_AR
+  m_Name: AR_WalkBack
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions:
@@ -716,7 +716,7 @@ AnimatorController:
   - serializedVersion: 5
     m_Name: UpperBody
     m_StateMachine: {fileID: -5940741365642090711}
-    m_Mask: {fileID: 31900000, guid: 40c56aeb8e301424aaa30689cb98198c, type: 2}
+    m_Mask: {fileID: 31900000, guid: 9988ef64425bd6f49aefd9f785b7605b, type: 2}
     m_Motions: []
     m_Behaviours: []
     m_BlendingMode: 0
@@ -916,7 +916,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Walk_AR
+  m_Name: AR_Walk
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions:

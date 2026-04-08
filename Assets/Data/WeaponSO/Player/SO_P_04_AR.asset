@@ -84,7 +84,7 @@ MonoBehaviour:
   usesAmmo: 1
   magazineSize: 50
   initialReserve: 20
-  infiniteReserve: 0
+  infiniteReserve: 1
   reloadTime: 1
   consumePerShot: 1
   autoReloadOnEmpty: 1

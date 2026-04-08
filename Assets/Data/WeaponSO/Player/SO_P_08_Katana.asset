@@ -18,7 +18,7 @@ MonoBehaviour:
   category: 0
   weaponPrefab: {fileID: 3664053158159759860, guid: 7e9f32e31cf53424cbabfadfe88394ff, type: 3}
   overrideController: {fileID: 22100000, guid: 7b26443918c412e498884a1d95344e2c, type: 2}
-  attackAnimVariantCount: 1
+  attackAnimVariantCount: 4
   attackVariantHandModes: 00000000
   cooldown: 1
   damage: 50

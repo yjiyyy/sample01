@@ -213,7 +213,7 @@ Animator:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7162835886033023559}
   m_Enabled: 1
-  m_Avatar: {fileID: 9000000, guid: f293fdc2036d4df46b0766dd80ef11f9, type: 3}
+  m_Avatar: {fileID: 9000000, guid: 1d84df156566f4944801b5f4702ceeb0, type: 3}
   m_Controller: {fileID: 9100000, guid: 040e64a34f0e23848a2f7dbeea3566d1, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
@@ -515,6 +515,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   orbitDiameter: 2
   rotationSpeedDegPerSec: 90
+  orbitHeightOffset: 0
   orbitCenterBoneName: Root_dummy
   initialSlots:
   - {fileID: 0}
