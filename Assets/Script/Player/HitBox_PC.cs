@@ -22,6 +22,8 @@ public class HitBox_PC : MonoBehaviour
 
     /// <summary> true면 넉백/랙돌 방향을 플레이어 중심(transform.root) 기준으로 계산. 무기 콜리더 전용. </summary>
     private bool usePlayerCenterForDirection = false;
+    /// <summary>무기 콜라이더 전용: ApplyHit 시 카테고리 보정을 확정 적용.</summary>
+    private bool applyCategoryDamageOnHit = false;
 
     // ───────── 오버로드 1: 즉발 1회 ─────────
     public void Initialize(float dmg, float rng, float kbPower, float life)
@@ -33,6 +35,7 @@ public class HitBox_PC : MonoBehaviour
 
         duplicateEnabled = false;
         duplicateInterval = 0.2f;
+        applyCategoryDamageOnHit = false;
 
         Debug.Log($"[HitBox_PC] Init │ dmg:{damage}, kb:{knockbackPower}, life:{lifetime}, Dup:false");
         Destroy(gameObject, lifetime);
@@ -48,6 +51,7 @@ public class HitBox_PC : MonoBehaviour
 
         duplicateEnabled = allowDup;
         duplicateInterval = Mathf.Max(0.01f, dupInterval);
+        applyCategoryDamageOnHit = false;
 
         Debug.Log($"[HitBox_PC] Init │ dmg:{damage}, kb:{knockbackPower}, life:{lifetime}, Dup:{duplicateEnabled}, interval:{duplicateInterval}");
         Destroy(gameObject, lifetime);
@@ -74,6 +78,7 @@ public class HitBox_PC : MonoBehaviour
         duplicateEnabled = false;
         duplicateInterval = 0.2f;
         usePlayerCenterForDirection = true;
+        applyCategoryDamageOnHit = true;
         overlapping.Clear();
         alreadyHit.Clear();
     }
@@ -174,9 +179,19 @@ public class HitBox_PC : MonoBehaviour
         Vector3? hitPoint = hitCollider != null ? hitCollider.ClosestPoint(transform.position) : (Vector3?)null;
 
         // 1) 데미지 먼저 적용
-        hp.ApplyDamage(damage, dir, weapon, 1f, hitPoint);
+        float finalDamage = damage;
+        if (applyCategoryDamageOnHit && weapon != null)
+        {
+            GameObject root = transform.root != null ? transform.root.gameObject : gameObject;
+            finalDamage = PlayerWeaponDamageModifiers.ScaleOutgoingDamage(root, weapon.category, damage);
+        }
+
+        hp.ApplyDamage(finalDamage, dir, weapon, 1f, hitPoint);
+        GameObject ownerRoot = transform.root != null ? transform.root.gameObject : gameObject;
+        PlayerWeaponDamageModifiers.TryApplyVampiricPunchOnHit(ownerRoot, weapon, finalDamage);
+        PlayerWeaponDamageModifiers.TryApplyBleedingPunchOnHit(ownerRoot, weapon, hp);
         ApplyAttackerHoldFromWeapon();
-        Debug.Log($"✅ [HitBox_PC] {hp.name} hit │ dmg:{damage}, dup:{duplicateEnabled}");
+        Debug.Log($"✅ [HitBox_PC] {hp.name} hit │ dmg:{finalDamage}, dup:{duplicateEnabled}, attached:{applyCategoryDamageOnHit}");
 
         // 2) 사망 여부 확인 후 넉백/푸시 분기
         var enemy = hp.GetComponent<Enemy>() ?? hp.GetComponentInParent<Enemy>();
@@ -185,6 +200,12 @@ public class HitBox_PC : MonoBehaviour
         if (enemy.CurrentState == Enemy.EnemyState.Dead)
         {
             // 치명타(사망)면 방향 전환/넉백/푸시 적용하지 않음
+            return;
+        }
+
+        if (PlayerWeaponDamageModifiers.TryBuildStunningPunchProxyOnHit(ownerRoot, weapon, out var stunProxy))
+        {
+            enemy.ApplyKnockback(dir, stunProxy);
             return;
         }
 

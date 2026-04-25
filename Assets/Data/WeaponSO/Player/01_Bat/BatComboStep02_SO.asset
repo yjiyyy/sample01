@@ -15,7 +15,7 @@ MonoBehaviour:
   comboStepHandMode: 0
   animClip: {fileID: 1827226128182048838, guid: 6111149b924858b4e9f1d4b663a5c696, type: 3}
   cooldown: 1
-  damage: 1
+  damage: 10
   range: 1
   hitboxSpawnDelay: 0.12
   hitBoxLifetime: 0.1

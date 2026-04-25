@@ -152,6 +152,9 @@ public class HitBox_PC_Projectile : MonoBehaviour
 
         Vector3? hitPoint = other.ClosestPoint(transform.position);
         hp.ApplyDamage(damage, damageDir, weapon, 1f, hitPoint);
+        GameObject ownerRoot = transform.root != null ? transform.root.gameObject : gameObject;
+        PlayerWeaponDamageModifiers.TryApplyVampiricPunchOnHit(ownerRoot, weapon, damage);
+        PlayerWeaponDamageModifiers.TryApplyBleedingPunchOnHit(ownerRoot, weapon, hp);
         ApplyAttackerHoldFromWeapon();
         Debug.Log($"✅ [Projectile] EnemyHealth에 {damage} 데미지 적용!");
 
@@ -165,7 +168,11 @@ public class HitBox_PC_Projectile : MonoBehaviour
                 if (knockbackDir.sqrMagnitude < 0.0001f) knockbackDir = Vector3.back;
                 knockbackDir = knockbackDir.normalized;
 
-                if (weapon != null && weapon.usePushInsteadOfKnockback)
+                if (PlayerWeaponDamageModifiers.TryBuildStunningPunchProxyOnHit(ownerRoot, weapon, out var stunProxy))
+                {
+                    enemy.ApplyKnockback(knockbackDir, stunProxy);
+                }
+                else if (weapon != null && weapon.usePushInsteadOfKnockback)
                 {
                     enemy.ApplyPush(knockbackDir, weapon);
                     Debug.Log($"💥 Projectile 충돌 │ Push 방향: {knockbackDir}");

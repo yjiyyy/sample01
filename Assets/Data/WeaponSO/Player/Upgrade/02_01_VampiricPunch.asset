@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d0916b9ec4a0474dabdcfc22da2e5d1, type: 3}
+  m_Name: 02_01_VampiricPunch
+  m_EditorClassIdentifier: 
+  id: 02_01
+  upgradeName: Vampiric Punch
+  icon: {fileID: 21300000, guid: 85548b9ae3a9d88439abb1f21f931038, type: 3}
+  allowedDamageTypes: 02000000
+  affectedCategories: 00000000
+  lifeStealPercent: 50

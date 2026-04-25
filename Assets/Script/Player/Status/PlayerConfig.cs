@@ -11,6 +11,10 @@ public class PlayerConfig : ScriptableObject
     [Header("Stats")]
     [Tooltip("Base maximum HP")]
     public float maxHealth = 100f;
+    [Tooltip("Base maximum stamina (evade gauge)")]
+    public float maxStamina = 100f;
+    [Tooltip("Stamina recharge per second")]
+    public float staminaRechargeRate = 20f;
 
     [Tooltip("Mass value (kg). If useAbsoluteMass = true, this is used as Rigidbody.mass directly. If false, this acts as a multiplier on original mass.")]
     public float mass = 1f;
@@ -52,6 +56,8 @@ public class PlayerConfig : ScriptableObject
     private void OnValidate()
     {
         maxHealth = Mathf.Max(0f, maxHealth);
+        maxStamina = Mathf.Max(1f, maxStamina);
+        staminaRechargeRate = Mathf.Max(0f, staminaRechargeRate);
 
         // mass: enforce safe range to avoid physics instability
         mass = Mathf.Clamp(mass, 0.0001f, 500f);

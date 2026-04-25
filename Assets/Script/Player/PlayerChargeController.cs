@@ -470,7 +470,7 @@ public class PlayerChargeController : MonoBehaviour
 
                 if (slot.enableAreaDot)
                 {
-                    float dmgPerTick = slot.dotDamagePerTick > 0f ? slot.dotDamagePerTick : slot.damage;
+                    float dmgPerTick = ScaleChargeSlotDamage(slot.dotDamagePerTick > 0f ? slot.dotDamagePerTick : slot.damage);
                     float interval = Mathf.Max(0.01f, slot.dotTickInterval);
 
                     hitbox.Initialize(
@@ -485,7 +485,7 @@ public class PlayerChargeController : MonoBehaviour
                 else
                 {
                     hitbox.Initialize(
-                        slot.damage,
+                        ScaleChargeSlotDamage(slot.damage),
                         slot.range,
                         slot.knockbackPower,
                         slot.hitBoxLifetime
@@ -500,7 +500,7 @@ public class PlayerChargeController : MonoBehaviour
 #if UNITY_EDITOR
             if (debugMode)
             {
-                Debug.Log($"[Charge] HB Spawn(idx:{i}, Delay {d:F2}s) │ dmg:{slot.damage}, range:{slot.range}, kb:{slot.knockbackPower}, life:{slot.hitBoxLifetime}, dup:{slot.enableAreaDot}");
+                Debug.Log($"[Charge] HB Spawn(idx:{i}, Delay {d:F2}s) │ dmg:{ScaleChargeSlotDamage(slot.damage)}, range:{slot.range}, kb:{slot.knockbackPower}, life:{slot.hitBoxLifetime}, dup:{slot.enableAreaDot}");
             }
 #endif
         }
@@ -558,7 +558,7 @@ public class PlayerChargeController : MonoBehaviour
                 hitbox.SetWeapon(chargeWeaponProxy);
                 if (slot.enableAreaDot)
                 {
-                    float dmgPerTick = slot.dotDamagePerTick > 0f ? slot.dotDamagePerTick : slot.damage;
+                    float dmgPerTick = ScaleChargeSlotDamage(slot.dotDamagePerTick > 0f ? slot.dotDamagePerTick : slot.damage);
                     float interval = Mathf.Max(0.01f, slot.dotTickInterval);
 
                     hitbox.Initialize(
@@ -573,7 +573,7 @@ public class PlayerChargeController : MonoBehaviour
                 else
                 {
                     hitbox.Initialize(
-                        slot.damage,
+                        ScaleChargeSlotDamage(slot.damage),
                         slot.range,
                         slot.knockbackPower,
                         slot.hitBoxLifetime
@@ -1020,6 +1020,17 @@ public class PlayerChargeController : MonoBehaviour
         chargeWeaponProxy.usePushInsteadOfKnockback = slot.usePushInsteadOfKnockback;
 
         // 처치 연출 파라미터 관련 필드 추가 복사 완료
+
+        var w = getWeaponData != null ? getWeaponData() : null;
+        chargeWeaponProxy.category = w != null ? w.category : WeaponCategory.Primary;
+    }
+
+    private float ScaleChargeSlotDamage(float baseDamage)
+    {
+        var w = getWeaponData != null ? getWeaponData() : null;
+        WeaponCategory cat = w != null ? w.category : WeaponCategory.Primary;
+        GameObject root = transform.root != null ? transform.root.gameObject : gameObject;
+        return PlayerWeaponDamageModifiers.ScaleOutgoingDamage(root, cat, baseDamage);
     }
 
     private IEnumerator StartContinuousWhenAllowed(PlayerChargeAttackSO slot)

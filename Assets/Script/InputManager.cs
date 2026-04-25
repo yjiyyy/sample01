@@ -205,41 +205,8 @@ public class InputManager : MonoBehaviour
 #if ENABLE_INPUT_SYSTEM
         var kb = Keyboard.current;
         if (kb == null) return false;
-
-        switch (kc)
-        {
-            case KeyCode.A: return kb.aKey != null && kb.aKey.isPressed;
-            case KeyCode.D: return kb.dKey != null && kb.dKey.isPressed;
-            case KeyCode.S: return kb.sKey != null && kb.sKey.isPressed;
-            case KeyCode.W: return kb.wKey != null && kb.wKey.isPressed;
-            case KeyCode.UpArrow: return kb.upArrowKey != null && kb.upArrowKey.isPressed;
-            case KeyCode.DownArrow: return kb.downArrowKey != null && kb.downArrowKey.isPressed;
-            case KeyCode.LeftArrow: return kb.leftArrowKey != null && kb.leftArrowKey.isPressed;
-            case KeyCode.RightArrow: return kb.rightArrowKey != null && kb.rightArrowKey.isPressed;
-            case KeyCode.Space: return kb.spaceKey != null && kb.spaceKey.isPressed;
-            case KeyCode.BackQuote: return kb.backquoteKey != null && kb.backquoteKey.isPressed;
-            case KeyCode.PageDown: return kb.pageDownKey != null && kb.pageDownKey.isPressed;
-            case KeyCode.PageUp: return kb.pageUpKey != null && kb.pageUpKey.isPressed;
-            case KeyCode.Return:
-            case KeyCode.KeypadEnter: return kb.enterKey != null && kb.enterKey.isPressed;
-            case KeyCode.Escape: return kb.escapeKey != null && kb.escapeKey.isPressed;
-            case KeyCode.K: return kb.kKey != null && kb.kKey.isPressed;
-            case KeyCode.Minus: return kb.minusKey != null && kb.minusKey.isPressed;
-            case KeyCode.Equals: return kb.equalsKey != null && kb.equalsKey.isPressed;
-            default:
-                if (kc >= KeyCode.Alpha0 && kc <= KeyCode.Alpha9)
-                {
-                    int n = kc - KeyCode.Alpha0;
-                    var digits = new KeyControl[] {
-                        kb.digit0Key, kb.digit1Key, kb.digit2Key, kb.digit3Key, kb.digit4Key,
-                        kb.digit5Key, kb.digit6Key, kb.digit7Key, kb.digit8Key, kb.digit9Key
-                    };
-                    var kctrl = digits[n];
-                    return kctrl != null && kctrl.isPressed;
-                }
-                break;
-        }
-        return false;
+        if (!TryGetKeyControl(kb, kc, out var key)) return false;
+        return key != null && key.isPressed;
 #else
         return UnityEngine.Input.GetKey(kc);
 #endif
@@ -250,41 +217,8 @@ public class InputManager : MonoBehaviour
 #if ENABLE_INPUT_SYSTEM
         var kb = Keyboard.current;
         if (kb == null) return false;
-
-        switch (kc)
-        {
-            case KeyCode.A: return kb.aKey != null && kb.aKey.wasPressedThisFrame;
-            case KeyCode.D: return kb.dKey != null && kb.dKey.wasPressedThisFrame;
-            case KeyCode.S: return kb.sKey != null && kb.sKey.wasPressedThisFrame;
-            case KeyCode.W: return kb.wKey != null && kb.wKey.wasPressedThisFrame;
-            case KeyCode.UpArrow: return kb.upArrowKey != null && kb.upArrowKey.wasPressedThisFrame;
-            case KeyCode.DownArrow: return kb.downArrowKey != null && kb.downArrowKey.wasPressedThisFrame;
-            case KeyCode.LeftArrow: return kb.leftArrowKey != null && kb.leftArrowKey.wasPressedThisFrame;
-            case KeyCode.RightArrow: return kb.rightArrowKey != null && kb.rightArrowKey.wasPressedThisFrame;
-            case KeyCode.Space: return kb.spaceKey != null && kb.spaceKey.wasPressedThisFrame;
-            case KeyCode.BackQuote: return kb.backquoteKey != null && kb.backquoteKey.wasPressedThisFrame;
-            case KeyCode.PageDown: return kb.pageDownKey != null && kb.pageDownKey.wasPressedThisFrame;
-            case KeyCode.PageUp: return kb.pageUpKey != null && kb.pageUpKey.wasPressedThisFrame;
-            case KeyCode.Return:
-            case KeyCode.KeypadEnter: return kb.enterKey != null && kb.enterKey.wasPressedThisFrame;
-            case KeyCode.Escape: return kb.escapeKey != null && kb.escapeKey.wasPressedThisFrame;
-            case KeyCode.K: return kb.kKey != null && kb.kKey.wasPressedThisFrame;
-            case KeyCode.Minus: return kb.minusKey != null && kb.minusKey.wasPressedThisFrame;
-            case KeyCode.Equals: return kb.equalsKey != null && kb.equalsKey.wasPressedThisFrame;
-            default:
-                if (kc >= KeyCode.Alpha0 && kc <= KeyCode.Alpha9)
-                {
-                    int n = kc - KeyCode.Alpha0;
-                    var digits = new KeyControl[] {
-                        kb.digit0Key, kb.digit1Key, kb.digit2Key, kb.digit3Key, kb.digit4Key,
-                        kb.digit5Key, kb.digit6Key, kb.digit7Key, kb.digit8Key, kb.digit9Key
-                    };
-                    var kctrl = digits[n];
-                    return kctrl != null && kctrl.wasPressedThisFrame;
-                }
-                break;
-        }
-        return false;
+        if (!TryGetKeyControl(kb, kc, out var key)) return false;
+        return key != null && key.wasPressedThisFrame;
 #else
         return UnityEngine.Input.GetKeyDown(kc);
 #endif
@@ -295,45 +229,119 @@ public class InputManager : MonoBehaviour
 #if ENABLE_INPUT_SYSTEM
         var kb = Keyboard.current;
         if (kb == null) return false;
-
-        switch (kc)
-        {
-            case KeyCode.A: return kb.aKey != null && kb.aKey.wasReleasedThisFrame;
-            case KeyCode.D: return kb.dKey != null && kb.dKey.wasReleasedThisFrame;
-            case KeyCode.S: return kb.sKey != null && kb.sKey.wasReleasedThisFrame;
-            case KeyCode.W: return kb.wKey != null && kb.wKey.wasReleasedThisFrame;
-            case KeyCode.UpArrow: return kb.upArrowKey != null && kb.upArrowKey.wasReleasedThisFrame;
-            case KeyCode.DownArrow: return kb.downArrowKey != null && kb.downArrowKey.wasReleasedThisFrame;
-            case KeyCode.LeftArrow: return kb.leftArrowKey != null && kb.leftArrowKey.wasReleasedThisFrame;
-            case KeyCode.RightArrow: return kb.rightArrowKey != null && kb.rightArrowKey.wasReleasedThisFrame;
-            case KeyCode.Space: return kb.spaceKey != null && kb.spaceKey.wasReleasedThisFrame;
-            case KeyCode.BackQuote: return kb.backquoteKey != null && kb.backquoteKey.wasReleasedThisFrame;
-            case KeyCode.PageDown: return kb.pageDownKey != null && kb.pageDownKey.wasReleasedThisFrame;
-            case KeyCode.PageUp: return kb.pageUpKey != null && kb.pageUpKey.wasReleasedThisFrame;
-            case KeyCode.Return:
-            case KeyCode.KeypadEnter: return kb.enterKey != null && kb.enterKey.wasReleasedThisFrame;
-            case KeyCode.Escape: return kb.escapeKey != null && kb.escapeKey.wasReleasedThisFrame;
-            case KeyCode.K: return kb.kKey != null && kb.kKey.wasReleasedThisFrame;
-            case KeyCode.Minus: return kb.minusKey != null && kb.minusKey.wasReleasedThisFrame;
-            case KeyCode.Equals: return kb.equalsKey != null && kb.equalsKey.wasReleasedThisFrame;
-            default:
-                if (kc >= KeyCode.Alpha0 && kc <= KeyCode.Alpha9)
-                {
-                    int n = kc - KeyCode.Alpha0;
-                    var digits = new KeyControl[] {
-                        kb.digit0Key, kb.digit1Key, kb.digit2Key, kb.digit3Key, kb.digit4Key,
-                        kb.digit5Key, kb.digit6Key, kb.digit7Key, kb.digit8Key, kb.digit9Key
-                    };
-                    var kctrl = digits[n];
-                    return kctrl != null && kctrl.wasReleasedThisFrame;
-                }
-                break;
-        }
-        return false;
+        if (!TryGetKeyControl(kb, kc, out var key)) return false;
+        return key != null && key.wasReleasedThisFrame;
 #else
         return UnityEngine.Input.GetKeyUp(kc);
 #endif
     }
+
+#if ENABLE_INPUT_SYSTEM
+    private static bool TryGetKeyControl(Keyboard kb, KeyCode kc, out KeyControl key)
+    {
+        key = null;
+        if (kb == null) return false;
+
+        // Alpha keys
+        if (kc >= KeyCode.A && kc <= KeyCode.Z)
+        {
+            int i = kc - KeyCode.A;
+            KeyControl[] letters = {
+                kb.aKey, kb.bKey, kb.cKey, kb.dKey, kb.eKey, kb.fKey, kb.gKey, kb.hKey, kb.iKey, kb.jKey, kb.kKey, kb.lKey, kb.mKey,
+                kb.nKey, kb.oKey, kb.pKey, kb.qKey, kb.rKey, kb.sKey, kb.tKey, kb.uKey, kb.vKey, kb.wKey, kb.xKey, kb.yKey, kb.zKey
+            };
+            key = letters[i];
+            return key != null;
+        }
+
+        // Top row digits
+        if (kc >= KeyCode.Alpha0 && kc <= KeyCode.Alpha9)
+        {
+            int i = kc - KeyCode.Alpha0;
+            KeyControl[] digits = {
+                kb.digit0Key, kb.digit1Key, kb.digit2Key, kb.digit3Key, kb.digit4Key,
+                kb.digit5Key, kb.digit6Key, kb.digit7Key, kb.digit8Key, kb.digit9Key
+            };
+            key = digits[i];
+            return key != null;
+        }
+
+        // Numpad digits
+        if (kc >= KeyCode.Keypad0 && kc <= KeyCode.Keypad9)
+        {
+            int i = kc - KeyCode.Keypad0;
+            KeyControl[] numpadDigits = {
+                kb.numpad0Key, kb.numpad1Key, kb.numpad2Key, kb.numpad3Key, kb.numpad4Key,
+                kb.numpad5Key, kb.numpad6Key, kb.numpad7Key, kb.numpad8Key, kb.numpad9Key
+            };
+            key = numpadDigits[i];
+            return key != null;
+        }
+
+        // Function keys
+        if (kc >= KeyCode.F1 && kc <= KeyCode.F12)
+        {
+            int i = kc - KeyCode.F1;
+            KeyControl[] fkeys = {
+                kb.f1Key, kb.f2Key, kb.f3Key, kb.f4Key, kb.f5Key, kb.f6Key,
+                kb.f7Key, kb.f8Key, kb.f9Key, kb.f10Key, kb.f11Key, kb.f12Key
+            };
+            key = fkeys[i];
+            return key != null;
+        }
+
+        switch (kc)
+        {
+            case KeyCode.Space: key = kb.spaceKey; return key != null;
+            case KeyCode.Tab: key = kb.tabKey; return key != null;
+            case KeyCode.Escape: key = kb.escapeKey; return key != null;
+            case KeyCode.Backspace: key = kb.backspaceKey; return key != null;
+            case KeyCode.Return: key = kb.enterKey; return key != null;
+
+            case KeyCode.UpArrow: key = kb.upArrowKey; return key != null;
+            case KeyCode.DownArrow: key = kb.downArrowKey; return key != null;
+            case KeyCode.LeftArrow: key = kb.leftArrowKey; return key != null;
+            case KeyCode.RightArrow: key = kb.rightArrowKey; return key != null;
+            case KeyCode.PageUp: key = kb.pageUpKey; return key != null;
+            case KeyCode.PageDown: key = kb.pageDownKey; return key != null;
+            case KeyCode.Home: key = kb.homeKey; return key != null;
+            case KeyCode.End: key = kb.endKey; return key != null;
+            case KeyCode.Insert: key = kb.insertKey; return key != null;
+            case KeyCode.Delete: key = kb.deleteKey; return key != null;
+
+            case KeyCode.BackQuote: key = kb.backquoteKey; return key != null;
+            case KeyCode.Minus: key = kb.minusKey; return key != null;
+            case KeyCode.Equals: key = kb.equalsKey; return key != null;
+            case KeyCode.LeftBracket: key = kb.leftBracketKey; return key != null;
+            case KeyCode.RightBracket: key = kb.rightBracketKey; return key != null;
+            case KeyCode.Backslash: key = kb.backslashKey; return key != null;
+            case KeyCode.Semicolon: key = kb.semicolonKey; return key != null;
+            case KeyCode.Quote: key = kb.quoteKey; return key != null;
+            case KeyCode.Comma: key = kb.commaKey; return key != null;
+            case KeyCode.Period: key = kb.periodKey; return key != null;
+            case KeyCode.Slash: key = kb.slashKey; return key != null;
+
+            case KeyCode.LeftShift: key = kb.leftShiftKey; return key != null;
+            case KeyCode.RightShift: key = kb.rightShiftKey; return key != null;
+            case KeyCode.LeftControl: key = kb.leftCtrlKey; return key != null;
+            case KeyCode.RightControl: key = kb.rightCtrlKey; return key != null;
+            case KeyCode.LeftAlt: key = kb.leftAltKey; return key != null;
+            case KeyCode.RightAlt: key = kb.rightAltKey; return key != null;
+            case KeyCode.CapsLock: key = kb.capsLockKey; return key != null;
+
+            case KeyCode.KeypadPeriod: key = kb.numpadPeriodKey; return key != null;
+            case KeyCode.KeypadDivide: key = kb.numpadDivideKey; return key != null;
+            case KeyCode.KeypadMultiply: key = kb.numpadMultiplyKey; return key != null;
+            case KeyCode.KeypadMinus: key = kb.numpadMinusKey; return key != null;
+            case KeyCode.KeypadPlus: key = kb.numpadPlusKey; return key != null;
+            case KeyCode.KeypadEquals: key = kb.numpadEqualsKey; return key != null;
+            case KeyCode.KeypadEnter: key = kb.numpadEnterKey; return key != null;
+
+            default:
+                return false;
+        }
+    }
+#endif
 
     // Axis emulation: Horizontal / Vertical only (used in project)
     public float GetAxisRaw(string axisName)

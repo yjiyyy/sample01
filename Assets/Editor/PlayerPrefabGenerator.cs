@@ -116,7 +116,6 @@ public static class PlayerPrefabGenerator
 
         root.AddComponent<PlayerMovement>();
         root.AddComponent<PlayerAnimationController>();
-        root.AddComponent<PlayerAnimationTester>();
         root.AddComponent<PlayerWeaponController>();
         root.AddComponent<MeshFilter>();
         var meshRenderer = root.AddComponent<MeshRenderer>();
@@ -183,25 +182,6 @@ public static class PlayerPrefabGenerator
         else
             Debug.LogWarning("[PlayerPrefabGenerator] MovementSettings를 찾지 못했습니다. 프리팹에서 PlayerMovement에 수동 할당해 주세요.");
 
-        // Player Animation Tester: 테스트용 무기 SO (1~9번 키) — None, Bat, Pistol, Shotgun, AR
-        WeaponDataSO[] testWeapons = FindTestWeaponSOs();
-        if (testWeapons != null && testWeapons.Length > 0)
-        {
-            var tester = root.GetComponent<PlayerAnimationTester>();
-            if (tester != null)
-            {
-                var so = new SerializedObject(tester);
-                var prop = so.FindProperty("testWeapons");
-                if (prop != null)
-                {
-                    prop.arraySize = testWeapons.Length;
-                    for (int i = 0; i < testWeapons.Length; i++)
-                        prop.GetArrayElementAtIndex(i).objectReferenceValue = testWeapons[i];
-                    so.ApplyModifiedPropertiesWithoutUndo();
-                }
-            }
-        }
-
         // Player Facade: Config = PlayerConfig_SO, Auto Sync 켜기
         PlayerConfig playerConfig = FindDefaultPlayerConfig();
         if (playerConfig != null)
@@ -250,26 +230,6 @@ public static class PlayerPrefabGenerator
             }
         }
         return null;
-    }
-
-    /// <summary>PC 공통: 스샷대로 None, Bat, Pistol, Shotgun, AR — Assets/Data/WeaponSO/Player 폴더만 사용 (Old 제외)</summary>
-    private static WeaponDataSO[] FindTestWeaponSOs()
-    {
-        string[] searchFolders = new[] { "Assets/Data/WeaponSO/Player" };
-        string[] names = { "SO_P_Weapon_00_None", "SO_P_Weapon_01_Bat", "SO_P_Weapon_02_Pistol", "SO_P_Weapon_03_Shotgun", "SO_P_Weapon_04_AR" };
-        var list = new List<WeaponDataSO>();
-        foreach (string name in names)
-        {
-            string[] guids = AssetDatabase.FindAssets($"{name} t:WeaponDataSO", searchFolders);
-            for (int i = 0; i < guids.Length; i++)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-                if (path == null || path.Contains("/Old/")) continue;
-                var asset = AssetDatabase.LoadAssetAtPath<WeaponDataSO>(path);
-                if (asset != null && asset.name == name) { list.Add(asset); break; }
-            }
-        }
-        return list.Count > 0 ? list.ToArray() : null;
     }
 
     /// <summary>PC 공통: Controller=PC_001, Avatar=PC001_newAvatar, Apply Root Motion/Animate Physics 끄기, Normal, Always Animate</summary>

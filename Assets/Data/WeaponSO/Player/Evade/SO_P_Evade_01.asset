@@ -12,9 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee7316db2ee827243a3404a3426a4e50, type: 3}
   m_Name: SO_P_Evade_01
   m_EditorClassIdentifier: 
-  maxGauge: 50
-  evadeCost: 1
-  rechargeRate: 5
+  evadeCost: 5
   evadeSpeed: 10
   evadeDuration: 0.8
   invincibilityDuration: 0.5

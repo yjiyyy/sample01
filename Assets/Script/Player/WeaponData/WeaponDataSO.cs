@@ -5,7 +5,7 @@ using System.Collections.Generic;
 /// Weapon data ScriptableObject (common for most weapons)
 /// - 기존 필드 + (WeaponBehavior 완전 이관용) 스폰포인트/프리팹 필드
 /// - 듀얼(2번째 스폰포인트/딜레이) 필드
-/// - PlayerAnimationTester용 weaponPrefab 필드
+/// - 장착용 weaponPrefab 필드 (DevWeaponSwitcher 등)
 /// </summary>
 
 public enum DamageTargetType
@@ -51,6 +51,16 @@ public enum AttackVariantHandMode
     Both
 }
 
+/// <summary>
+/// 업그레이드/피해 규칙 분기에 사용하는 공격 타입 분류.
+/// </summary>
+public enum AttackDamageType
+{
+    Unarmed,
+    MeleeWeapon,
+    Gun
+}
+
 [CreateAssetMenu(menuName = "Weapon/WeaponDataSO")]
 public class WeaponDataSO : ScriptableObject
 {
@@ -59,10 +69,13 @@ public class WeaponDataSO : ScriptableObject
     public string weaponName = "NewWeapon";
     public Sprite icon;
     public WeaponCategory category = WeaponCategory.Primary;
+    [Header("공격 타입 분류")]
+    [Tooltip("업그레이드/효과 분기용 공격 타입. 예: 흡혈은 MeleeWeapon/Unarmed만 허용")]
+    public AttackDamageType damageType = AttackDamageType.MeleeWeapon;
 
     [Header("장착 프리팹 (테스트/장착용)")]
     [Tooltip("이 WeaponDataSO를 장착할 때 사용할 무기 프리팹.\n" +
-             "PlayerAnimationTester(에디터 테스트)에서 이 값을 사용해 장착합니다.")]
+             "PlayerWeaponController.EquipWeapon / DevWeaponSwitcher 등에서 사용합니다.")]
     public GameObject weaponPrefab;
 
     [Header("애니메이션 세트 (Animator Override Controller 방식)")]

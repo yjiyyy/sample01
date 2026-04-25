@@ -18,6 +18,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   maxHealth: 90
+  maxStamina: 10
+  staminaRechargeRate: 0.5
   mass: 1
   useAbsoluteMass: 1
   baseMoveSpeed: 10

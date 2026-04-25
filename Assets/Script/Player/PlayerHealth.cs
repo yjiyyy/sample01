@@ -143,7 +143,6 @@ public class PlayerHealth : MonoBehaviour
         var move = GetComponent<PlayerMovement>();
         var evade = GetComponent<PlayerEvadeController>();
         var charge = GetComponent<PlayerChargeController>();
-        var animTester = GetComponent<PlayerAnimationTester>();
         var recoil = GetComponent<PlayerRecoil>();
 
         // 1) 상태 Dead + 모든 행동 컴포넌트 종료 (죽음 이벤트만 유지)
@@ -157,7 +156,6 @@ public class PlayerHealth : MonoBehaviour
         if (weaponCtrl != null) weaponCtrl.enabled = false;
         if (evade != null) evade.enabled = false;
         if (charge != null) charge.enabled = false;
-        if (animTester != null) animTester.enabled = false;
         if (recoil != null) recoil.enabled = false;
 
         // 2) SO에 따라 Ragdoll / Slice / 애니메이션 죽음 (몬스터와 동일)

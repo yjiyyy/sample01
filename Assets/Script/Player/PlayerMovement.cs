@@ -48,6 +48,7 @@ public class PlayerMovement : MonoBehaviour
     private float currentMoveSpeed = 0f;
 
     private bool suspendFalling = false;
+    private float externalMoveSpeedMultiplier = 1f;
 
     private StageManager stageManager;
     public Action onPlayerFellOutOfStage;
@@ -715,13 +716,21 @@ public class PlayerMovement : MonoBehaviour
 
     private float ComputeCurrentMoveSpeed(bool isARFiring, bool arAllowMove)
     {
-        float speed = baseMoveSpeed;
+        float speed = baseMoveSpeed * Mathf.Max(0f, externalMoveSpeedMultiplier);
         if (isARFiring && arAllowMove && weaponCtrl != null)
         {
             var arData = weaponCtrl.GetCurrentWeaponData() as WeaponDataSO_AR;
             if (arData != null) speed *= Mathf.Max(0f, arData.moveSpeedWhileFiring);
         }
         return speed;
+    }
+
+    /// <summary>
+    /// 업그레이드 등 외부 시스템이 이동속도 배율을 적용할 때 사용합니다. (1 = 기본속도)
+    /// </summary>
+    public void SetExternalMoveSpeedMultiplier(float multiplier)
+    {
+        externalMoveSpeedMultiplier = Mathf.Max(0f, multiplier);
     }
 
     // Public helper APIs required by other scripts

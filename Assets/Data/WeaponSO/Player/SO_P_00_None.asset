@@ -16,22 +16,24 @@ MonoBehaviour:
   weaponName: None
   icon: {fileID: 21300000, guid: a9e04d62599b8354885ac89756a251cf, type: 3}
   category: 0
+  damageType: 0
   weaponPrefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
   overrideController: {fileID: 0}
   attackAnimVariantCount: 4
+  attackVariantHandModes: 
   cooldown: 0.5
-  damage: 20
+  damage: 10
   range: 2.5
   hitboxSpawnDelay: 0.13
   hitBoxLifetime: 0.1
   trailEmitStartDelay: 0
   trailEmitDuration: 0
-  knockbackDuration: 0.3
-  knockbackPower: 10
+  knockbackDuration: 1
+  knockbackPower: 5
   jerkIntensity: 1
   jerkDuration: 0.2
   stunDuration: 2
-  usePushInsteadOfKnockback: 1
+  usePushInsteadOfKnockback: 0
   targetHoldDuration: 0.2
   attackerHoldDuration: 0.1
   targetStateHoldDuration: 0
@@ -60,5 +62,6 @@ MonoBehaviour:
   hitEffectPrefab: {fileID: 0}
   attackFXPhases: []
   dualWield: 0
+  dualWeaponPrefab: {fileID: 0}
   hitboxSpawnDelay2: 0
   projectileSpawnPoint2PathOrName: 

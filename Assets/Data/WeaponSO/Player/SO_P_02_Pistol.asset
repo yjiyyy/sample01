@@ -16,12 +16,13 @@ MonoBehaviour:
   weaponName: Pistol
   icon: {fileID: 21300000, guid: ad8bf8234a4f49a47b98e99d47be68a0, type: 3}
   category: 0
+  damageType: 2
   weaponPrefab: {fileID: 7696554681474183416, guid: 883d112363ed4164eaf30bb461f2d266, type: 3}
   overrideController: {fileID: 22100000, guid: 0988f3fddfb565b49a069a2e45c6a10b, type: 2}
   attackAnimVariantCount: 3
   attackVariantHandModes: 
   cooldown: 0.5
-  damage: 1
+  damage: 10
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.2

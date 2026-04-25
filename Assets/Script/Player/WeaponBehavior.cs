@@ -47,6 +47,16 @@ public class WeaponBehavior : MonoBehaviour
         return cachedPlayerCtrl != null && cachedPlayerCtrl.IsTimeHoldActive;
     }
 
+    /// <summary>업그레이드 등 무기 카테고리별 보정을 적용한 최종 피해.</summary>
+    private float ScaleOutgoingDamageForWeapon(WeaponDataSO weaponStats, float baseDamage)
+    {
+        if (weaponStats == null)
+            return Mathf.Max(0f, baseDamage);
+
+        GameObject root = transform.root != null ? transform.root.gameObject : gameObject;
+        return PlayerWeaponDamageModifiers.ScaleOutgoingDamage(root, weaponStats.category, baseDamage);
+    }
+
     void Awake()
     {
         if (data != null)
@@ -582,7 +592,7 @@ public class WeaponBehavior : MonoBehaviour
         if (hitboxGO.TryGetComponent(out HitBox_PC hitbox))
         {
             hitbox.SetWeapon(data);
-            hitbox.Initialize(data.damage, data.range, data.knockbackPower, data.hitBoxLifetime);
+            hitbox.Initialize(ScaleOutgoingDamageForWeapon(data, data.damage), data.range, data.knockbackPower, data.hitBoxLifetime);
         }
     }
 
@@ -812,7 +822,8 @@ public class WeaponBehavior : MonoBehaviour
                 Vector3 ppos = bulletGO.transform.position;
                 ppos.y = spawnPoint.position.y;
                 bulletGO.transform.position = ppos;
-                sectorProj.Initialize(this.data, dirXZ);
+                GameObject modRoot = transform.root != null ? transform.root.gameObject : gameObject;
+                sectorProj.Initialize(this.data, dirXZ, modRoot);
                 return;
             }
 
@@ -826,8 +837,9 @@ public class WeaponBehavior : MonoBehaviour
                 else if (data is WeaponDataSO_Launcher l2) { spd = l2.projectileSpeed; life = l2.projectileLifetime; }
                 else if (data is WeaponDataSO_AR ar2) { spd = ar2.projectileSpeed; life = ar2.projectileLifetime; pierce = ar2.pierceCount; }
 
-                if (pierce > 0) proj.InitializeTowardsTargetPosition(targetPos, data.damage, spd, life, pierce, true);
-                else proj.InitializeTowardsTargetPosition(targetPos, data.damage, spd, life, true);
+                float dmg = ScaleOutgoingDamageForWeapon(data, data.damage);
+                if (pierce > 0) proj.InitializeTowardsTargetPosition(targetPos, dmg, spd, life, pierce, true);
+                else proj.InitializeTowardsTargetPosition(targetPos, dmg, spd, life, true);
 
                 return;
             }
@@ -848,7 +860,8 @@ public class WeaponBehavior : MonoBehaviour
             Vector3 fwdXZ = dir; fwdXZ.y = 0f;
             if (fwdXZ.sqrMagnitude < 0.0001f) fwdXZ = transform.forward;
             fwdXZ.Normalize();
-            sector2.Initialize(this.data, fwdXZ);
+            GameObject modRoot2 = transform.root != null ? transform.root.gameObject : gameObject;
+            sector2.Initialize(this.data, fwdXZ, modRoot2);
             return;
         }
 
@@ -862,8 +875,9 @@ public class WeaponBehavior : MonoBehaviour
             else if (data is WeaponDataSO_Launcher l3) { spd = l3.projectileSpeed; life = l3.projectileLifetime; }
             else if (data is WeaponDataSO_AR ar3) { spd = ar3.projectileSpeed; life = ar3.projectileLifetime; pierce = ar3.pierceCount; }
 
-            if (pierce > 0) p.InitializeTowards(dir, data.damage, spd, life, pierce);
-            else p.InitializeTowards(dir, data.damage, spd, life);
+            float dmgP = ScaleOutgoingDamageForWeapon(data, data.damage);
+            if (pierce > 0) p.InitializeTowards(dir, dmgP, spd, life, pierce);
+            else p.InitializeTowards(dir, dmgP, spd, life);
 
             return;
         }
@@ -960,7 +974,7 @@ public class WeaponBehavior : MonoBehaviour
 
         sector.SetForwardOverride(forward);
 
-        float dmg = data.damage;
+        float dmg = ScaleOutgoingDamageForWeapon(data, data.damage);
         float radius = sg.shotgunRadius;
         float kb = data.knockbackPower;
         float life = data.hitBoxLifetime;
@@ -1014,7 +1028,8 @@ public class WeaponBehavior : MonoBehaviour
 
         if (bulletGO.TryGetComponent(out HitBox_PC_Projectile_Sector sectorProj))
         {
-            sectorProj.Initialize(this.data, dir);
+            GameObject modRootF = transform.root != null ? transform.root.gameObject : gameObject;
+            sectorProj.Initialize(this.data, dir, modRootF);
             return;
         }
 
@@ -1029,8 +1044,9 @@ public class WeaponBehavior : MonoBehaviour
             else if (data is WeaponDataSO_Launcher l) { spd = l.projectileSpeed; life = l.projectileLifetime; }
             else if (data is WeaponDataSO_AR ar) { spd = ar.projectileSpeed; life = ar.projectileLifetime; pierce = ar.pierceCount; }
 
-            if (pierce > 0) proj.InitializeTowards(dir, data.damage, spd, life, pierce);
-            else proj.InitializeTowards(dir, data.damage, spd, life);
+            float dmgF = ScaleOutgoingDamageForWeapon(data, data.damage);
+            if (pierce > 0) proj.InitializeTowards(dir, dmgF, spd, life, pierce);
+            else proj.InitializeTowards(dir, dmgF, spd, life);
 
             return;
         }

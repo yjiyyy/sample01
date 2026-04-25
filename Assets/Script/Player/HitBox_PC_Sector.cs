@@ -105,6 +105,9 @@ public class HitBox_PC_Sector : MonoBehaviour
 
             // 1) 데미지 먼저 적용
             hp.ApplyDamage(finalDmg, dir, weapon, weight, hitPoint);
+            GameObject ownerRoot = transform.root != null ? transform.root.gameObject : gameObject;
+            PlayerWeaponDamageModifiers.TryApplyVampiricPunchOnHit(ownerRoot, weapon, finalDmg);
+            PlayerWeaponDamageModifiers.TryApplyBleedingPunchOnHit(ownerRoot, weapon, hp);
             ApplyAttackerHoldFromWeapon();
             Debug.Log($"✅ [Shotgun] EnemyHealth에 {finalDmg} 데미지 적용!(w={weight:F2})");
 
@@ -115,6 +118,12 @@ public class HitBox_PC_Sector : MonoBehaviour
             if (enemy.CurrentState == Enemy.EnemyState.Dead)
             {
                 // 치명타면 방향 전환/넉백/푸시 적용하지 않음
+                continue;
+            }
+
+            if (PlayerWeaponDamageModifiers.TryBuildStunningPunchProxyOnHit(ownerRoot, weapon, out var stunProxy))
+            {
+                enemy.ApplyKnockback(dir, stunProxy, weight);
                 continue;
             }
 

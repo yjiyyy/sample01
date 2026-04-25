@@ -591,7 +591,7 @@ public class PlayerWeaponController : MonoBehaviour
 
     /// <summary>
     /// 무기 SO 기준 장착 — AOC/CurrentWeaponData/WeaponBehavior.ApplyData가 맞게 갱신됩니다.
-    /// (프리팹만 넘기는 EquipPrefab 경로와 달리 PlayerAnimationTester의 EquipByData와 동일합니다.)
+    /// (프리팹만 넘기는 EquipPrefab 경로와 달리 SO 기준으로 AOC·데이터를 동기화합니다.)
     /// </summary>
     public void EquipWeapon(WeaponDataSO weaponData)
     {

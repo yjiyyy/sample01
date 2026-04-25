@@ -609,7 +609,7 @@ ModelImporter:
       scale: {x: 1, y: 1, z: 1}
     - name: Bip001 Neck
       parentName: Bip001 Spine1
-      position: {x: -0.368937, y: -0.0582989, z: -0.000000036430247}
+      position: {x: -0.368937, y: -0.0582989, z: -0.000000036430208}
       rotation: {x: 0, y: 0, z: 0, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Bip001 R Clavicle
@@ -634,7 +634,7 @@ ModelImporter:
       scale: {x: 1.0000002, y: 1.0000001, z: 0.9999998}
     - name: R_Hand_Weapon
       parentName: Bip001 R Hand
-      position: {x: -0.10999977, y: 0.029999847, z: -0.03}
+      position: {x: -0.11, y: 0.03, z: -0.02999998}
       rotation: {x: 0, y: 0, z: 0, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Bip001 R Finger0
@@ -754,7 +754,7 @@ ModelImporter:
       scale: {x: 1, y: 1, z: 1}
     - name: Bip001 Head
       parentName: Bip001 Neck
-      position: {x: -0.046735685, y: -0.006254463, z: -0.000000013458411}
+      position: {x: -0.046735685, y: -0.006254463, z: -0.000000013458484}
       rotation: {x: 0, y: 0, z: 0, w: 1}
       scale: {x: 1.0000001, y: 1.0000002, z: 1.0000001}
     - name: Bip001 HeadNub

@@ -44,7 +44,6 @@ GameObject:
   - component: {fileID: 8100174068013826237}
   - component: {fileID: 8087633842368654686}
   - component: {fileID: 2004588313074536412}
-  - component: {fileID: 3022286776372735218}
   - component: {fileID: 7285279121193085522}
   - component: {fileID: 6887379582798511361}
   - component: {fileID: 7513737482599732494}
@@ -160,25 +159,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   weaponBehavior: {fileID: 0}
---- !u!114 &3022286776372735218
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2035022492551130508}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ad8ee9dc60506c541acb3305e38ecf5d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  testWeapons:
-  - {fileID: 11400000, guid: dbc5259d0ca8f3f448cb65df4bc65720, type: 2}
-  - {fileID: 11400000, guid: f440556998d9e35458b2733280355ba5, type: 2}
-  - {fileID: 11400000, guid: 0f5d169583bee1f4da439fd8f516e2fe, type: 2}
-  - {fileID: 11400000, guid: 4c858c29571e76547b8b35c3b63753e1, type: 2}
-  - {fileID: 11400000, guid: b347cb75708510240ba7748c83fdf6cc, type: 2}
-  - {fileID: 11400000, guid: 8a549ae9335cfd544b05fe1b9227448b, type: 2}
 --- !u!114 &7285279121193085522
 MonoBehaviour:
   m_ObjectHideFlags: 0

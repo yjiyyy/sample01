@@ -3,10 +3,8 @@
 [CreateAssetMenu(menuName = "Player/EvadeDataSO")]
 public class EvadeDataSO : ScriptableObject
 {
-    [Header("회피 기본 설정")]
-    public float maxGauge = 100f;
+    [Header("회피 비용")]
     public float evadeCost = 30f;
-    public float rechargeRate = 20f;
 
     [Header("회피 성능")]
     public float evadeSpeed = 8f;

@@ -39,6 +39,8 @@ public class EnemyHealth : MonoBehaviour
     // shield break state
     private bool isShieldBreak = false;
     private Coroutine shieldRechargeRoutine;
+    private bool isBleeding = false;
+    private Coroutine bleedingRoutine;
 
     /// <summary>HP가 0이 되어 Die가 확정될 때 1회 호출 (enemy.Die 직전).</summary>
     public event Action OnDeath;
@@ -165,10 +167,64 @@ public class EnemyHealth : MonoBehaviour
         if (deathInvoked) return;
         deathInvoked = true;
 
+        if (bleedingRoutine != null)
+        {
+            StopCoroutine(bleedingRoutine);
+            bleedingRoutine = null;
+        }
+        isBleeding = false;
+
         OnDeath?.Invoke();
 
         if (enemy != null)
             enemy.Die(hitDir, weapon, impactScale);
+    }
+
+    public bool IsBleeding => isBleeding;
+
+    /// <summary>
+    /// 출혈을 1회만 적용합니다. 이미 출혈 중이면 무시합니다.
+    /// </summary>
+    public bool TryApplyBleedOnce(float duration, float tickInterval, float damagePerTick, GameObject bleedTickEffectPrefab = null)
+    {
+        if (currentHP <= 0f || deathInvoked)
+            return false;
+
+        if (isBleeding)
+            return false;
+
+        if (duration <= 0f || tickInterval <= 0f || damagePerTick <= 0f)
+            return false;
+
+        isBleeding = true;
+        bleedingRoutine = StartCoroutine(BleedRoutine(duration, tickInterval, damagePerTick, bleedTickEffectPrefab));
+        return true;
+    }
+
+    private IEnumerator BleedRoutine(float duration, float tickInterval, float damagePerTick, GameObject bleedTickEffectPrefab)
+    {
+        float tick = Mathf.Max(0.05f, tickInterval);
+        float endTime = Time.time + Mathf.Max(0.05f, duration);
+        var wait = new WaitForSeconds(tick);
+
+        while (Time.time < endTime)
+        {
+            yield return wait;
+
+            if (currentHP <= 0f || deathInvoked)
+                break;
+
+            if (bleedTickEffectPrefab != null)
+            {
+                Transform root = transform.root != null ? transform.root : transform;
+                UnityEngine.Object.Instantiate(bleedTickEffectPrefab, root.position, Quaternion.identity, root);
+            }
+
+            ApplyDamage(damagePerTick, Vector3.zero, null, 1f, null);
+        }
+
+        isBleeding = false;
+        bleedingRoutine = null;
     }
 
     // Optional helper: expose current shield value (read-only)

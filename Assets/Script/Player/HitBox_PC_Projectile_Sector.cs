@@ -40,7 +40,8 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
         col = GetComponent<Collider>();
     }
 
-    public void Initialize(WeaponDataSO data, Vector3 forward)
+    /// <param name="ownerRootForDamageMods">플레이어 루트(업그레이드 보정용). null이면 SO 데미지 그대로.</param>
+    public void Initialize(WeaponDataSO data, Vector3 forward, GameObject ownerRootForDamageMods = null)
     {
         weaponData = data;
         launcherData = data as WeaponDataSO_Launcher;
@@ -48,7 +49,11 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
 
         cachedLifetime = launcherData != null ? launcherData.projectileLifetime : DEF_LIFETIME;
         cachedSpeed = launcherData != null ? launcherData.projectileSpeed : DEF_SPEED;
-        cachedDamage = data != null ? data.damage : DEF_DAMAGE;
+        float rawDamage = data != null ? data.damage : DEF_DAMAGE;
+        if (ownerRootForDamageMods != null && data != null)
+            cachedDamage = PlayerWeaponDamageModifiers.ScaleOutgoingDamage(ownerRootForDamageMods, data.category, rawDamage);
+        else
+            cachedDamage = rawDamage;
         cachedRadius = launcherData != null ? launcherData.explosiveRadius : DEF_RADIUS;
         cachedEdgeMul = launcherData != null ? launcherData.explosiveEdgeMul : DEF_EDGE;
 
@@ -135,6 +140,9 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
             else if (target.TryGetComponent(out EnemyHealth enemyHP))
             {
                 enemyHP.ApplyDamage(finalDamage, hitDir, weaponData, impactScale, hitPoint);
+                GameObject ownerRoot = transform.root != null ? transform.root.gameObject : gameObject;
+                PlayerWeaponDamageModifiers.TryApplyVampiricPunchOnHit(ownerRoot, weaponData, finalDamage);
+                PlayerWeaponDamageModifiers.TryApplyBleedingPunchOnHit(ownerRoot, weaponData, enemyHP);
                 ApplyAttackerHoldFromWeapon();
                 Debug.Log($"✅ [Explosion] EnemyHealth에 {finalDamage} 데미지!");
 
@@ -142,6 +150,12 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
                 var enemy = target.GetComponentInParent<Enemy>();
                 if (enemy != null && enemy.CurrentState != Enemy.EnemyState.Dead)
                 {
+                    if (PlayerWeaponDamageModifiers.TryBuildStunningPunchProxyOnHit(ownerRoot, weaponData, out var stunProxy))
+                    {
+                        enemy.ApplyKnockback(hitDir, stunProxy, impactScale);
+                        continue;
+                    }
+
                     if (weaponData != null && weaponData.usePushInsteadOfKnockback)
                     {
                         enemy.ApplyPush(hitDir, weaponData, impactScale);

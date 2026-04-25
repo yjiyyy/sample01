@@ -168,7 +168,6 @@ GameObject:
   - component: {fileID: 7363581019966837371}
   - component: {fileID: 3239210382414482126}
   - component: {fileID: 2832461117727367097}
-  - component: {fileID: 1809110992329604555}
   - component: {fileID: 1833718691710986991}
   - component: {fileID: 482975043326839558}
   - component: {fileID: 4104398978985094851}
@@ -283,24 +282,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   weaponBehavior: {fileID: 0}
---- !u!114 &1809110992329604555
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7162835886033023559}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ad8ee9dc60506c541acb3305e38ecf5d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  testWeapons:
-  - {fileID: 11400000, guid: dbc5259d0ca8f3f448cb65df4bc65720, type: 2}
-  - {fileID: 11400000, guid: f440556998d9e35458b2733280355ba5, type: 2}
-  - {fileID: 11400000, guid: 0f5d169583bee1f4da439fd8f516e2fe, type: 2}
-  - {fileID: 11400000, guid: 4c858c29571e76547b8b35c3b63753e1, type: 2}
-  - {fileID: 11400000, guid: b347cb75708510240ba7748c83fdf6cc, type: 2}
 --- !u!114 &1833718691710986991
 MonoBehaviour:
   m_ObjectHideFlags: 0

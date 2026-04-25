@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 6783850431051604461}
   - component: {fileID: 7043935488017820867}
   - component: {fileID: 4030254463457412395}
-  - component: {fileID: -1747262602898350906}
   - component: {fileID: 3684259590824549436}
   - component: {fileID: -1541331493322818118}
   - component: {fileID: -7523068386667480048}
@@ -126,27 +125,6 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 112
   m_CollisionDetection: 2
---- !u!114 &-1747262602898350906
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1981492291339588791}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ad8ee9dc60506c541acb3305e38ecf5d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  testWeapons:
-  - {fileID: 11400000, guid: 4fea67bffc1b3aa418d2b0ff14aa7cbc, type: 2}
-  - {fileID: 11400000, guid: 35acc212ed499b749806d3ec27951d41, type: 2}
-  - {fileID: 11400000, guid: 4f446b322fd0f5c48a8dae281deee4be, type: 2}
-  - {fileID: 11400000, guid: b8500695101ee304f99b6e43d6f46df5, type: 2}
-  - {fileID: 11400000, guid: 74c3a9dc47cc68f438b9572e6098ef48, type: 2}
-  weaponControllerManual: {fileID: 0}
-  equipManual: {fileID: 0}
-  healthManual: {fileID: 0}
 --- !u!114 &3684259590824549436
 MonoBehaviour:
   m_ObjectHideFlags: 0

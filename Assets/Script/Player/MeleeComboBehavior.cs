@@ -215,7 +215,10 @@ public class MeleeComboBehavior : MonoBehaviour
             hitbox.SetWeapon(proxy);
             ownerController?.StartRecoilIfNeeded(proxy);
 
-            float dmg = proxy != null ? proxy.damage : 0f;
+            GameObject rootGo = transform.root != null ? transform.root.gameObject : gameObject;
+            WeaponCategory cat = weapon != null ? weapon.category : WeaponCategory.Primary;
+            float rawDmg = proxy != null ? proxy.damage : 0f;
+            float dmg = PlayerWeaponDamageModifiers.ScaleOutgoingDamage(rootGo, cat, rawDmg);
             float rng = proxy != null ? proxy.range : 2.5f;
             float kb = proxy != null ? proxy.knockbackPower : 0f;
             float life = Mathf.Max(0.01f, step.hitBoxLifetime > 0f ? step.hitBoxLifetime : (weapon != null ? weapon.hitBoxLifetime : 0.15f));
@@ -488,6 +491,7 @@ public class MeleeComboBehavior : MonoBehaviour
 
         proxy.cooldown = step.cooldown >= 0f ? step.cooldown : (weaponDefault != null ? weaponDefault.cooldown : 0.5f);
         proxy.damage = step.damage >= 0f ? step.damage : (weaponDefault != null ? weaponDefault.damage : 0f);
+        proxy.category = weaponDefault != null ? weaponDefault.category : WeaponCategory.Primary;
         proxy.range = step.range >= 0f ? step.range : (weaponDefault != null ? weaponDefault.range : 2.5f);
 
         proxy.hitBoxLifetime = step.hitBoxLifetime > 0f ? step.hitBoxLifetime : (weaponDefault != null ? weaponDefault.hitBoxLifetime : 0.15f);

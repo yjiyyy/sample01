@@ -1,0 +1,399 @@
+using UnityEngine;
+
+/// <summary>
+/// 업그레이드 등으로 누적된 무기 카테고리별 데미지 보정을 보관합니다.
+/// 최종 피해 = max(0, baseDamage * (1 + 퍼센트 합) + 플랫 합)
+/// </summary>
+[DisallowMultipleComponent]
+public class PlayerWeaponDamageModifiers : MonoBehaviour
+{
+    private const int CategoryCount = 4;
+
+    private readonly float[] percentBonusSum = new float[CategoryCount];
+    private readonly float[] flatBonusSum = new float[CategoryCount];
+    private Upgrade cachedUpgrade;
+    private PlayerHealth cachedPlayerHealth;
+
+    /// <summary>
+    /// owner 루트(플레이어) 기준으로 카테고리별 보정을 적용합니다. 컴포넌트가 없으면 baseDamage 그대로.
+    /// </summary>
+    public static float ScaleOutgoingDamage(GameObject ownerRoot, WeaponCategory category, float baseDamage)
+    {
+        if (ownerRoot == null)
+            return baseDamage;
+
+        var mods = ownerRoot.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
+        if (mods == null)
+        {
+            // fallback: 장착 무기 루트가 플레이어 루트가 아닌 프리팹 구조에서도
+            // 단일 플레이 기준으로 보정을 찾을 수 있게 지원합니다.
+            mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
+        }
+        return mods != null ? mods.Apply(category, baseDamage) : baseDamage;
+    }
+
+    /// <summary>
+    /// 실제 적중 피해량 기준으로 흡혈 효과를 적용합니다.
+    /// </summary>
+    public static void TryApplyVampiricPunchOnHit(GameObject ownerRoot, WeaponDataSO weapon, float dealtDamage)
+    {
+        if (ownerRoot == null || weapon == null || dealtDamage <= 0f)
+            return;
+
+        var mods = ownerRoot.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
+        if (mods == null)
+            mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
+        if (mods == null)
+            return;
+
+        float lifeStealPercent = mods.GetVampiricPunchPercent(weapon);
+        if (lifeStealPercent <= 0f)
+            return;
+
+        if (mods.cachedPlayerHealth == null)
+            mods.cachedPlayerHealth = ResolvePlayerHealth(mods.cachedUpgrade);
+        if (mods.cachedPlayerHealth == null)
+            return;
+
+        float healAmount = Mathf.Max(0f, dealtDamage) * lifeStealPercent;
+        if (healAmount > 0f)
+            mods.cachedPlayerHealth.Heal(healAmount);
+    }
+
+    /// <summary>
+    /// 적중 시 출혈 효과를 적용합니다. 이미 출혈 중이면 재적용하지 않습니다.
+    /// </summary>
+    public static void TryApplyBleedingPunchOnHit(GameObject ownerRoot, WeaponDataSO weapon, EnemyHealth target)
+    {
+        if (ownerRoot == null || weapon == null || target == null)
+            return;
+
+        var mods = ownerRoot.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
+        if (mods == null)
+            mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
+        if (mods == null)
+            return;
+
+        if (!mods.TryGetBleedingPunchConfig(weapon, out float chance, out float duration, out float tickInterval, out float damagePerTick, out GameObject bleedTickEffectPrefab))
+            return;
+
+        if (Random.value > chance)
+            return;
+
+        target.TryApplyBleedOnce(duration, tickInterval, damagePerTick, bleedTickEffectPrefab);
+    }
+
+    /// <summary>
+    /// 적중 시 확률적으로 넉백→스턴 흐름용 프록시 무기 데이터를 생성합니다.
+    /// true를 반환하면 호출 측에서 기존 push 분기 대신 ApplyKnockback(proxy)를 사용합니다.
+    /// </summary>
+    public static bool TryBuildStunningPunchProxyOnHit(GameObject ownerRoot, WeaponDataSO weapon, out WeaponDataSO proxyWeapon)
+    {
+        proxyWeapon = null;
+        if (ownerRoot == null || weapon == null)
+            return false;
+
+        var mods = ownerRoot.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
+        if (mods == null)
+            mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
+        if (mods == null)
+            return false;
+
+        if (!mods.TryGetStunningPunchConfig(
+                weapon,
+                out float chance,
+                out float bonusKbDuration,
+                out float bonusKbPower,
+                out float bonusJerkIntensity,
+                out float bonusJerkDuration,
+                out float bonusStunDuration))
+            return false;
+
+        if (Random.value > chance)
+            return false;
+
+        var proxy = ScriptableObject.CreateInstance<WeaponDataSO>();
+        proxy.hideFlags = HideFlags.HideAndDontSave;
+        proxy.knockbackDuration = Mathf.Max(0f, weapon.knockbackDuration + bonusKbDuration);
+        proxy.knockbackPower = Mathf.Max(0f, weapon.knockbackPower + bonusKbPower);
+        proxy.jerkIntensity = Mathf.Max(0f, weapon.jerkIntensity + bonusJerkIntensity);
+        proxy.jerkDuration = Mathf.Max(0f, weapon.jerkDuration + bonusJerkDuration);
+        proxy.stunDuration = Mathf.Max(0f, weapon.stunDuration + bonusStunDuration);
+        proxy.usePushInsteadOfKnockback = false;
+        proxyWeapon = proxy;
+        return true;
+    }
+
+    public void Clear()
+    {
+        for (int i = 0; i < CategoryCount; i++)
+        {
+            percentBonusSum[i] = 0f;
+            flatBonusSum[i] = 0f;
+        }
+    }
+
+    /// <summary>
+    /// Upgrade 슬롯을 읽어 패시브 데미지 보정을 다시 계산합니다.
+    /// </summary>
+    public void RebuildFromUpgradeSlots(Upgrade upgrade)
+    {
+        Clear();
+        if (upgrade == null)
+            return;
+        cachedUpgrade = upgrade;
+        cachedPlayerHealth = ResolvePlayerHealth(upgrade);
+
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = upgrade.GetSlot(i);
+            if (slot is Upgrade_01_02_PowerUp dmgUp)
+            {
+                if (dmgUp.affectedCategories == null || dmgUp.affectedCategories.Count == 0)
+                    continue;
+
+                for (int c = 0; c < dmgUp.affectedCategories.Count; c++)
+                {
+                    WeaponCategory cat = dmgUp.affectedCategories[c];
+                    int idx = (int)cat;
+                    if (idx < 0 || idx >= CategoryCount)
+                        continue;
+
+                    percentBonusSum[idx] += dmgUp.additivePercentDamage;
+                    flatBonusSum[idx] += dmgUp.flatBonusDamage;
+                }
+            }
+        }
+    }
+
+    private static PlayerHealth ResolvePlayerHealth(Upgrade upgrade)
+    {
+        if (upgrade == null)
+            return null;
+
+        Transform root = upgrade.transform.root;
+        if (root == null)
+            return null;
+
+        var health = root.GetComponentInChildren<PlayerHealth>(true);
+        if (health == null)
+            health = Object.FindFirstObjectByType<PlayerHealth>();
+
+        return health;
+    }
+
+    private float GetMissingHpRatio()
+    {
+        if (cachedPlayerHealth == null && cachedUpgrade != null)
+            cachedPlayerHealth = ResolvePlayerHealth(cachedUpgrade);
+
+        if (cachedPlayerHealth == null)
+            return 0f;
+
+        float max = Mathf.Max(0.0001f, cachedPlayerHealth.GetMaxHP());
+        float current = Mathf.Clamp(cachedPlayerHealth.GetCurrentHP(), 0f, max);
+        return 1f - (current / max);
+    }
+
+    private float GetDynamicBloodRagePercent(WeaponCategory category)
+    {
+        if (cachedUpgrade == null)
+            return 0f;
+
+        float missingHpRatio = GetMissingHpRatio();
+        if (missingHpRatio <= 0f)
+            return 0f;
+
+        float sum = 0f;
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = cachedUpgrade.GetSlot(i);
+            if (slot is not Upgrade_01_03_BloodRage bloodRage)
+                continue;
+
+            if (bloodRage.affectedCategories == null || bloodRage.affectedCategories.Count == 0)
+                continue;
+
+            bool containsCategory = false;
+            for (int c = 0; c < bloodRage.affectedCategories.Count; c++)
+            {
+                if (bloodRage.affectedCategories[c] == category)
+                {
+                    containsCategory = true;
+                    break;
+                }
+            }
+
+            if (!containsCategory)
+                continue;
+
+            sum += missingHpRatio * Mathf.Max(0f, bloodRage.maxBonusPercentAtZeroHp);
+        }
+
+        return sum;
+    }
+
+    private float GetVampiricPunchPercent(WeaponDataSO weapon)
+    {
+        if (cachedUpgrade == null)
+            return 0f;
+
+        float sum = 0f;
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = cachedUpgrade.GetSlot(i);
+            if (slot is not Upgrade_02_01_VampiricPunch vamp)
+                continue;
+
+            if (!ContainsDamageType(vamp.allowedDamageTypes, weapon.damageType))
+                continue;
+
+            if (!ContainsCategory(vamp.affectedCategories, weapon.category))
+                continue;
+
+            sum += Mathf.Max(0f, vamp.lifeStealPercent);
+        }
+
+        return sum;
+    }
+
+    private bool TryGetBleedingPunchConfig(
+        WeaponDataSO weapon,
+        out float chance,
+        out float duration,
+        out float tickInterval,
+        out float damagePerTick,
+        out GameObject bleedTickEffectPrefab)
+    {
+        chance = 0f;
+        duration = 0f;
+        tickInterval = 0f;
+        damagePerTick = 0f;
+        bleedTickEffectPrefab = null;
+
+        if (cachedUpgrade == null)
+            return false;
+
+        bool found = false;
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = cachedUpgrade.GetSlot(i);
+            if (slot is not Upgrade_02_02_BleedingPunch bleed)
+                continue;
+
+            if (!ContainsDamageType(bleed.allowedDamageTypes, weapon.damageType))
+                continue;
+
+            if (!ContainsCategory(bleed.affectedCategories, weapon.category))
+                continue;
+
+            found = true;
+            chance += Mathf.Clamp01(bleed.bleedApplyChance);
+            duration += Mathf.Max(0f, bleed.duration);
+            tickInterval += Mathf.Max(0f, bleed.tickInterval);
+            damagePerTick += Mathf.Max(0f, bleed.damagePerTick);
+            if (bleedTickEffectPrefab == null && bleed.bleedTickEffectPrefab != null)
+                bleedTickEffectPrefab = bleed.bleedTickEffectPrefab;
+        }
+
+        chance = Mathf.Clamp01(chance);
+        if (!found)
+            return false;
+
+        if (duration <= 0f || tickInterval <= 0f || damagePerTick <= 0f || chance <= 0f)
+            return false;
+
+        return true;
+    }
+
+    private bool TryGetStunningPunchConfig(
+        WeaponDataSO weapon,
+        out float chance,
+        out float knockbackDuration,
+        out float knockbackPower,
+        out float jerkIntensity,
+        out float jerkDuration,
+        out float stunDuration)
+    {
+        chance = 0f;
+        knockbackDuration = 0f;
+        knockbackPower = 0f;
+        jerkIntensity = 0f;
+        jerkDuration = 0f;
+        stunDuration = 0f;
+
+        if (cachedUpgrade == null)
+            return false;
+
+        bool found = false;
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = cachedUpgrade.GetSlot(i);
+            if (slot is not Upgrade_02_03_StunningPunch stun)
+                continue;
+
+            if (!ContainsDamageType(stun.allowedDamageTypes, weapon.damageType))
+                continue;
+
+            if (!ContainsCategory(stun.affectedCategories, weapon.category))
+                continue;
+
+            found = true;
+            chance += Mathf.Clamp01(stun.stunApplyChance);
+            knockbackDuration += Mathf.Max(0f, stun.bonusKnockbackDuration);
+            knockbackPower += Mathf.Max(0f, stun.bonusKnockbackPower);
+            jerkIntensity += Mathf.Max(0f, stun.bonusJerkIntensity);
+            jerkDuration += Mathf.Max(0f, stun.bonusJerkDuration);
+            stunDuration += Mathf.Max(0f, stun.bonusStunDuration);
+        }
+
+        chance = Mathf.Clamp01(chance);
+        if (!found)
+            return false;
+
+        if (chance <= 0f)
+            return false;
+
+        return knockbackDuration > 0f || knockbackPower > 0f || stunDuration > 0f;
+    }
+
+    private static bool ContainsCategory(System.Collections.Generic.List<WeaponCategory> categories, WeaponCategory target)
+    {
+        if (categories == null || categories.Count == 0)
+            return false;
+
+        for (int i = 0; i < categories.Count; i++)
+        {
+            if (categories[i] == target)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsDamageType(System.Collections.Generic.List<AttackDamageType> types, AttackDamageType target)
+    {
+        if (types == null || types.Count == 0)
+            return false;
+
+        for (int i = 0; i < types.Count; i++)
+        {
+            if (types[i] == target)
+                return true;
+        }
+
+        return false;
+    }
+
+    public float Apply(WeaponCategory category, float baseDamage)
+    {
+        int idx = (int)category;
+        if (idx < 0 || idx >= CategoryCount)
+            return Mathf.Max(0f, baseDamage);
+
+        float dynamicBloodRage = GetDynamicBloodRagePercent(category);
+        float mul = 1f + percentBonusSum[idx] + dynamicBloodRage;
+        float v = baseDamage * mul + flatBonusSum[idx];
+        return Mathf.Max(0f, v);
+    }
+}

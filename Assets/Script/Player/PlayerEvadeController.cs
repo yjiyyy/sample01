@@ -9,11 +9,11 @@ public class PlayerEvadeController : MonoBehaviour
     private EvadeDataSO data;
     private PlayerAnimationController anim;
     private PlayerMovement movement;
+    private PlayerStats playerStats;
     private Func<PlayerState> getState;
     private Action<PlayerState> changeState;
 
     private Coroutine evadeRoutine;
-    private float currentGauge;
     private bool isInvincible;
 
     [Header("디버그")]
@@ -46,11 +46,11 @@ public class PlayerEvadeController : MonoBehaviour
         data = evadeData;
         anim = animCtrl;
         movement = move;
+        playerStats = GetComponent<PlayerStats>() ?? gameObject.AddComponent<PlayerStats>();
         getState = getStateFunc;
         changeState = changeStateAction;
 
-        if (data != null) currentGauge = data.maxGauge;
-        if (debugLogs) Debug.Log($"[Evade SETUP] maxGauge={currentGauge}, minInputMag={data?.minInputMagnitude}");
+        if (debugLogs) Debug.Log($"[Evade SETUP] maxStamina={playerStats.maxStamina}, minInputMag={data?.minInputMagnitude}");
     }
 
     private void OnValidate()
@@ -67,30 +67,38 @@ public class PlayerEvadeController : MonoBehaviour
 
     public void TickRecharge(float dt)
     {
-        if (data == null) return;
-        if (currentGauge < data.maxGauge)
-        {
-            currentGauge += data.rechargeRate * dt;
-            currentGauge = Mathf.Min(currentGauge, data.maxGauge);
-        }
+        if (playerStats == null) return;
+        playerStats.TickStaminaRecharge(dt);
     }
 
     public bool CanEvade()
     {
-        if (data == null) return false;
-        return currentGauge >= data.evadeCost;
+        if (data == null || playerStats == null) return false;
+        return playerStats.CanUseStamina(data.evadeCost);
     }
 
-    public float GetEvadeGauge() => currentGauge;
-    public float GetMaxEvadeGauge() => data != null ? data.maxGauge : 100f;
+    public float GetEvadeGauge() => playerStats != null ? playerStats.currentStamina : 0f;
+    public float GetMaxEvadeGauge() => playerStats != null ? playerStats.maxStamina : 100f;
     public bool IsInvincible() => isInvincible;
+
+    /// <summary>
+    /// 현재 회피 게이지를 지정한 양만큼 소모합니다.
+    /// </summary>
+    public void ConsumeGauge(float amount)
+    {
+        if (amount <= 0f) return;
+        if (playerStats == null) return;
+        playerStats.ConsumeStamina(amount);
+        if (debugLogs) Debug.Log($"[Evade] Gauge -{amount:F1} => {playerStats.currentStamina:F1}");
+    }
 
     public void PerformEvade(Vector2 moveInput, Action preEvadeCleanup)
     {
         if (data == null || !CanEvade()) return;
 
         preEvadeCleanup?.Invoke();
-        currentGauge -= data.evadeCost;
+        if (!playerStats.UseStamina(data.evadeCost))
+            return;
 
         Vector3 evadeDir;
         if (moveInput.magnitude > TinyInputThreshold)
