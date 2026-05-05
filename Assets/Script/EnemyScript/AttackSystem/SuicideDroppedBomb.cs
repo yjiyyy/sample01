@@ -121,7 +121,8 @@ public class SuicideDroppedBomb : MonoBehaviour
         float stun = data.stunDuration * mul;
 
         var deathProxy = WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse);
-        ph.ApplyDamage(dmg, hitDir, deathProxy, 1f, hitPoint);
+        float finalDamage = EnemyPlayerHitEffectApplier.ApplyIronBodyExtraDamageIfNeeded(pwc, dmg);
+        ph.ApplyDamage(finalDamage, hitDir, deathProxy, 1f, hitPoint);
 
         if (ph.GetCurrentHP() <= 0f)
             return;

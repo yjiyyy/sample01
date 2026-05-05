@@ -1,11 +1,9 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 플레이어 보조무기 궤도 및 슬롯 관리.
+/// 플레이어 보조무기 궤도 및 슬롯(0~4) 관리. 업그레이드 등에서 넘긴 프리팹만 붙입니다.
 /// - Root 본을 중심으로 회전, 궤적 지름/회전 속도 조절 가능
-/// - 보조무기 개수에 따라 360°/N 간격 자동 배치
-/// - AddSubWeapon / RemoveSubWeapon 으로 런타임 증감 지원
+/// - 비어 있지 않은 슬롯만 360°/N 간격으로 배치
 /// </summary>
 [DisallowMultipleComponent]
 public class SubWeaponController : MonoBehaviour
@@ -24,31 +22,15 @@ public class SubWeaponController : MonoBehaviour
     [Tooltip("궤도 중심이 될 본 이름. 비어있으면 플레이어 루트 사용")]
     [SerializeField] private string orbitCenterBoneName = "Root_dummy";
 
-    [Header("초기 보조무기 (에디터)")]
-    [Tooltip("게임 시작 시 자동 장착할 보조무기 SO. 빈 슬롯은 null")]
-    [SerializeField] private SubWeaponDataSO[] initialSlots = new SubWeaponDataSO[MaxSlots];
-
     private Transform orbitCenter;
-    private readonly List<SubWeaponDataSO> slots = new List<SubWeaponDataSO>(MaxSlots);
-    private readonly List<GameObject> instances = new List<GameObject>(MaxSlots);
+    private readonly GameObject[] slotInstances = new GameObject[MaxSlots];
     private float baseAngleDeg;
 
-    public int Count => slots.Count;
     public int MaxCount => MaxSlots;
 
     private void Awake()
     {
         orbitCenter = FindOrbitCenter();
-
-        // 초기 슬롯 반영
-        if (initialSlots != null)
-        {
-            for (int i = 0; i < Mathf.Min(initialSlots.Length, MaxSlots); i++)
-            {
-                if (initialSlots[i] != null)
-                    AddSubWeaponInternal(initialSlots[i]);
-            }
-        }
     }
 
     private void LateUpdate()
@@ -85,7 +67,14 @@ public class SubWeaponController : MonoBehaviour
     private void ApplyOrbitPositions()
     {
         if (orbitCenter == null) return;
-        int n = instances.Count;
+
+        int n = 0;
+        for (int i = 0; i < MaxSlots; i++)
+        {
+            if (slotInstances[i] != null)
+                n++;
+        }
+
         if (n == 0) return;
 
         float radius = orbitDiameter * 0.5f;
@@ -96,83 +85,67 @@ public class SubWeaponController : MonoBehaviour
         if (baseAngleDeg >= 360f) baseAngleDeg -= 360f;
         if (baseAngleDeg < 0f) baseAngleDeg += 360f;
 
-        // 중심: 플레이어 위치 + 높이 오프셋 (위치는 따라가지만 회전은 따라가지 않음)
         Vector3 centerPos = orbitCenter.position + Vector3.up * orbitHeightOffset;
-        // 월드 XZ 평면 기준으로 궤도 계산 (플레이어 회전 무관)
         Vector3 right = Vector3.right;
         Vector3 forward = Vector3.forward;
 
-        for (int i = 0; i < n; i++)
+        int k = 0;
+        for (int i = 0; i < MaxSlots; i++)
         {
-            float angleDeg = baseAngleDeg + angleStep * i;
+            if (slotInstances[i] == null)
+                continue;
+
+            float angleDeg = baseAngleDeg + angleStep * k;
+            k++;
             float rad = angleDeg * Mathf.Deg2Rad;
             float cos = Mathf.Cos(rad);
             float sin = Mathf.Sin(rad);
             Vector3 offset = (right * cos + forward * sin) * radius;
-            instances[i].transform.position = centerPos + offset;
+            slotInstances[i].transform.position = centerPos + offset;
         }
     }
 
     /// <summary>
-    /// 보조무기 추가. 빈 슬롯에 추가. 최대 5개 초과 시 false.
+    /// 슬롯 인덱스(0~4)에 보조무기 프리팹을 장착하거나 해제합니다. null이면 해당 슬롯만 비웁니다.
     /// </summary>
-    public bool AddSubWeapon(SubWeaponDataSO so)
+    public void SetCompanionPrefab(int slotIndex, GameObject prefabOrNull)
     {
-        if (so == null || so.prefab == null)
-        {
-            Debug.LogWarning("[SubWeaponController] AddSubWeapon: SO 또는 prefab이 null입니다.");
-            return false;
-        }
-        if (slots.Count >= MaxSlots)
-        {
-            Debug.LogWarning("[SubWeaponController] 최대 개수(5)에 도달했습니다.");
-            return false;
-        }
-        return AddSubWeaponInternal(so);
-    }
+        if (slotIndex < 0 || slotIndex >= MaxSlots)
+            return;
 
-    private bool AddSubWeaponInternal(SubWeaponDataSO so)
-    {
-        slots.Add(so);
-        var inst = Instantiate(so.prefab, orbitCenter != null ? orbitCenter : transform);
-        inst.name = so.prefab.name + "_" + instances.Count;
+        ClearSlotInternal(slotIndex);
+        if (prefabOrNull == null)
+            return;
+
+        Transform parent = orbitCenter != null ? orbitCenter : transform;
+        GameObject inst = Instantiate(prefabOrNull, parent);
+        inst.name = $"{prefabOrNull.name}_SubSlot{slotIndex}";
+        slotInstances[slotIndex] = inst;
+
         var beh = inst.GetComponent<SubWeaponBehavior>();
-        if (beh != null) beh.ApplyData(so);
-        instances.Add(inst);
-        return true;
+        if (beh != null)
+            beh.NotifyAttached();
     }
 
-    /// <summary>
-    /// 인덱스로 보조무기 제거.
-    /// </summary>
-    public bool RemoveSubWeaponAt(int index)
+    public GameObject GetCompanionInstance(int slotIndex)
     {
-        if (index < 0 || index >= instances.Count) return false;
-        if (instances[index] != null) Destroy(instances[index]);
-        instances.RemoveAt(index);
-        slots.RemoveAt(index);
-        return true;
+        if (slotIndex < 0 || slotIndex >= MaxSlots)
+            return null;
+        return slotInstances[slotIndex];
     }
 
-    /// <summary>
-    /// SO로 보조무기 제거. 첫 번째 일치 항목 제거.
-    /// </summary>
-    public bool RemoveSubWeapon(SubWeaponDataSO so)
+    public void ClearAllCompanionSlots()
     {
-        int idx = slots.IndexOf(so);
-        return idx >= 0 && RemoveSubWeaponAt(idx);
+        for (int i = 0; i < MaxSlots; i++)
+            ClearSlotInternal(i);
     }
 
-    /// <summary>
-    /// 모든 보조무기 제거.
-    /// </summary>
-    public void ClearAll()
+    private void ClearSlotInternal(int slotIndex)
     {
-        for (int i = instances.Count - 1; i >= 0; i--)
-        {
-            if (instances[i] != null) Destroy(instances[i]);
-        }
-        instances.Clear();
-        slots.Clear();
+        if (slotInstances[slotIndex] == null)
+            return;
+
+        Destroy(slotInstances[slotIndex]);
+        slotInstances[slotIndex] = null;
     }
 }

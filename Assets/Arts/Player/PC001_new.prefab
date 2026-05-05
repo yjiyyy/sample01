@@ -375,9 +375,6 @@ MonoBehaviour:
   rotationSpeedDegPerSec: 180
   orbitHeightOffset: 1
   orbitCenterBoneName: Root_dummy
-  initialSlots:
-  - {fileID: 11400000, guid: 36a751f92f474ec4cbf2bf6ea6df3a42, type: 2}
-  - {fileID: 0}
 --- !u!114 &7085716935313712670
 MonoBehaviour:
   m_ObjectHideFlags: 0

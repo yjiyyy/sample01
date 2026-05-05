@@ -366,6 +366,7 @@ MonoBehaviour:
   maxStamina: 10
   currentStamina: 10
   staminaRechargeRate: 0.5
+  staminaRechargeDelay: 3
   level: 1
   experience: 0
   expToNextLevel: 100
@@ -407,15 +408,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   orbitDiameter: 2
-  rotationSpeedDegPerSec: 90
-  orbitHeightOffset: 0
+  rotationSpeedDegPerSec: 120
+  orbitHeightOffset: 0.6
   orbitCenterBoneName: Root_dummy
-  initialSlots:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
 --- !u!114 &-808637308909157591
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -448,6 +443,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgrade: {fileID: 0}
   playerHealth: {fileID: 0}
+  playerMovement: {fileID: 0}
+  playerStats: {fileID: 0}
   enableDebugLog: 1
 --- !u!1 &4556984216477996302
 GameObject:

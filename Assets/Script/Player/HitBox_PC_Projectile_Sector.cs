@@ -146,6 +146,9 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
                 ApplyAttackerHoldFromWeapon();
                 Debug.Log($"✅ [Explosion] EnemyHealth에 {finalDamage} 데미지!");
 
+                if (enemyHP.GetCurrentHP() <= 0f)
+                    continue;
+
                 // 2) 살아있으면만 넉백/푸시 분기
                 var enemy = target.GetComponentInParent<Enemy>();
                 if (enemy != null && enemy.CurrentState != Enemy.EnemyState.Dead)

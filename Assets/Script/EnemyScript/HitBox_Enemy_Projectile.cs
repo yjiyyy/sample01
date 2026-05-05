@@ -99,7 +99,7 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         bool faceMove, bool spin, Vector3 spinAxis, float spinSpd,
         bool destroyObstacle, LayerMask obstacleMask,
         WeaponDataSO deathWeapon = null,
-        float hitstopDuration = 0f, bool usePush = false, float attackerHitstop = 0f
+        float hitstopDuration = 0f, bool usePush = false, float attackerHitstop = 0f, Enemy owner = null
     )
     {
         damage = dmg;
@@ -112,6 +112,7 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         targetHoldDuration = Mathf.Max(0f, hitstopDuration);
         attackerHoldDuration = Mathf.Max(0f, attackerHitstop);
         usePushInsteadOfKnockback = usePush;
+        ownerEnemy = owner;
 
         duplicateEnabled = allowDup;
         duplicateInterval = Mathf.Max(0.01f, dupInterval);
@@ -379,7 +380,8 @@ public class HitBox_Enemy_Projectile : MonoBehaviour
         hitDir.Normalize();
 
         Vector3? hitPoint = hitCollider != null ? hitCollider.ClosestPoint(transform.position) : (Vector3?)null;
-        hp.ApplyDamage(damage, hitDir, playerDeathWeapon, 1f, hitPoint);
+        float finalDamage = EnemyPlayerHitEffectApplier.ApplyIronBodyExtraDamageIfNeeded(pwc, damage);
+        hp.ApplyDamage(finalDamage, hitDir, playerDeathWeapon, 1f, hitPoint);
 
         // ✅ 핵심: HP 0이면 넉백/스턴 스킵 (즉시 Death 우선)
         if (hp.GetCurrentHP() <= 0f)

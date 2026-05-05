@@ -132,6 +132,15 @@ public class UpgradeEffectRuntime : MonoBehaviour
         StopAllSlotEffects();
 
         RebuildWeaponDamageModifiers();
+
+        Transform equipRoot = transform.root;
+        if (equipRoot != null)
+        {
+            var equip = equipRoot.GetComponentInChildren<PlayerEquipmentController>(true);
+            if (equip != null)
+                equip.ApplyExtendedMagazineFromUpgrades();
+        }
+
         RebuildMoveSpeedModifiers();
         RebuildStaminaRechargeModifiers();
 

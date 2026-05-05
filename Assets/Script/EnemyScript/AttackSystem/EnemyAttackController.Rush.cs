@@ -299,7 +299,8 @@ public partial class EnemyAttackController
                 null,
                 data.targetHoldDuration,
                 data.usePushInsteadOfKnockback,
-                data.attackerHoldDuration
+                data.attackerHoldDuration,
+                GetComponentInParent<Enemy>()
             );
         }
     }

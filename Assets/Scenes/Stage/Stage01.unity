@@ -392,6 +392,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 987d772fe5ca5394ca1f1dfa25ccd5b9, type: 2}
   - {fileID: 11400000, guid: 00ebc10c806fc7f4bb6a34ba699b63a0, type: 2}
   - {fileID: 11400000, guid: e931921ef2bae684aa24da4f1c1b8f33, type: 2}
+  - {fileID: 11400000, guid: ded1880e9028d7240aac7906794be116, type: 2}
   toggleKey: 96
   targetPlayer: {fileID: 0}
   enableInBuild: 1
@@ -439,9 +440,20 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e906b30662bb4b5459d88db8f145daa4, type: 2}
   - {fileID: 11400000, guid: a1b09384cefaada40972c91042e04498, type: 2}
   - {fileID: 11400000, guid: 0b61fc0f0fe034541b75a058c461716f, type: 2}
+  - {fileID: 11400000, guid: d1260017080bedd4ebe66324d406ded6, type: 2}
   - {fileID: 11400000, guid: 291b3c01091814148a3e8823a6365456, type: 2}
   - {fileID: 11400000, guid: 756ab23999fd5f042a80308610f77df3, type: 2}
   - {fileID: 11400000, guid: 3fb49a80782b9a443bdde34af24e2f1a, type: 2}
+  - {fileID: 11400000, guid: 44c9c0f16f030be47b65d16f80688a45, type: 2}
+  - {fileID: 11400000, guid: 93dbfd1d1fbd62f47ada201b39623802, type: 2}
+  - {fileID: 11400000, guid: a607c80a95e99c44faaa0a18aa7bcdbd, type: 2}
+  - {fileID: 11400000, guid: 229dbba1060ac7f41b61d25e464c741e, type: 2}
+  - {fileID: 11400000, guid: 8d3394bded2a6f248abc7a53d5ae68e1, type: 2}
+  - {fileID: 11400000, guid: 900354af64b73064b954c9529cbafb96, type: 2}
+  - {fileID: 11400000, guid: 635afa0b45cdc7549a73fbd3ea344175, type: 2}
+  - {fileID: 11400000, guid: 852f150d736f82d41a3be3e6a75f1fef, type: 2}
+  - {fileID: 11400000, guid: 62bb0e7872a186447a99185064427f08, type: 2}
+  - {fileID: 11400000, guid: f6f94137f2cd93c47b495def6125bef2, type: 2}
   toggleKey: 270
   targetUpgrade: {fileID: 0}
   enableInBuild: 1
@@ -3663,9 +3675,9 @@ MonoBehaviour:
   enemyPrefabsByLevel:
   - {fileID: 1793541852279191887, guid: 3d000b330de540f409706e2ea08384aa, type: 3}
   hpuiPrefab: {fileID: 5425390646291263780, guid: c221514702d57b44bac940471d983478, type: 3}
-  spawnInterval: 50
+  spawnInterval: 1
   jitterRadius: 0.5
-  maxConcurrentAlive: 3
+  maxConcurrentAlive: 5
   maxTotalSpawns: 50
   applyGroundRaycast: 0
   raycastHeight: 20

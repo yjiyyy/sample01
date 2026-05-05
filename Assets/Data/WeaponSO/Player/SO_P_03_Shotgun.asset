@@ -16,6 +16,7 @@ MonoBehaviour:
   weaponName: Shotgun
   icon: {fileID: 21300000, guid: 419adb5ccb916e74b84ffa872297305b, type: 3}
   category: 0
+  damageType: 2
   weaponPrefab: {fileID: 4959760178822361355, guid: c46fd77d1b3ee4247b34e4e23bf0f0b7, type: 3}
   overrideController: {fileID: 22100000, guid: f29704bd29fef8b4dba8ec467d06cdb0, type: 2}
   attackAnimVariantCount: 3
@@ -31,7 +32,7 @@ MonoBehaviour:
   knockbackPower: 10
   jerkIntensity: 1
   jerkDuration: 0.2
-  stunDuration: 2
+  stunDuration: 0
   usePushInsteadOfKnockback: 0
   targetHoldDuration: 0
   attackerHoldDuration: 0
@@ -39,42 +40,42 @@ MonoBehaviour:
   targetAnimationHoldDuration: 0
   attackerStateHoldDuration: 0
   attackerAnimationHoldDuration: 0
-  deathMode: 0
-  ragdollImpulse: 5
-  ragdollUpImpulse: 0
-  ragdollSpinTorque: 0
+  deathMode: 1
+  ragdollImpulse: 15
+  ragdollUpImpulse: 10
+  ragdollSpinTorque: 1500
   sliceTargets: 
   sliceImpulse: 0
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}
-  recoilStartDelay: 0.15
-  recoilPower: 3
-  recoilDuration: 0.2
+  recoilStartDelay: 0
+  recoilPower: 0
+  recoilDuration: 0
   socketNames:
   - R_Hand_Weapon
   projectileSpawnPointPathOrName: 
   meleeHitboxMode: 0
   meleeHitboxPrefab: {fileID: 0}
   _useWeaponColliderLegacy: 0
-  projectilePrefab: {fileID: 0}
-  shotgunSectorPrefab: {fileID: 6927439261670298432, guid: 2730b5bd2ecc78e458f6958bad2bc16d, type: 3}
+  projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
   hitEffectPrefab: {fileID: 0}
   attackFXPhases: []
   dualWield: 0
   dualWeaponPrefab: {fileID: 0}
   hitboxSpawnDelay2: 0
   projectileSpawnPoint2PathOrName: 
-  shotgunRadius: 60
-  shotgunAngle: 60
-  shotgunUseDistanceFalloff: 1
-  shotgunFalloffMin: 0
-  shotgunDebugVisualize: 1
-  shotgunDebugColor: {r: 1, g: 0.6, b: 0, a: 0.25}
-  shotgunDebugActualColor: {r: 0, g: 1, b: 0, a: 0.25}
+  pelletCount: 10
+  spreadAngle: 90
+  damagePerPellet: 10
+  projectileSpeed: 2
+  maxTravelDistance: 30
+  falloffStartDistance: 1
+  minDamageMultiplier: 0.2
+  pierceCount: 2
   usesAmmo: 1
   magazineSize: 3
   initialReserve: 5
-  infiniteReserve: 0
+  infiniteReserve: 1
   reloadTime: 3
   autoReloadOnEmpty: 1
   consumePerShot: 1

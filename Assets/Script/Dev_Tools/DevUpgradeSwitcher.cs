@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.EnhancedTouch;
@@ -46,30 +47,83 @@ public class DevUpgradeSwitcher : MonoBehaviour
     private GUIStyle headerStyle;
     private GUIStyle rowStyle;
     private GUIStyle cellTextStyle;
+    private EventSystem blockedEventSystem;
+    private bool blockedEventSystemWasEnabled;
+    private bool pendingUiEventSystemRestore;
+    private float uiEventSystemRestoreEarliestTime;
+    private float overlayReopenBlockedUntil;
 
     public bool IsOverlayOpen => overlayOpen;
 
-    public void ToggleOverlay() => SetOverlayOpen(!overlayOpen);
-    public void OpenOverlay() => SetOverlayOpen(true);
+    public void ToggleOverlay()
+    {
+        if (overlayOpen)
+        {
+            SetOverlayOpen(false);
+            return;
+        }
+
+        if (!CanOpenOverlayNow())
+            return;
+
+        SetOverlayOpen(true);
+    }
+
+    public void OpenOverlay()
+    {
+        if (!CanOpenOverlayNow())
+            return;
+
+        SetOverlayOpen(true);
+    }
+
     public void CloseOverlay() => SetOverlayOpen(false);
 
     public void ToggleOverlayForSlot(int slotIndex)
     {
         selectedSlotIndex = Mathf.Clamp(slotIndex, 0, Upgrade.SlotCount - 1);
-        SetOverlayOpen(!overlayOpen);
+        if (overlayOpen)
+        {
+            SetOverlayOpen(false);
+            return;
+        }
+
+        if (!CanOpenOverlayNow())
+            return;
+
+        SetOverlayOpen(true);
     }
 
     public void OpenOverlayForSlot(int slotIndex)
     {
         selectedSlotIndex = Mathf.Clamp(slotIndex, 0, Upgrade.SlotCount - 1);
+        if (!CanOpenOverlayNow())
+            return;
+
         SetOverlayOpen(true);
     }
 
     private void SetOverlayOpen(bool open)
     {
+        if (overlayOpen == open)
+            return;
+
         overlayOpen = open;
         if (InputManager.Instance != null)
             InputManager.Instance.OverlayInputBlocked = overlayOpen;
+
+        if (overlayOpen)
+        {
+            pendingUiEventSystemRestore = false;
+            SetUiEventSystemBlocked(true);
+        }
+        else
+        {
+            // 닫히는 클릭이 뒤 UI로 전달되지 않게, 포인터가 완전히 떨어진 뒤 복구
+            pendingUiEventSystemRestore = true;
+            uiEventSystemRestoreEarliestTime = Time.unscaledTime + 0.12f;
+            overlayReopenBlockedUntil = Time.unscaledTime + 0.25f;
+        }
     }
 
     private void Awake()
@@ -96,6 +150,31 @@ public class DevUpgradeSwitcher : MonoBehaviour
 #endif
         if (InputManager.Instance != null)
             InputManager.Instance.OverlayInputBlocked = false;
+        SetUiEventSystemBlocked(false);
+    }
+
+    private void SetUiEventSystemBlocked(bool blocked)
+    {
+        if (blocked)
+        {
+            if (blockedEventSystem != null)
+                return;
+
+            blockedEventSystem = EventSystem.current;
+            if (blockedEventSystem == null)
+                return;
+
+            blockedEventSystemWasEnabled = blockedEventSystem.enabled;
+            if (blockedEventSystemWasEnabled)
+                blockedEventSystem.enabled = false;
+            return;
+        }
+
+        if (blockedEventSystem == null)
+            return;
+
+        blockedEventSystem.enabled = blockedEventSystemWasEnabled;
+        blockedEventSystem = null;
     }
 
     private void Update()
@@ -107,10 +186,58 @@ public class DevUpgradeSwitcher : MonoBehaviour
             SetOverlayOpen(!overlayOpen);
 
         if (!overlayOpen)
+        {
+            TryRestoreUiEventSystemIfSafe();
             return;
+        }
 
         if (InputManager.Instance.GetKeyDown(KeyCode.Escape))
             SetOverlayOpen(false);
+    }
+
+    private void TryRestoreUiEventSystemIfSafe()
+    {
+        if (!pendingUiEventSystemRestore)
+            return;
+
+        if (Time.unscaledTime < uiEventSystemRestoreEarliestTime)
+            return;
+
+        if (IsAnyPointerPressed())
+            return;
+
+        pendingUiEventSystemRestore = false;
+        SetUiEventSystemBlocked(false);
+    }
+
+    private static bool IsAnyPointerPressed()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        var mouse = Mouse.current;
+        if (mouse != null && mouse.leftButton.isPressed)
+            return true;
+
+        var touch = Touchscreen.current;
+        if (touch != null)
+        {
+            for (int i = 0; i < touch.touches.Count; i++)
+            {
+                if (touch.touches[i].isInProgress)
+                    return true;
+            }
+        }
+
+        return false;
+#else
+        if (Input.GetMouseButton(0))
+            return true;
+        return Input.touchCount > 0;
+#endif
+    }
+
+    private bool CanOpenOverlayNow()
+    {
+        return Time.unscaledTime >= overlayReopenBlockedUntil;
     }
 
     private void EnsureUpgrade()
@@ -145,6 +272,9 @@ public class DevUpgradeSwitcher : MonoBehaviour
 
         UpgradeEffectSO effect = upgrades[effectIndex];
         bool ok = targetUpgrade.TrySetSlot(selectedSlotIndex, effect);
+
+        if (ok)
+            SetOverlayOpen(false);
 
         if (debugLog)
         {
@@ -274,8 +404,7 @@ public class DevUpgradeSwitcher : MonoBehaviour
 
                     if (GUI.Button(cellRect, GUIContent.none, GUIStyle.none))
                     {
-                        if (TryEquipAtIndex(i))
-                            SetOverlayOpen(false);
+                        TryEquipAtIndex(i);
                     }
 
                     if (Event.current.type == EventType.Repaint)

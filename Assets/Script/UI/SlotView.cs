@@ -205,7 +205,14 @@ public class SlotView : MonoBehaviour
         {
             curMag = TryGetIntFromObject(ammoObj, new[] { "CurrentMagazine", "currentMagazine", "currentMagazineCount", "current_magazine" }, defaultValue: -1);
             reserve = TryGetIntFromObject(ammoObj, new[] { "CurrentReserve", "currentReserve", "CurrentAmmoReserve", "current_reserve", "CurrentAmmo" }, defaultValue: -1);
-            if (magSize <= 0)
+            // SO magazineSize는 기본값만 담습니다. 확장 탄창 등은 런타임 탄약의 실제 용량을 우선합니다.
+            int capFromAmmo = TryGetIntFromObject(
+                ammoObj,
+                new[] { "EffectiveMagazineCapacity", "MagazineCapacity", "magazineSize", "magazine_capacity" },
+                defaultValue: -1);
+            if (capFromAmmo > 0)
+                magSize = capFromAmmo;
+            else if (magSize <= 0)
                 magSize = TryGetIntFromObject(ammoObj, new[] { "MagazineCapacity", "magazineSize", "magazine_capacity" }, defaultValue: magSize);
         }
 

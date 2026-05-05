@@ -61,7 +61,7 @@ public class HitBox_PC_Sector : MonoBehaviour
         if (baseForward.sqrMagnitude < 0.0001f) baseForward = Vector3.forward;
 
         var sg = weapon as WeaponDataSO_Shotgun;
-        float angle = sg != null ? sg.shotgunAngle : 90f;
+        float angle = sg != null ? sg.spreadAngle : 90f;
         float halfAngle = angle * 0.5f;
 
         // 반경 내 후보 수집(모든 레이어 → Tag로 필터)
@@ -83,15 +83,8 @@ public class HitBox_PC_Sector : MonoBehaviour
             float ang = Vector3.Angle(baseForward, dir);
             if (ang > halfAngle) continue;
 
-            // 거리감쇠 가중치
             float weight = 1f;
-            if (sg != null && sg.shotgunUseDistanceFalloff && radius > 0.01f)
-            {
-                float norm = Mathf.Clamp01(1f - (dist / radius)); // 가까울수록 1
-                weight = Mathf.Lerp(sg.shotgunFalloffMin, 1f, norm);
-            }
-
-            float finalDmg = damage * weight;
+            float finalDmg = damage;
 
             // 먼저 EnemyHealth에 데미지 적용(중복 방지 등 내부 처리)
             var hp = col.GetComponentInParent<EnemyHealth>();
@@ -110,6 +103,9 @@ public class HitBox_PC_Sector : MonoBehaviour
             PlayerWeaponDamageModifiers.TryApplyBleedingPunchOnHit(ownerRoot, weapon, hp);
             ApplyAttackerHoldFromWeapon();
             Debug.Log($"✅ [Shotgun] EnemyHealth에 {finalDmg} 데미지 적용!(w={weight:F2})");
+
+            if (hp.GetCurrentHP() <= 0f)
+                continue;
 
             // 2) 사망 여부 확인 후 넉백/푸시 분기
             var enemy = col.GetComponentInParent<Enemy>();

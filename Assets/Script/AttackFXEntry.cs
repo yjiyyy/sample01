@@ -113,6 +113,19 @@ public class AttackFXEntry
             runner = inst.AddComponent<AttackFXAutoCleanupRunner>();
         runner.Begin();
     }
+
+    /// <summary>
+    /// 지정 월드 위치·회전으로 FX 프리팹 1회 스폰(부모 없음). 비루프 파티클은 재생 종료 후 자동 삭제.
+    /// 보너스 샷 등 ScheduleAttackFX 경로를 타지 않는 경우에 사용합니다.
+    /// </summary>
+    public static void SpawnWorldOneShot(GameObject prefab, Vector3 worldPosition, Quaternion worldRotation)
+    {
+        if (prefab == null)
+            return;
+
+        GameObject inst = UnityEngine.Object.Instantiate(prefab, worldPosition, worldRotation);
+        StartAutoCleanupIfNeeded(inst);
+    }
 }
 
 [Serializable]

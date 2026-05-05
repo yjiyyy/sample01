@@ -369,6 +369,25 @@ public class PlayerEquipmentController : MonoBehaviour
             currentAmmoRuntimeAR.OnAmmoChanged += InternalAmmoChanged;
             InternalAmmoChanged(currentAmmoRuntimeAR.CurrentMagazine, currentAmmoRuntimeAR.CurrentReserve, currentAmmoRuntimeAR.IsReloading);
         }
+
+        ApplyExtendedMagazineFromUpgrades();
+    }
+
+    /// <summary>
+    /// 확장 탄창 등 슬롯 합산이 바뀐 뒤, 장착 무기 탄창을 새 용량으로 가득 채웁니다(예비탄 불변).
+    /// </summary>
+    public void ApplyExtendedMagazineFromUpgrades()
+    {
+        if (WeaponBehavior == null)
+            return;
+
+        var gunAmmo = WeaponBehavior.GetComponent<WeaponAmmoRuntime>();
+        if (gunAmmo != null && gunAmmo.IsInitialized)
+            gunAmmo.ApplyExtendedMagazineAfterUpgrades();
+
+        var arAmmo = WeaponBehavior.GetComponent<WeaponAmmoRuntime_AR>();
+        if (arAmmo != null && arAmmo.IsInitialized)
+            arAmmo.ApplyExtendedMagazineAfterUpgrades();
     }
 
     private void UnsubscribeCurrentAmmo()

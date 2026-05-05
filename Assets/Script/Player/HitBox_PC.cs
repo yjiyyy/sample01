@@ -193,6 +193,9 @@ public class HitBox_PC : MonoBehaviour
         ApplyAttackerHoldFromWeapon();
         Debug.Log($"✅ [HitBox_PC] {hp.name} hit │ dmg:{finalDamage}, dup:{duplicateEnabled}, attached:{applyCategoryDamageOnHit}");
 
+        if (hp.GetCurrentHP() <= 0f)
+            return;
+
         // 2) 사망 여부 확인 후 넉백/푸시 분기
         var enemy = hp.GetComponent<Enemy>() ?? hp.GetComponentInParent<Enemy>();
         if (enemy == null) return;

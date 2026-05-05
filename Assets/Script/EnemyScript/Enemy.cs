@@ -319,17 +319,7 @@ public class Enemy : MonoBehaviour
     public void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
     {
         if (CurrentState == EnemyState.Dead) return;
-
-        float stateHold = ResolveTargetStateHold(weapon) * Mathf.Max(0f, impactScale);
-        float animHold = ResolveTargetAnimationHold(weapon) * Mathf.Max(0f, impactScale);
-        float holdDuration = Mathf.Max(stateHold, animHold);
-
-        if (holdDuration > 0f)
-        {
-            StartCoroutine(DieAfterHoldRoutine(hitDir, weapon, impactScale, stateHold, animHold, holdDuration));
-            return;
-        }
-
+        // HP 0 사망은 홀드(경직/히트스톱) 대기 없이 즉시 처리한다.
         DoActualDeath(hitDir, weapon, impactScale);
     }
 

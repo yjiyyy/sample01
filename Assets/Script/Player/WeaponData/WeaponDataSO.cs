@@ -58,7 +58,8 @@ public enum AttackDamageType
 {
     Unarmed,
     MeleeWeapon,
-    Gun
+    /// <summary>탄환/원거리 총기류. 무기 클래스 이름의 Gun(WeaponDataSO_Gun)과 혼동하지 않도록 명명.</summary>
+    ProjectileGun
 }
 
 [CreateAssetMenu(menuName = "Weapon/WeaponDataSO")]
@@ -70,7 +71,7 @@ public class WeaponDataSO : ScriptableObject
     public Sprite icon;
     public WeaponCategory category = WeaponCategory.Primary;
     [Header("공격 타입 분류")]
-    [Tooltip("업그레이드/효과 분기용 공격 타입. 예: 흡혈은 MeleeWeapon/Unarmed만 허용")]
+    [Tooltip("업그레이드/효과 분기용 공격 타입. 예: 흡혈은 MeleeWeapon/Unarmed만 허용. 탄환 무기는 ProjectileGun.")]
     public AttackDamageType damageType = AttackDamageType.MeleeWeapon;
 
     [Header("장착 프리팹 (테스트/장착용)")]
@@ -177,7 +178,6 @@ public class WeaponDataSO : ScriptableObject
     [UnityEngine.Serialization.FormerlySerializedAs("useWeaponCollider")]
     private bool _useWeaponColliderLegacy = false;
     public GameObject projectilePrefab;
-    public GameObject shotgunSectorPrefab;
 
     [Tooltip("피격 시 타겟 표면에 스폰할 이펙트 프리팹. 비어있으면 이펙트 없음. ClosestPoint 기준 위치에 생성됨.")]
     public GameObject hitEffectPrefab;
@@ -188,7 +188,7 @@ public class WeaponDataSO : ScriptableObject
 
     // ---------------- Dual Wield ----------------
     [Header("Dual Wield (양손 옵션)")]
-    [Tooltip("true면 1회 공격에서 스폰을 최대 2번(1번/2번) ���도합니다.\n" +
+    [Tooltip("true면 1회 공격에서 스폰을 최대 2번(1번/2번) 시도합니다.\n" +
              "근접은 항상 'Root_dummy' 기준, 원거리는 projectileSpawnPoint2 사용.")]
     public bool dualWield = false;
 

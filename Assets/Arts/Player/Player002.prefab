@@ -653,12 +653,6 @@ MonoBehaviour:
   rotationSpeedDegPerSec: 90
   orbitHeightOffset: 0
   orbitCenterBoneName: Root_dummy
-  initialSlots:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
 --- !u!1001 &2315224077214167961
 PrefabInstance:
   m_ObjectHideFlags: 0

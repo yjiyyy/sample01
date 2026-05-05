@@ -1,0 +1,109 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21c074b4cf391bd41b0fe9376202ef96, type: 3}
+  m_Name: SO_P_11_SniperGun
+  m_EditorClassIdentifier: 
+  id: Weapon_11_SniperGun
+  weaponName: SniperGun
+  icon: {fileID: 21300000, guid: 98228aa838065ff4b9e726b1c48398c7, type: 3}
+  category: 0
+  damageType: 2
+  weaponPrefab: {fileID: 2514819526148707759, guid: c0f820a178d62374b8956a70ad8f2e54, type: 3}
+  overrideController: {fileID: 22100000, guid: 2b3ac060d9ca91c46be6af90e3b9cf71, type: 2}
+  attackAnimVariantCount: 3
+  attackVariantHandModes: 
+  cooldown: 1
+  damage: 10
+  range: 2.5
+  hitboxSpawnDelay: 0
+  hitBoxLifetime: 0.2
+  trailEmitStartDelay: 0
+  trailEmitDuration: 0
+  knockbackDuration: 1.2
+  knockbackPower: 15
+  jerkIntensity: 1
+  jerkDuration: 0.2
+  stunDuration: 0
+  usePushInsteadOfKnockback: 0
+  targetHoldDuration: 0
+  attackerHoldDuration: 0
+  targetStateHoldDuration: 0
+  targetAnimationHoldDuration: 0
+  attackerStateHoldDuration: 0
+  attackerAnimationHoldDuration: 0
+  deathMode: 1
+  ragdollImpulse: 10
+  ragdollUpImpulse: 3
+  ragdollSpinTorque: 15000
+  sliceTargets: 0000000001000000020000000300000004000000
+  sliceImpulse: 20
+  chargeSlot: {fileID: 0}
+  comboSlot: {fileID: 0}
+  recoilStartDelay: 0
+  recoilPower: 0
+  recoilDuration: 0
+  socketNames:
+  - R_Hand_Weapon
+  projectileSpawnPointPathOrName: 
+  meleeHitboxMode: 0
+  meleeHitboxPrefab: {fileID: 0}
+  _useWeaponColliderLegacy: 0
+  projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
+  hitEffectPrefab: {fileID: 0}
+  attackFXPhases:
+  - phase: 0
+    entries:
+    - attachRoot: 1
+      attachPathOrName: 
+      prefab: {fileID: 8078720523478869859, guid: 4f5fc4bbd01b03a4499a6ed77f175fc7, type: 3}
+      startDelay: 0
+      applyToOffHandWhenDual: 0
+      offHandStartDelay: 0
+      firePointHand: 0
+      parentToAttachPoint: 0
+  dualWield: 0
+  dualWeaponPrefab: {fileID: 0}
+  hitboxSpawnDelay2: 0
+  projectileSpawnPoint2PathOrName: 
+  fireInputMode: 0
+  facingMode: 0
+  lockRotationDuringFiring: 0
+  allowMoveWhileFiring: 1
+  projectileSpeed: 20
+  projectileLifetime: 5
+  pierceCount: 0
+  usesAmmo: 1
+  magazineSize: 30
+  initialReserve: 90
+  infiniteReserve: 0
+  reloadTime: 2
+  consumePerShot: 1
+  autoReloadOnEmpty: 1
+  autoReloadResumeWhileHeld: 0
+  tapFireDuration: 1.2
+  spreadAngle: 60
+  spread3D: 0
+  moveSpeedWhileFiring: 0.2
+  animPlaybackSpeedWhileFiring: 1
+  fullAimTime: 2
+  useFullAimDamageMultiplier: 1
+  fullAimDamageMultiplier: 5
+  useFullAimAutoAim: 1
+  ricochetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  ricochetSpeedMultiplier: 1
+  aimRayLength: 20
+  aimRayWidth: 0.03
+  aimRayColor: {r: 1, g: 0.3, b: 0.3, a: 0.9}
+  useFullAimRayColor: 1
+  aimRayFullAimColor: {r: 0.3, g: 1, b: 0.35, a: 0.95}

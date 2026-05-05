@@ -8,6 +8,22 @@ using UnityEngine;
 public class PlayerWeaponDamageModifiers : MonoBehaviour
 {
     private const int CategoryCount = 4;
+    private const bool EnableChainDebugLog = true;
+
+    public struct ChainShotsConfig
+    {
+        public int bounceCount;
+        public float searchRadius;
+        public float damageMultiplier;
+        public float chainTargetHoldDuration;
+    }
+
+    public struct BonusShotConfig
+    {
+        public float chance;
+        public float lateralOffsetMeters;
+        public float delayUnscaledSeconds;
+    }
 
     private readonly float[] percentBonusSum = new float[CategoryCount];
     private readonly float[] flatBonusSum = new float[CategoryCount];
@@ -122,6 +138,113 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
         proxy.usePushInsteadOfKnockback = false;
         proxyWeapon = proxy;
         return true;
+    }
+
+    /// <summary>
+    /// ProjectileGun 데미지 타입 공격에 적용되는 ChainShots 설정을 조회합니다.
+    /// 여러 슬롯이 있으면 수치가 합산됩니다.
+    /// </summary>
+    public static bool TryGetChainShotsConfig(GameObject ownerRoot, WeaponDataSO weapon, out ChainShotsConfig config)
+    {
+        config = default;
+        if (ownerRoot == null || weapon == null)
+            return false;
+
+        var mods = ownerRoot.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
+        if (mods == null)
+            mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
+        if (mods == null)
+            return false;
+
+        bool ok = mods.TryGetChainShotsConfigInternal(weapon, out config);
+        if (EnableChainDebugLog)
+        {
+            if (ok)
+            {
+                Debug.Log($"[ChainShots] ConfigResolved | weapon:{weapon.name} bounce:{config.bounceCount} radius:{config.searchRadius:F2} dmgMul:{config.damageMultiplier:F2} hold:{config.chainTargetHoldDuration:F2}");
+            }
+            else
+            {
+                Debug.Log($"[ChainShots] ConfigMissing | weapon:{weapon.name} damageType:{weapon.damageType} category:{weapon.category}");
+            }
+        }
+        return ok;
+    }
+
+    /// <summary>
+    /// 원본 프로젝타일 발사 시 적용할 추가 관통 수치를 조회합니다.
+    /// 슬롯에 같은 업그레이드가 여러 개면 합산됩니다.
+    /// </summary>
+    public static int GetAdditionalProjectilePierceCount(GameObject ownerRoot, WeaponDataSO weapon)
+    {
+        if (ownerRoot == null || weapon == null)
+            return 0;
+
+        var mods = ownerRoot.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
+        if (mods == null)
+            mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
+        if (mods == null)
+            return 0;
+
+        return mods.GetPiercingShotsBonus(weapon);
+    }
+
+    /// <summary>
+    /// 퀵 리로드 업그레이드 합산을 반영한 리로드 소요 시간(초)입니다.
+    /// 슬롯별 reloadTimeReductionFraction 합산 후 최대 0.5(50% 단축)로 제한하고, 단축이 적용되면 결과는 최소 0.5초입니다.
+    /// </summary>
+    public static float GetReloadTimeWithQuickReload(GameObject ownerRoot, WeaponDataSO weapon, float baseReloadTimeSeconds)
+    {
+        float b = Mathf.Max(0f, baseReloadTimeSeconds);
+        if (b <= 0f || ownerRoot == null || weapon == null)
+            return b;
+
+        var mods = ownerRoot.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
+        if (mods == null)
+            mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
+
+        float sum = mods != null ? mods.GetQuickReloadReductionSum(weapon) : 0f;
+        sum = Mathf.Clamp(sum, 0f, 0.5f);
+        if (sum <= 0f)
+            return b;
+
+        float t = b * (1f - sum);
+        return Mathf.Max(0.5f, t);
+    }
+
+    /// <summary>
+    /// 확장 탄창 업그레이드로 더해지는 탄 수 합계입니다. 슬롯마다 합산, 상한 없음.
+    /// </summary>
+    public static int GetExtendedMagazineBonusCount(GameObject ownerRoot, WeaponDataSO weapon)
+    {
+        if (ownerRoot == null || weapon == null)
+            return 0;
+
+        var mods = ownerRoot.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
+        if (mods == null)
+            mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
+        if (mods == null)
+            return 0;
+
+        return mods.GetExtendedMagazineBonusSum(weapon);
+    }
+
+    /// <summary>
+    /// 보너스 샷(무료 추가 탄환) 설정을 조회합니다. 슬롯마다 확률·오프셋·지연을 합산합니다.
+    /// </summary>
+    public static bool TryGetBonusShotConfig(GameObject ownerRoot, WeaponDataSO weapon, out BonusShotConfig config)
+    {
+        config = default;
+        if (ownerRoot == null || weapon == null)
+            return false;
+
+        var mods = ownerRoot.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
+        if (mods == null)
+            mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
+        if (mods == null)
+            return false;
+
+        return mods.TryGetBonusShotConfigInternal(weapon, out config);
     }
 
     public void Clear()
@@ -355,6 +478,169 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             return false;
 
         return knockbackDuration > 0f || knockbackPower > 0f || stunDuration > 0f;
+    }
+
+    private bool TryGetChainShotsConfigInternal(WeaponDataSO weapon, out ChainShotsConfig config)
+    {
+        config = default;
+
+        if (cachedUpgrade == null)
+            return false;
+
+        int bounceSum = 0;
+        float radiusSum = 0f;
+        float damageMulSum = 0f;
+        float holdSum = 0f;
+        bool found = false;
+
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = cachedUpgrade.GetSlot(i);
+            if (slot is not Upgrade_04_01_ChainShots chain)
+                continue;
+
+            if (!ContainsDamageType(chain.allowedDamageTypes, weapon.damageType))
+                continue;
+
+            if (!ContainsCategory(chain.affectedCategories, weapon.category))
+                continue;
+
+            found = true;
+            bounceSum += Mathf.Max(0, chain.bounceCount);
+            radiusSum += Mathf.Max(0f, chain.searchRadius);
+            damageMulSum += Mathf.Max(0f, chain.damageMultiplier);
+            holdSum += Mathf.Max(0f, chain.chainTargetHoldDuration);
+        }
+
+        if (!found)
+            return false;
+
+        if (bounceSum <= 0 || radiusSum <= 0f || damageMulSum <= 0f)
+            return false;
+
+        config = new ChainShotsConfig
+        {
+            bounceCount = bounceSum,
+            searchRadius = radiusSum,
+            damageMultiplier = damageMulSum,
+            chainTargetHoldDuration = holdSum
+        };
+        return true;
+    }
+
+    private int GetPiercingShotsBonus(WeaponDataSO weapon)
+    {
+        if (cachedUpgrade == null || weapon == null)
+            return 0;
+
+        int sum = 0;
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = cachedUpgrade.GetSlot(i);
+            if (slot is not Upgrade_04_02_PiercingShots piercing)
+                continue;
+
+            if (!ContainsDamageType(piercing.allowedDamageTypes, weapon.damageType))
+                continue;
+
+            if (!ContainsCategory(piercing.affectedCategories, weapon.category))
+                continue;
+
+            sum += Mathf.Max(0, piercing.additionalPierceCount);
+        }
+
+        return Mathf.Max(0, sum);
+    }
+
+    private float GetQuickReloadReductionSum(WeaponDataSO weapon)
+    {
+        if (cachedUpgrade == null || weapon == null)
+            return 0f;
+
+        float sum = 0f;
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = cachedUpgrade.GetSlot(i);
+            if (slot is not Upgrade_04_04_QuickReload quick)
+                continue;
+
+            if (!ContainsDamageType(quick.allowedDamageTypes, weapon.damageType))
+                continue;
+
+            if (!ContainsCategory(quick.affectedCategories, weapon.category))
+                continue;
+
+            sum += Mathf.Max(0f, quick.reloadTimeReductionFraction);
+        }
+
+        return Mathf.Max(0f, sum);
+    }
+
+    private int GetExtendedMagazineBonusSum(WeaponDataSO weapon)
+    {
+        if (cachedUpgrade == null || weapon == null)
+            return 0;
+
+        int sum = 0;
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = cachedUpgrade.GetSlot(i);
+            if (slot is not Upgrade_04_05_ExtendedMag ext)
+                continue;
+
+            if (!ContainsDamageType(ext.allowedDamageTypes, weapon.damageType))
+                continue;
+
+            if (!ContainsCategory(ext.affectedCategories, weapon.category))
+                continue;
+
+            sum += Mathf.Max(0, ext.additionalMagazineRounds);
+        }
+
+        return Mathf.Max(0, sum);
+    }
+
+    private bool TryGetBonusShotConfigInternal(WeaponDataSO weapon, out BonusShotConfig config)
+    {
+        config = default;
+
+        if (cachedUpgrade == null || weapon == null)
+            return false;
+
+        float chanceSum = 0f;
+        float lateralSum = 0f;
+        float delaySum = 0f;
+        bool found = false;
+
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            UpgradeEffectSO slot = cachedUpgrade.GetSlot(i);
+            if (slot is not Upgrade_04_03_BonusShot bonus)
+                continue;
+
+            if (!ContainsDamageType(bonus.allowedDamageTypes, weapon.damageType))
+                continue;
+
+            if (!ContainsCategory(bonus.affectedCategories, weapon.category))
+                continue;
+
+            found = true;
+            chanceSum += Mathf.Clamp01(bonus.bonusShotChance);
+            lateralSum += Mathf.Max(0f, bonus.lateralOffsetMeters);
+            delaySum += Mathf.Max(0f, bonus.delayUnscaledSeconds);
+        }
+
+        if (!found)
+            return false;
+
+        config = new BonusShotConfig
+        {
+            chance = Mathf.Clamp01(chanceSum),
+            lateralOffsetMeters = lateralSum,
+            delayUnscaledSeconds = Mathf.Min(5f, delaySum)
+        };
+
+        return config.chance > 0f;
     }
 
     private static bool ContainsCategory(System.Collections.Generic.List<WeaponCategory> categories, WeaponCategory target)

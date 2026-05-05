@@ -25,6 +25,9 @@ public class Upgrade : MonoBehaviour
 
         if (GetComponent<PlayerWeaponDamageModifiers>() == null)
             gameObject.AddComponent<PlayerWeaponDamageModifiers>();
+
+        if (GetComponent<PlayerCompanionUpgradeRuntime>() == null)
+            gameObject.AddComponent<PlayerCompanionUpgradeRuntime>();
     }
 
     public UpgradeEffectSO GetSlot(int index)

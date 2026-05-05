@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8aecbbdb3fa87b4c977aab945b07586, type: 3}
   m_Name: SO_P_10_DPistol
   m_EditorClassIdentifier: 
-  id: Weapon_10_AR
+  id: Weapon_10_Dpistol
   weaponName: DPistol
   icon: {fileID: 21300000, guid: 7c3f77ceb62f700458884433ca1701b1, type: 3}
   category: 0
+  damageType: 2
   weaponPrefab: {fileID: 7696554681474183416, guid: f702a545a1cd45741aef21d94d1dfc0a, type: 3}
   overrideController: {fileID: 22100000, guid: 719939beeb031714fb456d6e5ad12e9d, type: 2}
   attackAnimVariantCount: 1
@@ -58,7 +59,6 @@ MonoBehaviour:
   meleeHitboxPrefab: {fileID: 0}
   _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
-  shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
   attackFXPhases:
   - phase: 0

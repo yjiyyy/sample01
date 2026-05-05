@@ -4,8 +4,8 @@ using System.Reflection;
 using UnityEngine;
 
 /// <summary>
-/// Gun/Shotgun 등 탄약(매거진/리저브) 관리.
-/// Initialize(WeaponDataSO / WeaponDataSO_Gun) API로 초기화.
+/// Gun/Shotgun ?? ???(?????/??????) ????.
+/// Initialize(WeaponDataSO / WeaponDataSO_Gun) API?? ????.
 /// </summary>
 [DisallowMultipleComponent]
 public class WeaponAmmoRuntime : MonoBehaviour
@@ -34,10 +34,15 @@ public class WeaponAmmoRuntime : MonoBehaviour
     private Coroutine reloadRoutine;
     private float reloadEndTime;
 
+    /// <summary>?? ?????? ?? ???????? ?????. ???? ???? SO ????.</summary>
+    private WeaponDataSO reloadModWeaponRef;
+
+    private int lastSeenEffectiveMagazineCapacityForExtendedApply = -1;
+
     private bool initialized;
     public bool IsInitialized => initialized;
 
-    // 이벤트: (magazine, reserve, isReloading)
+    // ????: (magazine, reserve, isReloading)
     public event Action<int, int, bool> OnAmmoChanged;
 
     #region Initialize overloads
@@ -49,6 +54,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
 
         usingSpec = false;
         gunData = data;
+        reloadModWeaponRef = data;
 
         if (reloadRoutine != null)
         {
@@ -58,7 +64,8 @@ public class WeaponAmmoRuntime : MonoBehaviour
 
         if (gunData != null && gunData.usesAmmo)
         {
-            CurrentMagazine = Mathf.Clamp(gunData.magazineSize, 0, int.MaxValue);
+            int cap = GetEffectiveMagazineCapacity();
+            CurrentMagazine = Mathf.Min(Mathf.Max(0, gunData.magazineSize), cap);
             CurrentReserve = Mathf.Max(0, gunData.initialReserve);
             IsReloading = false;
         }
@@ -70,7 +77,8 @@ public class WeaponAmmoRuntime : MonoBehaviour
         }
 
         initialized = true;
-        Debug.Log($"[Ammo] (Re)Init → mag:{CurrentMagazine}/{GetMagazineSize()} reserve:{(GetInfiniteReserve() ? "∞" : CurrentReserve.ToString())}");
+        lastSeenEffectiveMagazineCapacityForExtendedApply = -1;
+        Debug.Log($"[Ammo] (Re)Init ?? mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
@@ -98,6 +106,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
         usingSpec = true;
         gunData = null;
         spec = newSpec;
+        reloadModWeaponRef = data;
 
         if (reloadRoutine != null)
         {
@@ -107,7 +116,8 @@ public class WeaponAmmoRuntime : MonoBehaviour
 
         if (spec.usesAmmo)
         {
-            CurrentMagazine = Mathf.Clamp(spec.magazineSize, 0, int.MaxValue);
+            int cap = GetEffectiveMagazineCapacity();
+            CurrentMagazine = Mathf.Min(Mathf.Max(0, spec.magazineSize), cap);
             CurrentReserve = Mathf.Max(0, spec.initialReserve);
             IsReloading = false;
         }
@@ -119,7 +129,8 @@ public class WeaponAmmoRuntime : MonoBehaviour
         }
 
         initialized = true;
-        Debug.Log($"[Ammo] (Re)Init (generic) → mag:{CurrentMagazine}/{GetMagazineSize()} reserve:{(GetInfiniteReserve() ? "∞" : CurrentReserve.ToString())}");
+        lastSeenEffectiveMagazineCapacityForExtendedApply = -1;
+        Debug.Log($"[Ammo] (Re)Init (generic) ?? mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
@@ -128,10 +139,64 @@ public class WeaponAmmoRuntime : MonoBehaviour
 
     #region Helpers: read config (unify gunData/spec access)
 
-    private int GetMagazineSize()
+    private int GetBaseMagazineSize()
     {
         if (!usingSpec && gunData != null) return gunData.magazineSize;
         return Mathf.Max(0, spec.magazineSize);
+    }
+
+    private int GetExtendedMagazineBonusFromUpgrades()
+    {
+        if (reloadModWeaponRef == null)
+            return 0;
+
+        GameObject ownerRoot = transform.root != null ? transform.root.gameObject : gameObject;
+        return PlayerWeaponDamageModifiers.GetExtendedMagazineBonusCount(ownerRoot, reloadModWeaponRef);
+    }
+
+    /// <summary>SO base magazine plus extended-magazine upgrade bonus.</summary>
+    public int GetEffectiveMagazineCapacity()
+    {
+        return Mathf.Max(0, GetBaseMagazineSize() + GetExtendedMagazineBonusFromUpgrades());
+    }
+
+    /// <summary>Runtime max magazine for UI (SlotView reflection). Can exceed SO magazineSize.</summary>
+    public int EffectiveMagazineCapacity => GetEffectiveMagazineCapacity();
+
+    /// <summary>
+    /// After upgrade slots change: interrupt reload if needed, fill magazine to new capacity (reserve unchanged).
+    /// </summary>
+    public void ApplyExtendedMagazineAfterUpgrades()
+    {
+        if (!GetUsesAmmo() || !initialized || reloadModWeaponRef == null)
+            return;
+
+        if (IsReloading)
+            InterruptReload();
+
+        int newCap = GetEffectiveMagazineCapacity();
+        if (newCap <= 0)
+            return;
+
+        if (lastSeenEffectiveMagazineCapacityForExtendedApply >= 0 &&
+            newCap == lastSeenEffectiveMagazineCapacityForExtendedApply)
+            return;
+
+        if (lastSeenEffectiveMagazineCapacityForExtendedApply < 0)
+        {
+            CurrentMagazine = newCap;
+        }
+        else if (newCap > lastSeenEffectiveMagazineCapacityForExtendedApply)
+        {
+            CurrentMagazine = newCap;
+        }
+        else
+        {
+            CurrentMagazine = Mathf.Min(CurrentMagazine, newCap);
+        }
+
+        lastSeenEffectiveMagazineCapacityForExtendedApply = newCap;
+        OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
     private int GetInitialReserve()
     {
@@ -147,6 +212,16 @@ public class WeaponAmmoRuntime : MonoBehaviour
     {
         if (!usingSpec && gunData != null) return gunData.reloadTime;
         return spec.reloadTime;
+    }
+
+    private float GetReloadDurationAfterQuickReload()
+    {
+        float baseRt = Mathf.Max(0f, GetReloadTime());
+        if (baseRt <= 0f || reloadModWeaponRef == null)
+            return baseRt;
+
+        GameObject ownerRoot = transform.root != null ? transform.root.gameObject : gameObject;
+        return PlayerWeaponDamageModifiers.GetReloadTimeWithQuickReload(ownerRoot, reloadModWeaponRef, baseRt);
     }
     private bool GetAutoReloadOnEmpty()
     {
@@ -248,7 +323,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
         if (IsReloading) return false;
         if (!initialized)
         {
-            Debug.LogWarning("[Ammo] 초기화되지 않았는데 TryConsumeForShot 호출됨.");
+            Debug.LogWarning("[Ammo] ???????? ????? TryConsumeForShot ????.");
             return false;
         }
 
@@ -258,7 +333,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
 
         CurrentMagazine -= need;
 
-        Debug.Log($"[Ammo] 소비! 남은: {CurrentMagazine}/{GetMagazineSize()} (예비: {(GetInfiniteReserve() ? "∞" : CurrentReserve.ToString())})");
+        Debug.Log($"[Ammo] ???! ????: {CurrentMagazine}/{GetEffectiveMagazineCapacity()} (????: {(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())})");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
 
@@ -273,18 +348,18 @@ public class WeaponAmmoRuntime : MonoBehaviour
         if (!GetUsesAmmo()) return false;
         if (IsReloading) return false;
         if (!initialized) return false;
-        if (GetMagazineSize() <= 0) return false; // cap zero guard
+        if (GetEffectiveMagazineCapacity() <= 0) return false; // cap zero guard
         if (GetInfiniteReserve() == false && CurrentReserve <= 0) return false;
-        if (CurrentMagazine >= GetMagazineSize()) return false;
+        if (CurrentMagazine >= GetEffectiveMagazineCapacity()) return false;
 
-        float rt = GetReloadTime();
-        Debug.Log($"[Ammo] 재장전 시작 (예비:{(GetInfiniteReserve() ? "∞" : CurrentReserve.ToString())}, 시간:{rt:F2})");
+        float rt = GetReloadDurationAfterQuickReload();
+        Debug.Log($"[Ammo] ?????? ???? (????:{(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())}, ????:{rt:F2})");
 
         if (rt <= 0f)
         {
             int loadedInstant = PerformRefill();
-            string reserveStr = GetInfiniteReserve() ? "∞" : CurrentReserve.ToString();
-            Debug.Log($"[Ammo] 재장전 즉시 완료 | 채움:{loadedInstant} | mag:{CurrentMagazine}/{GetMagazineSize()} | reserve:{reserveStr}");
+            string reserveStr = GetInfiniteReserve() ? "??" : CurrentReserve.ToString();
+            Debug.Log($"[Ammo] ?????? ??? ??? | ???:{loadedInstant} | mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} | reserve:{reserveStr}");
 
             OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
             return true;
@@ -307,15 +382,15 @@ public class WeaponAmmoRuntime : MonoBehaviour
         IsReloading = false;
         reloadRoutine = null;
 
-        string reserveStr = GetInfiniteReserve() ? "∞" : CurrentReserve.ToString();
-        Debug.Log($"[Ammo] 재장전 완료 | 채움:{loaded} | mag:{CurrentMagazine}/{GetMagazineSize()} | reserve:{reserveStr}");
+        string reserveStr = GetInfiniteReserve() ? "??" : CurrentReserve.ToString();
+        Debug.Log($"[Ammo] ?????? ??? | ???:{loaded} | mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} | reserve:{reserveStr}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
 
     private int PerformRefill()
     {
-        int cap = Mathf.Max(0, GetMagazineSize());
+        int cap = Mathf.Max(0, GetEffectiveMagazineCapacity());
         int need = Mathf.Max(0, cap - CurrentMagazine);
         if (need <= 0) return 0;
 
@@ -345,21 +420,22 @@ public class WeaponAmmoRuntime : MonoBehaviour
     }
 
     /// <summary>
-    /// 외부에서 snapshot(매거진/리저브) 적용.
-    /// - triggerAutoReload=true면 mag==0일 때 예비가 있으면 auto reload 시도
+    /// ??????? snapshot(?????/??????) ????.
+    /// - triggerAutoReload=true?? mag==0?? ?? ???? ?????? auto reload ???
     /// </summary>
     public void LoadSnapshot(int magazine, int reserve, bool triggerAutoReload = true)
     {
         if (!GetUsesAmmo())
             return;
 
-        int cap = Mathf.Max(0, GetMagazineSize());
+        int cap = Mathf.Max(0, GetEffectiveMagazineCapacity());
         CurrentMagazine = Mathf.Clamp(magazine, 0, cap);
 
         if (!GetInfiniteReserve())
             CurrentReserve = Mathf.Max(0, reserve);
 
         IsReloading = false;
+        lastSeenEffectiveMagazineCapacityForExtendedApply = GetEffectiveMagazineCapacity();
         if (triggerAutoReload &&
             CurrentMagazine <= 0 &&
             HasAnyReserveOrInfinite() &&
@@ -368,7 +444,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
             TryStartReload();
         }
 
-        Debug.Log($"[Ammo] Snapshot 적용 → mag:{CurrentMagazine}/{GetMagazineSize()} reserve:{(GetInfiniteReserve() ? "∞" : CurrentReserve.ToString())}");
+        Debug.Log($"[Ammo] Snapshot ???? ?? mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }

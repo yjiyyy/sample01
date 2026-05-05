@@ -498,12 +498,6 @@ MonoBehaviour:
   rotationSpeedDegPerSec: 90
   orbitHeightOffset: 0
   orbitCenterBoneName: Root_dummy
-  initialSlots:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
 --- !u!1 &7320358954023749536
 GameObject:
   m_ObjectHideFlags: 0

@@ -26,7 +26,7 @@ public class HitBox_Enemy : MonoBehaviour
     public void Initialize(
         float dmg, float rng, float kbPower, float kbDuration, float lifetime, float stun = 0f,
         bool allowDup = false, float dupInterval = 0f, WeaponDataSO deathWeapon = null,
-        float hitstopDuration = 0f, bool usePush = false, float attackerHitstop = 0f)
+        float hitstopDuration = 0f, bool usePush = false, float attackerHitstop = 0f, Enemy owner = null)
     {
         damage = dmg;
         knockbackPower = kbPower;
@@ -36,6 +36,9 @@ public class HitBox_Enemy : MonoBehaviour
         targetHoldDuration = Mathf.Max(0f, hitstopDuration);
         attackerHoldDuration = Mathf.Max(0f, attackerHitstop);
         usePushInsteadOfKnockback = usePush;
+        ownerEnemy = owner;
+        if (ownerEnemy == null)
+            ownerEnemy = GetComponentInParent<Enemy>();
 
         duplicateEnabled = allowDup;
         duplicateInterval = Mathf.Max(0.01f, dupInterval);
@@ -152,8 +155,9 @@ public class HitBox_Enemy : MonoBehaviour
         hitDirForDamage.Normalize();
 
         Vector3? hitPoint = hitCollider != null ? hitCollider.ClosestPoint(transform.position) : (Vector3?)null;
-        hp.ApplyDamage(damage, hitDirForDamage, playerDeathWeapon, 1f, hitPoint);
-        Debug.Log($"✅ [HitBox_Enemy] PlayerHealth에 {damage} 데미지 적용! (dup:{duplicateEnabled})");
+        float finalDamage = EnemyPlayerHitEffectApplier.ApplyIronBodyExtraDamageIfNeeded(weaponController, damage);
+        hp.ApplyDamage(finalDamage, hitDirForDamage, playerDeathWeapon, 1f, hitPoint);
+        Debug.Log($"✅ [HitBox_Enemy] PlayerHealth에 {finalDamage} 데미지 적용! (dup:{duplicateEnabled})");
 
         // ✅ 핵심: HP가 0 이하로 떨어졌으면 넉백/스턴을 절대 실행하지 않음 (즉시 Death 우선)
         if (hp.GetCurrentHP() <= 0f)

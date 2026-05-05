@@ -22,7 +22,7 @@ MonoBehaviour:
   attackAnimVariantCount: 3
   attackVariantHandModes: 
   cooldown: 0.5
-  damage: 10
+  damage: 50
   range: 2.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.2
@@ -58,22 +58,31 @@ MonoBehaviour:
   meleeHitboxPrefab: {fileID: 0}
   _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
-  shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
-  attackFXPhases: []
+  attackFXPhases:
+  - phase: 0
+    entries:
+    - attachRoot: 1
+      attachPathOrName: 
+      prefab: {fileID: 8078720523478869859, guid: 4f5fc4bbd01b03a4499a6ed77f175fc7, type: 3}
+      startDelay: 0.1
+      applyToOffHandWhenDual: 0
+      offHandStartDelay: 0
+      firePointHand: 0
+      parentToAttachPoint: 0
   dualWield: 0
   dualWeaponPrefab: {fileID: 0}
   hitboxSpawnDelay2: 0
   projectileSpawnPoint2PathOrName: 
-  projectileLifetime: 5
-  projectileSpeed: 20
-  pierceCount: 1
+  projectileLifetime: 10
+  projectileSpeed: 5
+  pierceCount: 0
   aimScanAngle: 90
   aimScanDistance: 15
   usesAmmo: 1
-  magazineSize: 100
-  initialReserve: 100
-  infiniteReserve: 1
+  magazineSize: 5
+  initialReserve: 10
+  infiniteReserve: 0
   reloadTime: 3
   consumePerShot: 1
   autoReloadOnEmpty: 1

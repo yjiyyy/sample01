@@ -197,7 +197,8 @@ public partial class EnemyAttackController
                 WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse),
                 data.targetHoldDuration,
                 data.usePushInsteadOfKnockback,
-                data.attackerHoldDuration
+                data.attackerHoldDuration,
+                GetComponentInParent<Enemy>()
             );
         }
 

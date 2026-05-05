@@ -72,6 +72,8 @@ public class PlayerWeaponController : MonoBehaviour
     private float arTapModeEndTime = 0f;
     private float arTapNextExtendAllowedTime = 0f;
     private bool arTapQueuedShot = false;
+    private LineRenderer sniperAimLeftLine;
+    private LineRenderer sniperAimRightLine;
 
     // Melee 콤보: ignoreTimeAfterInput ~ stepDuration 구간에서만 이동 허용 (MeleeComboBehavior가 설정)
     private bool meleeComboAllowMoveFlag = false;
@@ -643,6 +645,17 @@ public class PlayerWeaponController : MonoBehaviour
         }
         // -------------------------------------------------------
 
+        if (data is WeaponDataSO_Sniper sniperData)
+        {
+            float delta = Time.time - lastAttackTime;
+            if (delta < sniperData.cooldown) return;
+            lastAttackTime = Time.time;
+
+            if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
+            arFireRoutine = StartCoroutine(SniperAimAndFireRoutine(sniperData));
+            return;
+        }
+
         if (data is WeaponDataSO_AR arData)
         {
             if (arData.fireInputMode == ARFireInputMode.TapTimed && arFireRoutine != null)
@@ -1050,6 +1063,305 @@ public class PlayerWeaponController : MonoBehaviour
         arTapNextExtendAllowedTime = 0f;
         arTapQueuedShot = false;
         movement?.ClearLookOverride();
+        SetSniperAimLinesVisible(false);
+    }
+
+    private IEnumerator SniperAimAndFireRoutine(WeaponDataSO_Sniper sniper)
+    {
+        ChangeState(PlayerState.Attack);
+        animationController?.PlayAttack(sniper, true);
+        BeginARFireState(sniper);
+
+        var wb = equipComp.WeaponBehavior;
+        if (wb == null)
+        {
+            Debug.LogWarning("[Sniper] WeaponBehavior missing");
+            ChangeState(PlayerState.Idle);
+            EndARFireState();
+            yield break;
+        }
+
+        var ammo = wb.GetComponent<WeaponAmmoRuntime_AR>();
+        if (ammo == null) ammo = wb.gameObject.AddComponent<WeaponAmmoRuntime_AR>();
+        ammo.Initialize(sniper, force: false);
+
+        float holdElapsed = 0f;
+        bool releasedByInput = false;
+        bool cancelled = false;
+
+        while (true)
+        {
+            if (stateHoldCount <= 0)
+                holdElapsed += Time.deltaTime;
+
+            if (state == PlayerState.Knockback || state == PlayerState.Stun || state == PlayerState.Dead || state == PlayerState.Evade)
+            {
+                cancelled = true;
+                break;
+            }
+
+            if (equipComp.CurrentWeaponData != sniper)
+            {
+                cancelled = true;
+                break;
+            }
+
+            Vector3 aimDir = ResolveSniperAimDirection(sniper);
+            movement?.SetLookOverride(aimDir);
+
+            float spread = GetSniperCurrentSpread(sniper, holdElapsed);
+            bool fullAimReached = holdElapsed >= sniper.fullAimTime;
+            UpdateSniperAimLines(aimDir, spread, sniper, fullAimReached);
+
+            bool holding = InputManager.Instance.GetAttack();
+            if (!holding || InputManager.Instance.GetAttackUp())
+            {
+                releasedByInput = true;
+                break;
+            }
+
+            yield return null;
+        }
+
+        if (!cancelled && releasedByInput)
+        {
+            bool fullAimSuccess = holdElapsed >= sniper.fullAimTime;
+            if (ammo.IsReloading)
+            {
+                // 조준 유지 중 리로드가 걸린 상태에서 손을 떼면 발사하지 않는다.
+            }
+            else if (ammo.CanFire(sniper.consumePerShot) && ammo.TryConsumeForShot(sniper.consumePerShot))
+            {
+                Vector3 aimDir = ResolveSniperAimDirection(sniper);
+                if (fullAimSuccess && sniper.useFullAimAutoAim)
+                {
+                    Vector3 autoAim = ResolveSniperFullAimAutoAimDirection(sniper, aimDir);
+                    if (autoAim.sqrMagnitude > 0.0001f)
+                        aimDir = autoAim;
+                }
+
+                float spread = GetSniperCurrentSpread(sniper, holdElapsed);
+                Vector3 shootDir = spread > 0f
+                    ? RandomDirectionInCone(aimDir, spread * 0.5f)
+                    : aimDir;
+                float damageMultiplier = (fullAimSuccess && sniper.useFullAimDamageMultiplier)
+                    ? sniper.fullAimDamageMultiplier
+                    : 1f;
+
+                animationController?.PlayAttack(sniper, true);
+                wb.ARAttackHit(shootDir, sniper.spread3D, damageMultiplier);
+                StartRecoilIfNeeded(sniper);
+
+                if (ammo.IsMagazineEmpty() && !ammo.HasAnyReserveOrInfinite())
+                    RequestSwitchToDefault();
+            }
+            else if (sniper.autoReloadOnEmpty && ammo.HasAnyReserveOrInfinite())
+            {
+                ammo.TryStartReload();
+            }
+            else if (!ammo.HasAnyReserveOrInfinite())
+            {
+                RequestSwitchToDefault();
+            }
+        }
+
+        animationController?.EndAttack();
+        if (movement != null && movement.GetVelocityMagnitude() > 0.1f)
+            ChangeState(PlayerState.Move);
+        else
+            ChangeState(PlayerState.Idle);
+
+        EndARFireState();
+        arFireRoutine = null;
+    }
+
+    private float GetSniperCurrentSpread(WeaponDataSO_Sniper sniper, float holdElapsed)
+    {
+        if (sniper == null) return 0f;
+        float t = Mathf.Clamp01(holdElapsed / Mathf.Max(0.01f, sniper.fullAimTime));
+        return Mathf.Lerp(sniper.spreadAngle, 0f, t);
+    }
+
+    private Vector3 ResolveSniperAimDirection(WeaponDataSO_Sniper sniper)
+    {
+        if (arRotationLocked)
+            return arLockedForward;
+
+        if (sniper != null && sniper.facingMode == ARFacingMode.MoveDirection)
+        {
+            Vector2 input = InputManager.Instance != null ? InputManager.Instance.GetMoveInput() : Vector2.zero;
+            Vector3 moveDir = movement != null
+                ? movement.CameraRelative(new Vector3(input.x, 0f, input.y))
+                : new Vector3(input.x, 0f, input.y);
+            moveDir.y = 0f;
+            if (moveDir.sqrMagnitude > 0.0001f)
+                return moveDir.normalized;
+        }
+
+        // Sniper ignores NearestTargetAutoAim and falls back to forward direction.
+        Vector3 fallback = transform.forward;
+        fallback.y = 0f;
+        if (fallback.sqrMagnitude < 0.0001f) fallback = Vector3.forward;
+        return fallback.normalized;
+    }
+
+    private void EnsureSniperAimLines(WeaponDataSO_Sniper sniper)
+    {
+        if (sniperAimLeftLine == null)
+            sniperAimLeftLine = CreateSniperAimLine("SniperAimLine_L", sniper);
+        if (sniperAimRightLine == null)
+            sniperAimRightLine = CreateSniperAimLine("SniperAimLine_R", sniper);
+    }
+
+    private LineRenderer CreateSniperAimLine(string objName, WeaponDataSO_Sniper sniper)
+    {
+        var go = new GameObject(objName);
+        go.transform.SetParent(transform, false);
+        var lr = go.AddComponent<LineRenderer>();
+        lr.useWorldSpace = true;
+        lr.loop = false;
+        lr.alignment = LineAlignment.View;
+        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        lr.receiveShadows = false;
+        lr.positionCount = 2;
+        lr.startWidth = sniper != null ? sniper.aimRayWidth : 0.03f;
+        lr.endWidth = lr.startWidth;
+        lr.material = new Material(Shader.Find("Sprites/Default"));
+        Color c = sniper != null ? sniper.aimRayColor : Color.red;
+        lr.startColor = c;
+        lr.endColor = c;
+        lr.enabled = false;
+        return lr;
+    }
+
+    private void SetSniperAimLinesVisible(bool visible)
+    {
+        if (sniperAimLeftLine != null) sniperAimLeftLine.enabled = visible;
+        if (sniperAimRightLine != null) sniperAimRightLine.enabled = visible;
+    }
+
+    private void UpdateSniperAimLines(Vector3 aimDir, float spread, WeaponDataSO_Sniper sniper, bool fullAimReached)
+    {
+        if (sniper == null) return;
+        EnsureSniperAimLines(sniper);
+        if (sniperAimLeftLine == null || sniperAimRightLine == null) return;
+
+        float half = Mathf.Max(0f, spread) * 0.5f;
+        Vector3 leftDir = Quaternion.AngleAxis(-half, Vector3.up) * aimDir;
+        Vector3 rightDir = Quaternion.AngleAxis(half, Vector3.up) * aimDir;
+        leftDir.y = 0f;
+        rightDir.y = 0f;
+        if (leftDir.sqrMagnitude < 0.0001f) leftDir = aimDir;
+        if (rightDir.sqrMagnitude < 0.0001f) rightDir = aimDir;
+        leftDir.Normalize();
+        rightDir.Normalize();
+
+        Vector3 origin = GetSniperRayOrigin();
+        float rayLen = Mathf.Max(0.1f, sniper.aimRayLength);
+        Vector3 leftEnd = origin + leftDir * rayLen;
+        Vector3 rightEnd = origin + rightDir * rayLen;
+
+        if (Physics.Raycast(origin, leftDir, out RaycastHit lHit, rayLen, ~0, QueryTriggerInteraction.Ignore))
+            leftEnd = lHit.point;
+        if (Physics.Raycast(origin, rightDir, out RaycastHit rHit, rayLen, ~0, QueryTriggerInteraction.Ignore))
+            rightEnd = rHit.point;
+
+        sniperAimLeftLine.startWidth = sniper.aimRayWidth;
+        sniperAimLeftLine.endWidth = sniper.aimRayWidth;
+        sniperAimRightLine.startWidth = sniper.aimRayWidth;
+        sniperAimRightLine.endWidth = sniper.aimRayWidth;
+        Color lineColor = sniper.aimRayColor;
+        if (fullAimReached && sniper.useFullAimRayColor)
+            lineColor = sniper.aimRayFullAimColor;
+        sniperAimLeftLine.startColor = lineColor;
+        sniperAimLeftLine.endColor = lineColor;
+        sniperAimRightLine.startColor = lineColor;
+        sniperAimRightLine.endColor = lineColor;
+
+        sniperAimLeftLine.enabled = true;
+        sniperAimRightLine.enabled = true;
+        sniperAimLeftLine.SetPosition(0, origin);
+        sniperAimLeftLine.SetPosition(1, leftEnd);
+        sniperAimRightLine.SetPosition(0, origin);
+        sniperAimRightLine.SetPosition(1, rightEnd);
+    }
+
+    private Vector3 GetSniperRayOrigin()
+    {
+        var spawn = equipComp != null && equipComp.WeaponBehavior != null
+            ? equipComp.WeaponBehavior.GetPrimaryProjectileSpawnPoint()
+            : null;
+        if (spawn != null)
+            return spawn.position;
+        return transform.position + Vector3.up * 1.0f;
+    }
+
+    private Vector3 ResolveSniperFullAimAutoAimDirection(WeaponDataSO_Sniper sniper, Vector3 baseAimDir)
+    {
+        if (sniper == null) return Vector3.zero;
+
+        Vector3 origin = GetSniperRayOrigin();
+        Vector3 baseDir = baseAimDir;
+        baseDir.y = 0f;
+        if (baseDir.sqrMagnitude < 0.0001f) return Vector3.zero;
+        baseDir.Normalize();
+
+        float maxAngle = Mathf.Max(0f, sniper.spreadAngle) * 0.5f;
+        float maxDist = Mathf.Max(0.1f, sniper.aimRayLength);
+
+        Transform best = null;
+        float bestAngle = float.PositiveInfinity;
+        var enemies = DetectEnemies();
+        if (enemies == null || enemies.Count == 0)
+            return Vector3.zero;
+
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            var t = enemies[i];
+            if (t == null) continue;
+
+            Vector3 to = t.position - origin;
+            to.y = 0f;
+            float dist = to.magnitude;
+            if (dist <= 0.001f || dist > maxDist) continue;
+
+            Vector3 dir = to / dist;
+            float angle = Vector3.Angle(baseDir, dir);
+            if (angle > maxAngle) continue;
+
+            if (!IsSniperTargetVisible(origin, t)) continue;
+
+            if (angle < bestAngle)
+            {
+                bestAngle = angle;
+                best = t;
+            }
+        }
+
+        if (best == null) return Vector3.zero;
+        Vector3 finalDir = best.position - origin;
+        finalDir.y = 0f;
+        if (finalDir.sqrMagnitude < 0.0001f) return Vector3.zero;
+        return finalDir.normalized;
+    }
+
+    private bool IsSniperTargetVisible(Vector3 origin, Transform target)
+    {
+        if (target == null) return false;
+        Vector3 targetPos = target.position;
+        targetPos.y = origin.y;
+        Vector3 to = targetPos - origin;
+        float dist = to.magnitude;
+        if (dist <= 0.0001f) return true;
+        Vector3 dir = to / dist;
+
+        if (!Physics.Raycast(origin, dir, out RaycastHit hit, dist, ~0, QueryTriggerInteraction.Ignore))
+            return true;
+
+        var hitEnemy = hit.collider != null ? hit.collider.GetComponentInParent<EnemyHealth>() : null;
+        var targetEnemy = target.GetComponentInParent<EnemyHealth>();
+        if (hitEnemy == null || targetEnemy == null) return false;
+        return hitEnemy.transform.root == targetEnemy.transform.root;
     }
 
     private IEnumerator AssaultRifleFireRoutine(WeaponDataSO_AR ar)
