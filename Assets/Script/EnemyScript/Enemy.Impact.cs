@@ -60,15 +60,26 @@ public class EnemyImpact : MonoBehaviour
             return;
         }
 
+        float knockbackPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
+        float knockbackDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
+        float stunDuration = weapon != null ? weapon.stunDuration * impactScale : 0f;
+
+        // CC 값이 모두 0이면 피격 반응(넉백 상태/모션) 없이 HP 처리만 허용한다.
+        // 단, 타격감용 홀드(hitstop)는 기존대로 적용 가능.
+        if (weapon != null &&
+            knockbackPower <= EPS &&
+            knockbackDuration <= EPS &&
+            stunDuration <= EPS)
+        {
+            ApplyTargetHoldsOnly(ctx, weapon, impactScale);
+            return;
+        }
+
         if (impactRoutine != null)
         {
             StopCoroutine(impactRoutine);
             impactRoutine = null;
         }
-
-        float knockbackPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
-        float knockbackDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
-        float stunDuration = weapon != null ? weapon.stunDuration * impactScale : 0f;
         float targetStateHoldDuration = ResolveTargetStateHold(weapon);
         float targetAnimationHoldDuration = ResolveTargetAnimationHold(weapon);
 
@@ -118,14 +129,24 @@ public class EnemyImpact : MonoBehaviour
             return;
         }
 
+        float pushPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
+        float pushDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
+
+        // Push 기반 CC 값이 모두 0이면 밀림 처리 없이 HP 처리만 허용한다.
+        // 단, 타격감용 홀드(hitstop)는 기존대로 적용 가능.
+        if (weapon != null &&
+            pushPower <= EPS &&
+            pushDuration <= EPS)
+        {
+            ApplyTargetHoldsOnly(ctx, weapon, impactScale);
+            return;
+        }
+
         if (pushRoutine != null)
         {
             StopCoroutine(pushRoutine);
             pushRoutine = null;
         }
-
-        float pushPower = weapon != null ? weapon.knockbackPower * impactScale : 0f;
-        float pushDuration = weapon != null ? weapon.knockbackDuration * impactScale : 0.1f;
         float targetStateHoldDuration = ResolveTargetStateHold(weapon);
         float targetAnimationHoldDuration = ResolveTargetAnimationHold(weapon);
 

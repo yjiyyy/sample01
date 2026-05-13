@@ -28,6 +28,12 @@ public class Upgrade : MonoBehaviour
 
         if (GetComponent<PlayerCompanionUpgradeRuntime>() == null)
             gameObject.AddComponent<PlayerCompanionUpgradeRuntime>();
+
+        if (GetComponent<PlayerCompanionCooldownModifiers>() == null)
+            gameObject.AddComponent<PlayerCompanionCooldownModifiers>();
+
+        if (GetComponent<PlayerReviveTicketRuntime>() == null)
+            gameObject.AddComponent<PlayerReviveTicketRuntime>();
     }
 
     public UpgradeEffectSO GetSlot(int index)

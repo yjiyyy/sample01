@@ -241,8 +241,8 @@ public class PlayerAnimationController : MonoBehaviour
                     // Log caller for debugging repeated requests
                     string caller = GetCallerSummary();
                     Debug.Log($"[PlayerAnim] Playing Death once. Caller: {caller}");
-                    TryPlaySafe("Death", 0, 0f);
-                    deathRoutine = StartCoroutine(PlayDeathAndFreezeRoutine());
+                    if (TryPlaySafe("Death", 0, 0f))
+                        deathRoutine = StartCoroutine(PlayDeathAndFreezeRoutine());
                 }
                 else
                 {
@@ -339,10 +339,11 @@ public class PlayerAnimationController : MonoBehaviour
         deathRoutine = null;
     }
 
-    // helper: try to play state safely (no exception if state name missing)
-    private void TryPlaySafe(string stateName, int layer = 0, float normalizedTime = 0f)
+    /// <summary>상태 재생 시도. 실제로 Play가 호출되면 true.</summary>
+    private bool TryPlaySafe(string stateName, int layer = 0, float normalizedTime = 0f)
     {
-        if (animator == null || string.IsNullOrEmpty(stateName)) return;
+        if (animator == null || string.IsNullOrEmpty(stateName))
+            return false;
 
         // Normalize and prepare checks:
         // - Check animator.HasState for several common variants:
@@ -420,13 +421,14 @@ public class PlayerAnimationController : MonoBehaviour
                 Debug.LogWarning($"[PlayerAnim] Play skipped — state not found on Animator: '{stateName}' (layer:{layer})");
                 warnedMissingStates.Add(stateName);
             }
-            return;
+            return false;
         }
 
         // If we get here, state seems to exist; call Play wrapped in try/catch to be extra-safe.
         try
         {
             animator.Play(stateName, layer, normalizedTime);
+            return true;
         }
         catch (Exception e)
         {
@@ -436,6 +438,7 @@ public class PlayerAnimationController : MonoBehaviour
                 Debug.LogWarning($"[PlayerAnim] animator.Play('{stateName}') failed despite existence check: {e.Message}");
                 warnedMissingStates.Add(stateName);
             }
+            return false;
         }
     }
 

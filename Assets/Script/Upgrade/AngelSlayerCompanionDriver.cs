@@ -168,7 +168,11 @@ public class AngelSlayerCompanionDriver : MonoBehaviour
 
         FaceTargetXZ();
 
-        attackCountdown = Mathf.Max(0.05f, config.attackCooldown);
+        attackCountdown = PlayerCompanionCooldownModifiers.ApplyCompanionCooldown(
+            playerRoot != null ? playerRoot.gameObject : (transform.root != null ? transform.root.gameObject : gameObject),
+            config.id,
+            config.attackCooldown,
+            0.05f);
         StopAttackRoutine();
         attackRoutine = StartCoroutine(AttackRoutine());
     }

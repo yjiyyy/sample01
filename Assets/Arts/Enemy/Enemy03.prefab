@@ -436,6 +436,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1172861245451257790}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5154615839123151310
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2313104753608812745}
+  m_Layer: 0
+  m_Name: Fire_Point_Throw
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2313104753608812745
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5154615839123151310}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.00000008146034, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 2, z: 0.7}
+  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2203385513394846890}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6093672701956866180
 GameObject:
   m_ObjectHideFlags: 0
@@ -714,6 +745,9 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -8469757102928205973, guid: 354ad9e7356753a4a8c6904a0f6967d5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2313104753608812745}
     - targetCorrespondingSourceObject: {fileID: -6446628698421239552, guid: 354ad9e7356753a4a8c6904a0f6967d5, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4129411870678709069}
@@ -1223,6 +1257,11 @@ CharacterJoint:
   m_EnablePreprocessing: 1
   m_MassScale: 1
   m_ConnectedMassScale: 1
+--- !u!4 &2203385513394846890 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8469757102928205973, guid: 354ad9e7356753a4a8c6904a0f6967d5, type: 3}
+  m_PrefabInstance: {fileID: 1506066744185936833}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2206195008689079259 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 755308492798842906, guid: 354ad9e7356753a4a8c6904a0f6967d5, type: 3}

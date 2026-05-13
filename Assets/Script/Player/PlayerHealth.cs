@@ -32,6 +32,7 @@ public class PlayerHealth : MonoBehaviour
     private bool ragdollInitialized = false;
     // 랙돌 상태에서 충돌로 생기는 회전 스핀(Y angularVelocity)만 빠르게 줄이기
     private bool ragdollSpinKillActive = false;
+    private float invincibleUntilTime = -1f;
 
     private const string kHeadName = "Bip001 Head";
     private const string kLeftArmName = "Bip001 L UpperArm";
@@ -100,12 +101,13 @@ public class PlayerHealth : MonoBehaviour
     {
         // 이미 죽었으면 추가 데미지/넉백/로그 등 모두 무시
         if (deadProcessed) return;
+        if (Time.time < invincibleUntilTime) return;
 
         // 피격 이펙트 (무기 SO에 hitEffectPrefab 있을 때, hitPoint가 있으면 해당 위치에 스폰)
         TrySpawnHitEffect(weapon, hitPoint);
 
         currentHP -= amount;
-        Debug.Log($"플레이어가 {amount:F1} 피해! scale:{impactScale:F2} | HP: {currentHP:F1}");
+        Debug.Log($"플레이어가 {amount:F1} 피해! scale:{impactScale:F2} | HP: {Mathf.Max(0f, currentHP):F1}");
 
         if (currentHP <= 0f)
         {
@@ -130,6 +132,19 @@ public class PlayerHealth : MonoBehaviour
     private void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (deadProcessed) return;
+
+        // Revive Ticket이 있으면 일반 사망 로직 대신 부활 시퀀스로 넘깁니다.
+        var reviveRuntime = GetComponent<PlayerReviveTicketRuntime>();
+        if (reviveRuntime == null)
+            reviveRuntime = GetComponentInChildren<PlayerReviveTicketRuntime>(true);
+        if (reviveRuntime == null)
+            reviveRuntime = GetComponentInParent<PlayerReviveTicketRuntime>();
+        if (reviveRuntime != null && reviveRuntime.TryHandleDeath(this, hitDir, weapon, impactScale))
+        {
+            deadProcessed = true;
+            return;
+        }
+
         deadProcessed = true;
 
         // 0) 즉시 입력 차단 — 죽는 순간 입력이 적용되지 않도록 (입력 중 랙돌 시 특히 중요)
@@ -651,6 +666,73 @@ public class PlayerHealth : MonoBehaviour
     public float GetCurrentHP() => currentHP;
     public float GetMaxHP() => maxHP;
     public float GetWeight() => weight;
+
+    public void EnterReviveWaitingState()
+    {
+        if (deadProcessed)
+            return;
+
+        deadProcessed = true;
+        currentHP = 0f;
+
+        if (InputManager.Instance != null)
+        {
+            InputManager.SetPlayerDeathBlock(true);
+            InputManager.Instance.ClearPlayerInput();
+        }
+
+        var weaponCtrl = GetComponent<PlayerWeaponController>();
+        var move = GetComponent<PlayerMovement>();
+        var evade = GetComponent<PlayerEvadeController>();
+        var charge = GetComponent<PlayerChargeController>();
+        var recoil = GetComponent<PlayerRecoil>();
+
+        try
+        {
+            var m = weaponCtrl?.GetType().GetMethod("SetState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (m != null && weaponCtrl != null) m.Invoke(weaponCtrl, new object[] { PlayerState.Dead });
+        }
+        catch (System.Exception ex) { Debug.LogWarning($"[PlayerHealth] ReviveWaiting SetState 실패: {ex.Message}"); }
+
+        if (move != null) move.enabled = false;
+        if (weaponCtrl != null) weaponCtrl.enabled = false;
+        if (evade != null) evade.enabled = false;
+        if (charge != null) charge.enabled = false;
+        if (recoil != null) recoil.enabled = false;
+
+        var animCtrl = GetComponent<PlayerAnimationController>();
+        if (animCtrl != null) animCtrl.ForceAnimationByState(PlayerState.Dead);
+        else if (animator != null) animator.SetBool("IsDead", true);
+
+        var root = transform.root;
+        if (root != null)
+        {
+            foreach (var c in root.GetComponentsInChildren<Collider>(true))
+                if (c != null) c.enabled = false;
+        }
+
+        if (rootRb != null)
+        {
+#if UNITY_6000_0_OR_NEWER
+            rootRb.linearVelocity = Vector3.zero;
+#else
+            rootRb.velocity = Vector3.zero;
+#endif
+            rootRb.angularVelocity = Vector3.zero;
+            rootRb.isKinematic = true;
+        }
+    }
+
+    public void SetTemporaryInvincible(float seconds)
+    {
+        if (seconds <= 0f)
+        {
+            invincibleUntilTime = -1f;
+            return;
+        }
+
+        invincibleUntilTime = Time.time + seconds;
+    }
 
     private static void TrySpawnHitEffect(WeaponDataSO weapon, System.Nullable<Vector3> hitPoint)
     {

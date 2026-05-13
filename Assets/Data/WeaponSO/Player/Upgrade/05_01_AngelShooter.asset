@@ -24,7 +24,7 @@ MonoBehaviour:
   attackAnimationClip: {fileID: 1827226128182048838, guid: 22a5ac27a21030c4188e8ef7c788420f, type: 3}
   projectileSpawnDelay: 0.05
   firePointChildName: Fire_Point
-  fireCooldown: 2
+  fireCooldown: 1
   projectilePrefab: {fileID: 8033842031334091814, guid: 4b8339929d75e13428c4c885a1face81, type: 3}
   projectileSpeed: 20
   damage: 50

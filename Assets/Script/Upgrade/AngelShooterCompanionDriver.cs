@@ -212,7 +212,11 @@ public class AngelShooterCompanionDriver : MonoBehaviour
         fireCountdown -= dt;
         if (fireCountdown <= 0f)
         {
-            fireCountdown = Mathf.Max(0.05f, config.fireCooldown);
+            fireCountdown = PlayerCompanionCooldownModifiers.ApplyCompanionCooldown(
+                playerRoot != null ? playerRoot.gameObject : (transform.root != null ? transform.root.gameObject : gameObject),
+                config.id,
+                config.fireCooldown,
+                0.05f);
             TryFire();
         }
     }

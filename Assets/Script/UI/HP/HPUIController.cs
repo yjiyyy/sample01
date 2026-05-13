@@ -100,7 +100,17 @@ public class HPUIControllerBase : MonoBehaviour
         }
         else
         {
-            // health가 잘못되었으면 파괴
+            // PlayerHealth 참조가 사라진 경우(부활 교체 타이밍)는 UI를 유지하고 재할당을 기다립니다.
+            if (isPlayerHealth)
+            {
+                health = null;
+                playerHP = null;
+                playerWeapon = null;
+                initialized = false;
+                return true;
+            }
+
+            // Enemy는 기존 동작대로 제거합니다.
             Destroy(gameObject);
             return false;
         }
@@ -135,8 +145,8 @@ public class HPUIControllerBase : MonoBehaviour
             }
         }
 
-        // 체력이 0이면 제거
-        if (currentHP <= 0f)
+        // Enemy 체력바만 0이면 제거. 플레이어 HP바는 부활 대기 중에도 유지합니다.
+        if (currentHP <= 0f && isEnemyHealth)
         {
             Destroy(gameObject);
             return false;

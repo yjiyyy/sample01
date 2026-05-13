@@ -365,6 +365,7 @@ public partial class EnemyAttackController : MonoBehaviour
         InterruptJumpIfNeeded();
         InterruptAoEIfNeeded();
         InterruptComboIfNeeded();
+        InterruptTimeProjectileIfNeeded();
         InterruptSuicideIfNeeded();
 
         if (pendingAttackIndex >= 0 && !pendingExecuted)

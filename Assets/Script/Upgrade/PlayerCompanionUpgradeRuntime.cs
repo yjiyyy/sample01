@@ -116,6 +116,70 @@ public class PlayerCompanionUpgradeRuntime : MonoBehaviour
                     d = inst.AddComponent<AngelSlayerCompanionDriver>();
                 d.Initialize(slayer, playerRoot);
             }
+            else if (slot is Upgrade_05_03_AngelCurse curse &&
+                     curse.companionPrefab != null &&
+                     curse.projectilePrefab != null)
+            {
+                GameObject existing = sub.GetCompanionInstance(i);
+                if (existing != null)
+                {
+                    var driver = existing.GetComponent<AngelCurseCompanionDriver>();
+                    if (driver != null && driver.UsesSameConfig(curse))
+                        continue;
+                }
+
+                sub.SetCompanionPrefab(i, curse.companionPrefab);
+                GameObject inst = sub.GetCompanionInstance(i);
+                if (inst == null)
+                    continue;
+
+                var d = inst.GetComponent<AngelCurseCompanionDriver>();
+                if (d == null)
+                    d = inst.AddComponent<AngelCurseCompanionDriver>();
+                d.Initialize(curse, playerRoot);
+            }
+            else if (slot is Upgrade_05_04_AngelLightning lightning &&
+                     lightning.companionPrefab != null)
+            {
+                GameObject existing = sub.GetCompanionInstance(i);
+                if (existing != null)
+                {
+                    var driver = existing.GetComponent<AngelLightningCompanionDriver>();
+                    if (driver != null && driver.UsesSameConfig(lightning))
+                        continue;
+                }
+
+                sub.SetCompanionPrefab(i, lightning.companionPrefab);
+                GameObject inst = sub.GetCompanionInstance(i);
+                if (inst == null)
+                    continue;
+
+                var d = inst.GetComponent<AngelLightningCompanionDriver>();
+                if (d == null)
+                    d = inst.AddComponent<AngelLightningCompanionDriver>();
+                d.Initialize(lightning, playerRoot);
+            }
+            else if (slot is Upgrade_05_05_AngelLottery lottery &&
+                     lottery.companionPrefab != null)
+            {
+                GameObject existing = sub.GetCompanionInstance(i);
+                if (existing != null)
+                {
+                    var driver = existing.GetComponent<AngelLotteryCompanionDriver>();
+                    if (driver != null && driver.UsesSameConfig(lottery))
+                        continue;
+                }
+
+                sub.SetCompanionPrefab(i, lottery.companionPrefab);
+                GameObject inst = sub.GetCompanionInstance(i);
+                if (inst == null)
+                    continue;
+
+                var d = inst.GetComponent<AngelLotteryCompanionDriver>();
+                if (d == null)
+                    d = inst.AddComponent<AngelLotteryCompanionDriver>();
+                d.Initialize(lottery, playerRoot);
+            }
             else
             {
                 sub.SetCompanionPrefab(i, null);

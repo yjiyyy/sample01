@@ -132,6 +132,7 @@ public class UpgradeEffectRuntime : MonoBehaviour
         StopAllSlotEffects();
 
         RebuildWeaponDamageModifiers();
+        RebuildCompanionCooldownModifiers();
 
         Transform equipRoot = transform.root;
         if (equipRoot != null)
@@ -190,6 +191,22 @@ public class UpgradeEffectRuntime : MonoBehaviour
         var mods = root.GetComponentInChildren<PlayerWeaponDamageModifiers>(true);
         if (mods == null)
             mods = root.gameObject.AddComponent<PlayerWeaponDamageModifiers>();
+
+        mods.RebuildFromUpgradeSlots(upgrade);
+    }
+
+    private void RebuildCompanionCooldownModifiers()
+    {
+        if (upgrade == null)
+            return;
+
+        Transform root = transform.root;
+        if (root == null)
+            return;
+
+        var mods = root.GetComponentInChildren<PlayerCompanionCooldownModifiers>(true);
+        if (mods == null)
+            mods = root.gameObject.AddComponent<PlayerCompanionCooldownModifiers>();
 
         mods.RebuildFromUpgradeSlots(upgrade);
     }

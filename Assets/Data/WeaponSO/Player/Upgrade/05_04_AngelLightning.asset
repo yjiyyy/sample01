@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63ee2ee1912d8d64abe27c625fb084ee, type: 3}
+  m_Name: 05_04_AngelLightning
+  m_EditorClassIdentifier: 
+  id: 05_04
+  upgradeName: Angel Lightning
+  icon: {fileID: 21300000, guid: fb0121b9c061ae64da99166d4ac7c424, type: 3}
+  companionPrefab: {fileID: 6813440811960600658, guid: 0f8551f82e7c13248af3b560e67c1a98, type: 3}
+  acquireRange: 10
+  enemyLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  cycleCooldown: 1
+  targetsPerCycle: 1
+  strikeInterval: 0.3
+  hitDelay: 0.2
+  attackAnimationClip: {fileID: 1827226128182048838, guid: 0fde836ed8cae5f478b410766b766415, type: 3}
+  knockbackPower: 5
+  knockbackDuration: 0.5
+  baseStunDuration: 5
+  hitAttachEffectPrefab: {fileID: 4294302568896850296, guid: 89f7a4ff93f4b2244bca3b366bb50bb6, type: 3}
+  hitAttachEffectLifetime: 1.5

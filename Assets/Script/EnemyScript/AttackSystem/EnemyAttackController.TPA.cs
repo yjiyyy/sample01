@@ -71,6 +71,7 @@ public partial class EnemyAttackController : MonoBehaviour
         float startTime = Time.time;
         float attackEndTime = startTime + data.attackTime;
         bool fired = false;
+        bool completedSuccessfully = true;
 
         // FireAtTime이 AttackTime보다 크면 발사하지 않고 애니메이션만 출력
         float useFireTime = (data.fireAtTime <= data.attackTime) ? data.fireAtTime : -1f;
@@ -87,6 +88,15 @@ public partial class EnemyAttackController : MonoBehaviour
         {
             while (Time.time < attackEndTime)
             {
+                if (enemy == null ||
+                    enemy.CurrentState != Enemy.EnemyState.Attack ||
+                    enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
+                {
+                    Log("TPA ATTACK INTERRUPT noCooldown");
+                    completedSuccessfully = false;
+                    yield break;
+                }
+
                 float elapsed = Time.time - startTime;
 
                 // FireAtTime 도달 시 발사 (한 번만)
@@ -126,8 +136,11 @@ public partial class EnemyAttackController : MonoBehaviour
             currentAttack = null;
             currentAttackIndex = -1;
 
-            ApplyPerAttackCooldown(index, data.cooldown);
-            ApplyGlobalCooldown();
+            if (completedSuccessfully)
+            {
+                ApplyPerAttackCooldown(index, data.cooldown);
+                ApplyGlobalCooldown();
+            }
         }
 
         yield break;
@@ -186,5 +199,38 @@ public partial class EnemyAttackController : MonoBehaviour
         }
 
         tp.Initialize(data, enemy, target);
+    }
+
+    private void CancelTimeProjectileNoCooldown()
+    {
+        if (enemy != null && enemy.animator != null)
+            enemy.animator.speed = 1f;
+
+        if (enemy != null && enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
+            enemy.SetState(Enemy.EnemyState.Chase, true);
+
+        if (enemy != null)
+        {
+            try { enemy.UnlockLookDirection(); } catch { }
+        }
+
+        if (timeProjectileRoutine != null)
+        {
+            try { StopCoroutine(timeProjectileRoutine); } catch { }
+            timeProjectileRoutine = null;
+        }
+
+        runningTimeProjectileIndex = -1;
+        currentAttack = null;
+        currentAttackIndex = -1;
+    }
+
+    private void InterruptTimeProjectileIfNeeded()
+    {
+        if (timeProjectileRoutine == null)
+            return;
+
+        Log("INTERRUPT timeProjectile -> cancel");
+        CancelTimeProjectileNoCooldown();
     }
 }

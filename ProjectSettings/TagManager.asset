@@ -5,6 +5,8 @@ TagManager:
   serializedVersion: 3
   tags:
   - Enemy
+  - FxTemporaire
+  - particles
   layers:
   - Default
   - TransparentFX
@@ -23,8 +25,8 @@ TagManager:
   - Prop
   - Parts
   - SpringBone
-  - 
-  - 
+  - Upgrade_Projectile
+  - UI_Cam
   - 
   - 
   - 
@@ -41,6 +43,9 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: UI_Cam
+    uniqueID: 22043153
     locked: 0
   m_RenderingLayers:
   - Default

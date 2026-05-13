@@ -16,22 +16,22 @@ MonoBehaviour:
   upgradeName: Angel Slayer
   icon: {fileID: 21300000, guid: 7b8542eee790f0a4383bff6c63d4d242, type: 3}
   companionPrefab: {fileID: 9025141506227844988, guid: d42810e0e3fe40c47be757064d701739, type: 3}
-  acquireRange: 5
+  acquireRange: 1.3
   scanInterval: 0.2
   enemyLayers:
     serializedVersion: 2
     m_Bits: 0
-  attackCooldown: 0.5
+  attackCooldown: 1
   attackTriggerName: Attack
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.15
-  damage: 10
+  damage: 2
   knockbackDuration: 0.5
-  knockbackPower: 4
+  knockbackPower: 10
   jerkIntensity: 0
   jerkDuration: 0
   stunDuration: 0
-  targetHoldDuration: 1
+  targetHoldDuration: 0.1
   deathMode: 1
   ragdollImpulse: 10
   ragdollUpImpulse: 5
