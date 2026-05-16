@@ -17,6 +17,9 @@ public class PlayerChargeAttackSO : ScriptableObject {
     public float damage = 120f;
     public float duration = 0.8f;
     public float range = 2.5f;
+    [Tooltip("차지 공격 발동 1회당 소모 스테미너. 0이면 소모 없음.")]
+    [Min(0f)]
+    public float staminaCost = 0f;
     public float hitBoxLifetime = 0.15f;
     [Header("넉백/스턴(EnemyImpact에서 SO로 읽음)")]
     public float knockbackPower = 5f;
@@ -89,6 +92,7 @@ public class PlayerChargeAttackSO : ScriptableObject {
         holdSuccessTime = Mathf.Max(0f, holdSuccessTime);
         duration = Mathf.Max(0f, duration);
         range = Mathf.Max(0f, range);
+        staminaCost = Mathf.Max(0f, staminaCost);
         hitBoxLifetime = Mathf.Max(0.01f, hitBoxLifetime);
         knockbackDuration = Mathf.Max(0f, knockbackDuration);
         stunDuration = Mathf.Max(0f, stunDuration);

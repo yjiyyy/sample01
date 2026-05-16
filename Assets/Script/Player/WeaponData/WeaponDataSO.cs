@@ -74,6 +74,13 @@ public class WeaponDataSO : ScriptableObject
     [Tooltip("업그레이드/효과 분기용 공격 타입. 예: 흡혈은 MeleeWeapon/Unarmed만 허용. 탄환 무기는 ProjectileGun.")]
     public AttackDamageType damageType = AttackDamageType.MeleeWeapon;
 
+    [Header("독 (플레이어 피격)")]
+    [Tooltip("독 공격이면 배리어를 건너뛰고 HP에만 피해가 들어갑니다.")]
+    public bool isPoisonAttack;
+
+    [Tooltip("맞았을 때 중독 상태를 걸거나 갱신할 설정. 비어 있으면 디버프 없이 독 피해 규칙만 적용됩니다.")]
+    public PoisonStatusConfigSO poisonOnHitStatus;
+
     [Header("장착 프리팹 (테스트/장착용)")]
     [Tooltip("이 WeaponDataSO를 장착할 때 사용할 무기 프리팹.\n" +
              "PlayerWeaponController.EquipWeapon / DevWeaponSwitcher 등에서 사용합니다.")]
@@ -97,6 +104,9 @@ public class WeaponDataSO : ScriptableObject
     public float cooldown = 1.0f;
     public float damage = 10f;
     public float range = 2.5f;
+    [Tooltip("이 무기 공격 1회당 소모 스테미너. 0이면 소모 없음.")]
+    [Min(0f)]
+    public float staminaCost = 0f;
 
     [Header("히트박스 타이밍 및 지속")]
     public float hitboxSpawnDelay = 0f;
@@ -233,7 +243,9 @@ public class WeaponDataSO : ScriptableObject
         float ragdollUpImpulse,
         float ragdollSpinTorque,
         List<SliceTarget> sliceTargets,
-        float sliceImpulse)
+        float sliceImpulse,
+        bool isPoisonAttack = false,
+        PoisonStatusConfigSO poisonOnHitStatus = null)
     {
         var so = CreateInstance<WeaponDataSO>();
         so.hideFlags = HideFlags.HideAndDontSave;
@@ -243,7 +255,19 @@ public class WeaponDataSO : ScriptableObject
         so.ragdollSpinTorque = ragdollSpinTorque;
         so.sliceTargets = sliceTargets != null ? new List<SliceTarget>(sliceTargets) : new List<SliceTarget>();
         so.sliceImpulse = sliceImpulse;
+        so.isPoisonAttack = isPoisonAttack || poisonOnHitStatus != null;
+        so.poisonOnHitStatus = poisonOnHitStatus;
         return so;
+    }
+
+    /// <summary>
+    /// Rush/점프 등 기존에 deathWeapon이 null이던 경로에서 독 정보만 넣을 때 사용합니다. 둘 다 없으면 null.
+    /// </summary>
+    public static WeaponDataSO CreatePoisonPlayerHitProxyOrNull(bool isPoisonAttack, PoisonStatusConfigSO poisonOnHitStatus)
+    {
+        if (!isPoisonAttack && poisonOnHitStatus == null)
+            return null;
+        return CreatePlayerDeathProxy(DeathMode.Animation, 0f, 0f, 0f, null, 0f, isPoisonAttack, poisonOnHitStatus);
     }
 
 #if UNITY_EDITOR
@@ -279,6 +303,8 @@ public class WeaponDataSO : ScriptableObject
         ragdollSpinTorque = Mathf.Max(0f, ragdollSpinTorque);
 
         sliceImpulse = Mathf.Max(0f, sliceImpulse);
+
+        staminaCost = Mathf.Max(0f, staminaCost);
 
         hitboxSpawnDelay2 = Mathf.Max(0f, hitboxSpawnDelay2);
 

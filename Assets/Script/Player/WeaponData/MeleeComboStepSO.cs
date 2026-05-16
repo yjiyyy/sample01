@@ -28,6 +28,8 @@ public class MeleeComboStepSO : ScriptableObject
     public float damage = -1f;
     [Tooltip("스텝 자체의 범위(음수면 무기 기본값 사용)")]
     public float range = -1f;
+    [Tooltip("스텝별 스테미너 소모. 음수면 무기 기본값 사용.")]
+    public float staminaCost = -1f;
 
     [Header("히트박스 타이밍 및 지속")]
     [Tooltip("히트박스 스폰 지연(초)")]

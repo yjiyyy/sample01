@@ -74,7 +74,7 @@ public class PlayerEvadeController : MonoBehaviour
     public bool CanEvade()
     {
         if (data == null || playerStats == null) return false;
-        return playerStats.CanUseStamina(data.evadeCost);
+        return playerStats.CanUseStamina(data.staminaCost);
     }
 
     public float GetEvadeGauge() => playerStats != null ? playerStats.currentStamina : 0f;
@@ -97,7 +97,7 @@ public class PlayerEvadeController : MonoBehaviour
         if (data == null || !CanEvade()) return;
 
         preEvadeCleanup?.Invoke();
-        if (!playerStats.UseStamina(data.evadeCost))
+        if (!playerStats.UseStamina(data.staminaCost))
             return;
 
         Vector3 evadeDir;

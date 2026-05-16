@@ -60,6 +60,9 @@ public class AngelCursePoisonField : MonoBehaviour
         poisonWeaponProxy.damageType = AttackDamageType.ProjectileGun;
         poisonWeaponProxy.damage = Mathf.Max(0f, config.poisonDamagePerTick);
 
+        poisonWeaponProxy.isPoisonAttack = true;
+        poisonWeaponProxy.poisonOnHitStatus = config.playerPoisonStatusFromField;
+
         // 순수 DoT 요구사항: 넉백/푸시/스턴 없음.
         poisonWeaponProxy.knockbackDuration = 0f;
         poisonWeaponProxy.knockbackPower = 0f;

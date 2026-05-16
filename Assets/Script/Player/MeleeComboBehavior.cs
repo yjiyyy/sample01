@@ -19,6 +19,7 @@ public class MeleeComboBehavior : MonoBehaviour
     private Action<PlayerState> changeState;
     private PlayerMovement playerMovement;
     private PlayerWeaponController ownerController;
+    private PlayerStats playerStats;
 
     // runtime
     private int currentStepIndex = 0;
@@ -62,6 +63,10 @@ public class MeleeComboBehavior : MonoBehaviour
         ownerController = owner;
         debugMode = debug;
 
+        playerStats = owner != null
+            ? owner.GetComponent<PlayerStats>() ?? owner.GetComponentInChildren<PlayerStats>(true)
+            : null;
+
         EnsureProxies(force: true);
     }
 
@@ -72,10 +77,22 @@ public class MeleeComboBehavior : MonoBehaviour
     {
         if (comboData == null || comboData.steps == null || comboData.steps.Count == 0) return;
 
+        var step0 = comboData.steps[0];
+        if (step0 == null)
+            return;
+
+        var weaponForCost = getWeaponData != null ? getWeaponData() : null;
+        float cost0 = PlayerAttackStamina.GetEffectiveCost(weaponForCost, step0);
+        if (!PlayerAttackStamina.CanPay(playerStats, cost0))
+        {
+            if (debugMode) Debug.Log("[Combo] 스테미너 부족으로 콤보 시작 불가");
+            return;
+        }
+
         // If not active, start combo
         if (!comboActive)
         {
-            StartCombo();
+            StartCombo(cost0);
             return;
         }
 
@@ -83,15 +100,21 @@ public class MeleeComboBehavior : MonoBehaviour
         TryAdvanceOnInput();
     }
 
-    private void StartCombo()
+    private void StartCombo(float staminaCostFirstStep)
     {
-        if (comboData == null || comboData.steps.Count == 0) return;
+        if (comboData == null || comboData.steps == null || comboData.steps.Count == 0) return;
 
         // Guard: if current player state blocks attacking, ignore
         var s = getCurrentState != null ? getCurrentState() : PlayerState.Idle;
         if (s == PlayerState.Knockback || s == PlayerState.Stun || s == PlayerState.Dead || s == PlayerState.Evade)
         {
             if (debugMode) Debug.Log("[Combo] Start blocked by state: " + s);
+            return;
+        }
+
+        if (!PlayerAttackStamina.TryPay(playerStats, staminaCostFirstStep))
+        {
+            if (debugMode) Debug.Log("[Combo] 스테미너 차감 실패로 시작 중단");
             return;
         }
 
@@ -150,10 +173,40 @@ public class MeleeComboBehavior : MonoBehaviour
 
     private void AdvanceToNextStep()
     {
+        int nextIdx = currentStepIndex + 1;
+        if (nextIdx >= comboData.steps.Count)
+        {
+            if (!comboData.loop)
+            {
+                EndCombo();
+                return;
+            }
+
+            nextIdx = 0;
+        }
+
+        var nextStep = comboData.steps[nextIdx];
+        if (nextStep == null)
+            return;
+
+        var weapon = getWeaponData != null ? getWeaponData() : null;
+        float cost = PlayerAttackStamina.GetEffectiveCost(weapon, nextStep);
+        if (!PlayerAttackStamina.CanPay(playerStats, cost))
+        {
+            if (debugMode) Debug.Log("[Combo] 다음 스텝 스테미너 부족");
+            return;
+        }
+
         if (activeStepRoutine != null)
         {
             try { StopCoroutine(activeStepRoutine); } catch { }
             activeStepRoutine = null;
+        }
+
+        if (!PlayerAttackStamina.TryPay(playerStats, cost))
+        {
+            if (debugMode) Debug.Log("[Combo] 다음 스텝 스테미너 차감 실패");
+            return;
         }
 
         ownerController?.SetMeleeComboAllowMove(false);
@@ -164,19 +217,7 @@ public class MeleeComboBehavior : MonoBehaviour
         }
 
         changeState?.Invoke(PlayerState.Attack);
-        currentStepIndex++;
-        if (currentStepIndex >= comboData.steps.Count)
-        {
-            if (comboData.loop)
-            {
-                currentStepIndex = 0;
-            }
-            else
-            {
-                EndCombo();
-                return;
-            }
-        }
+        currentStepIndex = nextIdx;
 
         stepElapsed = 0f;
         activeStepRoutine = StartCoroutine(StepRoutine(currentStepIndex));

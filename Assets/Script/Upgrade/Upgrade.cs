@@ -34,6 +34,15 @@ public class Upgrade : MonoBehaviour
 
         if (GetComponent<PlayerReviveTicketRuntime>() == null)
             gameObject.AddComponent<PlayerReviveTicketRuntime>();
+
+        if (GetComponent<PlayerBarrierUpgradeRuntime>() == null)
+            gameObject.AddComponent<PlayerBarrierUpgradeRuntime>();
+
+        if (GetComponent<PlayerGodShieldUpgradeRuntime>() == null)
+            gameObject.AddComponent<PlayerGodShieldUpgradeRuntime>();
+
+        if (GetComponent<PlayerOverdriveUpgradeRuntime>() == null)
+            gameObject.AddComponent<PlayerOverdriveUpgradeRuntime>();
     }
 
     public UpgradeEffectSO GetSlot(int index)

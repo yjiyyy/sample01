@@ -169,7 +169,7 @@ public partial class EnemyAttackController
                 data.stunDuration,
                 data.allowDuplicateHit,
                 data.duplicateHitInterval,
-                WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse),
+                WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse, data.isPoisonAttack, data.poisonOnHitStatus),
                 data.targetHoldDuration,
                 data.usePushInsteadOfKnockback,
                 data.attackerHoldDuration,

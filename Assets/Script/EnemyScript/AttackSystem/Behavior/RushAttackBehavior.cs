@@ -221,7 +221,7 @@ public class RushAttackBehavior : MonoBehaviour
                 data.stunDuration,
                 data.allowDuplicateHit,
                 data.duplicateHitInterval,
-                null,
+                WeaponDataSO.CreatePoisonPlayerHitProxyOrNull(data.isPoisonAttack, data.poisonOnHitStatus),
                 data.targetHoldDuration,
                 data.usePushInsteadOfKnockback,
                 data.attackerHoldDuration

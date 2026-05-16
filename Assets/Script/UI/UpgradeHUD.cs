@@ -554,4 +554,122 @@ public class UpgradeHUD : MonoBehaviour
                 defaultSlotSprites[i] = slotImages[i].sprite;
         }
     }
+
+    /// <summary>
+    /// 씬에서 플레이어 <see cref="Upgrade"/>에 맞는 HUD를 고르고 <see cref="EnsureDataSource"/>까지 적용합니다.
+    /// (부활 티켓·베리어 등 슬롯 소모 FX 공통)
+    /// </summary>
+    public static UpgradeHUD ResolveAndBindHud(Upgrade upgrade, bool verboseLog = false)
+    {
+        if (upgrade == null)
+            return null;
+
+        UpgradeHUD[] allHuds = Object.FindObjectsByType<UpgradeHUD>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (allHuds == null || allHuds.Length == 0)
+        {
+            if (verboseLog)
+                Debug.LogWarning("[UpgradeHUD] 씬에 UpgradeHUD가 없습니다.");
+            return null;
+        }
+
+        if (verboseLog)
+            Debug.Log($"[UpgradeHUD] UpgradeHUD 검색 — 총 {allHuds.Length}개");
+
+        UpgradeHUD chosen = null;
+        int bestRank = int.MinValue;
+        for (int i = 0; i < allHuds.Length; i++)
+        {
+            UpgradeHUD hud = allHuds[i];
+            if (hud == null)
+                continue;
+
+            if (IsUnderDeprecatedFxCanvas(hud.transform))
+            {
+                if (verboseLog)
+                    Debug.Log($"[UpgradeHUD] HUD 후보 제외(Canvas_UpgradeFX 하위): '{hud.name}' path:{BuildTransformPath(hud.transform)}");
+                continue;
+            }
+
+            int slotFilled = hud.CountAssignedSlotImages();
+            bool linked = hud.DataSource == upgrade;
+            int rank = slotFilled * 1000;
+            if (linked)
+                rank += 100;
+            if (hud.gameObject.activeInHierarchy)
+                rank += 10;
+            string goName = hud.gameObject.name;
+            if (goName.IndexOf("UpgradeHUDRoot", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                rank += 50;
+
+            if (verboseLog)
+            {
+                Debug.Log(
+                    $"[UpgradeHUD] HUD 후보 — name:'{hud.name}', path:{BuildTransformPath(hud.transform)}, " +
+                    $"slotsFilled:{slotFilled}, linked:{linked}, active:{hud.gameObject.activeInHierarchy}, rank:{rank}");
+            }
+
+            if (rank > bestRank)
+            {
+                bestRank = rank;
+                chosen = hud;
+            }
+        }
+
+        if (chosen == null)
+        {
+            for (int i = 0; i < allHuds.Length; i++)
+            {
+                if (allHuds[i] != null && !IsUnderDeprecatedFxCanvas(allHuds[i].transform))
+                {
+                    chosen = allHuds[i];
+                    break;
+                }
+            }
+        }
+
+        if (chosen == null)
+            chosen = allHuds[0];
+
+        chosen.EnsureDataSource(upgrade);
+
+        if (verboseLog)
+        {
+            Debug.Log(
+                $"[UpgradeHUD] HUD 선택 완료 — '{chosen.name}', path:{BuildTransformPath(chosen.transform)}, " +
+                $"slotsFilled:{chosen.CountAssignedSlotImages()}, DataSource:'{(chosen.DataSource != null ? chosen.DataSource.name : "null")}'");
+        }
+
+        return chosen;
+    }
+
+    private static bool IsUnderDeprecatedFxCanvas(Transform t)
+    {
+        const string deprecatedCanvas = "Canvas_UpgradeFX";
+        while (t != null)
+        {
+            if (t.name.IndexOf(deprecatedCanvas, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            t = t.parent;
+        }
+
+        return false;
+    }
+
+    private static string BuildTransformPath(Transform t)
+    {
+        if (t == null)
+            return "(null)";
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder(128);
+        Transform walk = t;
+        while (walk != null)
+        {
+            if (sb.Length > 0)
+                sb.Insert(0, '/');
+            sb.Insert(0, walk.name);
+            walk = walk.parent;
+        }
+
+        return sb.ToString();
+    }
 }

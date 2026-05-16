@@ -17,6 +17,8 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: a9e04d62599b8354885ac89756a251cf, type: 3}
   category: 0
   damageType: 0
+  isPoisonAttack: 1
+  poisonOnHitStatus: {fileID: 11400000, guid: c3d4e5f60718293a4b5c6d7e8f901234, type: 2}
   weaponPrefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
   overrideController: {fileID: 0}
   attackAnimVariantCount: 4
@@ -24,6 +26,7 @@ MonoBehaviour:
   cooldown: 0.5
   damage: 10
   range: 2.5
+  staminaCost: 10
   hitboxSpawnDelay: 0.13
   hitBoxLifetime: 0.1
   trailEmitStartDelay: 0
@@ -46,7 +49,7 @@ MonoBehaviour:
   ragdollSpinTorque: 0
   sliceTargets: 
   sliceImpulse: 0
-  chargeSlot: {fileID: 11400000, guid: 2b658550bec31024d9db2012e686dfc2, type: 2}
+  chargeSlot: {fileID: 11400000, guid: fdd50407a2980fa42849cfdb3de8471b, type: 2}
   comboSlot: {fileID: 0}
   recoilStartDelay: 0
   recoilPower: 0
@@ -58,7 +61,6 @@ MonoBehaviour:
   meleeHitboxPrefab: {fileID: 1988047932026333537, guid: 4f98ed13c83d79348b3d04aa2cd0e190, type: 3}
   _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 0}
-  shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 0}
   attackFXPhases: []
   dualWield: 0

@@ -34,6 +34,10 @@ public class PlayerHealth : MonoBehaviour
     private bool ragdollSpinKillActive = false;
     private float invincibleUntilTime = -1f;
 
+    private PlayerBarrierUpgradeRuntime barrierRuntime;
+    private PlayerPoisonDebuffRuntime poisonDebuffRuntime;
+    private PlayerGodShieldUpgradeRuntime godShieldRuntime;
+
     private const string kHeadName = "Bip001 Head";
     private const string kLeftArmName = "Bip001 L UpperArm";
     private const string kRightArmName = "Bip001 R UpperArm";
@@ -52,6 +56,49 @@ public class PlayerHealth : MonoBehaviour
         animator = rootTransform.GetComponentInChildren<Animator>();
         CollectRagdollParts();
         ragdollSpinKillActive = false;
+        EnsureBarrierRuntimeReference();
+        EnsurePoisonDebuffRuntimeReference();
+        EnsureGodShieldRuntimeReference();
+    }
+
+    private void EnsurePoisonDebuffRuntimeReference()
+    {
+        if (poisonDebuffRuntime != null)
+            return;
+
+        poisonDebuffRuntime = GetComponent<PlayerPoisonDebuffRuntime>() ??
+                              GetComponentInChildren<PlayerPoisonDebuffRuntime>(true) ??
+                              GetComponentInParent<PlayerPoisonDebuffRuntime>();
+
+        if (poisonDebuffRuntime == null)
+        {
+            gameObject.AddComponent<PlayerPoisonDebuffRuntime>();
+            poisonDebuffRuntime = GetComponent<PlayerPoisonDebuffRuntime>();
+        }
+    }
+
+    private void EnsureBarrierRuntimeReference()
+    {
+        if (barrierRuntime != null)
+            return;
+
+        barrierRuntime = GetComponent<PlayerBarrierUpgradeRuntime>();
+        if (barrierRuntime == null)
+            barrierRuntime = GetComponentInChildren<PlayerBarrierUpgradeRuntime>(true);
+        if (barrierRuntime == null)
+            barrierRuntime = GetComponentInParent<PlayerBarrierUpgradeRuntime>();
+    }
+
+    private void EnsureGodShieldRuntimeReference()
+    {
+        if (godShieldRuntime != null)
+            return;
+
+        godShieldRuntime = GetComponent<PlayerGodShieldUpgradeRuntime>();
+        if (godShieldRuntime == null)
+            godShieldRuntime = GetComponentInChildren<PlayerGodShieldUpgradeRuntime>(true);
+        if (godShieldRuntime == null)
+            godShieldRuntime = GetComponentInParent<PlayerGodShieldUpgradeRuntime>();
     }
 
     private void CollectRagdollParts()
@@ -103,11 +150,27 @@ public class PlayerHealth : MonoBehaviour
         if (deadProcessed) return;
         if (Time.time < invincibleUntilTime) return;
 
+        EnsureGodShieldRuntimeReference();
+        if (amount > 0f && godShieldRuntime != null && godShieldRuntime.IsProtectionActive)
+            return;
+
         // 피격 이펙트 (무기 SO에 hitEffectPrefab 있을 때, hitPoint가 있으면 해당 위치에 스폰)
         TrySpawnHitEffect(weapon, hitPoint);
 
-        currentHP -= amount;
-        Debug.Log($"플레이어가 {amount:F1} 피해! scale:{impactScale:F2} | HP: {Mathf.Max(0f, currentHP):F1}");
+        EnsureBarrierRuntimeReference();
+        bool bypassBarrier = weapon != null && weapon.isPoisonAttack;
+        float damageToHp = amount;
+        if (!bypassBarrier && barrierRuntime != null)
+            damageToHp = barrierRuntime.AbsorbDamageBeforeHp(amount);
+
+        currentHP -= damageToHp;
+        Debug.Log($"플레이어가 원피해 {amount:F1} → HP적용 {damageToHp:F1} (scale:{impactScale:F2}) | HP: {Mathf.Max(0f, currentHP):F1}");
+
+        if (!deadProcessed && amount > 0f && weapon != null && weapon.isPoisonAttack && weapon.poisonOnHitStatus != null)
+        {
+            EnsurePoisonDebuffRuntimeReference();
+            poisonDebuffRuntime?.RegisterPoisonHit(weapon.poisonOnHitStatus);
+        }
 
         if (currentHP <= 0f)
         {
@@ -132,6 +195,8 @@ public class PlayerHealth : MonoBehaviour
     private void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (deadProcessed) return;
+
+        TryClearPoisonDebuff();
 
         // Revive Ticket이 있으면 일반 사망 로직 대신 부활 시퀀스로 넘깁니다.
         var reviveRuntime = GetComponent<PlayerReviveTicketRuntime>();
@@ -667,10 +732,22 @@ public class PlayerHealth : MonoBehaviour
     public float GetMaxHP() => maxHP;
     public float GetWeight() => weight;
 
+    public bool IsDeadProcessed() => deadProcessed;
+
+    public bool IsInvulnerableNow() => Time.time < invincibleUntilTime;
+
+    private void TryClearPoisonDebuff()
+    {
+        EnsurePoisonDebuffRuntimeReference();
+        poisonDebuffRuntime?.ClearPoisonState();
+    }
+
     public void EnterReviveWaitingState()
     {
         if (deadProcessed)
             return;
+
+        TryClearPoisonDebuff();
 
         deadProcessed = true;
         currentHP = 0f;

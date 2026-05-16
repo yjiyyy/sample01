@@ -42,6 +42,7 @@ public class PlayerChargeController : MonoBehaviour
 
     private WeaponDataSO chargeWeaponProxy;
     private PlayerWeaponController weaponCtrl;
+    private PlayerStats playerStats;
 
     public void Setup(
         PlayerAnimationController animCtrl,
@@ -62,6 +63,14 @@ public class PlayerChargeController : MonoBehaviour
         enableChargeMessages = enableMessages;
         debugMode = debug;
         weaponCtrl = GetComponent<PlayerWeaponController>();
+    }
+
+    private void EnsurePlayerStats()
+    {
+        if (playerStats != null)
+            return;
+
+        playerStats = GetComponent<PlayerStats>() ?? GetComponentInChildren<PlayerStats>(true);
     }
 
     private bool IsHoldActive()
@@ -336,6 +345,13 @@ public class PlayerChargeController : MonoBehaviour
     private void ExecuteChargeAttack(PlayerChargeAttackSO slot)
     {
         if (slot == null) return;
+
+        EnsurePlayerStats();
+        if (!PlayerAttackStamina.TryPay(playerStats, Mathf.Max(0f, slot.staminaCost)))
+        {
+            if (debugMode) Debug.Log("[Charge] 스테미너 부족 → 단발 차지 발동 취소");
+            return;
+        }
 
         changeState?.Invoke(PlayerState.Attack);
 
@@ -848,6 +864,14 @@ public class PlayerChargeController : MonoBehaviour
         {
             while (continuousActive && InputManager.Instance.GetAttack())
             {
+                EnsurePlayerStats();
+                if (!PlayerAttackStamina.TryPay(playerStats, Mathf.Max(0f, slot.staminaCost)))
+                {
+                    if (debugMode) Debug.Log("[Charge] 연속 차지 스테미너 부족 → 종료");
+                    continuousActive = false;
+                    break;
+                }
+
                 // Start a single cycle
 
                 // If faceNearestWhileHeld is requested, start/ensure face coroutine runs to always set look override.

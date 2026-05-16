@@ -25,6 +25,8 @@ public class PlayerStats : MonoBehaviour
     private float externalStaminaRechargeDelayReduction = 0f;
     private float staminaRechargeCooldown = 0f;
 
+    private PlayerOverdriveUpgradeRuntime overdriveRuntime;
+
     // Leveling & experience (example)
     public int level = 1;
     public float experience = 0f;
@@ -89,12 +91,17 @@ public class PlayerStats : MonoBehaviour
     public bool CanUseStamina(float amount)
     {
         if (amount <= 0f) return true;
+        if (IsOverdriveSuppressingStaminaCost())
+            return true;
         return currentStamina >= amount;
     }
 
     public bool UseStamina(float amount)
     {
         if (amount <= 0f) return true;
+        if (IsOverdriveSuppressingStaminaCost())
+            return true;
+
         if (currentStamina < amount) return false;
         currentStamina -= amount;
         if (currentStamina < 0f) currentStamina = 0f;
@@ -105,6 +112,9 @@ public class PlayerStats : MonoBehaviour
     public void ConsumeStamina(float amount)
     {
         if (amount <= 0f) return;
+        if (IsOverdriveSuppressingStaminaCost())
+            return;
+
         currentStamina = Mathf.Max(0f, currentStamina - amount);
         StartStaminaRechargeCooldown();
     }
@@ -119,6 +129,27 @@ public class PlayerStats : MonoBehaviour
     {
         float effectiveDelay = Mathf.Max(0f, staminaRechargeDelay - externalStaminaRechargeDelayReduction);
         staminaRechargeCooldown = effectiveDelay;
+    }
+
+    private void EnsureOverdriveRuntime()
+    {
+        if (overdriveRuntime != null)
+            return;
+
+        overdriveRuntime = GetComponent<PlayerOverdriveUpgradeRuntime>();
+        if (overdriveRuntime == null)
+            overdriveRuntime = GetComponentInChildren<PlayerOverdriveUpgradeRuntime>(true);
+        if (overdriveRuntime == null)
+            overdriveRuntime = GetComponentInParent<PlayerOverdriveUpgradeRuntime>();
+        if (overdriveRuntime == null && transform.root != null)
+            overdriveRuntime = transform.root.GetComponentInChildren<PlayerOverdriveUpgradeRuntime>(true);
+    }
+
+    /// <summary>오버드라이브 중에는 스태미나를 줄이지 않고(및 소모 쿨다운을 걸지 않음), 회복은 그대로 적용됩니다.</summary>
+    private bool IsOverdriveSuppressingStaminaCost()
+    {
+        EnsureOverdriveRuntime();
+        return overdriveRuntime != null && overdriveRuntime.IsOverdriveActive;
     }
 
     public void AddExperience(float exp)

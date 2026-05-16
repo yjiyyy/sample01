@@ -357,7 +357,7 @@ public partial class EnemyAttackController
         float kbDur = data.knockbackDuration * mul;
         float stun = data.stunDuration * mul;
 
-        var deathProxy = WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse);
+        var deathProxy = WeaponDataSO.CreatePlayerDeathProxy(data.deathMode, data.ragdollImpulse, data.ragdollUpImpulse, data.ragdollSpinTorque, data.sliceTargets, data.sliceImpulse, data.isPoisonAttack, data.poisonOnHitStatus);
         float finalDamage = EnemyPlayerHitEffectApplier.ApplyIronBodyExtraDamageIfNeeded(pwc, dmg);
         ph.ApplyDamage(finalDamage, hitDir, deathProxy, 1f, hitPoint);
 

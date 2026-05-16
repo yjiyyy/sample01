@@ -50,11 +50,21 @@ public static class EnemyPlayerHitEffectApplier
     {
         ApplyAttackerHold(attacker, attackerHoldDuration);
 
+        PlayerWeaponController pwcResolve = playerWeaponController;
+        if (pwcResolve == null && playerMovement != null)
+            pwcResolve = playerMovement.GetComponent<PlayerWeaponController>() ??
+                         playerMovement.GetComponentInParent<PlayerWeaponController>();
+
+        if (pwcResolve != null && pwcResolve.IsInvincible())
+            return;
+
+        PlayerWeaponController pwcEffective = pwcResolve ?? playerWeaponController;
+
         bool effectiveUsePush = usePushInsteadOfKnockback;
         bool allowPushDisplacement = true;
         bool allowTargetHitstop = true;
 
-        if (TryGetIronBodyConfig(playerWeaponController, out bool ironBodyPush, out bool ironBodyHitstop, out _, out _))
+        if (TryGetIronBodyConfig(pwcEffective, out bool ironBodyPush, out bool ironBodyHitstop, out _, out _))
         {
             // IronBody 장착 시 공격 취소를 막기 위해 항상 Push 경로로 처리합니다.
             effectiveUsePush = true;
@@ -62,10 +72,10 @@ public static class EnemyPlayerHitEffectApplier
             allowTargetHitstop = ironBodyHitstop;
         }
 
-        if (allowTargetHitstop && playerWeaponController != null && targetHoldDuration > 0f)
+        if (allowTargetHitstop && pwcEffective != null && targetHoldDuration > 0f)
         {
-            playerWeaponController.StartStateHold(targetHoldDuration);
-            playerWeaponController.StartAnimationHold(targetHoldDuration);
+            pwcEffective.StartStateHold(targetHoldDuration);
+            pwcEffective.StartAnimationHold(targetHoldDuration);
         }
 
         if (effectiveUsePush)
@@ -73,10 +83,10 @@ public static class EnemyPlayerHitEffectApplier
             if (allowPushDisplacement && playerMovement != null)
                 playerMovement.ApplyKnockback(hitDirection, knockbackPower, knockbackDuration, knockbackRelativeTransform, faceHitDirection: false);
         }
-        else if (playerWeaponController != null)
+        else if (pwcEffective != null)
         {
             // 타격감 우선: target hold를 먼저 건 뒤 넉백을 적용한다.
-            playerWeaponController.ForceApplyKnockback(hitDirection, knockbackPower, knockbackDuration, stunDuration, clearExistingHolds: false);
+            pwcEffective.ForceApplyKnockback(hitDirection, knockbackPower, knockbackDuration, stunDuration, clearExistingHolds: false);
         }
         else if (playerMovement != null)
         {

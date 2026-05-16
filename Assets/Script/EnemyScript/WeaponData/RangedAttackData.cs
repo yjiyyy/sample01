@@ -77,6 +77,12 @@ public class RangedAttackData : ScriptableObject
     public List<SliceTarget> sliceTargets = new List<SliceTarget>();
     public float sliceImpulse = 0f;
 
+    [Header("독 (플레이어)")]
+    [Tooltip("독 공격으로 처리합니다(배리어 우회 등). PoisonStatusConfig를 지정하면 자동으로 켜집니다.")]
+    public bool isPoisonAttack;
+    [Tooltip("맞을 때 플레이어 중독 상태를 갱신할 설정. 비우면 독 규칙만 적용되고 중독 틱·연출은 없습니다.")]
+    public PoisonStatusConfigSO poisonOnHitStatus;
+
     [Header("??? ?? ??")]
     [Tooltip("????(??/???)?? ??????? ???????")]
     public bool destroyOnObstacle = true;

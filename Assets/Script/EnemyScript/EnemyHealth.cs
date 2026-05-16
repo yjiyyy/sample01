@@ -41,11 +41,14 @@ public class EnemyHealth : MonoBehaviour
     private Coroutine shieldRechargeRoutine;
     private bool isBleeding = false;
     private Coroutine bleedingRoutine;
+    private EnemyPoisonDebuffRuntime poisonDebuffRuntime;
 
     /// <summary>HP가 0이 되어 Die가 확정될 때 1회 호출 (enemy.Die 직전).</summary>
     public event Action OnDeath;
 
     private bool deathInvoked;
+
+    public bool IsDeadProcessed() => deathInvoked;
 
     // Public read-only property to indicate super-armor state: shield > 0 => super-armor
     public bool HasSuperArmor => useShield && currentShield > 0f;
@@ -61,6 +64,23 @@ public class EnemyHealth : MonoBehaviour
         {
             if (showShieldLogs) Debug.Log($"[EnemyHealth] Starting with shield ({currentShield}/{maxShield}) - super-armor active.");
         }
+
+        EnsurePoisonDebuffRuntimeReference();
+    }
+
+    private void EnsurePoisonDebuffRuntimeReference()
+    {
+        if (poisonDebuffRuntime != null)
+            return;
+
+        poisonDebuffRuntime = GetComponent<EnemyPoisonDebuffRuntime>() ??
+                              GetComponentInChildren<EnemyPoisonDebuffRuntime>(true) ??
+                              GetComponentInParent<EnemyPoisonDebuffRuntime>();
+
+        if (poisonDebuffRuntime == null)
+        {
+            poisonDebuffRuntime = gameObject.AddComponent<EnemyPoisonDebuffRuntime>();
+        }
     }
 
     // -------------------------------------------------------
@@ -73,14 +93,24 @@ public class EnemyHealth : MonoBehaviour
     // Main damage entry point (preserves existing behavior: shield absorbs first, shieldBreak triggers, then HP)
     public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon, float impactScale, System.Nullable<Vector3> hitPoint = null)
     {
-        if (amount <= 0f || currentHP <= 0f) return;
+        if (currentHP <= 0f || deathInvoked)
+            return;
+
+        if (amount <= 0f)
+        {
+            if (weapon != null && weapon.poisonOnHitStatus != null)
+                ApplyPoisonStatus(weapon.poisonOnHitStatus);
+            return;
+        }
 
         WeaponDataSO.TrySpawnHitEffectAt(weapon, hitPoint);
 
         float remaining = amount;
+        bool poisonHit = weapon != null && (weapon.isPoisonAttack || weapon.poisonOnHitStatus != null);
+        bool bypassShield = poisonHit;
 
-        // Shield absorption (when not shield broken)
-        if (useShield && currentShield > 0f && !isShieldBreak)
+        // Shield absorption (when not shield broken). 독 피해는 실드를 우회해 HP에만 적용.
+        if (!bypassShield && useShield && currentShield > 0f && !isShieldBreak)
         {
             float absorb = Mathf.Min(currentShield, remaining);
             currentShield -= absorb;
@@ -105,6 +135,12 @@ public class EnemyHealth : MonoBehaviour
         currentHP -= remaining;
         if (showShieldLogs)
             Debug.Log($"{gameObject.name} HP -{remaining:F1} → {currentHP:F1}/{maxHP:F1}");
+
+        if (!deathInvoked && poisonHit && weapon.poisonOnHitStatus != null)
+        {
+            EnsurePoisonDebuffRuntimeReference();
+            poisonDebuffRuntime?.RegisterPoisonHit(weapon.poisonOnHitStatus);
+        }
 
         if (currentHP <= 0f)
         {
@@ -174,6 +210,8 @@ public class EnemyHealth : MonoBehaviour
         }
         isBleeding = false;
 
+        TryClearPoisonDebuff();
+
         OnDeath?.Invoke();
 
         if (enemy != null)
@@ -181,6 +219,22 @@ public class EnemyHealth : MonoBehaviour
     }
 
     public bool IsBleeding => isBleeding;
+
+    /// <summary>독 피해 없이 중독 상태만 걸거나 갱신합니다.</summary>
+    public void ApplyPoisonStatus(PoisonStatusConfigSO config)
+    {
+        if (config == null || currentHP <= 0f || deathInvoked)
+            return;
+
+        EnsurePoisonDebuffRuntimeReference();
+        poisonDebuffRuntime?.RegisterPoisonHit(config);
+    }
+
+    private void TryClearPoisonDebuff()
+    {
+        EnsurePoisonDebuffRuntimeReference();
+        poisonDebuffRuntime?.ClearPoisonState();
+    }
 
     /// <summary>
     /// 출혈을 1회만 적용합니다. 이미 출혈 중이면 무시합니다.

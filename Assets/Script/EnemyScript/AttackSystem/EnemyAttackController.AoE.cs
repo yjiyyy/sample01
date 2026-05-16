@@ -379,7 +379,10 @@ public partial class EnemyAttackController
             }
             else if (ptype == typeof(WeaponDataSO))
             {
-                list.Add(null);
+                if (!data.isPoisonAttack && data.poisonOnHitStatus == null)
+                    list.Add(null);
+                else
+                    list.Add(WeaponDataSO.CreatePlayerDeathProxy(DeathMode.Animation, 0f, 0f, 0f, null, 0f, data.isPoisonAttack, data.poisonOnHitStatus));
             }
             else
             {

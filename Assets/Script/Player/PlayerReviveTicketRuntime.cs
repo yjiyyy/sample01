@@ -125,119 +125,18 @@ public class PlayerReviveTicketRuntime : MonoBehaviour
         if (upgrade == null)
             return;
 
-        UpgradeHUD[] allHuds = Object.FindObjectsByType<UpgradeHUD>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        if (allHuds == null || allHuds.Length == 0)
+        UpgradeHUD chosen = UpgradeHUD.ResolveAndBindHud(upgrade, verboseReviveSlotFx);
+        if (chosen == null)
         {
             if (enableDebugLog)
                 Debug.LogWarning("[PlayerReviveTicketRuntime] 씬에 UpgradeHUD가 없습니다.");
             return;
         }
 
-        if (verboseReviveSlotFx)
-            Debug.Log($"[ReviveSlotFx] UpgradeHUD 검색 — 총 {allHuds.Length}개");
-
-        // 동일 Upgrade에 묶인 UpgradeHUD가 2개 이상이면 DataSource만으로는 구분이 안 됩니다.
-        // 슬롯 Image가 실제로 연결된 HUD(UpgradeHUDRoot 등)를 우선합니다.
-        // (예전 Screen Space Camera용 Canvas_UpgradeFX 아래 HUD는 사용하지 않을 때가 많아 제외합니다.)
-        UpgradeHUD chosen = null;
-        int bestRank = int.MinValue;
-        for (int i = 0; i < allHuds.Length; i++)
-        {
-            UpgradeHUD hud = allHuds[i];
-            if (hud == null)
-                continue;
-
-            if (IsUnderDeprecatedFxCanvas(hud.transform))
-            {
-                if (verboseReviveSlotFx)
-                    Debug.Log($"[ReviveSlotFx] HUD 후보 제외(Canvas_UpgradeFX 하위): '{hud.name}' path:{BuildTransformPath(hud.transform)}");
-                continue;
-            }
-
-            int slotFilled = hud.CountAssignedSlotImages();
-            bool linked = hud.DataSource == upgrade;
-            int rank = slotFilled * 1000;
-            if (linked)
-                rank += 100;
-            if (hud.gameObject.activeInHierarchy)
-                rank += 10;
-            string goName = hud.gameObject.name;
-            if (goName.IndexOf("UpgradeHUDRoot", System.StringComparison.OrdinalIgnoreCase) >= 0)
-                rank += 50;
-
-            if (verboseReviveSlotFx)
-            {
-                Debug.Log(
-                    $"[ReviveSlotFx] HUD 후보 — name:'{hud.name}', path:{BuildTransformPath(hud.transform)}, " +
-                    $"slotsFilled:{slotFilled}, linked:{linked}, active:{hud.gameObject.activeInHierarchy}, rank:{rank}");
-            }
-
-            if (rank > bestRank)
-            {
-                bestRank = rank;
-                chosen = hud;
-            }
-        }
-
-        if (chosen == null)
-        {
-            for (int i = 0; i < allHuds.Length; i++)
-            {
-                if (allHuds[i] != null && !IsUnderDeprecatedFxCanvas(allHuds[i].transform))
-                {
-                    chosen = allHuds[i];
-                    break;
-                }
-            }
-        }
-
-        if (chosen == null)
-            chosen = allHuds[0];
-
-        chosen.EnsureDataSource(upgrade);
         upgradeHud = chosen;
-
-        if (verboseReviveSlotFx)
-        {
-            Debug.Log(
-                $"[ReviveSlotFx] HUD 선택 완료 — '{chosen.name}', path:{BuildTransformPath(chosen.transform)}, " +
-                $"slotsFilled:{chosen.CountAssignedSlotImages()}, DataSource:'{(chosen.DataSource != null ? chosen.DataSource.name : "null")}'");
-        }
 
         if (enableDebugLog && chosen.CountAssignedSlotImages() == 0)
             Debug.LogWarning($"[PlayerReviveTicketRuntime] 선택된 UpgradeHUD('{chosen.name}')에 슬롯 Image가 없습니다. Slot Consume FX가 재생되지 않을 수 있습니다.");
-    }
-
-    private static string BuildTransformPath(Transform t)
-    {
-        if (t == null)
-            return "(null)";
-
-        System.Text.StringBuilder sb = new System.Text.StringBuilder(128);
-        Transform walk = t;
-        while (walk != null)
-        {
-            if (sb.Length > 0)
-                sb.Insert(0, '/');
-            sb.Insert(0, walk.name);
-            walk = walk.parent;
-        }
-
-        return sb.ToString();
-    }
-
-    /// <summary>사용하지 않는 FX 전용 캔버스(삭제 예정) 아래인지.</summary>
-    private static bool IsUnderDeprecatedFxCanvas(Transform t)
-    {
-        const string deprecatedCanvas = "Canvas_UpgradeFX";
-        while (t != null)
-        {
-            if (t.name.IndexOf(deprecatedCanvas, System.StringComparison.OrdinalIgnoreCase) >= 0)
-                return true;
-            t = t.parent;
-        }
-
-        return false;
     }
 
     private bool PlaySlotConsumeFx(Upgrade_06_01_ReviveTicket ticket, int slotIndex)

@@ -11,6 +11,7 @@ public class HPUIControllerBase : MonoBehaviour
     [Header("UI 요소")]
     public Slider hpSlider;
     [Tooltip("실드 (선택) - Enemy 전용")] public Slider shieldSlider;
+    [Tooltip("베리어 (선택) - 플레이어 전용, 슬롯 합산")] public Slider barrierSlider;
 
     // 회피 (플레이어 전용)
     [Tooltip("플레이어 회피 게이지 (항상 표시)")]
@@ -24,12 +25,18 @@ public class HPUIControllerBase : MonoBehaviour
 
     // 플레이어 무기/회피 컨트롤러 (health가 붙은 오브젝트에서 가져옵니다)
     protected PlayerWeaponController playerWeapon;
+    protected PlayerBarrierUpgradeRuntime playerBarrier;
+    protected PlayerPoisonDebuffRuntime playerPoison;
+    protected EnemyPoisonDebuffRuntime enemyPoison;
 
     // 초기화 여부 (health가 할당되어 내부 셋업이 끝났는지)
     protected bool initialized = false;
 
     // 회피 색상(파랑)
     protected static readonly Color EvadeColor = new Color32(0x2E, 0xA7, 0xFF, 0xFF);
+
+    private Color defaultHpFillColor = Color.white;
+    private bool hasCapturedDefaultHpFillColor;
 
     // 외부에서 나중에 health를 할당할 때 사용합니다.
     // (GameManager나 다른 코드가 씬에 미리 위치한 UI를 찾아서 할당할 경우 호출)
@@ -106,6 +113,10 @@ public class HPUIControllerBase : MonoBehaviour
                 health = null;
                 playerHP = null;
                 playerWeapon = null;
+                playerBarrier = null;
+                playerPoison = null;
+                enemyPoison = null;
+                RestoreHpFillToDefault();
                 initialized = false;
                 return true;
             }
@@ -117,6 +128,8 @@ public class HPUIControllerBase : MonoBehaviour
 
         hpSlider.value = maxHP > 0f ? currentHP / maxHP : 0f;
 
+        ApplyHpFillPoisonTint();
+
         if (shieldSlider != null && isEnemyHealth && enemyHP != null && enemyHP.UseShield())
         {
             shieldSlider.gameObject.SetActive(true);
@@ -127,6 +140,42 @@ public class HPUIControllerBase : MonoBehaviour
         else if (shieldSlider != null)
         {
             shieldSlider.gameObject.SetActive(false);
+        }
+
+        if (barrierSlider != null)
+        {
+            if (isPlayerHealth && playerHP != null)
+            {
+                if (playerBarrier == null)
+                {
+                    playerBarrier = playerHP.GetComponent<PlayerBarrierUpgradeRuntime>() ??
+                                    playerHP.GetComponentInChildren<PlayerBarrierUpgradeRuntime>(true) ??
+                                    playerHP.transform.root.GetComponentInChildren<PlayerBarrierUpgradeRuntime>(true);
+                }
+
+                if (playerBarrier != null)
+                {
+                    float maxB = playerBarrier.GetBarrierTotalMax();
+                    float curB = playerBarrier.GetBarrierTotalCurrent();
+                    if (maxB > 0f)
+                    {
+                        barrierSlider.gameObject.SetActive(true);
+                        barrierSlider.value = maxB > 0f ? curB / maxB : 0f;
+                    }
+                    else
+                    {
+                        barrierSlider.gameObject.SetActive(false);
+                    }
+                }
+                else
+                {
+                    barrierSlider.gameObject.SetActive(false);
+                }
+            }
+            else
+            {
+                barrierSlider.gameObject.SetActive(false);
+            }
         }
 
         // 회피 게이지 갱신 (플레이어 전용, 항상 표기)
@@ -171,6 +220,10 @@ public class HPUIControllerBase : MonoBehaviour
             isPlayerHealth = true;
             isEnemyHealth = false;
             playerWeapon = health.GetComponent<PlayerWeaponController>();
+            playerBarrier = ph.GetComponent<PlayerBarrierUpgradeRuntime>() ??
+                            ph.GetComponentInChildren<PlayerBarrierUpgradeRuntime>(true) ??
+                            ph.transform.root.GetComponentInChildren<PlayerBarrierUpgradeRuntime>(true);
+            ResolvePlayerPoisonRuntime(ph);
         }
         else if (health is EnemyHealth eh)
         {
@@ -178,6 +231,10 @@ public class HPUIControllerBase : MonoBehaviour
             isEnemyHealth = true;
             isPlayerHealth = false;
             playerWeapon = null;
+            playerBarrier = null;
+            playerPoison = null;
+            enemyPoison = null;
+            ResolveEnemyPoisonRuntime(eh);
         }
         else
         {
@@ -192,6 +249,12 @@ public class HPUIControllerBase : MonoBehaviour
             shieldSlider.gameObject.SetActive(isEnemyHealth && enemyHP != null && enemyHP.UseShield());
         }
 
+        if (barrierSlider != null)
+        {
+            bool showBarrier = isPlayerHealth && playerBarrier != null && playerBarrier.GetBarrierTotalMax() > 0f;
+            barrierSlider.gameObject.SetActive(showBarrier);
+        }
+
         // Evade 슬라이더은 플레이어에서만 사용(없으면 자동 숨김)
         if (evadeSlider != null)
         {
@@ -201,6 +264,9 @@ public class HPUIControllerBase : MonoBehaviour
             // 색상 자동 적용(가능한 경우)
             TryStyleEvadeSlider(evadeSlider, EvadeColor);
         }
+
+        if (isPlayerHealth || isEnemyHealth)
+            CaptureDefaultHpFillImageColorIfNeeded();
 
         initialized = true;
     }
@@ -222,5 +288,107 @@ public class HPUIControllerBase : MonoBehaviour
             if (img != null)
                 img.color = color;
         }
+    }
+
+    private void CaptureDefaultHpFillImageColorIfNeeded()
+    {
+        if (hasCapturedDefaultHpFillColor || hpSlider == null || hpSlider.fillRect == null)
+            return;
+
+        var img = hpSlider.fillRect.GetComponent<Image>();
+        if (img == null)
+            return;
+
+        defaultHpFillColor = img.color;
+        hasCapturedDefaultHpFillColor = true;
+    }
+
+    private void RestoreHpFillToDefault()
+    {
+        if (!hasCapturedDefaultHpFillColor || hpSlider == null || hpSlider.fillRect == null)
+            return;
+
+        var img = hpSlider.fillRect.GetComponent<Image>();
+        if (img != null)
+            img.color = defaultHpFillColor;
+    }
+
+    private void ApplyHpFillPoisonTint()
+    {
+        Image img = ResolveHpFillImage();
+        if (img == null)
+            return;
+
+        if (isPlayerHealth && playerHP != null)
+        {
+            ResolvePlayerPoisonRuntime(playerHP);
+            if (playerPoison != null && playerPoison.TryGetPoisonHpBarTint(out Color tint))
+            {
+                img.color = tint;
+                return;
+            }
+        }
+        else if (isEnemyHealth && enemyHP != null)
+        {
+            if (enemyPoison == null)
+                ResolveEnemyPoisonRuntime(enemyHP);
+            else
+                enemyPoison = enemyHP.GetComponent<EnemyPoisonDebuffRuntime>() ??
+                              enemyHP.GetComponentInChildren<EnemyPoisonDebuffRuntime>(true);
+
+            if (enemyPoison != null && enemyPoison.TryGetPoisonHpBarTint(out Color tint))
+            {
+                img.color = tint;
+                return;
+            }
+        }
+
+        if (hasCapturedDefaultHpFillColor)
+            img.color = defaultHpFillColor;
+    }
+
+    private Image ResolveHpFillImage()
+    {
+        if (hpSlider == null)
+            return null;
+
+        if (hpSlider.fillRect != null)
+        {
+            var fillImg = hpSlider.fillRect.GetComponent<Image>();
+            if (fillImg != null)
+                return fillImg;
+        }
+
+        var images = hpSlider.GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < images.Length; i++)
+        {
+            Image candidate = images[i];
+            if (candidate == null)
+                continue;
+            if (candidate.gameObject.name.IndexOf("fill", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return candidate;
+        }
+
+        return null;
+    }
+
+    private void ResolvePlayerPoisonRuntime(PlayerHealth ph)
+    {
+        if (ph == null || playerPoison != null)
+            return;
+
+        playerPoison = ph.GetComponent<PlayerPoisonDebuffRuntime>() ??
+                       ph.GetComponentInChildren<PlayerPoisonDebuffRuntime>(true) ??
+                       ph.transform.root.GetComponentInChildren<PlayerPoisonDebuffRuntime>(true);
+    }
+
+    private void ResolveEnemyPoisonRuntime(EnemyHealth eh)
+    {
+        if (eh == null || enemyPoison != null)
+            return;
+
+        enemyPoison = eh.GetComponent<EnemyPoisonDebuffRuntime>() ??
+                      eh.GetComponentInChildren<EnemyPoisonDebuffRuntime>(true) ??
+                      eh.transform.root.GetComponentInChildren<EnemyPoisonDebuffRuntime>(true);
     }
 }

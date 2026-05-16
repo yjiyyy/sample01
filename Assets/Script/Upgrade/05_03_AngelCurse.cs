@@ -86,6 +86,9 @@ public class Upgrade_05_03_AngelCurse : UpgradeEffectSO
     [Min(0f)]
     public float poisonDamagePerTick = 8f;
 
+    [Tooltip("독 필드로 플레이어가 피해를 입을 때 걸거나 갱신할 중독 설정. 비우면 HP만 독 규칙(배리어 무시), 디버프 없음.")]
+    public PoisonStatusConfigSO playerPoisonStatusFromField;
+
     [Tooltip("독 필드가 피해를 줄 대상")]
     public AngelCurseDamageTargetType poisonDamageTargets = AngelCurseDamageTargetType.EnemyOnly;
 

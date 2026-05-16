@@ -49,6 +49,8 @@ public class PlayerWeaponController : MonoBehaviour
     private PlayerState state = PlayerState.Idle;
     public PlayerState CurrentState => state;
 
+    private PlayerGodShieldUpgradeRuntime godShieldRuntime;
+
     // runtime flags / state
     private bool chargeInvincible = false;
     private float lastAttackTime = -999f;
@@ -104,8 +106,29 @@ public class PlayerWeaponController : MonoBehaviour
 
     // ------------------ Public compatibility APIs ------------------
 
+    private void EnsureGodShieldRuntimeReference()
+    {
+        if (godShieldRuntime != null)
+            return;
+
+        godShieldRuntime = GetComponent<PlayerGodShieldUpgradeRuntime>() ??
+                           GetComponentInChildren<PlayerGodShieldUpgradeRuntime>(true) ??
+                           GetComponentInParent<PlayerGodShieldUpgradeRuntime>();
+        if (godShieldRuntime == null && transform.root != null)
+            godShieldRuntime = transform.root.GetComponentInChildren<PlayerGodShieldUpgradeRuntime>(true);
+    }
+
+    private bool IsGodShieldProtectionActive()
+    {
+        EnsureGodShieldRuntimeReference();
+        return godShieldRuntime != null && godShieldRuntime.IsProtectionActive;
+    }
+
     // Invincibility check used by enemy hitboxes / other systems
-    public bool IsInvincible() => (evadeComp?.IsInvincible() ?? false) || chargeInvincible;
+    public bool IsInvincible() =>
+        (evadeComp?.IsInvincible() ?? false) ||
+        chargeInvincible ||
+        IsGodShieldProtectionActive();
 
     // ForceApplyKnockback: 적 공격(폭발/충격 등)이 플레이어에 넉백을 바로 적용할 때 외부에서 호출
     // 시그니처: (Vector3 dir, float power, float duration, float stun, bool clearExistingHolds=true)
@@ -115,6 +138,12 @@ public class PlayerWeaponController : MonoBehaviour
         if (state == PlayerState.Dead)
         {
             if (debugMode) Debug.Log("[PlayerWeaponController] ForceApplyKnockback ignored because state==Dead");
+            return;
+        }
+
+        if (IsInvincible())
+        {
+            if (debugMode) Debug.Log("[PlayerWeaponController] ForceApplyKnockback ignored because invincible (evade/charge/GodShield)");
             return;
         }
 
@@ -305,6 +334,25 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     // ------------------ End compatibility APIs ------------------
+
+    private PlayerStats playerStats;
+
+    private void EnsurePlayerStats()
+    {
+        if (playerStats != null)
+            return;
+
+        playerStats = GetComponent<PlayerStats>() ?? GetComponentInChildren<PlayerStats>(true);
+    }
+
+    private bool TryPayWeaponStamina(WeaponDataSO weaponData)
+    {
+        if (weaponData == null)
+            return true;
+
+        EnsurePlayerStats();
+        return PlayerAttackStamina.TryPay(playerStats, Mathf.Max(0f, weaponData.staminaCost));
+    }
 
     private void Awake()
     {
@@ -730,6 +778,13 @@ public class PlayerWeaponController : MonoBehaviour
 
         float deltaGeneral = Time.time - lastAttackTime;
         if (deltaGeneral < data.cooldown) return;
+
+        if (!TryPayWeaponStamina(data))
+        {
+            if (debugMode) Debug.Log("[Attack] 스테미너 부족 — 일반 공격 취소");
+            return;
+        }
+
         lastAttackTime = Time.time;
 
         if (attackRoutine != null) { StopCoroutine(attackRoutine); attackRoutine = null; }
@@ -1130,30 +1185,41 @@ public class PlayerWeaponController : MonoBehaviour
             {
                 // 조준 유지 중 리로드가 걸린 상태에서 손을 떼면 발사하지 않는다.
             }
-            else if (ammo.CanFire(sniper.consumePerShot) && ammo.TryConsumeForShot(sniper.consumePerShot))
+            else if (ammo.CanFire(sniper.consumePerShot))
             {
-                Vector3 aimDir = ResolveSniperAimDirection(sniper);
-                if (fullAimSuccess && sniper.useFullAimAutoAim)
+                EnsurePlayerStats();
+                float sc = Mathf.Max(0f, sniper.staminaCost);
+                if (!PlayerAttackStamina.CanPay(playerStats, sc))
                 {
-                    Vector3 autoAim = ResolveSniperFullAimAutoAimDirection(sniper, aimDir);
-                    if (autoAim.sqrMagnitude > 0.0001f)
-                        aimDir = autoAim;
+                    // 스테미너 부족 — 발사 없음 (조준만 종료)
                 }
+                else if (ammo.TryConsumeForShot(sniper.consumePerShot))
+                {
+                    PlayerAttackStamina.TryPay(playerStats, sc);
 
-                float spread = GetSniperCurrentSpread(sniper, holdElapsed);
-                Vector3 shootDir = spread > 0f
-                    ? RandomDirectionInCone(aimDir, spread * 0.5f)
-                    : aimDir;
-                float damageMultiplier = (fullAimSuccess && sniper.useFullAimDamageMultiplier)
-                    ? sniper.fullAimDamageMultiplier
-                    : 1f;
+                    Vector3 aimDir = ResolveSniperAimDirection(sniper);
+                    if (fullAimSuccess && sniper.useFullAimAutoAim)
+                    {
+                        Vector3 autoAim = ResolveSniperFullAimAutoAimDirection(sniper, aimDir);
+                        if (autoAim.sqrMagnitude > 0.0001f)
+                            aimDir = autoAim;
+                    }
 
-                animationController?.PlayAttack(sniper, true);
-                wb.ARAttackHit(shootDir, sniper.spread3D, damageMultiplier);
-                StartRecoilIfNeeded(sniper);
+                    float spread = GetSniperCurrentSpread(sniper, holdElapsed);
+                    Vector3 shootDir = spread > 0f
+                        ? RandomDirectionInCone(aimDir, spread * 0.5f)
+                        : aimDir;
+                    float damageMultiplier = (fullAimSuccess && sniper.useFullAimDamageMultiplier)
+                        ? sniper.fullAimDamageMultiplier
+                        : 1f;
 
-                if (ammo.IsMagazineEmpty() && !ammo.HasAnyReserveOrInfinite())
-                    RequestSwitchToDefault();
+                    animationController?.PlayAttack(sniper, true);
+                    wb.ARAttackHit(shootDir, sniper.spread3D, damageMultiplier);
+                    StartRecoilIfNeeded(sniper);
+
+                    if (ammo.IsMagazineEmpty() && !ammo.HasAnyReserveOrInfinite())
+                        RequestSwitchToDefault();
+                }
             }
             else if (sniper.autoReloadOnEmpty && ammo.HasAnyReserveOrInfinite())
             {
@@ -1438,10 +1504,20 @@ public class PlayerWeaponController : MonoBehaviour
 
             if (shouldAttemptShot)
             {
+                EnsurePlayerStats();
+                float sc = Mathf.Max(0f, ar.staminaCost);
+
                 if (ammo.CanFire(ar.consumePerShot))
                 {
-                    if (ammo.TryConsumeForShot(ar.consumePerShot))
+                    if (!PlayerAttackStamina.CanPay(playerStats, sc))
                     {
+                        if (!tapMode)
+                            break;
+                    }
+                    else if (ammo.TryConsumeForShot(ar.consumePerShot))
+                    {
+                        PlayerAttackStamina.TryPay(playerStats, sc);
+
                         StartRecoilIfNeeded(ar);
 
                         Vector3 baseDir = aimDir;

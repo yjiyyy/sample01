@@ -15,7 +15,7 @@ MonoBehaviour:
   attackName: Attack
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   grantSuperArmor: 0
-  damage: 50
+  damage: 10
   range: 1
   cooldown: 0
   attackTime: 0.8
@@ -38,6 +38,8 @@ MonoBehaviour:
   ragdollSpinTorque: 500
   sliceTargets: 
   sliceImpulse: 150
+  isPoisonAttack: 1
+  poisonOnHitStatus: {fileID: 11400000, guid: c3d4e5f60718293a4b5c6d7e8f901234, type: 2}
   isMovingAttack: 0
   moveForce: 4
   moveDuration: 0.3

@@ -824,6 +824,7 @@ public class PlayerMovement : MonoBehaviour
         if (weaponCtrl != null)
         {
             if (weaponCtrl.CurrentState == PlayerState.Dead) return;
+            if (weaponCtrl.IsInvincible()) return;
         }
 
         // 확실한 넉백 판정일 때만 피격 방향으로 회전 (Push·슈퍼아머·공격 중은 유지)

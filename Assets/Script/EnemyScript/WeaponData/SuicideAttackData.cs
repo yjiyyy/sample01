@@ -84,6 +84,12 @@ public class SuicideAttackData : ScriptableObject
     public float knockbackDuration = 0.2f;
     public float stunDuration = 0f;
 
+    [Header("독 (플레이어)")]
+    [Tooltip("독 공격으로 처리합니다(배리어 우회 등). PoisonStatusConfig를 지정하면 자동으로 켜집니다.")]
+    public bool isPoisonAttack;
+    [Tooltip("맞을 때 플레이어 중독 상태를 갱신할 설정. 비우면 독 규칙만 적용되고 중독 틱·연출은 없습니다.")]
+    public PoisonStatusConfigSO poisonOnHitStatus;
+
     [Header("Debug")]
     [Tooltip("체크하면 폭발 시 범위 확인용 더미 스피어를 잠깐 생성합니다.")]
     public bool spawnDebugSphereOnExplode = false;

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c47fb8921e3f4a2b9c8d7e6f5a4b3c2d, type: 3}
+  m_Name: 06_02_Barrier
+  m_EditorClassIdentifier: 
+  id: 06_02
+  upgradeName: Barrier
+  icon: {fileID: 21300000, guid: 4b8704e26b2848645a0b10dbe8013033, type: 3}
+  barrierMaxPoints: 150
+  slotConsumeFxPrefab: {fileID: 1775205180007417791, guid: f5792611a58ccf141a326ca8f30cba1a, type: 3}
+  slotFxAutoDestroySeconds: 3
+  barrierGaugeHitSlotFxPrefab: {fileID: 2312808137506244997, guid: 17aa8cee3d6150842b74c22a8b10a952, type: 3}
+  barrierGaugeHitSlotFxAutoDestroySeconds: 3
+  slotClearDelaySeconds: 2

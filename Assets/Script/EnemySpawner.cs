@@ -194,6 +194,8 @@ public class EnemySpawner : MonoBehaviour
                     else if (n.Contains("hp")) baseCtrl.hpSlider = s;
                     else if (n.Contains("evade")) baseCtrl.evadeSlider = s;
                 }
+
+                baseCtrl.Initialize(baseCtrl.health);
             }
         }
 

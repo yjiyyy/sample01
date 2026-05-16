@@ -15,12 +15,12 @@ MonoBehaviour:
   id: 06_01
   upgradeName: ReviveTicket
   icon: {fileID: 21300000, guid: e7831b8f87347064993b719175eeeb7c, type: 3}
-  respawnDelaySeconds: 5
+  respawnDelaySeconds: 3
   respawnHealthRatio: 1
   respawnYOffset: 0.5
   invincibleSecondsAfterRespawn: 3
-  slotConsumeFxPrefab: {fileID: 114004161566773944, guid: 7ff356bb1b379824ea8bc6d6fc7cc1bf, type: 3}
+  slotConsumeFxPrefab: {fileID: 1775205180007417791, guid: f5792611a58ccf141a326ca8f30cba1a, type: 3}
   reviveCastFxPrefab: {fileID: 0}
   respawnFxPrefab: {fileID: 1022620237433466777, guid: 3284c0df8040ee34eb3a12ac0c37c354, type: 3}
-  slotFxAutoDestroySeconds: 5
+  slotFxAutoDestroySeconds: 3
   worldFxAutoDestroySeconds: 5

@@ -1,10 +1,13 @@
 ﻿using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Player/EvadeDataSO")]
 public class EvadeDataSO : ScriptableObject
 {
-    [Header("회피 비용")]
-    public float evadeCost = 30f;
+    [Header("스테미너")]
+    [FormerlySerializedAs("evadeCost")]
+    [Tooltip("회피 1회 사용 시 소모되는 스테미너 양.")]
+    public float staminaCost = 30f;
 
     [Header("회피 성능")]
     public float evadeSpeed = 8f;
