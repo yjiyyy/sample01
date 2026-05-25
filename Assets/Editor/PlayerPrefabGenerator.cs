@@ -5,8 +5,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Player용 FBX를 선택한 뒤 메뉴에서 실행하면
-/// 첨부한 인스펙터 구성과 동일하게 Player 전용 프리팹(Animator, Rigidbody, CapsuleCollider,
-/// PlayerMovement, PlayerAnimationController, PlayerWeaponController, InputManager, PlayerHealth 등 + 랙돌)을 생성합니다.
+/// Assets/Arts/Player/Player001.prefab 과 동일한 루트 컴포넌트·기본값으로 Player 전용 프리팹을 생성합니다.
 /// </summary>
 public static class PlayerPrefabGenerator
 {
@@ -82,7 +81,7 @@ public static class PlayerPrefabGenerator
         fbxInstance.transform.localRotation = Quaternion.identity;
         fbxInstance.transform.localScale = Vector3.one;
 
-        // Char001_SO와 유사한 컴포넌트 순서. (PlayerMovement가 RequireComponent<Rigidbody>이므로 Rigidbody를 Movement보다 먼저 추가)
+        // Player001.prefab 과 동일한 컴포넌트 순서. (PlayerMovement가 RequireComponent<Rigidbody>이므로 Rigidbody를 Movement보다 먼저 추가)
         Animator sourceAnimator = fbxInstance.GetComponent<Animator>();
         if (sourceAnimator != null)
         {
@@ -131,7 +130,12 @@ public static class PlayerPrefabGenerator
         root.AddComponent<PlayerFacade>();
         root.AddComponent<PlayerStats>();
         root.AddComponent<PlayerEquipmentController>();
+        var sliceBlood = root.AddComponent<SliceBloodEffectSpawner>();
         root.AddComponent<SubWeaponController>();
+        root.AddComponent<Upgrade>();
+        root.AddComponent<UpgradeEffectRuntime>();
+
+        SetModelHierarchyLayer(fbxInstance.transform, LayerMask.NameToLayer("Ragdoll"));
 
         AddPlayerComponentProperties(root, rootAnim, rb, capsule);
         if (!BuildRagdoll(root, rootAnim, rb, fbxInstance.transform))
@@ -144,7 +148,8 @@ public static class PlayerPrefabGenerator
         if (settings != null)
         {
             BuildFXBloodDummies(fbxInstance.transform, settings);
-            AddSliceBloodEffectSpawner(root, settings);
+            if (settings.bloodGushPrefab != null)
+                sliceBlood.bloodGushPrefab = settings.bloodGushPrefab;
         }
 
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, savePath, InteractionMode.AutomatedAction);
@@ -158,9 +163,25 @@ public static class PlayerPrefabGenerator
         int playerLayer = LayerMask.NameToLayer("Player");
         if (playerLayer >= 0) root.layer = playerLayer;
 
+        var movement = root.GetComponent<PlayerMovement>();
         var weaponCtrl = root.GetComponent<PlayerWeaponController>();
         var animCtrl = root.GetComponent<PlayerAnimationController>();
         var detector = root.GetComponent<EnemyDetector>();
+        var health = root.GetComponent<PlayerHealth>();
+        var stats = root.GetComponent<PlayerStats>();
+        var subWeapon = root.GetComponent<SubWeaponController>();
+        var upgradeRuntime = root.GetComponent<UpgradeEffectRuntime>();
+
+        if (movement != null)
+        {
+            var so = new SerializedObject(movement);
+            SetFloat(so, "baseMoveSpeed", 10f);
+            var propStop = so.FindProperty("stopWhenNoInput") ?? so.FindProperty("m_stopWhenNoInput");
+            if (propStop != null) propStop.boolValue = true;
+            SetFloat(so, "rotationSpeedDegPerSec", 1080f);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         if (weaponCtrl != null)
         {
             var so = new SerializedObject(weaponCtrl);
@@ -168,13 +189,66 @@ public static class PlayerPrefabGenerator
             if (propAnim != null && animCtrl != null) propAnim.objectReferenceValue = animCtrl;
             var propDet = so.FindProperty("enemyDetector") ?? so.FindProperty("m_enemyDetector");
             if (propDet != null && detector != null) propDet.objectReferenceValue = detector;
+            var propDebug = so.FindProperty("debugMode") ?? so.FindProperty("m_debugMode");
+            if (propDebug != null) propDebug.boolValue = true;
+            var propCharge = so.FindProperty("enableChargeMessages") ?? so.FindProperty("m_enableChargeMessages");
+            if (propCharge != null) propCharge.boolValue = true;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        if (health != null)
+        {
+            health.maxHP = 90f;
+            health.weight = 1f;
+        }
+
+        if (detector != null)
+        {
+            detector.viewAngle = 45f;
+            detector.viewDistance = 10f;
+            detector.segmentCount = 30;
+            detector.height = 0.8f;
+            detector.usePhysicsScan = true;
+        }
+
+        if (stats != null)
+        {
+            stats.maxHealth = 90f;
+            stats.currentHealth = 90f;
+            stats.massMultiplier = 1f;
+            stats.baseMoveSpeed = 10f;
+            stats.rotationSpeedDegPerSec = 1080f;
+            stats.maxStamina = 10f;
+            stats.currentStamina = 10f;
+            stats.staminaRechargeRate = 0.5f;
+            stats.staminaRechargeDelay = 3f;
+            stats.level = 1;
+            stats.experience = 0;
+            stats.expToNextLevel = 100;
+        }
+
+        if (subWeapon != null)
+        {
+            var so = new SerializedObject(subWeapon);
+            SetFloat(so, "orbitDiameter", 2f);
+            SetFloat(so, "rotationSpeedDegPerSec", 120f);
+            SetFloat(so, "orbitHeightOffset", 0.6f);
+            SetString(so, "orbitCenterBoneName", "Root_Dummy");
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        if (upgradeRuntime != null)
+        {
+            var so = new SerializedObject(upgradeRuntime);
+            var propLog = so.FindProperty("enableDebugLog") ?? so.FindProperty("m_enableDebugLog");
+            if (propLog != null) propLog.boolValue = true;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         MovementSettings movementSettings = FindDefaultMovementSettings();
-        if (movementSettings != null)
+        if (movementSettings != null && movement != null)
         {
-            var so = new SerializedObject(root.GetComponent<PlayerMovement>());
+            var so = new SerializedObject(movement);
             var prop = so.FindProperty("movementSettings") ?? so.FindProperty("m_movementSettings");
             if (prop != null) prop.objectReferenceValue = movementSettings;
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -182,7 +256,7 @@ public static class PlayerPrefabGenerator
         else
             Debug.LogWarning("[PlayerPrefabGenerator] MovementSettings를 찾지 못했습니다. 프리팹에서 PlayerMovement에 수동 할당해 주세요.");
 
-        // Player Facade: Config = PlayerConfig_SO, Auto Sync 켜기
+        // Player Facade: Config = PlayerConfig_SO, Auto Sync 켜기 (Player001.prefab 과 동일)
         PlayerConfig playerConfig = FindDefaultPlayerConfig();
         if (playerConfig != null)
         {
@@ -199,18 +273,36 @@ public static class PlayerPrefabGenerator
             Debug.LogWarning("[PlayerPrefabGenerator] PlayerConfig_SO를 찾지 못했습니다. 프리팹에서 Player Facade에 수동 할당해 주세요.");
     }
 
+    private static void SetFloat(SerializedObject so, string name, float value)
+    {
+        var prop = so.FindProperty(name) ?? so.FindProperty("m_" + name);
+        if (prop != null) prop.floatValue = value;
+    }
+
+    private static void SetString(SerializedObject so, string name, string value)
+    {
+        var prop = so.FindProperty(name) ?? so.FindProperty("m_" + name);
+        if (prop != null) prop.stringValue = value;
+    }
+
+    /// <summary>Player001.prefab: FBX 하위 메시 계층을 Ragdoll 레이어(9)로 설정</summary>
+    private static void SetModelHierarchyLayer(Transform modelRoot, int layer)
+    {
+        if (modelRoot == null || layer < 0) return;
+        foreach (Transform child in modelRoot.GetComponentsInChildren<Transform>(true))
+        {
+            if (child == modelRoot) continue;
+            child.gameObject.layer = layer;
+        }
+    }
+
     private static void ApplyDetectorMaterial(MeshRenderer meshRenderer)
     {
         if (meshRenderer == null) return;
-        foreach (string guid in AssetDatabase.FindAssets("Detector t:Material"))
-        {
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
-            if (mat != null && mat.shader != null && mat.shader.name.Contains("Unlit"))
-            {
-                meshRenderer.sharedMaterial = mat;
-                break;
-            }
-        }
+        const string detectorMatPath = "Assets/Arts/FX/Helper/Detector.mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(detectorMatPath);
+        if (mat != null)
+            meshRenderer.sharedMaterial = mat;
     }
 
     private static PlayerConfig FindDefaultPlayerConfig()
@@ -232,7 +324,7 @@ public static class PlayerPrefabGenerator
         return null;
     }
 
-    /// <summary>PC 공통: Controller=PC_001, Avatar=PC001_newAvatar, Apply Root Motion/Animate Physics 끄기, Normal, Always Animate</summary>
+    /// <summary>Player001 기준: Controller=PC_001, Avatar=Player001.fbx, Apply Root Motion/Animate Physics 끄기, Normal, Always Animate</summary>
     private static void ApplyDefaultAnimatorIfNeeded(Animator animator)
     {
         if (animator == null) return;
@@ -264,8 +356,8 @@ public static class PlayerPrefabGenerator
     {
         string[] pathsToTry = new[]
         {
-            "Assets/Arts/Player/New01/Model/PC001_new.fbx",
-            AssetDatabase.GUIDToAssetPath("8660d3d865b72a241877d8d4e0773df0")
+            "Assets/Arts/Old/Model/Player001.fbx",
+            "Assets/Arts/Player/FBX/Body/PC_M_Normal_Skin.fbx"
         };
         foreach (string path in pathsToTry)
         {
@@ -276,11 +368,10 @@ public static class PlayerPrefabGenerator
                 if (o is Avatar av && av.isHuman) return av;
             }
         }
-        foreach (string guid in AssetDatabase.FindAssets("PC001_new"))
+        foreach (string guid in AssetDatabase.FindAssets("Player001 t:Model"))
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
-            if (path == null || (!path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase) && !path.EndsWith(".prefab", System.StringComparison.OrdinalIgnoreCase))) continue;
-            if (path.EndsWith(".prefab", System.StringComparison.OrdinalIgnoreCase)) continue;
+            if (path == null || !path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase)) continue;
             Object[] all = AssetDatabase.LoadAllAssetsAtPath(path);
             foreach (Object o in all)
             {
@@ -447,13 +538,6 @@ public static class PlayerPrefabGenerator
             if (f != null) return f;
         }
         return null;
-    }
-
-    private static void AddSliceBloodEffectSpawner(GameObject root, RagdollBuildSettings settings)
-    {
-        var spawner = root.AddComponent<SliceBloodEffectSpawner>();
-        if (settings.bloodGushPrefab != null)
-            spawner.bloodGushPrefab = settings.bloodGushPrefab;
     }
 
     private static void BuildRagdollHumanoid(GameObject root, Animator animator, Rigidbody rootRb, Transform hipsTr, RagdollBuildSettings settings)

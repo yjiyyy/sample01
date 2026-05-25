@@ -141,21 +141,8 @@ public class PlayerEquipmentController : MonoBehaviour
         }
 
         Transform mainMount = null;
-        if (playerRoot != null && CurrentWeaponData != null && CurrentWeaponData.socketNames != null)
-        {
-            if (CurrentWeaponData.socketNames.Count > 0 && !string.IsNullOrEmpty(CurrentWeaponData.socketNames[0]))
-                mainMount = FindDeepChild(playerRoot, CurrentWeaponData.socketNames[0]);
-
-            if (mainMount == null)
-            {
-                foreach (var n in CurrentWeaponData.socketNames)
-                {
-                    if (string.IsNullOrEmpty(n)) continue;
-                    mainMount = FindDeepChild(playerRoot, n);
-                    if (mainMount != null) break;
-                }
-            }
-        }
+        if (playerRoot != null && CurrentWeaponData != null)
+            mainMount = FindRightHandWeaponSocket(playerRoot, CurrentWeaponData.socketNames);
 
         AttachToMount(instMain.transform, mainMount);
 
@@ -175,10 +162,13 @@ public class PlayerEquipmentController : MonoBehaviour
             CurrentWeaponData.socketNames.Count >= 2 &&
             !string.IsNullOrEmpty(CurrentWeaponData.socketNames[1]))
         {
-            Transform subMount = FindDeepChild(playerRoot, CurrentWeaponData.socketNames[1]);
+            Transform subMount = FindLeftHandWeaponSocket(playerRoot, CurrentWeaponData.socketNames);
             if (subMount == null)
             {
-                Debug.LogWarning($"[Equip] dualWield=true 이지만 왼손 소켓을 못 찾음: '{CurrentWeaponData.socketNames[1]}'");
+                string wanted = CurrentWeaponData.socketNames.Count > 1
+                    ? CurrentWeaponData.socketNames[1]
+                    : "L_Hand_Weapon";
+                Debug.LogWarning($"[Equip] dualWield=true 이지만 왼손 소켓을 못 찾음 (손={LeftHandBone}, 후보={wanted}).");
                 return;
             }
 
@@ -407,6 +397,103 @@ public class PlayerEquipmentController : MonoBehaviour
     private void InternalAmmoChanged(int magazine, int reserve, bool isReloading)
     {
         OnAmmoChanged?.Invoke(magazine, reserve, isReloading);
+    }
+
+    private const string RightHandBone = "Bip001 R Hand";
+    private const string LeftHandBone = "Bip001 L Hand";
+    private static readonly string[] RootDummyNames = { "Root_Dummy", "Root_dummy" };
+
+    public static Transform FindRootDummy(Transform searchRoot)
+    {
+        if (searchRoot == null) return null;
+        foreach (string name in RootDummyNames)
+        {
+            var t = FindDeepChildStatic(searchRoot, name);
+            if (t != null) return t;
+        }
+        return null;
+    }
+
+    public static Transform FindRightHandWeaponSocket(Transform searchRoot, IList<string> socketNamesFromData = null)
+    {
+        IList<string> rightOnly = null;
+        if (socketNamesFromData != null && socketNamesFromData.Count > 0 && !string.IsNullOrEmpty(socketNamesFromData[0]))
+            rightOnly = new List<string> { socketNamesFromData[0] };
+        return FindHandWeaponSocket(searchRoot, rightHand: true, rightOnly, "R_Hand_Weapon");
+    }
+
+    public static Transform FindLeftHandWeaponSocket(Transform searchRoot, IList<string> socketNamesFromData = null)
+    {
+        IList<string> leftOnly = null;
+        if (socketNamesFromData != null && socketNamesFromData.Count > 1 && !string.IsNullOrEmpty(socketNamesFromData[1]))
+            leftOnly = new List<string> { socketNamesFromData[1] };
+        return FindHandWeaponSocket(searchRoot, rightHand: false, leftOnly, "L_Hand_Weapon");
+    }
+
+    public static Transform FindBoneByNameOrPath(Transform parent, string pathOrName)
+    {
+        if (parent == null || string.IsNullOrEmpty(pathOrName)) return null;
+
+        string normalized = pathOrName.Replace("\\", "/").Trim();
+        if (normalized.Contains("/"))
+        {
+            var byPath = parent.Find(normalized);
+            if (byPath != null) return byPath;
+            string lastName = normalized.Substring(normalized.LastIndexOf('/') + 1);
+            return FindDeepChildStatic(parent, lastName);
+        }
+
+        foreach (string rootName in RootDummyNames)
+        {
+            if (normalized == rootName)
+                return FindRootDummy(parent);
+        }
+
+        return FindDeepChildStatic(parent, normalized);
+    }
+
+    private static Transform FindHandWeaponSocket(Transform searchRoot, bool rightHand, IList<string> socketNamesFromData, string defaultSocketName)
+    {
+        if (searchRoot == null) return null;
+
+        string handBone = rightHand ? RightHandBone : LeftHandBone;
+        Transform hand = FindDeepChildStatic(searchRoot, handBone);
+        if (hand == null) return null;
+
+        if (socketNamesFromData != null)
+        {
+            foreach (string socketName in socketNamesFromData)
+            {
+                if (string.IsNullOrEmpty(socketName)) continue;
+                var t = FindDirectOrDeepChild(hand, socketName);
+                if (t != null) return t;
+            }
+        }
+
+        return FindDirectOrDeepChild(hand, defaultSocketName);
+    }
+
+    private static Transform FindDirectOrDeepChild(Transform parent, string name)
+    {
+        if (parent == null || string.IsNullOrEmpty(name)) return null;
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            var c = parent.GetChild(i);
+            if (c.name == name) return c;
+        }
+        return FindDeepChildStatic(parent, name);
+    }
+
+    private static Transform FindDeepChildStatic(Transform parent, string name)
+    {
+        if (parent == null || string.IsNullOrEmpty(name)) return null;
+        if (parent.name == name) return parent;
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            var t = FindDeepChildStatic(parent.GetChild(i), name);
+            if (t != null) return t;
+        }
+        return null;
     }
 
     // Utilities

@@ -349,10 +349,9 @@ public class WeaponBehavior : MonoBehaviour
     {
         if (data == null) return;
 
-        const string meleeKey = "Root_dummy";
-        meleeSpawnPoint = FindByNameOrPath(transform.root, meleeKey);
+        meleeSpawnPoint = PlayerEquipmentController.FindRootDummy(transform.root);
         if (meleeSpawnPoint == null)
-            Debug.LogWarning($"[WeaponBehavior] meleeSpawnPoint(1) 못 찾음 (playerRoot): '{meleeKey}'.");
+            Debug.LogWarning("[WeaponBehavior] meleeSpawnPoint(1) 못 찾음 (playerRoot): Root_Dummy / Root_dummy.");
 
         string projKey = string.IsNullOrEmpty(data.projectileSpawnPointPathOrName) ? "Fire_Point" : data.projectileSpawnPointPathOrName;
         projKey = NormalizePath(projKey);
@@ -361,10 +360,9 @@ public class WeaponBehavior : MonoBehaviour
         if (projectileSpawnPoint == null)
             Debug.LogWarning($"[WeaponBehavior] projectileSpawnPoint(1) 못 찾음 (weapon): '{projKey}'.");
 
-        // dualWield일 때 2번째 근접도 같은 Root_dummy 사용
-        meleeSpawnPoint2 = data.dualWield ? FindByNameOrPath(transform.root, meleeKey) : null;
+        meleeSpawnPoint2 = data.dualWield ? PlayerEquipmentController.FindRootDummy(transform.root) : null;
         if (data.dualWield && meleeSpawnPoint2 == null)
-            Debug.LogWarning($"[WeaponBehavior] meleeSpawnPoint(2) 못 찾음 (playerRoot): '{meleeKey}'.");
+            Debug.LogWarning("[WeaponBehavior] meleeSpawnPoint(2) 못 찾음 (playerRoot): Root_Dummy / Root_dummy.");
 
         projectileSpawnPoint2 = ResolveSecondProjectileSpawnPoint();
     }
@@ -373,12 +371,7 @@ public class WeaponBehavior : MonoBehaviour
     {
         if (data == null || !data.dualWield) return null;
 
-        Transform leftSocket = null;
-        if (data.socketNames != null && data.socketNames.Count >= 2 && !string.IsNullOrEmpty(data.socketNames[1]))
-        {
-            leftSocket = FindDeepChildByName(transform.root, data.socketNames[1]);
-        }
-
+        Transform leftSocket = PlayerEquipmentController.FindLeftHandWeaponSocket(transform.root, data.socketNames);
         if (leftSocket == null)
             return null;
 
@@ -402,18 +395,7 @@ public class WeaponBehavior : MonoBehaviour
 
     private Transform FindByNameOrPath(Transform parent, string pathOrName)
     {
-        if (parent == null || string.IsNullOrEmpty(pathOrName)) return null;
-
-        if (pathOrName.Contains("/"))
-        {
-            var byPath = parent.Find(pathOrName);
-            if (byPath != null) return byPath;
-
-            string lastName = pathOrName.Substring(pathOrName.LastIndexOf('/') + 1);
-            return FindDeepChildByName(parent, lastName);
-        }
-
-        return FindDeepChildByName(parent, pathOrName);
+        return PlayerEquipmentController.FindBoneByNameOrPath(parent, pathOrName);
     }
 
     private Transform FindDeepChildByName(Transform parent, string name)

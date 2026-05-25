@@ -43,8 +43,8 @@ public class PlayerChargeAttackSO : ScriptableObject {
     [Header("발동 무적 (A안: 차지 성공 즉시부터 적용)")]
     public float invincibilityDuration = 0.3f;
     [Header("스폰 포인트")]
-    [Tooltip("없으면 플레이어 Transform 기준. 기본은 Root_dummy")]
-    public string meleeSpawnPointName = "Root_dummy";
+    [Tooltip("없으면 플레이어 Transform 기준. 기본은 Root_Dummy (구 Rig: Root_dummy)")]
+    public string meleeSpawnPointName = "Root_Dummy";
     [Header("히트박스 스폰 딜레이 (절대시간, 차지 성공 시점 기준)")]
     [Tooltip("spawnCount로 개수 조절. spawnDelays에 절대시간(초)을 입력하세요. OnValidate에서 자동 정렬됩니다.")]
     public int spawnCount = 1;

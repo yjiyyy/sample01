@@ -199,7 +199,7 @@ public class WeaponDataSO : ScriptableObject
     // ---------------- Dual Wield ----------------
     [Header("Dual Wield (양손 옵션)")]
     [Tooltip("true면 1회 공격에서 스폰을 최대 2번(1번/2번) 시도합니다.\n" +
-             "근접은 항상 'Root_dummy' 기준, 원거리는 projectileSpawnPoint2 사용.")]
+             "근접은 Root_Dummy(또는 Root_dummy) 기준, 원거리는 projectileSpawnPoint2 사용.")]
     public bool dualWield = false;
 
     [Tooltip("듀얼일 때 왼손(서브)에 붙일 프리팹. 비우면 메인 weaponPrefab과 동일한 프리팹을 복제해 사용합니다.")]

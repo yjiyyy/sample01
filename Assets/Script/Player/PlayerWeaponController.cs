@@ -365,16 +365,7 @@ public class PlayerWeaponController : MonoBehaviour
         fsm = GetComponent<PlayerStateMachine>() ?? gameObject.AddComponent<PlayerStateMachine>();
         fsm.Init(PlayerState.Idle);
 
-        // Root_dummy 타겟 캐시 (melee spawn point)
-        Transform[] all = GetComponentsInChildren<Transform>(true);
-        foreach (var t in all)
-        {
-            if (t != null && t.name == "Root_dummy")
-            {
-                meleeSpawnPointCache = t;
-                break;
-            }
-        }
+        meleeSpawnPointCache = PlayerEquipmentController.FindRootDummy(transform);
         if (meleeSpawnPointCache == null) meleeSpawnPointCache = transform;
 
         // Setup subcomponents - backward compatible Setup overloads in equipComp

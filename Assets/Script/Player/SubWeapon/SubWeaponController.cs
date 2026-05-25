@@ -20,7 +20,7 @@ public class SubWeaponController : MonoBehaviour
 
     [Header("궤도 중심 본")]
     [Tooltip("궤도 중심이 될 본 이름. 비어있으면 플레이어 루트 사용")]
-    [SerializeField] private string orbitCenterBoneName = "Root_dummy";
+    [SerializeField] private string orbitCenterBoneName = "Root_Dummy";
 
     private Transform orbitCenter;
     private readonly GameObject[] slotInstances = new GameObject[MaxSlots];
@@ -42,6 +42,9 @@ public class SubWeaponController : MonoBehaviour
     {
         Transform root = transform.root;
         if (root == null) root = transform;
+
+        var rootDummy = PlayerEquipmentController.FindRootDummy(root);
+        if (rootDummy != null) return rootDummy;
 
         if (!string.IsNullOrEmpty(orbitCenterBoneName))
         {

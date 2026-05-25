@@ -24,9 +24,9 @@ MonoBehaviour:
   attackAnimVariantCount: 4
   attackVariantHandModes: 
   cooldown: 0.5
-  damage: 10
+  damage: 20
   range: 2.5
-  staminaCost: 10
+  staminaCost: 0
   hitboxSpawnDelay: 0.13
   hitBoxLifetime: 0.1
   trailEmitStartDelay: 0
