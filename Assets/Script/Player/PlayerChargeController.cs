@@ -478,7 +478,10 @@ public class PlayerChargeController : MonoBehaviour
             }
 
             // Time reached: spawn one hitbox
-            GameObject hb = Instantiate(slot.hitBoxPrefab, spawn.position, spawn.rotation);
+            GameObject hb = Instantiate(
+                slot.hitBoxPrefab,
+                spawn.position,
+                PlayerEquipmentController.GetMeleeHitboxSpawnRotation(spawn));
 
             if (hb.TryGetComponent<HitBox_PC>(out var hitbox))
             {
@@ -568,7 +571,10 @@ public class PlayerChargeController : MonoBehaviour
                 yield return null;
             }
 
-            GameObject hb = Instantiate(slot.hitBoxPrefab, spawn.position, spawn.rotation);
+            GameObject hb = Instantiate(
+                slot.hitBoxPrefab,
+                spawn.position,
+                PlayerEquipmentController.GetMeleeHitboxSpawnRotation(spawn));
             if (hb.TryGetComponent<HitBox_PC>(out var hitbox))
             {
                 hitbox.SetWeapon(chargeWeaponProxy);

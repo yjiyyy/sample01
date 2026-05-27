@@ -819,7 +819,10 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
-        GameObject hitboxGO = Instantiate(prefab, spawn.position, spawn.rotation);
+        GameObject hitboxGO = Instantiate(
+            prefab,
+            spawn.position,
+            PlayerEquipmentController.GetMeleeHitboxSpawnRotation(spawn));
 
         if (hitboxGO.TryGetComponent(out HitBox_PC hitbox))
         {

@@ -37,10 +37,9 @@ public class EnemyFacade : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        if (!Application.isPlaying && autoSync)
-        {
+        // NPC 프리팹은 EnemyConfig 없이 Body 파츠만 쓰는 경우가 많음 — config 없을 때는 동기화·경고 생략
+        if (!Application.isPlaying && autoSync && config != null)
             ApplyToComponents();
-        }
     }
 #endif
 
@@ -59,18 +58,36 @@ public class EnemyFacade : MonoBehaviour
                 ApplyToComponents();
         }
 
-        // Parts System: 파츠 생성 (런타임에서만)
+        // Body에 지정된 Head / Hair 파츠 (EnemyBodyPartSlots)
+        if (Application.isPlaying)
+        {
+            var bodyPartSlots = GetComponentInChildren<EnemyBodyPartSlots>(true);
+            if (bodyPartSlots != null)
+                bodyPartSlots.TryAttachParts(this);
+        }
+
+        // EnemyConfig 슬롯 파츠 (무기·액세서리 등 — Head/Hair는 Body 슬롯 사용 권장)
         if (Application.isPlaying && config != null)
         {
             SpawnParts();
         }
     }
 
+    /// <summary>EnemyBodyPartSlots 등에서 생성한 파츠를 등록 (EnemyDie 연동).</summary>
+    public void RegisterSpawnedPart(GameObject part)
+    {
+        if (part == null) return;
+        if (!spawnedParts.Contains(part))
+            spawnedParts.Add(part);
+        InitializePartPhysics(part);
+    }
+
     public void ApplyToComponents()
     {
         if (config == null)
         {
-            Debug.LogWarning("[EnemyFacade] No EnemyConfig assigned.");
+            if (Application.isPlaying)
+                Debug.LogWarning("[EnemyFacade] No EnemyConfig assigned.");
             return;
         }
 

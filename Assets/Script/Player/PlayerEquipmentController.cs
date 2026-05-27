@@ -414,6 +414,27 @@ public class PlayerEquipmentController : MonoBehaviour
         return null;
     }
 
+    /// <summary>
+    /// 근접 히트박스 스폰 회전. Root_Dummy(FBX 축 보정 -90° X 등)는 쓰지 않고 플레이어 전방(Yaw)만 적용.
+    /// </summary>
+    public static Quaternion GetMeleeHitboxSpawnRotation(Transform context = null)
+    {
+        Transform root = context != null ? context.root : null;
+        if (root == null) return Quaternion.identity;
+
+        Vector3 forward = root.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            forward = root.rotation * Vector3.forward;
+            forward.y = 0f;
+        }
+
+        return forward.sqrMagnitude < 0.0001f
+            ? Quaternion.identity
+            : Quaternion.LookRotation(forward.normalized, Vector3.up);
+    }
+
     public static Transform FindRightHandWeaponSocket(Transform searchRoot, IList<string> socketNamesFromData = null)
     {
         IList<string> rightOnly = null;

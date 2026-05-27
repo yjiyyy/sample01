@@ -17,6 +17,8 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: 11d8677ec0e09024d8d623faa359e265, type: 3}
   category: 0
   damageType: 2
+  isPoisonAttack: 0
+  poisonOnHitStatus: {fileID: 0}
   weaponPrefab: {fileID: 2514819526148707759, guid: c0f820a178d62374b8956a70ad8f2e54, type: 3}
   overrideController: {fileID: 22100000, guid: 2b3ac060d9ca91c46be6af90e3b9cf71, type: 2}
   attackAnimVariantCount: 3
@@ -24,6 +26,7 @@ MonoBehaviour:
   cooldown: 0.2
   damage: 1
   range: 2.5
+  staminaCost: 0
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.1
   trailEmitStartDelay: 0
@@ -82,9 +85,9 @@ MonoBehaviour:
   projectileLifetime: 5
   pierceCount: 0
   usesAmmo: 1
-  magazineSize: 5
+  magazineSize: 100
   initialReserve: 5
-  infiniteReserve: 0
+  infiniteReserve: 1
   reloadTime: 5
   consumePerShot: 1
   autoReloadOnEmpty: 1

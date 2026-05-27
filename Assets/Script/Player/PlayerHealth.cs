@@ -367,15 +367,7 @@ public class PlayerHealth : MonoBehaviour
             var partBodies = root.GetComponentsInChildren<Rigidbody>(true);
             var partCols = root.GetComponentsInChildren<Collider>(true);
 
-            foreach (var t in root.GetComponentsInChildren<Transform>(true))
-            {
-                if (t == null) continue;
-                foreach (var j in t.GetComponents<Joint>()) { if (j != null) { j.connectedBody = null; Destroy(j); } }
-                foreach (var c in t.GetComponentsInChildren<ConfigurableJoint>(true)) { if (c != null) { c.connectedBody = null; Destroy(c); } }
-                foreach (var cj in t.GetComponentsInChildren<CharacterJoint>(true)) { if (cj != null) { cj.connectedBody = null; Destroy(cj); } }
-                foreach (var hj in t.GetComponentsInChildren<HingeJoint>(true)) { if (hj != null) { hj.connectedBody = null; Destroy(hj); } }
-                foreach (var fj in t.GetComponentsInChildren<FixedJoint>(true)) { if (fj != null) { fj.connectedBody = null; Destroy(fj); } }
-            }
+            DisconnectJointsFromSliceToBody(root, slicedSet);
 
             root.SetParent(null, worldPositionStays: true);
             root.gameObject.name = root.gameObject.name + "_Sliced";
@@ -473,15 +465,7 @@ public class PlayerHealth : MonoBehaviour
             var partBodies = root.GetComponentsInChildren<Rigidbody>(true);
             var partCols = root.GetComponentsInChildren<Collider>(true);
 
-            foreach (var t in root.GetComponentsInChildren<Transform>(true))
-            {
-                if (t == null) continue;
-                foreach (var j in t.GetComponents<Joint>()) { if (j != null) { j.connectedBody = null; Destroy(j); } }
-                foreach (var c in t.GetComponentsInChildren<ConfigurableJoint>(true)) { if (c != null) { c.connectedBody = null; Destroy(c); } }
-                foreach (var cj in t.GetComponentsInChildren<CharacterJoint>(true)) { if (cj != null) { cj.connectedBody = null; Destroy(cj); } }
-                foreach (var hj in t.GetComponentsInChildren<HingeJoint>(true)) { if (hj != null) { hj.connectedBody = null; Destroy(hj); } }
-                foreach (var fj in t.GetComponentsInChildren<FixedJoint>(true)) { if (fj != null) { fj.connectedBody = null; Destroy(fj); } }
-            }
+            DisconnectJointsFromSliceToBody(root, slicedSet);
 
             foreach (var col in partCols) { if (col != null) col.enabled = true; }
             foreach (var rb in partBodies)
@@ -555,6 +539,29 @@ public class PlayerHealth : MonoBehaviour
             AddBoneIfFound(list, bone);
         }
         return list;
+    }
+
+    /// <summary>
+    /// 슬라이스 파츠 안에서는 상·하박(UpperArm↔Forearm 등) 조인트는 유지하고,
+    /// 몸통 등 슬라이스 밖으로 나가는 조인트만 끊습니다. (EnemyDie와 동일)
+    /// </summary>
+    private void DisconnectJointsFromSliceToBody(Transform sliceRoot, HashSet<Rigidbody> slicedSet)
+    {
+        if (sliceRoot == null || slicedSet == null) return;
+
+        foreach (var t in sliceRoot.GetComponentsInChildren<Transform>(true))
+        {
+            if (t == null) continue;
+            foreach (var j in t.GetComponents<Joint>())
+            {
+                if (j == null) continue;
+                if (j.connectedBody != null && !slicedSet.Contains(j.connectedBody))
+                {
+                    j.connectedBody = null;
+                    Destroy(j);
+                }
+            }
+        }
     }
 
     private void DisconnectJointsPointingToSet(Rigidbody owner, HashSet<Rigidbody> slicedSet)

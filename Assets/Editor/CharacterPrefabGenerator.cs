@@ -76,15 +76,15 @@ public static class EnemyPrefabGenerator
         fbxInstance.transform.localRotation = Quaternion.identity;
         fbxInstance.transform.localScale = Vector3.one;
 
-        Animator sourceAnimator = fbxInstance.GetComponent<Animator>();
+        Animator sourceAnimator = FindUsableAnimator(fbxInstance);
         Animator rootAnimator = root.AddComponent<Animator>();
 
-        // Enemy 공통: Controller=E_Animator, Avatar=PC001_newAvatar, Apply Root Motion 끄기, Normal, Always Animate
+        // Enemy 공통: Controller=E_Animator, Avatar=Body FBX 또는 PC_M_Normal_Skin Avatar
         RuntimeAnimatorController enemyController = FindEnemyAnimatorController();
         Avatar enemyAvatar = FindEnemyAvatar(fbxAssetPath, sourceAnimator);
 
-        RuntimeAnimatorController ctrlToUse = enemyController ?? sourceAnimator?.runtimeAnimatorController;
-        Avatar avaToUse = enemyAvatar ?? sourceAnimator?.avatar;
+        RuntimeAnimatorController ctrlToUse = enemyController ?? TryGetAnimatorController(sourceAnimator);
+        Avatar avaToUse = enemyAvatar ?? TryGetAnimatorAvatar(sourceAnimator);
 
         if (ctrlToUse == null)
             Debug.LogWarning("[EnemyPrefabGenerator] E_Animator를 찾지 못했습니다. " + EnemyAnimatorControllerPath);
@@ -101,7 +101,7 @@ public static class EnemyPrefabGenerator
         soAnim.ApplyModifiedPropertiesWithoutUndo();
 
         if (sourceAnimator != null)
-            Object.DestroyImmediate(sourceAnimator);
+            Object.DestroyImmediate(sourceAnimator, true);
 
         Animator rootAnim = root.GetComponent<Animator>();
 
@@ -134,9 +134,48 @@ public static class EnemyPrefabGenerator
             AddSliceBloodEffectSpawner(root, settings);
         }
 
+        // 저장 직전: HairSocket(모델) + EnemyBodyPartSlots(적 루트 — FBX 자식에 붙이면 저장 시 빠질 수 있음)
+        EnsureBodyPartSlotsSetup(root, fbxInstance);
+
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, savePath, InteractionMode.AutomatedAction);
         Object.DestroyImmediate(root);
         Debug.Log($"[EnemyPrefabGenerator] Enemy 프리팹 생성 완료: {savePath}");
+    }
+
+    /// <summary>Bip001 Head 하위 HairSocket(모델) + EnemyBodyPartSlots(적 루트).</summary>
+    private static void EnsureBodyPartSlotsSetup(GameObject enemyRoot, GameObject modelRoot)
+    {
+        if (modelRoot != null)
+        {
+            if (EnemyBodyPartSlots.EnsureHairSocket(modelRoot.transform))
+            {
+                Debug.Log("[EnemyPrefabGenerator] Bip001 Head 하위에 HairSocket을 생성했습니다.");
+                RecordNestedPrefabOverrides(modelRoot);
+            }
+        }
+
+        if (enemyRoot == null) return;
+
+        if (enemyRoot.GetComponent<EnemyBodyPartSlots>() == null)
+        {
+            enemyRoot.AddComponent<EnemyBodyPartSlots>();
+            Debug.Log("[EnemyPrefabGenerator] 적 루트에 EnemyBodyPartSlots를 추가했습니다.");
+        }
+    }
+
+    /// <summary>FBX 모델 인스턴스에 추가한 HairSocket 등이 프리팹에 남도록 오버라이드 기록.</summary>
+    private static void RecordNestedPrefabOverrides(GameObject modelRoot)
+    {
+        if (modelRoot == null) return;
+        if (!PrefabUtility.IsPartOfPrefabInstance(modelRoot)) return;
+
+        PrefabUtility.RecordPrefabInstancePropertyModifications(modelRoot);
+        foreach (Transform t in modelRoot.GetComponentsInChildren<Transform>(true))
+        {
+            if (t == null || t.gameObject == modelRoot) continue;
+            if (PrefabUtility.IsAddedGameObjectOverride(t.gameObject))
+                PrefabUtility.RecordPrefabInstancePropertyModifications(t.gameObject);
+        }
     }
 
     private static void AddEnemyComponents(GameObject root, Animator animator, Rigidbody rb, CapsuleCollider capsule)
@@ -192,7 +231,8 @@ public static class EnemyPrefabGenerator
     private const string EnemyAnimatorControllerPath = "Assets/Arts/Enemy/Ani/E_Animator.controller";
     private const string EnemyAvatarSourcePath = "Assets/Arts/Player/New01/Model/PC001_new.fbx";
     private const string E_AnimatorGUID = "0c585f06e6c97534cac89d91d9e0726d";
-    private const string PC001_newGUID = "8660d3d865b72a241877d8d4e0773df0";
+    /// <summary>공통 Humanoid Avatar (PC_M_Normal_Skin.fbx)</summary>
+    private const string FallbackBodyAvatarFbxGuid = "c71776d8f2d897e4e88aae49f60d3704";
 
     /// <summary>Enemy 공통 Animator Controller (E_Animator) 찾기</summary>
     private static RuntimeAnimatorController FindEnemyAnimatorController()
@@ -211,23 +251,89 @@ public static class EnemyPrefabGenerator
         return null;
     }
 
-    /// <summary>Enemy 공통 Avatar (PC001_newAvatar) 찾기</summary>
+    /// <summary>Enemy 공통 Humanoid Avatar 찾기 (선택 FBX → 폴백 Body FBX).</summary>
     private static Avatar FindEnemyAvatar(string fbxAssetPath, Animator sourceAnimator)
     {
         foreach (string path in new[]
         {
             fbxAssetPath,
-            AssetDatabase.GUIDToAssetPath(PC001_newGUID),
-            EnemyAvatarSourcePath
+            EnemyAvatarSourcePath,
+            AssetDatabase.GUIDToAssetPath(FallbackBodyAvatarFbxGuid)
         })
         {
             if (string.IsNullOrEmpty(path)) continue;
-            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(path))
-            {
-                if (o is Avatar av && av.isHuman) return av;
-            }
+            Avatar fromAssets = FindHumanoidAvatarAtPath(path, preferAnyAvatar: path == fbxAssetPath);
+            if (fromAssets != null) return fromAssets;
         }
-        return sourceAnimator?.avatar != null && sourceAnimator.isHuman ? sourceAnimator.avatar : null;
+
+        return TryGetAnimatorAvatar(sourceAnimator);
+    }
+
+    private static Avatar FindHumanoidAvatarAtPath(string assetPath, bool preferAnyAvatar)
+    {
+        foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(assetPath))
+        {
+            if (o is not Avatar av) continue;
+            if (av.isHuman) return av;
+            if (preferAnyAvatar) return av;
+        }
+
+        return null;
+    }
+
+    private static Animator FindUsableAnimator(GameObject modelRoot)
+    {
+        if (modelRoot == null) return null;
+
+        var onRoot = modelRoot.GetComponent<Animator>();
+        if (IsUsableAnimator(onRoot)) return onRoot;
+
+        foreach (var anim in modelRoot.GetComponentsInChildren<Animator>(true))
+        {
+            if (IsUsableAnimator(anim)) return anim;
+        }
+
+        return null;
+    }
+
+    private static bool IsUsableAnimator(Animator animator)
+    {
+        if (animator == null) return false;
+        try
+        {
+            _ = animator.avatar;
+            return true;
+        }
+        catch (MissingComponentException)
+        {
+            return false;
+        }
+    }
+
+    private static Avatar TryGetAnimatorAvatar(Animator animator)
+    {
+        if (!IsUsableAnimator(animator)) return null;
+        try
+        {
+            Avatar av = animator.avatar;
+            if (av != null && animator.isHuman) return av;
+        }
+        catch (MissingComponentException) { }
+
+        return null;
+    }
+
+    private static RuntimeAnimatorController TryGetAnimatorController(Animator animator)
+    {
+        if (!IsUsableAnimator(animator)) return null;
+        try
+        {
+            return animator.runtimeAnimatorController;
+        }
+        catch (MissingComponentException)
+        {
+            return null;
+        }
     }
 
     private static MovementSettings FindDefaultMovementSettings()

@@ -231,7 +231,8 @@ public class MeleeComboBehavior : MonoBehaviour
         bool hasSub = equip != null && equip.SecondaryWeapon != null;
 
         Vector3 mainPos = spawnPoint != null ? spawnPoint.position : transform.position;
-        Quaternion mainRot = spawnPoint != null ? spawnPoint.rotation : transform.rotation;
+        Quaternion mainRot = PlayerEquipmentController.GetMeleeHitboxSpawnRotation(
+            spawnPoint != null ? spawnPoint : transform);
 
         void SpawnAt(Vector3 pos, Quaternion rot)
         {
@@ -277,7 +278,9 @@ public class MeleeComboBehavior : MonoBehaviour
                 break;
             case AttackVariantHandMode.OffOnly:
                 if (hasSub)
-                    SpawnAt(equip.SecondaryWeapon.transform.position, equip.SecondaryWeapon.transform.rotation);
+                    SpawnAt(
+                        equip.SecondaryWeapon.transform.position,
+                        PlayerEquipmentController.GetMeleeHitboxSpawnRotation(equip.SecondaryWeapon.transform));
                 else
                     SpawnAt(mainPos, mainRot);
                 break;
@@ -285,7 +288,9 @@ public class MeleeComboBehavior : MonoBehaviour
             default:
                 SpawnAt(mainPos, mainRot);
                 if (hasSub)
-                    SpawnAt(equip.SecondaryWeapon.transform.position, equip.SecondaryWeapon.transform.rotation);
+                    SpawnAt(
+                        equip.SecondaryWeapon.transform.position,
+                        PlayerEquipmentController.GetMeleeHitboxSpawnRotation(equip.SecondaryWeapon.transform));
                 break;
         }
     }
