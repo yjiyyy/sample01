@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Unity.Cinemachine;
 
@@ -46,29 +47,51 @@ public class SpawnManager : MonoBehaviour
         return playerPrefab;
     }
 
-    public void ScheduleRevive(Upgrade_06_01_ReviveTicket ticket, Vector3 deathPosition, UpgradeEffectSO[] preservedSlots, Transform corpseRoot)
+    public void ScheduleRevive(
+        Upgrade_06_01_ReviveTicket ticket,
+        Vector3 deathPosition,
+        UpgradeEffectSO[] preservedSlots,
+        Transform corpseRoot,
+        PlayerReviveWeaponSnapshot weaponSnapshot,
+        IReadOnlyList<GameObject> slicedAttachmentRoots)
     {
         if (ticket == null)
             return;
 
-        StartCoroutine(CoRevive(ticket, deathPosition, preservedSlots, corpseRoot));
+        StartCoroutine(CoRevive(ticket, deathPosition, preservedSlots, corpseRoot, weaponSnapshot, slicedAttachmentRoots));
     }
 
-    private IEnumerator CoRevive(Upgrade_06_01_ReviveTicket ticket, Vector3 deathPosition, UpgradeEffectSO[] preservedSlots, Transform corpseRoot)
+    private IEnumerator CoRevive(
+        Upgrade_06_01_ReviveTicket ticket,
+        Vector3 deathPosition,
+        UpgradeEffectSO[] preservedSlots,
+        Transform corpseRoot,
+        PlayerReviveWeaponSnapshot weaponSnapshot,
+        IReadOnlyList<GameObject> slicedAttachmentRoots)
     {
         float delay = Mathf.Max(0f, ticket.respawnDelaySeconds);
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
-        // UI 슬롯 재연결 시 기존 PlayerHealth 참조가 남지 않도록 먼저 제거합니다.
-        if (corpseRoot != null)
-            Destroy(corpseRoot.gameObject);
+        // UI 슬롯 재연결 시 기존 PlayerHealth 참조가 남지 않도록 시체·분리 무기를 함께 제거합니다.
+        DestroyReviveCorpseDebris(corpseRoot, slicedAttachmentRoots);
         yield return null;
 
         Vector3 respawnPos = deathPosition + Vector3.up * Mathf.Max(0f, ticket.respawnYOffset);
         GameObject player = SpawnPlayerAt(respawnPos, transform.rotation);
         if (player == null)
             yield break;
+
+        // PlayerWeaponController.Start()의 기본 무기 장착이 끝난 뒤 죽기 직전 무기로 덮어씁니다.
+        yield return null;
+
+        if (weaponSnapshot.HasWeapon)
+        {
+            var equip = player.GetComponent<PlayerEquipmentController>()
+                ?? player.GetComponentInChildren<PlayerEquipmentController>(true);
+            if (equip != null)
+                equip.ApplyReviveWeaponSnapshot(weaponSnapshot, player.transform);
+        }
 
         var upgrade = player.GetComponent<Upgrade>();
         if (upgrade != null && preservedSlots != null)
@@ -93,6 +116,22 @@ public class SpawnManager : MonoBehaviour
             if (ticket.worldFxAutoDestroySeconds > 0f)
                 Destroy(fx, ticket.worldFxAutoDestroySeconds);
         }
+    }
+
+    private static void DestroyReviveCorpseDebris(Transform corpseRoot, IReadOnlyList<GameObject> slicedAttachmentRoots)
+    {
+        if (slicedAttachmentRoots != null)
+        {
+            for (int i = 0; i < slicedAttachmentRoots.Count; i++)
+            {
+                var go = slicedAttachmentRoots[i];
+                if (go != null)
+                    Destroy(go);
+            }
+        }
+
+        if (corpseRoot != null)
+            Destroy(corpseRoot.gameObject);
     }
 
     private GameObject SpawnPlayerAt(Vector3 position, Quaternion rotation)

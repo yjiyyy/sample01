@@ -8,6 +8,7 @@ using System.Collections.Generic;
 /// - 이 컴포넌트는 체력 관련만 담당합니다.
 /// - PC 랙돌: 몬스터 웨폰 SO의 deathMode가 Ragdoll일 때만 활성화 (그 외는 기존 애니메이션 죽음).
 /// - 슬라이스: 몬스터와 동일하게 SO의 sliceTargets/sliceImpulse로 본 분리 연출 지원.
+/// - 무기/소품 소켓 3본(R_Hand_Weapon 등)은 모든 사망 연출에서 항상 분리 (AttachmentBoneDeathSlice).
 /// </summary>
 public class PlayerHealth : MonoBehaviour
 {
@@ -33,6 +34,7 @@ public class PlayerHealth : MonoBehaviour
     // 랙돌 상태에서 충돌로 생기는 회전 스핀(Y angularVelocity)만 빠르게 줄이기
     private bool ragdollSpinKillActive = false;
     private float invincibleUntilTime = -1f;
+    private readonly HashSet<Rigidbody> attachmentSlicedBodies = new HashSet<Rigidbody>();
 
     private PlayerBarrierUpgradeRuntime barrierRuntime;
     private PlayerPoisonDebuffRuntime poisonDebuffRuntime;
@@ -112,7 +114,9 @@ public class PlayerHealth : MonoBehaviour
         }
         foreach (var col in rootTransform.GetComponentsInChildren<Collider>(true))
         {
-            if (col != null && col.transform != rootTransform && col != rootCollider) ragdollColliders.Add(col);
+            if (col == null || col.transform == rootTransform || col == rootCollider) continue;
+            if (col.isTrigger || DieColliderUtility.IsDieCollider(col)) continue;
+            ragdollColliders.Add(col);
         }
         foreach (var rb in ragdollBodies)
         {
@@ -198,47 +202,45 @@ public class PlayerHealth : MonoBehaviour
 
         TryClearPoisonDebuff();
 
-        // Revive Ticket이 있으면 일반 사망 로직 대신 부활 시퀀스로 넘깁니다.
+        var equipComp = GetComponent<PlayerEquipmentController>()
+            ?? GetComponentInChildren<PlayerEquipmentController>(true);
+        PlayerReviveWeaponSnapshot weaponSnapshot = equipComp != null
+            ? equipComp.CaptureReviveWeaponSnapshot()
+            : default;
+
         var reviveRuntime = GetComponent<PlayerReviveTicketRuntime>();
         if (reviveRuntime == null)
             reviveRuntime = GetComponentInChildren<PlayerReviveTicketRuntime>(true);
         if (reviveRuntime == null)
             reviveRuntime = GetComponentInParent<PlayerReviveTicketRuntime>();
-        if (reviveRuntime != null && reviveRuntime.TryHandleDeath(this, hitDir, weapon, impactScale))
-        {
-            deadProcessed = true;
-            return;
-        }
+
+        bool deferCorpseDestroy = reviveRuntime != null && reviveRuntime.HasReviveTicket();
+
+        DisableGameplayForDeath();
+        var attachmentSlice = PerformPlayerAttachmentDeathSlice(hitDir, weapon, impactScale, deferCorpseDestroy);
+        equipComp?.ReleaseCorpseWeaponReferencesAfterSlice();
+
+        // 부활 예정이면 시체 Destroy만 미루고, 연출은 일반 사망과 동일하게 진행합니다.
 
         deadProcessed = true;
 
-        // 0) 즉시 입력 차단 — 죽는 순간 입력이 적용되지 않도록 (입력 중 랙돌 시 특히 중요)
-        if (InputManager.Instance != null)
+        float pendingCorpseDestroyDelay = PerformBodyDeathPresentation(hitDir, weapon, impactScale, deferCorpseDestroy);
+
+        if (deferCorpseDestroy && reviveRuntime.TryHandleDeath(this, hitDir, weapon, impactScale, weaponSnapshot, attachmentSlice.SlicedRoots))
+            return;
+
+        if (pendingCorpseDestroyDelay > 0f)
         {
-            InputManager.SetPlayerDeathBlock(true);
-            InputManager.Instance.ClearPlayerInput();
+            if (rootTransform != null) Destroy(rootTransform.gameObject, pendingCorpseDestroyDelay);
+            else Destroy(gameObject, pendingCorpseDestroyDelay);
         }
+    }
 
-        var weaponCtrl = GetComponent<PlayerWeaponController>();
-        var move = GetComponent<PlayerMovement>();
-        var evade = GetComponent<PlayerEvadeController>();
-        var charge = GetComponent<PlayerChargeController>();
-        var recoil = GetComponent<PlayerRecoil>();
+    /// <summary>SO 기준 랙돌 / 슬라이스 / 애니메이션 죽음. skipDestroy=true면 Destroy 호출을 하지 않고 예정 시간만 반환.</summary>
+    private float PerformBodyDeathPresentation(Vector3 hitDir, WeaponDataSO weapon, float impactScale, bool skipDestroy)
+    {
+        const float animDestroyDelay = 5f;
 
-        // 1) 상태 Dead + 모든 행동 컴포넌트 종료 (죽음 이벤트만 유지)
-        try
-        {
-            var m = weaponCtrl?.GetType().GetMethod("SetState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-            if (m != null && weaponCtrl != null) m.Invoke(weaponCtrl, new object[] { PlayerState.Dead });
-        }
-        catch (System.Exception ex) { Debug.LogWarning($"[PlayerHealth] weaponCtrl SetState 실패: {ex.Message}"); }
-        if (move != null) move.enabled = false;
-        if (weaponCtrl != null) weaponCtrl.enabled = false;
-        if (evade != null) evade.enabled = false;
-        if (charge != null) charge.enabled = false;
-        if (recoil != null) recoil.enabled = false;
-
-        // 2) SO에 따라 Ragdoll / Slice / 애니메이션 죽음 (몬스터와 동일)
         bool doRagdoll = (weapon != null && weapon.deathMode == DeathMode.Ragdoll && ragdollBodies.Count > 0);
         bool doSlice = (weapon != null && weapon.sliceTargets != null && weapon.sliceTargets.Count > 0);
 
@@ -254,23 +256,34 @@ public class PlayerHealth : MonoBehaviour
                 if (rootCollider != null) rootCollider.enabled = false;
                 foreach (var rb in ragdollBodies) { if (rb != null) rb.isKinematic = false; }
                 foreach (var col in ragdollColliders) { if (col != null) col.enabled = true; }
-                ApplyRagdollImpulse(hitDir, weapon, impactScale);
+                ApplyRagdollImpulse(hitDir, weapon, impactScale, FilterRagdollBodiesForImpulse(ragdollBodies));
                 ragdollSpinKillActive = true;
             }
-            if (rootTransform != null) Destroy(rootTransform.gameObject, DESTROY_DELAY);
-            else Destroy(gameObject, DESTROY_DELAY);
-            return;
+
+            if (!skipDestroy)
+            {
+                if (rootTransform != null) Destroy(rootTransform.gameObject, DESTROY_DELAY);
+                else Destroy(gameObject, DESTROY_DELAY);
+                return 0f;
+            }
+
+            return DESTROY_DELAY;
         }
 
         if (doSlice)
         {
             PerformSliceWithAnimationBody(hitDir, weapon, impactScale);
-            if (rootTransform != null) Destroy(rootTransform.gameObject, DESTROY_DELAY);
-            else Destroy(gameObject, DESTROY_DELAY);
-            return;
+
+            if (!skipDestroy)
+            {
+                if (rootTransform != null) Destroy(rootTransform.gameObject, DESTROY_DELAY);
+                else Destroy(gameObject, DESTROY_DELAY);
+                return 0f;
+            }
+
+            return DESTROY_DELAY;
         }
 
-        // 3) 애니메이션 죽음: 애니메이터 IsDead, 전 Collider OFF, 루트 Kinematic
         Debug.Log("플레이어 사망 (HP 0) → 애니메이션 죽음");
         var animCtrl = GetComponent<PlayerAnimationController>();
         if (animCtrl != null) animCtrl.ForceAnimationByState(PlayerState.Dead);
@@ -292,8 +305,56 @@ public class PlayerHealth : MonoBehaviour
             rootRb.angularVelocity = Vector3.zero;
             rootRb.isKinematic = true;
         }
-        if (root != null) Destroy(root.gameObject, 5f);
-        else Destroy(gameObject, 5f);
+
+        if (!skipDestroy)
+        {
+            if (root != null) Destroy(root.gameObject, animDestroyDelay);
+            else Destroy(gameObject, animDestroyDelay);
+            return 0f;
+        }
+
+        return animDestroyDelay;
+    }
+
+    private void DisableGameplayForDeath()
+    {
+        if (InputManager.Instance != null)
+        {
+            InputManager.SetPlayerDeathBlock(true);
+            InputManager.Instance.ClearPlayerInput();
+        }
+
+        var weaponCtrl = GetComponent<PlayerWeaponController>();
+        var move = GetComponent<PlayerMovement>();
+        var evade = GetComponent<PlayerEvadeController>();
+        var charge = GetComponent<PlayerChargeController>();
+        var recoil = GetComponent<PlayerRecoil>();
+
+        try
+        {
+            var m = weaponCtrl?.GetType().GetMethod("SetState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (m != null && weaponCtrl != null) m.Invoke(weaponCtrl, new object[] { PlayerState.Dead });
+        }
+        catch (System.Exception ex) { Debug.LogWarning($"[PlayerHealth] weaponCtrl SetState 실패: {ex.Message}"); }
+
+        if (move != null) move.enabled = false;
+        if (weaponCtrl != null) weaponCtrl.enabled = false;
+        if (evade != null) evade.enabled = false;
+        if (charge != null) charge.enabled = false;
+        if (recoil != null) recoil.enabled = false;
+    }
+
+    private AttachmentBoneDeathSlice.Result PerformPlayerAttachmentDeathSlice(
+        Vector3 hitDir, WeaponDataSO weapon, float impactScale, bool deferSlicedAutoDestroy)
+    {
+        bool keepAnimatorForAttachmentSlice = weapon == null || weapon.deathMode == DeathMode.Animation;
+        var attachmentSlice = AttachmentBoneDeathSlice.Perform(
+            transform, rootTransform, animator, rootRb, ragdollBodies,
+            hitDir, weapon, impactScale, keepAnimatorForAttachmentSlice, this, DESTROY_DELAY, "PlayerHealth",
+            scheduleSlicedAutoDestroy: !deferSlicedAutoDestroy);
+        foreach (var rb in attachmentSlice.SlicedBodies)
+            attachmentSlicedBodies.Add(rb);
+        return attachmentSlice;
     }
 
     private void FixedUpdate()
@@ -432,7 +493,7 @@ public class PlayerHealth : MonoBehaviour
         List<Transform> sliceRoots = CollectSliceRoots(target);
         if (sliceRoots.Count == 0)
         {
-            ApplyRagdollImpulse(hitDir, weapon, impactScale);
+            ApplyRagdollImpulse(hitDir, weapon, impactScale, FilterRagdollBodiesForImpulse(ragdollBodies));
             if (rootTransform != null) Destroy(rootTransform.gameObject, DESTROY_DELAY);
             else Destroy(gameObject, DESTROY_DELAY);
             return;
@@ -508,10 +569,15 @@ public class PlayerHealth : MonoBehaviour
         foreach (var rb in ragdollBodies)
         {
             if (rb == null) continue;
-            if (!slicedSet.Contains(rb)) nonSliced.Add(rb);
+            if (!slicedSet.Contains(rb) && !attachmentSlicedBodies.Contains(rb)) nonSliced.Add(rb);
         }
         if (nonSliced.Count > 0)
             ApplyGlobalImpulseAndSpin(nonSliced, hitDir, weapon, impactScale);
+    }
+
+    private List<Rigidbody> FilterRagdollBodiesForImpulse(IList<Rigidbody> source)
+    {
+        return AttachmentBoneDeathSlice.FilterForGlobalImpulse(source, attachmentSlicedBodies);
     }
 
     private List<Transform> CollectSliceRoots(SliceTarget target)
@@ -694,8 +760,11 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    private void ApplyRagdollImpulse(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
+    private void ApplyRagdollImpulse(Vector3 hitDir, WeaponDataSO weapon, float impactScale, IList<Rigidbody> targets = null)
     {
+        if (targets == null) targets = ragdollBodies;
+        if (targets == null || targets.Count == 0) return;
+
         Vector3 dir = hitDir;
         dir.y = 0f;
         if (dir.sqrMagnitude > 0.0001f) dir = dir.normalized;
@@ -710,14 +779,14 @@ public class PlayerHealth : MonoBehaviour
         if (up > 0f) vel += Vector3.up * up;
         if (vel.sqrMagnitude > 0f)
         {
-            foreach (var rb in ragdollBodies)
+            foreach (var rb in targets)
             { if (rb != null) rb.AddForce(vel, ForceMode.VelocityChange); }
         }
         if (spin > 0f)
         {
             Vector3 axis = Vector3.Cross(Vector3.up, dir).normalized;
             if (axis.sqrMagnitude < 0.0001f) axis = Vector3.right;
-            foreach (var rb in ragdollBodies)
+            foreach (var rb in targets)
             { if (rb != null) rb.AddTorque(axis * spin, ForceMode.VelocityChange); }
         }
     }
@@ -747,64 +816,6 @@ public class PlayerHealth : MonoBehaviour
     {
         EnsurePoisonDebuffRuntimeReference();
         poisonDebuffRuntime?.ClearPoisonState();
-    }
-
-    public void EnterReviveWaitingState()
-    {
-        if (deadProcessed)
-            return;
-
-        TryClearPoisonDebuff();
-
-        deadProcessed = true;
-        currentHP = 0f;
-
-        if (InputManager.Instance != null)
-        {
-            InputManager.SetPlayerDeathBlock(true);
-            InputManager.Instance.ClearPlayerInput();
-        }
-
-        var weaponCtrl = GetComponent<PlayerWeaponController>();
-        var move = GetComponent<PlayerMovement>();
-        var evade = GetComponent<PlayerEvadeController>();
-        var charge = GetComponent<PlayerChargeController>();
-        var recoil = GetComponent<PlayerRecoil>();
-
-        try
-        {
-            var m = weaponCtrl?.GetType().GetMethod("SetState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-            if (m != null && weaponCtrl != null) m.Invoke(weaponCtrl, new object[] { PlayerState.Dead });
-        }
-        catch (System.Exception ex) { Debug.LogWarning($"[PlayerHealth] ReviveWaiting SetState 실패: {ex.Message}"); }
-
-        if (move != null) move.enabled = false;
-        if (weaponCtrl != null) weaponCtrl.enabled = false;
-        if (evade != null) evade.enabled = false;
-        if (charge != null) charge.enabled = false;
-        if (recoil != null) recoil.enabled = false;
-
-        var animCtrl = GetComponent<PlayerAnimationController>();
-        if (animCtrl != null) animCtrl.ForceAnimationByState(PlayerState.Dead);
-        else if (animator != null) animator.SetBool("IsDead", true);
-
-        var root = transform.root;
-        if (root != null)
-        {
-            foreach (var c in root.GetComponentsInChildren<Collider>(true))
-                if (c != null) c.enabled = false;
-        }
-
-        if (rootRb != null)
-        {
-#if UNITY_6000_0_OR_NEWER
-            rootRb.linearVelocity = Vector3.zero;
-#else
-            rootRb.velocity = Vector3.zero;
-#endif
-            rootRb.angularVelocity = Vector3.zero;
-            rootRb.isKinematic = true;
-        }
     }
 
     public void SetTemporaryInvincible(float seconds)

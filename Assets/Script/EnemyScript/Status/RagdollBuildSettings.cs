@@ -62,6 +62,33 @@ public class RagdollBuildSettings : ScriptableObject
     [Tooltip("SliceBloodEffectSpawner에 할당할 피 이펙트 프리팹")]
     public GameObject bloodGushPrefab;
 
+    [Header("무기/소품 소켓 랙돌 (Collider 없음 — DieCollider는 파츠 프리팹)")]
+    [Tooltip("비어 있으면 R_Hand_Weapon / L_Hand_Weapon / Bip001 Prop3 기본값 사용.")]
+    public AttachmentBoneEntry[] attachmentBones;
+
+    [System.Serializable]
+    public class AttachmentBoneEntry
+    {
+        [Tooltip("Rigidbody·Joint를 붙일 본 이름")]
+        public string boneName = "";
+        [Tooltip("CharacterJoint connectedBody (부모 쪽 본). RB 없으면 상위 본까지 탐색.")]
+        public string jointConnectedBone = "";
+        public float mass = 1f;
+        public float drag = 0f;
+        public float angularDrag = 0.05f;
+    }
+
+    /// <summary>무기/소품 소켓 3본 기본값 (프리팹 제네레이터·EnemyDie 슬라이스와 동일).</summary>
+    public static AttachmentBoneEntry[] GetDefaultAttachmentBones()
+    {
+        return new AttachmentBoneEntry[]
+        {
+            new AttachmentBoneEntry { boneName = "R_Hand_Weapon", jointConnectedBone = "Bip001 R Hand", mass = 1f },
+            new AttachmentBoneEntry { boneName = "L_Hand_Weapon", jointConnectedBone = "Bip001 L Hand", mass = 1f },
+            new AttachmentBoneEntry { boneName = "Bip001 Prop3", jointConnectedBone = "Bip001", mass = 1f },
+        };
+    }
+
     [Header("BIP 본 이름 (Transform 이름과 정확히 일치)")]
     public string pelvis = "Bip001";
     public string leftHips = "Bip001 L Thigh";

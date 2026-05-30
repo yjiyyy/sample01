@@ -47,7 +47,7 @@ MonoBehaviour:
   ragdollImpulse: 5
   ragdollUpImpulse: 0
   ragdollSpinTorque: 0
-  sliceTargets: 
+  sliceTargets: 00000000
   sliceImpulse: 0
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}

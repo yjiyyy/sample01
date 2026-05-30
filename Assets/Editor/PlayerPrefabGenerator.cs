@@ -638,6 +638,7 @@ public static class PlayerPrefabGenerator
             joint.swing2Limit = new SoftJointLimit { limit = swing };
             joint.enableProjection = true;
         }
+        RagdollAttachmentBoneBuilder.Build(animator.transform, boneToRb, settings, "[PlayerPrefabGenerator]");
         SetRagdollBonesLayer(root, boneToRb.Keys);
     }
 
@@ -773,6 +774,7 @@ public static class PlayerPrefabGenerator
         var existingCj = pelvisTr.GetComponent<CharacterJoint>();
         if (existingCj != null) Object.DestroyImmediate(existingCj);
 
+        RagdollAttachmentBoneBuilder.Build(modelRoot, boneToRb, settings, "[PlayerPrefabGenerator]");
         SetRagdollBonesLayer(root, boneToRb.Keys);
         Debug.Log($"[PlayerPrefabGenerator] BIP 랙돌 생성 완료 (본 수={count})");
     }

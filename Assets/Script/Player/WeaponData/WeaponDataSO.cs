@@ -255,7 +255,7 @@ public class WeaponDataSO : ScriptableObject
         so.ragdollSpinTorque = ragdollSpinTorque;
         so.sliceTargets = sliceTargets != null ? new List<SliceTarget>(sliceTargets) : new List<SliceTarget>();
         so.sliceImpulse = sliceImpulse;
-        so.isPoisonAttack = isPoisonAttack || poisonOnHitStatus != null;
+        so.isPoisonAttack = isPoisonAttack;
         so.poisonOnHitStatus = poisonOnHitStatus;
         return so;
     }
@@ -265,7 +265,7 @@ public class WeaponDataSO : ScriptableObject
     /// </summary>
     public static WeaponDataSO CreatePoisonPlayerHitProxyOrNull(bool isPoisonAttack, PoisonStatusConfigSO poisonOnHitStatus)
     {
-        if (!isPoisonAttack && poisonOnHitStatus == null)
+        if (!isPoisonAttack)
             return null;
         return CreatePlayerDeathProxy(DeathMode.Animation, 0f, 0f, 0f, null, 0f, isPoisonAttack, poisonOnHitStatus);
     }

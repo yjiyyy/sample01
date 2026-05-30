@@ -19,7 +19,8 @@ MonoBehaviour:
   range: 5
   cooldown: 0
   attackTime: 2
-  clip: {fileID: 3700658901771414680, guid: 3a9935da68c61ab429ab904c9474c217, type: 3}
+  variantClips:
+  - {fileID: 3700658901771414680, guid: 3a9935da68c61ab429ab904c9474c217, type: 3}
   hitboxSpawnDelay: 1
   hitBoxLifetime: 0.4
   attachHitboxToEnemy: 1

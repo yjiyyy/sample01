@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dc3491976d90564db1812b88ae1fd44, type: 3}
+  m_Name: EnemyConfig_SO
+  m_EditorClassIdentifier: 
+  displayName: NewEnemy
+  tagName: Enemy
+  layer:
+    serializedVersion: 2
+    m_Bits: 0
+  maxHealth: 100
+  mass: 1
+  useShield: 0
+  maxShield: 50
+  shieldBreakDuration: 2
+  shieldRechargeDelay: 3
+  shieldRechargeRate: 10
+  baseMoveSpeed: 3.5
+  movementSettings: {fileID: 0}
+  detectionRadius: 5
+  findDuration: 2
+  backstepDistance: 5
+  backstepSpeedMultiplier: 1
+  forwardSpeedNormalizeTime: 0.25
+  roamRadius: 3
+  peaceMoveSpeedMultiplier: 0.6
+  idleMin: 1
+  idleMax: 3
+  attackPatterns:
+  - {fileID: 11400000, guid: ed6f8f9e13b90a04faa58b61dd502cc7, type: 2}
+  globalPatternCooldown: 0.35
+  defaultPatternHoldDuration: 1
+  enablePerPatternHoldOverride: 1
+  totalDropCountMin: 1
+  totalDropCountMax: 3
+  dropEntries: []
+  dropGroundLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
+  partSlotCount: 1
+  partSlots:
+  - boneName: R_Hand_Weapon
+    partPrefab: {fileID: 6720980456043207435, guid: 2793be7cea35d54419ead793a20895c0, type: 3}
+    localOffset: {x: 0, y: 0, z: 0}
+    localRotationEuler: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
+  overrideController: {fileID: 0}
+  editorAutoApplyDefault: 1

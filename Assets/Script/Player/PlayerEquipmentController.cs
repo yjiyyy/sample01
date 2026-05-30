@@ -2,6 +2,20 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 
+/// <summary>부활 시 죽기 직전 무기·탄약 상태를 넘기기 위한 스냅샷.</summary>
+public struct PlayerReviveWeaponSnapshot
+{
+    public enum AmmoCategory { None, Gun, AR, Shotgun }
+
+    public WeaponDataSO weaponData;
+    public bool hasAmmo;
+    public int magazine;
+    public int reserve;
+    public AmmoCategory ammoCategory;
+
+    public bool HasWeapon => weaponData != null;
+}
+
 [DisallowMultipleComponent]
 public class PlayerEquipmentController : MonoBehaviour
 {
@@ -145,6 +159,8 @@ public class PlayerEquipmentController : MonoBehaviour
             mainMount = FindRightHandWeaponSocket(playerRoot, CurrentWeaponData.socketNames);
 
         AttachToMount(instMain.transform, mainMount);
+        DieColliderUtility.ApplyPartsLayer(instMain.transform);
+        DieColliderUtility.DisablePartCollidersForLife(instMain.transform);
 
         ApplyAnimatorOverride(debugLogs);
 
@@ -190,6 +206,8 @@ public class PlayerEquipmentController : MonoBehaviour
             if (subAmmoAR != null) Destroy(subAmmoAR);
 
             AttachToMount(instSub.transform, subMount);
+            DieColliderUtility.ApplyPartsLayer(instSub.transform);
+            DieColliderUtility.DisablePartCollidersForLife(instSub.transform);
 
             if (CurrentWeaponData.UseWeaponCollider)
             {
@@ -223,6 +241,80 @@ public class PlayerEquipmentController : MonoBehaviour
         }
 
         EquipByData(DefaultWeaponData, playerRoot, debugLogs: false);
+    }
+
+    /// <summary>사망 직전 장착 무기·탄약을 캡처합니다 (부활 복원용).</summary>
+    public PlayerReviveWeaponSnapshot CaptureReviveWeaponSnapshot()
+    {
+        SaveCurrentSnapshots();
+
+        var snap = new PlayerReviveWeaponSnapshot { weaponData = CurrentWeaponData };
+        if (CurrentWeaponData == null)
+            return snap;
+
+        if (CurrentWeaponData is WeaponDataSO_Gun gun && gun.usesAmmo &&
+            gunAmmoSnapshots.TryGetValue(gun, out AmmoSnapshot gunSnap))
+        {
+            snap.hasAmmo = true;
+            snap.ammoCategory = PlayerReviveWeaponSnapshot.AmmoCategory.Gun;
+            snap.magazine = gunSnap.magazine;
+            snap.reserve = gunSnap.reserve;
+        }
+        else if (CurrentWeaponData is WeaponDataSO_AR ar && ar.usesAmmo &&
+                 arAmmoSnapshots.TryGetValue(ar, out AmmoSnapshot arSnap))
+        {
+            snap.hasAmmo = true;
+            snap.ammoCategory = PlayerReviveWeaponSnapshot.AmmoCategory.AR;
+            snap.magazine = arSnap.magazine;
+            snap.reserve = arSnap.reserve;
+        }
+        else if (CurrentWeaponData is WeaponDataSO_Shotgun sg && sg.usesAmmo &&
+                 shotgunAmmoSnapshots.TryGetValue(sg, out AmmoSnapshot sgSnap))
+        {
+            snap.hasAmmo = true;
+            snap.ammoCategory = PlayerReviveWeaponSnapshot.AmmoCategory.Shotgun;
+            snap.magazine = sgSnap.magazine;
+            snap.reserve = sgSnap.reserve;
+        }
+
+        return snap;
+    }
+
+    /// <summary>부활 후 죽기 직전 무기·탄약 상태를 복원합니다.</summary>
+    public void ApplyReviveWeaponSnapshot(PlayerReviveWeaponSnapshot snap, Transform playerRoot)
+    {
+        if (!snap.HasWeapon)
+        {
+            EquipDefault(playerRoot);
+            return;
+        }
+
+        if (snap.hasAmmo)
+        {
+            switch (snap.ammoCategory)
+            {
+                case PlayerReviveWeaponSnapshot.AmmoCategory.Gun when snap.weaponData is WeaponDataSO_Gun gun:
+                    gunAmmoSnapshots[gun] = new AmmoSnapshot { magazine = snap.magazine, reserve = snap.reserve };
+                    break;
+                case PlayerReviveWeaponSnapshot.AmmoCategory.AR when snap.weaponData is WeaponDataSO_AR ar:
+                    arAmmoSnapshots[ar] = new AmmoSnapshot { magazine = snap.magazine, reserve = snap.reserve };
+                    break;
+                case PlayerReviveWeaponSnapshot.AmmoCategory.Shotgun when snap.weaponData is WeaponDataSO_Shotgun shotgun:
+                    shotgunAmmoSnapshots[shotgun] = new AmmoSnapshot { magazine = snap.magazine, reserve = snap.reserve };
+                    break;
+            }
+        }
+
+        EquipByData(snap.weaponData, playerRoot, debugLogs: false);
+    }
+
+    /// <summary>무기 분리 슬라이스 후 시체 참조만 끊습니다 (분리된 무기 오브젝트는 Destroy하지 않음).</summary>
+    public void ReleaseCorpseWeaponReferencesAfterSlice()
+    {
+        UnsubscribeCurrentAmmo();
+        CurrentWeapon = null;
+        SecondaryWeapon = null;
+        WeaponBehavior = null;
     }
 
     public void Unequip()

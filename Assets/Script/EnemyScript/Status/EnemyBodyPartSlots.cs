@@ -255,7 +255,13 @@ public class EnemyBodyPartSlots : MonoBehaviour
 #if UNITY_EDITOR
         if (isEditorPreview)
         {
-            var instance = UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
+            GameObject instance;
+            // Prefab Asset / Prefab Mode: 부모가 에셋이면 InstantiatePrefab(parent) 불가
+            if (UnityEditor.PrefabUtility.IsPartOfPrefabAsset(parent))
+                instance = Object.Instantiate(prefab, parent);
+            else
+                instance = UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
+
             if (instance == null) return null;
 
             instance.name = prefab.name;

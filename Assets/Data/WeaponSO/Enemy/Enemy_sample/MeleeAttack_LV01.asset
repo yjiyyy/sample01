@@ -19,7 +19,8 @@ MonoBehaviour:
   range: 1
   cooldown: 3
   attackTime: 0.7
-  clip: {fileID: 7400000, guid: ac8903a0dce77ef4590afb0242e5093d, type: 2}
+  variantClips:
+  - {fileID: 7400000, guid: ac8903a0dce77ef4590afb0242e5093d, type: 2}
   hitboxSpawnDelay: 0.2
   hitBoxLifetime: 0.1
   attackFXPhases: []

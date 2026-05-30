@@ -542,6 +542,7 @@ public static class EnemyPrefabGenerator
             joint.enableProjection = true;
         }
 
+        RagdollAttachmentBoneBuilder.Build(animator.transform, boneToRb, settings, "[EnemyPrefabGenerator]");
         SetRagdollBonesLayer(root, boneToRb.Keys);
         SetEnemyDieHipsBody(root, hipsTr, boneToRb);
     }
@@ -674,6 +675,7 @@ public static class EnemyPrefabGenerator
             joint.enableProjection = true;
         }
 
+        RagdollAttachmentBoneBuilder.Build(modelRoot, boneToRb, settings, "[EnemyPrefabGenerator]");
         SetRagdollBonesLayer(root, boneToRb.Keys);
         SetEnemyDieHipsBody(root, bones["Pelvis"], boneToRb);
         Debug.Log($"[EnemyPrefabGenerator] BIP 랙돌 생성 완료 (본 수={count})");

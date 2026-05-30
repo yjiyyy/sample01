@@ -14,9 +14,9 @@ using UnityEngine;
 /// 
 /// [Parts System]
 /// - Awake/Die() 시점에 EnemyFacade.SpawnedParts에서 파츠 Rigidbody/Collider 수집. 
-/// - 평소:  파츠는 "Parts" 레이어, Rigidbody kinematic, Collider disabled. 
-/// - 죽을 때: 파츠를 부모에서 분리(SetParent(null)), "Ragdoll" 레이어로 변경, 
-///   Rigidbody non-kinematic, Collider enabled, 타격 방향으로 sliceImpulse 적용.
+/// - 평소:  파츠는 "Parts" 레이어, Rigidbody kinematic, DieCollider/Trigger disabled. 
+/// - 죽을 때: 파츠를 부모에서 분리(SetParent(null)), 레이어 Parts 유지,
+///   DieCollider만 enabled, sliceImpulse 적용. 몸통 뼈는 Ragdoll 레이어.
 /// </summary>
 [DisallowMultipleComponent]
 public class EnemyDie : MonoBehaviour
@@ -53,6 +53,8 @@ public class EnemyDie : MonoBehaviour
     private bool initialized;
     private const float DESTROY_DELAY = 7f;
 
+    private readonly HashSet<Rigidbody> attachmentSlicedBodies = new HashSet<Rigidbody>();
+
     private const string kHeadName = "Bip001 Head";
     private const string kLeftArmName = "Bip001 L UpperArm";
     private const string kRightArmName = "Bip001 R UpperArm";
@@ -78,6 +80,15 @@ public class EnemyDie : MonoBehaviour
         CollectRagdollParts();
         CollectPartRigidbodies(); // 첫 시도 (파츠가 없을 수 있음)
         InitializeRagdollOff();
+    }
+
+    /// <summary>EnemyFacade가 파츠 생성 후 호출. 랙돌 본/파츠 목록 재수집.</summary>
+    public void RefreshRagdollFromHierarchy()
+    {
+        CollectRagdollParts();
+        CollectPartRigidbodies();
+        if (initialized)
+            InitializeRagdollOff();
     }
 
     private void CollectRagdollParts()
@@ -123,6 +134,7 @@ public class EnemyDie : MonoBehaviour
             if (col == null) continue;
             if (excludeRoot != null && col.transform == excludeRoot) continue;
             if (col == rootCollider) continue;
+            if (col.isTrigger || DieColliderUtility.IsDieCollider(col)) continue;
             ragdollColliders.Add(col);
         }
     }
@@ -160,10 +172,8 @@ public class EnemyDie : MonoBehaviour
                 Collider[] cols = partObj.GetComponentsInChildren<Collider>(true);
                 foreach (var col in cols)
                 {
-                    if (col != null)
-                    {
+                    if (col != null && !col.isTrigger && !DieColliderUtility.IsDieCollider(col))
                         partColliders.Add(col);
-                    }
                 }
 
                 Debug.Log($"[EnemyDie] Collected part:  '{partObj.name}' (Rigidbody: 1, Colliders: {cols.Length})");
@@ -208,10 +218,10 @@ public class EnemyDie : MonoBehaviour
         }
 
         int disabledColCount = 0;
-        foreach (var partCol in partColliders)
+        foreach (var partObj in partGameObjects)
         {
-            if (partCol == null) continue;
-            partCol.enabled = false;
+            if (partObj == null) continue;
+            DieColliderUtility.DisablePartCollidersForLife(partObj.transform);
             disabledColCount++;
         }
 
@@ -272,20 +282,23 @@ public class EnemyDie : MonoBehaviour
             }
 
             int disabledColCount = 0;
-            foreach (var partCol in partColliders)
+            foreach (var partObj in partGameObjects)
             {
-                if (partCol == null) continue;
-                partCol.enabled = false;
+                if (partObj == null) continue;
+                DieColliderUtility.DisablePartCollidersForLife(partObj.transform);
                 disabledColCount++;
             }
 
-            Debug.Log($"[EnemyDie] Die(): Part Rigidbodies set kinematic: {disabledRbCount}, Colliders disabled: {disabledColCount}");
+            Debug.Log($"[EnemyDie] Die(): Part Rigidbodies set kinematic: {disabledRbCount}, Parts colliders disabled: {disabledColCount}");
         }
 
         if (!initialized) { CollectRagdollParts(); InitializeRagdollOff(); }
 
         var mode = weapon != null ? weapon.deathMode : DeathMode.Animation;
         bool doSlice = weapon != null && weapon.sliceTargets != null && weapon.sliceTargets.Count > 0;
+        bool keepAnimatorForAttachmentSlice = mode == DeathMode.Animation;
+
+        PerformAlwaysSliceAttachmentBones(hitDir, weapon, impactScale, keepAnimatorForAttachmentSlice);
 
         if (mode == DeathMode.Animation)
         {
@@ -334,15 +347,33 @@ public class EnemyDie : MonoBehaviour
         // Parts System: 파츠 분리 + Ragdoll 활성화
         SeparateAndActivateParts(hitDir, weapon, impactScale);
 
-        ApplyGlobalImpulseAndSpin(ragdollBodies, hitDir, weapon, impactScale);
+        ApplyGlobalImpulseAndSpin(FilterBodiesForGlobalImpulse(ragdollBodies), hitDir, weapon, impactScale);
+    }
+
+    private List<Rigidbody> FilterBodiesForGlobalImpulse(List<Rigidbody> source)
+    {
+        return AttachmentBoneDeathSlice.FilterForGlobalImpulse(source, attachmentSlicedBodies);
+    }
+
+    private bool IsPartOnAlwaysSliceBone(GameObject partObj)
+    {
+        return AttachmentBoneDeathSlice.IsUnderAttachmentBone(partObj != null ? partObj.transform : null, transform);
     }
 
     /// <summary>
-    /// Parts System: 파츠를 부모에서 분리하고 Ragdoll 활성화. 
-    /// - 부모에서 분리 (SetParent(null))
-    /// - 레이어를 "Ragdoll"로 변경
-    /// - Rigidbody non-kinematic, Collider enabled
-    /// - 타격 방향으로 sliceImpulse 적용
+    /// 무기/소품 소켓 3본: 모든 죽음 연출에서 분리, sliceImpulse 적용.
+    /// </summary>
+    private void PerformAlwaysSliceAttachmentBones(Vector3 hitDir, WeaponDataSO weapon, float impactScale, bool keepAnimator)
+    {
+        var result = AttachmentBoneDeathSlice.Perform(
+            transform, transform, animator, rootRb, ragdollBodies,
+            hitDir, weapon, impactScale, keepAnimator, this, DESTROY_DELAY, "EnemyDie");
+        foreach (var rb in result.SlicedBodies)
+            attachmentSlicedBodies.Add(rb);
+    }
+
+    /// <summary>
+    /// Parts System: 파츠를 부모에서 분리. 레이어 Parts 유지, DieCollider만 활성화.
     /// </summary>
     private void SeparateAndActivateParts(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
     {
@@ -352,12 +383,7 @@ public class EnemyDie : MonoBehaviour
             return;
         }
 
-        int ragdollLayer = LayerMask.NameToLayer("Ragdoll");
-        if (ragdollLayer == -1)
-        {
-            Debug.LogWarning("[EnemyDie] 'Ragdoll' layer not found!  Parts will keep their original layer.");
-            ragdollLayer = 0;
-        }
+        int partsLayer = DieColliderUtility.PartsLayer;
 
         // ★ weapon이 null이면 기본값 5.0f 사용 ★
         float sImpulseBase = (weapon != null ? weapon.sliceImpulse : 5.0f);
@@ -374,6 +400,12 @@ public class EnemyDie : MonoBehaviour
             GameObject partObj = partGameObjects[i];
             if (partObj == null) continue;
 
+            if (IsPartOnAlwaysSliceBone(partObj))
+            {
+                Debug.Log($"[EnemyDie] Skipping part '{partObj.name}' — handled by always-slice bone.");
+                continue;
+            }
+
             Rigidbody partRb = partRigidbodies[i];
             if (partRb == null) continue;
 
@@ -389,20 +421,16 @@ public class EnemyDie : MonoBehaviour
             partObj.transform.position = worldPos;
             partObj.transform.rotation = worldRot;
 
-            // 4. 레이어 변경 (재귀적으로 자식도)
-            SetLayerRecursively(partObj, ragdollLayer);
+            // 4. Parts 레이어 유지
+            DieColliderUtility.SetLayerRecursively(partObj.transform, partsLayer);
 
             // 5. Rigidbody 활성화
             partRb.isKinematic = false;
             partRb.useGravity = true;
             partRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
-            // 6. Collider 활성화
-            Collider[] cols = partObj.GetComponentsInChildren<Collider>(true);
-            foreach (var col in cols)
-            {
-                if (col != null) col.enabled = true;
-            }
+            // 6. DieCollider만 활성화 (공격 Trigger 제외)
+            DieColliderUtility.SetDieCollidersEnabled(partObj.transform, true);
 
             // 7. Impulse 적용
             if (sImpulse > 0f && dir.sqrMagnitude > 0f)
@@ -417,25 +445,10 @@ public class EnemyDie : MonoBehaviour
             // 8. 7초 후 파괴
             Destroy(partObj, DESTROY_DELAY);
 
-            Debug.Log($"[EnemyDie] Separated part:  '{partObj.name}' (Layer: {LayerMask.LayerToName(ragdollLayer)}, Impulse: {sImpulse:F2})");
+            Debug.Log($"[EnemyDie] Separated part:  '{partObj.name}' (Layer: {LayerMask.LayerToName(partsLayer)}, Impulse: {sImpulse:F2})");
         }
 
         Debug.Log($"[EnemyDie] Total parts separated: {partGameObjects.Count}");
-    }
-
-    /// <summary>
-    /// GameObject와 모든 자식의 레이어를 재귀적으로 변경. 
-    /// </summary>
-    private void SetLayerRecursively(GameObject obj, int layer)
-    {
-        if (obj == null) return;
-        obj.layer = layer;
-
-        foreach (Transform child in obj.transform)
-        {
-            if (child != null)
-                SetLayerRecursively(child.gameObject, layer);
-        }
     }
 
     private void PerformSliceWithSelectiveGlobalImpulse(Vector3 hitDir, WeaponDataSO weapon, float impactScale)
@@ -446,7 +459,7 @@ public class EnemyDie : MonoBehaviour
         foreach (var rb in ragdollBodies) { if (rb != null) rb.isKinematic = false; }
         foreach (var col in ragdollColliders) { if (col != null) col.enabled = true; }
 
-        // Parts System: 파츠 분리 + Ragdoll 활성화
+        // Parts System: 파츠 분리 + DieCollider 활성화
         SeparateAndActivateParts(hitDir, weapon, impactScale);
 
         SliceTarget target = ChooseSliceTarget(weapon.sliceTargets);
@@ -476,7 +489,7 @@ public class EnemyDie : MonoBehaviour
 
         if (sliceRoots.Count == 0)
         {
-            ApplyGlobalImpulseAndSpin(ragdollBodies, hitDir, weapon, impactScale);
+            ApplyGlobalImpulseAndSpin(FilterBodiesForGlobalImpulse(ragdollBodies), hitDir, weapon, impactScale);
             return;
         }
 
@@ -566,7 +579,7 @@ public class EnemyDie : MonoBehaviour
 
         if (nonSliced.Count > 0)
         {
-            ApplyGlobalImpulseAndSpin(nonSliced, hitDir, weapon, impactScale);
+            ApplyGlobalImpulseAndSpin(FilterBodiesForGlobalImpulse(nonSliced), hitDir, weapon, impactScale);
         }
     }
 

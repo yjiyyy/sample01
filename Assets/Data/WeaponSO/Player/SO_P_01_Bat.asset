@@ -24,7 +24,7 @@ MonoBehaviour:
   attackAnimVariantCount: 3
   attackVariantHandModes: 
   cooldown: 1
-  damage: 10
+  damage: 150
   range: 2.5
   staminaCost: 0
   hitboxSpawnDelay: 0.1
@@ -43,12 +43,12 @@ MonoBehaviour:
   targetAnimationHoldDuration: 0.2
   attackerStateHoldDuration: 0.1
   attackerAnimationHoldDuration: 0.1
-  deathMode: 1
+  deathMode: 0
   ragdollImpulse: 10
   ragdollUpImpulse: 7
   ragdollSpinTorque: 10000
-  sliceTargets: 0000000001000000020000000400000003000000
-  sliceImpulse: 10
+  sliceTargets: 
+  sliceImpulse: 30
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}
   recoilStartDelay: 0

@@ -18,8 +18,9 @@ public class MeleeAttackData : ScriptableObject
     [Tooltip("공격 모션 시간. 0 이하이면 컨트롤러 fallback 사용.")]
     public float attackTime = 0f;
 
-    [Header("애니메이션 클립 (선택)")]
-    public AnimationClip clip;
+    [Header("애니메이션 클립")]
+    [Tooltip("공격 모션 후보. 1개면 고정, 2개 이상이면 매 공격마다 그중 하나를 랜덤 재생합니다.")]
+    public List<AnimationClip> variantClips = new List<AnimationClip>();
 
     [Header("히트박스 타이밍 및 지속")]
     public float hitboxSpawnDelay = 0f;
@@ -62,7 +63,7 @@ public class MeleeAttackData : ScriptableObject
     public float sliceImpulse = 0f;
 
     [Header("독 (플레이어)")]
-    [Tooltip("독 공격으로 처리합니다(배리어 우회 등). PoisonStatusConfig를 지정하면 자동으로 켜집니다.")]
+    [Tooltip("true일 때만 독 공격으로 처리합니다(배리어 우회 등). false이면 Poison On Hit Status가 있어도 적용되지 않습니다.")]
     public bool isPoisonAttack;
     [Tooltip("맞을 때 플레이어 중독 상태를 갱신할 설정. 비우면 독 규칙만 적용되고 중독 틱·연출은 없습니다.")]
     public PoisonStatusConfigSO poisonOnHitStatus;
@@ -92,6 +93,44 @@ public class MeleeAttackData : ScriptableObject
     // 단일 커스텀 필드: 애니메이션 시작 기준으로 몇 초 후에 힘을 적용할지(0이면 즉시)
     [Tooltip("애니메이션 시작 기준으로 힘을 적용할 시간(초). 0이면 즉시 적용.")]
     public float forceApplyTime = 0f;
+
+    /// <summary>
+    /// variantClips에 등록된 클립 중 하나를 랜덤 선택. 없으면 null.
+    /// </summary>
+    public AnimationClip PickRandomVariantClip()
+    {
+        if (variantClips == null || variantClips.Count == 0)
+            return null;
+
+        int validCount = 0;
+        for (int i = 0; i < variantClips.Count; i++)
+        {
+            if (variantClips[i] != null)
+                validCount++;
+        }
+
+        if (validCount == 0)
+            return null;
+
+        if (validCount == 1)
+        {
+            for (int i = 0; i < variantClips.Count; i++)
+            {
+                if (variantClips[i] != null)
+                    return variantClips[i];
+            }
+        }
+
+        int pick = Random.Range(0, validCount);
+        for (int i = 0; i < variantClips.Count; i++)
+        {
+            if (variantClips[i] == null) continue;
+            if (pick == 0) return variantClips[i];
+            pick--;
+        }
+
+        return null;
+    }
 
     private void OnValidate()
     {

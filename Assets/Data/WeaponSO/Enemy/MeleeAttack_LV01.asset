@@ -18,9 +18,11 @@ MonoBehaviour:
   damage: 150
   range: 1
   cooldown: 0
-  attackTime: 0.8
-  clip: {fileID: 1827226128182048838, guid: ba08b59e514e8fb48965ea1fc597534c, type: 3}
-  hitboxSpawnDelay: 0.3
+  attackTime: 1.5
+  variantClips:
+  - {fileID: 1827226128182048838, guid: a0907f69574492244a3fcd4129ad4278, type: 3}
+  - {fileID: 1827226128182048838, guid: 9f2a5c2164cacdf449c4dbc962ba6733, type: 3}
+  hitboxSpawnDelay: 1
   hitBoxLifetime: 0.1
   attackFXPhases: []
   attachHitboxToEnemy: 0
@@ -36,8 +38,8 @@ MonoBehaviour:
   ragdollImpulse: 5
   ragdollUpImpulse: 10
   ragdollSpinTorque: 500
-  sliceTargets: 04000000
-  sliceImpulse: 7
+  sliceTargets: 
+  sliceImpulse: 12
   isPoisonAttack: 0
   poisonOnHitStatus: {fileID: 11400000, guid: c3d4e5f60718293a4b5c6d7e8f901234, type: 2}
   isMovingAttack: 0

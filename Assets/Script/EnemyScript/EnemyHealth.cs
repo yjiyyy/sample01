@@ -98,7 +98,7 @@ public class EnemyHealth : MonoBehaviour
 
         if (amount <= 0f)
         {
-            if (weapon != null && weapon.poisonOnHitStatus != null)
+            if (weapon != null && weapon.isPoisonAttack && weapon.poisonOnHitStatus != null)
                 ApplyPoisonStatus(weapon.poisonOnHitStatus);
             return;
         }
@@ -106,7 +106,7 @@ public class EnemyHealth : MonoBehaviour
         WeaponDataSO.TrySpawnHitEffectAt(weapon, hitPoint);
 
         float remaining = amount;
-        bool poisonHit = weapon != null && (weapon.isPoisonAttack || weapon.poisonOnHitStatus != null);
+        bool poisonHit = weapon != null && weapon.isPoisonAttack;
         bool bypassShield = poisonHit;
 
         // Shield absorption (when not shield broken). 독 피해는 실드를 우회해 HP에만 적용.

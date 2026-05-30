@@ -216,6 +216,22 @@ MonoBehaviour:
     localPosition: {x: 0, y: -0.1, z: -0.035}
     localEulerAngles: {x: 0, y: 90, z: 340}
   bloodGushPrefab: {fileID: 2174314246831670090, guid: dd29497a8a22e0d46a7b9f8432a5a107, type: 3}
+  attachmentBones:
+  - boneName: R_Hand_Weapon
+    jointConnectedBone: Bip001 R Hand
+    mass: 1
+    drag: 0
+    angularDrag: 0.05
+  - boneName: L_Hand_Weapon
+    jointConnectedBone: Bip001 L Hand
+    mass: 1
+    drag: 0
+    angularDrag: 0.05
+  - boneName: Bip001 Prop3
+    jointConnectedBone: Bip001
+    mass: 1
+    drag: 0
+    angularDrag: 0.05
   pelvis: Bip001
   leftHips: Bip001 L Thigh
   leftKnee: Bip001 L Calf

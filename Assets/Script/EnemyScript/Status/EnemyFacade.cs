@@ -70,6 +70,7 @@ public class EnemyFacade : MonoBehaviour
         if (Application.isPlaying && config != null)
         {
             SpawnParts();
+            GetComponent<EnemyDie>()?.RefreshRagdollFromHierarchy();
         }
     }
 
@@ -272,14 +273,19 @@ public class EnemyFacade : MonoBehaviour
 #endif
         }
 
-        // 7) Animator override
+        // 7) Animator override (E_Animator 베이스 → Config AOC)
         var animator = GetComponent<Animator>();
         if (animator != null && config.overrideController != null)
         {
+            if (Application.isPlaying)
+            {
+                animator.runtimeAnimatorController = config.overrideController;
+            }
 #if UNITY_EDITOR
-            TrySetSerializedObjectField(animator, "runtimeAnimatorController", config.overrideController);
-#else
-            animator.runtimeAnimatorController = config.overrideController;
+            else
+            {
+                TrySetSerializedObjectField(animator, "m_Controller", config.overrideController);
+            }
 #endif
         }
 
@@ -305,6 +311,10 @@ public class EnemyFacade : MonoBehaviour
         }
 
         appliedOnce = true;
+
+        var dieCtrl = GetComponent<EnemyDie>();
+        dieCtrl?.RefreshRagdollFromHierarchy();
+
         if (Application.isPlaying)
             Debug.Log($"[EnemyFacade] Applied config '{config.displayName}' to '{gameObject.name}'.");
 #if UNITY_EDITOR
@@ -376,7 +386,6 @@ public class EnemyFacade : MonoBehaviour
         if (partObj == null) return;
 
         int rbCount = 0;
-        int colCount = 0;
 
         // Rigidbody 초기화 (루트)
         Rigidbody partRb = partObj.GetComponent<Rigidbody>();
@@ -388,18 +397,11 @@ public class EnemyFacade : MonoBehaviour
             rbCount++;
         }
 
-        // Collider 초기화 (루트 + 자식 모두)
-        Collider[] colliders = partObj.GetComponentsInChildren<Collider>(true);
-        foreach (var col in colliders)
-        {
-            if (col != null)
-            {
-                col.enabled = false;
-                colCount++;
-            }
-        }
+        // Collider: DieCollider + 공격 Trigger만 평소 비활성, 레이어 Parts
+        DieColliderUtility.ApplyPartsLayer(partObj.transform);
+        DieColliderUtility.DisablePartCollidersForLife(partObj.transform);
 
-        Debug.Log($"[EnemyFacade] InitializePartPhysics: '{partObj.name}' - Rigidbody kinematic: {rbCount}, Colliders disabled: {colCount}");
+        Debug.Log($"[EnemyFacade] InitializePartPhysics: '{partObj.name}' - Rigidbody kinematic: {rbCount}");
     }
 
     /// <summary>

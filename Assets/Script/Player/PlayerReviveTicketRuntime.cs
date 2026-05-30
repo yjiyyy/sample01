@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -24,7 +25,27 @@ public class PlayerReviveTicketRuntime : MonoBehaviour
             upgrade = GetComponentInParent<Upgrade>();
     }
 
-    public bool TryHandleDeath(PlayerHealth playerHealth, Vector3 hitDir, WeaponDataSO weapon, float impactScale)
+    public bool HasReviveTicket()
+    {
+        if (upgrade == null || revivePending)
+            return false;
+
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            if (upgrade.GetSlot(i) is Upgrade_06_01_ReviveTicket)
+                return true;
+        }
+
+        return false;
+    }
+
+    public bool TryHandleDeath(
+        PlayerHealth playerHealth,
+        Vector3 hitDir,
+        WeaponDataSO weapon,
+        float impactScale,
+        PlayerReviveWeaponSnapshot weaponSnapshot,
+        IReadOnlyList<GameObject> slicedAttachmentRoots)
     {
         if (playerHealth == null || revivePending)
             return revivePending;
@@ -59,12 +80,6 @@ public class PlayerReviveTicketRuntime : MonoBehaviour
         Transform corpseRoot = playerHealth.transform.root;
         Vector3 deathPos = corpseRoot.position;
 
-        if (InputManager.Instance != null)
-        {
-            InputManager.SetPlayerDeathBlock(true);
-            InputManager.Instance.ClearPlayerInput();
-        }
-
         EnsureUpgradeHud();
         if (!PlaySlotConsumeFx(ticket, slotIndex))
         {
@@ -86,9 +101,8 @@ public class PlayerReviveTicketRuntime : MonoBehaviour
             return false;
         }
 
-        // 시체는 남겨두고, 리스폰 시점에 제거합니다.
-        playerHealth.EnterReviveWaitingState();
-        spawnManager.ScheduleRevive(ticket, deathPos, preservedSlots, corpseRoot);
+        // Die()에서 일반 사망과 동일한 연출(랙돌/슬라이스/애니)이 끝난 뒤, 시체만 남겨 부활을 예약합니다.
+        spawnManager.ScheduleRevive(ticket, deathPos, preservedSlots, corpseRoot, weaponSnapshot, slicedAttachmentRoots);
         StartCoroutine(ClearSlotAfterDelay(slotIndex, Mathf.Max(0f, ticket.respawnDelaySeconds)));
 
         if (enableDebugLog)

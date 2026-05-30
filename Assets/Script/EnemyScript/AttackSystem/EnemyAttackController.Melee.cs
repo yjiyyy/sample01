@@ -17,6 +17,7 @@ public partial class EnemyAttackController
     private Coroutine meleeHitDelayRoutine;
     private Coroutine meleeMoveRoutine;
     private Coroutine attackHitDeferredRoutine;
+    private AnimationClip meleeSelectedClip;
 
     // --- Combo / override helpers ---
     // When true, FinishMelee will NOT apply per-attack cooldown. Used by combo mode.
@@ -291,6 +292,8 @@ public partial class EnemyAttackController
             AttackFXEntry.ScheduleAttackFX(this, fxList, ResolveEnemyAttackFXEntry, IsHold);
         }
 
+        meleeSelectedClip = data.PickRandomVariantClip();
+
         meleeRequestedDuration = data.attackTime > 0f ? data.attackTime : 0.8f;
         meleeClipLength = GetMeleeClipLength(data);
         meleeElapsed = 0f;
@@ -318,8 +321,8 @@ public partial class EnemyAttackController
             SafeSetBool("IsRushPrepare", false);
             enemy.animator.speed = 1f;
 
-            if (data.clip != null)
-                enemy.animator.Play(data.clip.name, 0, 0f);
+            if (meleeSelectedClip != null)
+                enemy.animator.Play(meleeSelectedClip.name, 0, 0f);
             else
                 enemy.animator.Play(data.attackName, 0, 0f);
 
@@ -340,12 +343,13 @@ public partial class EnemyAttackController
             meleeMoveRoutine = StartCoroutine(MeleeMovingRoutine(data));
         }
 
-        Log($"MELEE START idx={index} req={meleeRequestedDuration:F3}s clip={meleeClipLength:F3}s freeze={(meleeWillFreeze ? "Y" : "N")}, hitDelay={data.hitboxSpawnDelay:F3}s");
+        string clipLabel = meleeSelectedClip != null ? meleeSelectedClip.name : data.attackName;
+        Log($"MELEE START idx={index} anim={clipLabel} req={meleeRequestedDuration:F3}s clipLen={meleeClipLength:F3}s freeze={(meleeWillFreeze ? "Y" : "N")}, hitDelay={data.hitboxSpawnDelay:F3}s");
     }
 
     private float GetMeleeClipLength(MeleeAttackData data)
     {
-        if (data.clip != null) return data.clip.length;
+        if (meleeSelectedClip != null) return meleeSelectedClip.length;
         if (enemy?.animator?.runtimeAnimatorController != null)
         {
             var clips = enemy.animator.runtimeAnimatorController.animationClips;
@@ -400,6 +404,7 @@ public partial class EnemyAttackController
 
         currentAttack = null;
         currentAttackIndex = -1;
+        meleeSelectedClip = null;
         meleeHitboxSpawned = false;
         meleeWillFreeze = false;
         meleeFrozenApplied = false;

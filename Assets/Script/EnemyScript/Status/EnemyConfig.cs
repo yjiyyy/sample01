@@ -167,5 +167,14 @@ public class EnemyConfig : ScriptableObject
                     partSlots[i] = new EnemyPartSlot();
             }
         }
+
+        if (partSlots != null)
+        {
+            for (int i = 0; i < partSlots.Length; i++)
+            {
+                if (partSlots[i] == null)
+                    partSlots[i] = new EnemyPartSlot();
+            }
+        }
     }
 }
