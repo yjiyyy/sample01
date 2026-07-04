@@ -333,6 +333,7 @@ GameObject:
   - component: {fileID: 6740595882722350854}
   - component: {fileID: 8755868324322052401}
   - component: {fileID: 3856160886756817972}
+  - component: {fileID: -6021863096959980972}
   m_Layer: 7
   m_Name: PC_F_Fat_Skin
   m_TagString: Enemy
@@ -607,12 +608,24 @@ MonoBehaviour:
   headPartPrefab: {fileID: 2802387193775170961, guid: 12ea92c8ea2e0c64ea0bd25b5a27f28d, type: 3}
   hairPartPrefab: {fileID: 4148957149732144116, guid: bcb58a3fabaa82546a956b2fc0dfce83, type: 3}
   partsScale: 1
-  bodySkinMaterial: {fileID: 0}
+  bodySkinMaterial: {fileID: 2100000, guid: 6da517d0addfedb40999e81d49e23aec, type: 2}
   applyBodySkinTint: 1
-  bodySkinColor: {r: 0.9411765, g: 0.81960785, b: 0.69803923, a: 1}
-  skinMaskTexture: {fileID: 0}
+  bodySkinColor: {r: 0.2627451, g: 0.11372549, b: 0, a: 1}
+  skinMaskTexture: {fileID: 2800000, guid: 8f894c1508fbcb44e874d970b431cd01, type: 3}
   maskBakeColorThreshold: 0.15
   previewInEditor: 1
+--- !u!114 &-6021863096959980972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7512254375196626866}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1808e2217baa1f4c89b0eff74f7b883, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7512910613083388698
 GameObject:
   m_ObjectHideFlags: 0
@@ -704,6 +717,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: -6670977698611750003, guid: a800ee3f955cd8d4b956aadf53e184f2, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: a780f8f09ce1fca4da8a1d896aa4725d, type: 2}
     - target: {fileID: -5596330547777284101, guid: a800ee3f955cd8d4b956aadf53e184f2, type: 3}
       propertyPath: m_Layer
       value: 9
@@ -740,6 +757,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: 1074015364784313153, guid: a800ee3f955cd8d4b956aadf53e184f2, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: a780f8f09ce1fca4da8a1d896aa4725d, type: 2}
     - target: {fileID: 2947578085842236503, guid: a800ee3f955cd8d4b956aadf53e184f2, type: 3}
       propertyPath: m_Layer
       value: 9
@@ -756,6 +777,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
+    - target: {fileID: 7645049906934609855, guid: a800ee3f955cd8d4b956aadf53e184f2, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: a780f8f09ce1fca4da8a1d896aa4725d, type: 2}
     - target: {fileID: 7706553021220353082, guid: a800ee3f955cd8d4b956aadf53e184f2, type: 3}
       propertyPath: m_Layer
       value: 9

@@ -210,6 +210,7 @@ public class EnemyFacade : MonoBehaviour
             ok |= TrySetSerializedFloat(aiComp, "peaceMoveSpeedMultiplier", config.peaceMoveSpeedMultiplier);
             ok |= TrySetSerializedFloat(aiComp, "idleMin", config.idleMin);
             ok |= TrySetSerializedFloat(aiComp, "idleMax", config.idleMax);
+            ok |= TrySetSerializedEnum(aiComp, "chaseTrackingMode", config.chaseTrackingMode);
             if (!ok)
                 Debug.LogWarning($"[EnemyFacade] EnemyAI present but some AI fields were not found on '{aiComp.GetType().Name}'.");
 #else
@@ -222,6 +223,7 @@ public class EnemyFacade : MonoBehaviour
             TrySetPublicPropertyOrField(aiComp, "peaceMoveSpeedMultiplier", config.peaceMoveSpeedMultiplier);
             TrySetPublicPropertyOrField(aiComp, "idleMin", config.idleMin);
             TrySetPublicPropertyOrField(aiComp, "idleMax", config.idleMax);
+            TrySetPublicPropertyOrField(aiComp, "chaseTrackingMode", config.chaseTrackingMode);
 #endif
         }
 
@@ -504,6 +506,20 @@ public class EnemyFacade : MonoBehaviour
                 prop.floatValue = value;
             else
                 prop.intValue = Mathf.RoundToInt(value);
+            so.ApplyModifiedProperties();
+            return true;
+        }
+        return false;
+    }
+
+    private bool TrySetSerializedEnum<TEnum>(Component comp, string propName, TEnum value) where TEnum : struct, Enum
+    {
+        if (comp == null) return false;
+        var so = new SerializedObject(comp);
+        var prop = so.FindProperty(propName) ?? so.FindProperty("m_" + propName);
+        if (prop != null && prop.propertyType == SerializedPropertyType.Enum)
+        {
+            prop.enumValueIndex = Convert.ToInt32(value);
             so.ApplyModifiedProperties();
             return true;
         }

@@ -33,6 +33,12 @@ public class LoadSceneOnClick : MonoBehaviour
             return;
         }
 
+        if (StageSceneNames.IsStageEnvironmentScene(targetSceneName))
+        {
+            StageSceneLoader.LoadStage(targetSceneName);
+            return;
+        }
+
         SceneManager.LoadScene(targetSceneName);
     }
 

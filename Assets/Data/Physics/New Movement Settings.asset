@@ -12,35 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5a35d87c08127df4e84f237bf0184f12, type: 3}
   m_Name: New Movement Settings
   m_EditorClassIdentifier: 
-  headMask:
+  groundMask:
     serializedVersion: 2
-    m_Bits: 8192
-  headPortion: 0.4
-  headMargin: 0.02
-  headClampIterations: 1
-  obstacleMask:
+    m_Bits: 1024
+  blockMask:
     serializedVersion: 2
-    m_Bits: 4096
-  floorMask:
-    serializedVersion: 2
-    m_Bits: 8192
-  movementBlockMask_fallback:
-    serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 20480
   collisionSkin: 0.02
-  floorThreshold: 0.75
+  floorSlopeThreshold: 0.5
   slideIterations: 0
-  tinyDispThreshold: 0.02
-  maxStepHeight: 0.6
+  tinyMoveThreshold: 0.002
+  maxStepHeight: 0.3
   stepSearchIterations: 1
   floorCheckDepth: 0.15
   minStepProbeDistance: 0.15
-  overlapIterations: 1
-  minFactorThreshold: 0.05
-  strictHeadroomBlock: 1
-  pushableMassMultiplier: 1
-  pushImpulseFactor: 0.5
-  crowdMassThresholdMultiplier: 1.2
-  crowdCountThreshold: 3
-  enableGizmos: 0
   overlapBufferSize: 4

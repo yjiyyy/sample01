@@ -233,31 +233,15 @@ public class EnemyDie : MonoBehaviour
     private void TryDropItems()
     {
         var facade = GetComponent<EnemyFacade>();
-        if (facade == null || facade.config == null || facade.config.dropEntries == null) return;
+        if (facade == null || facade.config == null) return;
 
         var cfg = facade.config;
-        int totalSlots = Mathf.Clamp(Random.Range(cfg.totalDropCountMin, cfg.totalDropCountMax + 1), 0, 99);
-        if (totalSlots <= 0) return;
-
-        Vector3 dropPos = transform.position + Vector3.up * 0.3f;
-
-        for (int slot = 0; slot < totalSlots; slot++)
-        {
-            foreach (var entry in cfg.dropEntries)
-            {
-                if (entry == null || entry.itemPrefab == null) continue;
-                if (entry.dropChance <= 0f || Random.value > entry.dropChance) continue;
-
-                Vector3 offset = new Vector3(Random.Range(-0.2f, 0.2f), 0f, Random.Range(-0.2f, 0.2f));
-                GameObject go = Instantiate(entry.itemPrefab, dropPos + offset, Quaternion.identity);
-
-                var arc = go.AddComponent<ItemDropArc>();
-                float up = Random.Range(5.5f, 8f);
-                float outMag = Random.Range(0.8f, 1.5f);
-                Vector3 vel = Vector3.up * up + new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f)).normalized * outMag;
-                arc.StartArc(vel, cfg.dropGroundLayerMask);
-            }
-        }
+        ItemDropSpawner.DropItems(
+            transform.position,
+            cfg.totalDropCountMin,
+            cfg.totalDropCountMax,
+            cfg.dropEntries,
+            cfg.dropGroundLayerMask);
     }
 
     public void Die(Vector3 hitDir, WeaponDataSO weapon, float impactScale)

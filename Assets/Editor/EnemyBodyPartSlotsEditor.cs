@@ -72,18 +72,37 @@ public class EnemyBodyPartSlotsEditor : Editor
         }
 
         EditorGUILayout.HelpBox(
-            "Play 전 Scene/Prefab 화면에서 Head·Hair를 보려면 미리보기를 켜 두세요.\n" +
-            "미리보기 오브젝트는 프리팹에 저장되지 않습니다.",
-            MessageType.None);
+            "Head·Hair는 자동으로 붙지 않습니다. 씬에 배치한 적을 선택한 뒤 「미리보기 갱신」을 누르세요.\n" +
+            "Project 프리팹·Prefab Mode에서는 미리보기할 수 없습니다.\n" +
+            "미리보기 오브젝트는 프리팹·씬에 저장되지 않습니다.",
+            MessageType.Info);
+
+        bool canPreview = slots.previewInEditor && slots.gameObject.scene.IsValid();
 
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("미리보기 갱신"))
-                slots.RefreshEditorPreview();
+            using (new EditorGUI.DisabledScope(!canPreview))
+            {
+                if (GUILayout.Button("미리보기 갱신"))
+                    slots.RefreshEditorPreview();
+            }
 
             if (GUILayout.Button("미리보기 제거"))
                 slots.ClearEditorPreview();
         }
+
+        if (!slots.previewInEditor)
+        {
+            EditorGUILayout.HelpBox("previewInEditor를 켜야 미리보기 버튼을 사용할 수 있습니다.", MessageType.None);
+        }
+        else if (!slots.gameObject.scene.IsValid())
+        {
+            EditorGUILayout.HelpBox("씬에 배치된 적 인스턴스에서만 미리보기할 수 있습니다.", MessageType.None);
+        }
+
+        EditorGUILayout.Space();
+        if (GUILayout.Button("씬 고아 미리보기 전부 제거"))
+            EnemyBodyPartSlots.ClearAllEditorPreviewOrphansInOpenScenes();
     }
 
     private static void DrawToneButton(EnemyBodyPartSlots slots, Color toneColor, string label, string tooltip)

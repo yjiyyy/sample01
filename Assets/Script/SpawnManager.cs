@@ -30,13 +30,13 @@ public class SpawnManager : MonoBehaviour
         }
     }
 
-    void Start()
+    /// <summary>StageSceneLoader가 Core+배경 준비 후 호출합니다.</summary>
+    public void SpawnInitialPlayer(Vector3 position, Quaternion rotation, CinemachineCamera camera = null)
     {
-        var player = SpawnPlayerAt(transform.position, transform.rotation);
-        if (player == null)
-        {
-            return;
-        }
+        if (camera != null)
+            followCamera = camera;
+
+        SpawnPlayerAt(position, rotation);
     }
 
     public GameObject ResolvePlayerPrefab()

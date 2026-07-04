@@ -20,7 +20,7 @@ public class PlayerEvadeController : MonoBehaviour
     public bool debugLogs = false;
 
     [Header("충돌(회피 차단) 설정")]
-    [Tooltip("Evade 이동을 막을 레이어(현재 Ground).")]
+    [Tooltip("Evade 이동을 막을 레이어 (Ground, Wall, Prop).")]
     [SerializeField] private LayerMask evadeBlockMask;
     [Tooltip("짧은 프리캐스트 및 메인 캐스트에서 사용하는 skin 거리")]
     [SerializeField] private float collisionSkin = 0.02f;
@@ -60,8 +60,12 @@ public class PlayerEvadeController : MonoBehaviour
 
         if (evadeBlockMask == 0)
         {
-            int g = LayerMask.NameToLayer("Ground");
-            if (g >= 0) evadeBlockMask = 1 << g;
+            int ground = LayerMask.NameToLayer("Ground");
+            int wall = LayerMask.NameToLayer("Wall");
+            int prop = LayerMask.NameToLayer("Prop");
+            if (ground >= 0) evadeBlockMask |= 1 << ground;
+            if (wall >= 0) evadeBlockMask |= 1 << wall;
+            if (prop >= 0) evadeBlockMask |= 1 << prop;
         }
     }
 

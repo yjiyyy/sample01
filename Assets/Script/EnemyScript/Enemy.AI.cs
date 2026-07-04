@@ -38,6 +38,10 @@ public class EnemyAI : MonoBehaviour
     public float idleMin = 1f;
     public float idleMax = 3f;
 
+    [Header("Chase tracking")]
+    [Tooltip("전투 추적 이동 시 플레이어 위치 갱신 주기. 발견·공격은 실시간.")]
+    public EnemyChaseTrackingMode chaseTrackingMode = EnemyChaseTrackingMode.ThreeSeconds;
+
     private Enemy enemy;
     private EnemyAttackController attackCtrl;
 
@@ -51,11 +55,22 @@ public class EnemyAI : MonoBehaviour
 
     private enum AIState { Peace, Finding, Combat }
     private AIState aiState = AIState.Peace;
+
+    /// <summary>표정 시스템용 AI 페이즈 (Animator와 별개).</summary>
+    public enum FacePhase { Peace, Finding, Combat }
+
+    public FacePhase CurrentFacePhase { get; private set; } = FacePhase.Peace;
+
     private Vector3 spawnPosition;
     private Vector3 roamTarget;
     private bool hasRoamTarget = false;
     private float idleTimer = 0f;
     private Coroutine findingCoroutine;
+
+    private Vector3 cachedChasePosition;
+    private bool chaseCacheInitialized;
+    private float nextChaseRefreshTime;
+    private const float CHASE_TARGET_REACHED_EPS = 0.05f;
 
     private void Awake()
     {
@@ -63,6 +78,12 @@ public class EnemyAI : MonoBehaviour
         attackCtrl = GetComponent<EnemyAttackController>();
         spawnPosition = transform.position;
         aiState = AIState.Peace;
+        SetFacePhase(FacePhase.Peace);
+    }
+
+    private void SetFacePhase(FacePhase phase)
+    {
+        CurrentFacePhase = phase;
     }
 
     public void Tick(Enemy ctx, Transform player)
@@ -77,6 +98,9 @@ public class EnemyAI : MonoBehaviour
             if (backstepping) ForceClearBackstep();
             return;
         }
+
+        if (aiState == AIState.Combat)
+            UpdateChaseTargetCache(false);
 
         if (ctx.CurrentState == Enemy.EnemyState.Attack)
         {
@@ -102,7 +126,8 @@ public class EnemyAI : MonoBehaviour
 
     private void PeaceTick(Enemy ctx, Transform player)
     {
-        float sqrDist = (player.position - ctx.transform.position).sqrMagnitude;
+        Vector3 livePlayerPos = GetLivePlayerPosition(player);
+        float sqrDist = (livePlayerPos - ctx.transform.position).sqrMagnitude;
         if (sqrDist <= detectionRadius * detectionRadius)
         {
             StartFinding(ctx, player);
@@ -149,6 +174,7 @@ public class EnemyAI : MonoBehaviour
     {
         if (aiState == AIState.Finding) return;
         aiState = AIState.Finding;
+        SetFacePhase(FacePhase.Finding);
 
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
@@ -170,6 +196,7 @@ public class EnemyAI : MonoBehaviour
                 ctx.CurrentState == Enemy.EnemyState.Knockback)
             {
                 aiState = AIState.Peace;
+                SetFacePhase(FacePhase.Peace);
                 findingCoroutine = null;
                 yield break;
             }
@@ -179,10 +206,12 @@ public class EnemyAI : MonoBehaviour
         }
 
         aiState = AIState.Combat;
+        SetFacePhase(FacePhase.Combat);
         findingCoroutine = null;
 
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
+        ForceRefreshChaseTarget();
     }
 
     private void DriveDecision(Enemy ctx, Transform player)
@@ -193,7 +222,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        float distance = (player.position - ctx.transform.position).magnitude;
+        float distance = Vector3.Distance(GetLivePlayerPosition(player), ctx.transform.position);
         string reason;
         bool distanceMaintenanceMode = ShouldDistanceMaintain(distance, out reason);
 
@@ -332,14 +361,15 @@ public class EnemyAI : MonoBehaviour
         backstepping = true;
         ctx.animCtrl?.SetSignedSpeed(-1f);
         if (attackCtrl?.debugDecisionLogs == true)
-            Debug.Log($"[AI] Backstep START dist={Vector3.Distance(player.position, ctx.transform.position):F2}");
+            Debug.Log($"[AI] Backstep START dist={Vector3.Distance(GetLivePlayerPosition(player), ctx.transform.position):F2}");
     }
 
     private void UpdateBackstep(Enemy ctx, Transform player)
     {
         if (!backstepping) return;
 
-        float dist = Vector3.Distance(player.position, ctx.transform.position);
+        Vector3 livePlayerPos = GetLivePlayerPosition(player);
+        float dist = Vector3.Distance(livePlayerPos, ctx.transform.position);
         string reason;
         bool distanceMaintenanceMode = ShouldDistanceMaintain(dist, out reason);
 
@@ -362,7 +392,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        Vector3 face = player.position - ctx.transform.position;
+        Vector3 face = GetChaseTargetPosition(livePlayerPos) - ctx.transform.position;
         face.y = 0f;
         if (face.sqrMagnitude > 0.0001f)
             ctx.RequestLook(face.normalized);
@@ -403,8 +433,21 @@ public class EnemyAI : MonoBehaviour
     private void ForwardChase(Enemy ctx, Transform player)
     {
         if (backstepping) return;
-        Vector3 dir = player.position - ctx.transform.position;
+
+        Vector3 livePlayerPos = GetLivePlayerPosition(player);
+        Vector3 targetPos = GetChaseTargetPosition(livePlayerPos);
+        Vector3 dir = targetPos - ctx.transform.position;
         dir.y = 0f;
+
+        // 틱 모드에서 마지막 목표 지점에 도착하면 즉시 1회 재갱신해 제자리 걸음을 줄인다.
+        if (chaseTrackingMode != EnemyChaseTrackingMode.Realtime &&
+            dir.sqrMagnitude <= CHASE_TARGET_REACHED_EPS * CHASE_TARGET_REACHED_EPS)
+        {
+            ForceRefreshChaseTarget();
+            targetPos = GetChaseTargetPosition(livePlayerPos);
+            dir = targetPos - ctx.transform.position;
+            dir.y = 0f;
+        }
 
         if (dir.sqrMagnitude > 0.0001f)
             ctx.RequestLook(dir.normalized);
@@ -420,7 +463,7 @@ public class EnemyAI : MonoBehaviour
 
     private void IdleFacing(Enemy ctx, Transform player)
     {
-        Vector3 look = player.position - ctx.transform.position;
+        Vector3 look = GetLivePlayerPosition(player) - ctx.transform.position;
         look.y = 0f;
         if (look.sqrMagnitude > 0.0001f)
             ctx.RequestLook(look.normalized);
@@ -434,7 +477,7 @@ public class EnemyAI : MonoBehaviour
     {
         if (attackCtrl != null && attackCtrl.IsRushing)
             return;
-        Vector3 dir = player.position - ctx.transform.position;
+        Vector3 dir = GetLivePlayerPosition(player) - ctx.transform.position;
         dir.y = 0f;
         if (dir.sqrMagnitude > 0.0001f)
             ctx.RequestLook(dir);
@@ -445,6 +488,11 @@ public class EnemyAI : MonoBehaviour
         ctx.animCtrl?.SetSignedSpeed(0f);
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
+    }
+
+    public void OnAttackEnded(Transform player)
+    {
+        RefreshChaseTargetNow(player);
     }
 
     public void InterruptAttack()
@@ -464,7 +512,92 @@ public class EnemyAI : MonoBehaviour
             findingCoroutine = null;
         }
         aiState = AIState.Combat;
+        SetFacePhase(FacePhase.Combat);
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
+        ForceRefreshChaseTarget();
+    }
+
+    private Vector3 GetLivePlayerPosition(Transform player)
+    {
+        if (PlayerTargetCache.TryGetPosition(out Vector3 cachedPos))
+            return cachedPos;
+        return player != null ? player.position : transform.position;
+    }
+
+    private Vector3 GetChaseTargetPosition(Vector3 liveFallback)
+    {
+        return chaseCacheInitialized ? cachedChasePosition : liveFallback;
+    }
+
+    private float GetChaseIntervalSeconds()
+    {
+        switch (chaseTrackingMode)
+        {
+            case EnemyChaseTrackingMode.Realtime:
+                return Time.fixedDeltaTime;
+            case EnemyChaseTrackingMode.OneSecond:
+                return 1f;
+            case EnemyChaseTrackingMode.TwoSeconds:
+                return 2f;
+            default:
+                return 3f;
+        }
+    }
+
+    private void ForceRefreshChaseTarget()
+    {
+        UpdateChaseTargetCache(true);
+    }
+
+    private void RefreshChaseTargetNow(Transform player)
+    {
+        if (PlayerTargetCache.TryGetPosition(out Vector3 livePos))
+        {
+            cachedChasePosition = livePos;
+            chaseCacheInitialized = true;
+            nextChaseRefreshTime = Time.time + GetChaseIntervalSeconds();
+            return;
+        }
+
+        if (player != null)
+        {
+            cachedChasePosition = player.position;
+            chaseCacheInitialized = true;
+            nextChaseRefreshTime = Time.time + GetChaseIntervalSeconds();
+            return;
+        }
+
+        chaseCacheInitialized = false;
+    }
+
+    private void UpdateChaseTargetCache(bool force)
+    {
+        if (!PlayerTargetCache.TryGetPosition(out Vector3 livePos))
+        {
+            chaseCacheInitialized = false;
+            return;
+        }
+
+        if (chaseTrackingMode == EnemyChaseTrackingMode.Realtime)
+        {
+            cachedChasePosition = livePos;
+            chaseCacheInitialized = true;
+            return;
+        }
+
+        if (force || !chaseCacheInitialized)
+        {
+            cachedChasePosition = livePos;
+            chaseCacheInitialized = true;
+            nextChaseRefreshTime = Time.time + GetChaseIntervalSeconds();
+            return;
+        }
+
+        if (Time.time >= nextChaseRefreshTime)
+        {
+            cachedChasePosition = livePos;
+            nextChaseRefreshTime = Time.time + GetChaseIntervalSeconds();
+        }
     }
 }

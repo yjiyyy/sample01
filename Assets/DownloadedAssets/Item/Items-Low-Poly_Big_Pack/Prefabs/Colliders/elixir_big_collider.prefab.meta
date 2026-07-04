@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: fd973b9e0e734b54b8ecebee94b385e7
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 297038
+  packageName: Items - Low-Poly Big Pack
+  packageVersion: 1.0
+  assetPath: Assets/Items-Low-Poly_Big_Pack/Prefabs/Colliders/elixir_big_collider.prefab
+  uploadId: 696194

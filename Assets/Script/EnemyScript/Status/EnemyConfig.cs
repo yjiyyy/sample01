@@ -43,6 +43,18 @@ public class ItemDropEntry
     public float dropChance = 0.5f;
 }
 
+/// <summary>
+/// 전투 추적(이동) 시 플레이어 위치를 얼마나 자주 갱신할지.
+/// 발견·공격 판정은 항상 실시간 위치를 사용한다.
+/// </summary>
+public enum EnemyChaseTrackingMode
+{
+    Realtime = 0,
+    OneSecond = 1,
+    TwoSeconds = 2,
+    ThreeSeconds = 3,
+}
+
 [CreateAssetMenu(menuName = "Enemy/EnemyConfig", fileName = "EnemyConfig_SO")]
 public class EnemyConfig : ScriptableObject
 {
@@ -98,6 +110,9 @@ public class EnemyConfig : ScriptableObject
     public float idleMin = 1f;
     [Tooltip("Idle wait time maximum in Peace mode.")]
     public float idleMax = 3f;
+
+    [Tooltip("전투 추적 이동 시 플레이어 위치 갱신 주기. 발견·공격은 실시간.")]
+    public EnemyChaseTrackingMode chaseTrackingMode = EnemyChaseTrackingMode.ThreeSeconds;
 
     [Header("Combat")]
 

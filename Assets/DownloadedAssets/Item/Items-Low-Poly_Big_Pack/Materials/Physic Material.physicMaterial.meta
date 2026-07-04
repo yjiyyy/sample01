@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 969a44ec63512a44a9ac9b24da64b36e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 13400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 297038
+  packageName: Items - Low-Poly Big Pack
+  packageVersion: 1.0
+  assetPath: Assets/Items-Low-Poly_Big_Pack/Materials/Physic Material.physicMaterial
+  uploadId: 696194

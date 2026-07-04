@@ -1,9 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// 적 루트에 붙여 Head / Hair 파츠 프리팹을 지정합니다.
 /// Play 시 Bip001 Head / HairSocket 에 인스턴스를 생성합니다.
-/// 에디터에서는 previewInEditor 로 Play 전 미리보기 가능 (프리팹에 저장되지 않음).
+/// 에디터에서는 「미리보기 갱신」 버튼으로 Play 전 Head/Hair 확인 가능 (프리팹·씬에 저장되지 않음).
 /// </summary>
 [DisallowMultipleComponent]
 [ExecuteAlways]
@@ -46,7 +47,7 @@ public class EnemyBodyPartSlots : MonoBehaviour
 #endif
 
     [Header("에디터")]
-    [Tooltip("켜면 Play 전에도 Head/Hair를 Scene에 표시합니다 (저장되지 않는 미리보기).")]
+    [Tooltip("켜 두면 Inspector 「미리보기 갱신」 버튼으로 Head/Hair를 표시할 수 있습니다 (자동 갱신 없음).")]
     public bool previewInEditor = true;
 
     private bool _attached;
@@ -59,17 +60,14 @@ public class EnemyBodyPartSlots : MonoBehaviour
 #if UNITY_EDITOR
     private bool _previewRefreshQueued;
     private bool _previewClearQueued;
+    private readonly List<GameObject> _editorPreviewInstances = new List<GameObject>();
 #endif
 
     private void OnEnable()
     {
 #if UNITY_EDITOR
         if (!Application.isPlaying)
-        {
             QueueEditorSkinTintApply();
-            if (previewInEditor)
-                QueueEditorPreviewRefresh();
-        }
 #endif
     }
 
@@ -87,11 +85,6 @@ public class EnemyBodyPartSlots : MonoBehaviour
         if (Application.isPlaying) return;
 
         QueueEditorSkinTintApply();
-
-        if (!previewInEditor)
-            QueueEditorPreviewClear();
-        else
-            QueueEditorPreviewRefresh();
     }
 
     private bool _skinTintApplyQueued;
@@ -140,11 +133,36 @@ public class EnemyBodyPartSlots : MonoBehaviour
     }
 
 #if UNITY_EDITOR
-    /// <summary>Inspector 버튼·자동 갱신용 (delayCall로 안전하게 처리).</summary>
+    /// <summary>Inspector 「미리보기 갱신」 버튼용 (delayCall로 안전하게 처리).</summary>
     public void RefreshEditorPreview()
     {
         if (Application.isPlaying) return;
+        if (!IsEditorPreviewAllowed(out string reason))
+        {
+            Debug.LogWarning($"[EnemyBodyPartSlots] 미리보기 불가: {reason} ({name})");
+            return;
+        }
+
         QueueEditorPreviewRefresh();
+    }
+
+    /// <summary>씬에 배치된 적에서만 수동 미리보기 허용.</summary>
+    private bool IsEditorPreviewAllowed(out string reason)
+    {
+        if (!previewInEditor)
+        {
+            reason = "previewInEditor가 꺼져 있습니다";
+            return false;
+        }
+
+        if (!gameObject.scene.IsValid())
+        {
+            reason = "씬에 배치된 적에서만 미리보기할 수 있습니다 (Project 프리팹 에셋·Prefab Mode에서는 불가)";
+            return false;
+        }
+
+        reason = null;
+        return true;
     }
 
     /// <summary>Inspector 버튼용 (delayCall로 안전하게 처리).</summary>
@@ -156,12 +174,42 @@ public class EnemyBodyPartSlots : MonoBehaviour
 
     private void ClearEditorPreviewNow()
     {
+        for (int i = _editorPreviewInstances.Count - 1; i >= 0; i--)
+        {
+            var go = _editorPreviewInstances[i];
+            if (go != null)
+                DestroyImmediate(go);
+        }
+
+        _editorPreviewInstances.Clear();
+
         var markers = GetComponentsInChildren<EnemyBodyPartPreviewMarker>(true);
         for (int i = markers.Length - 1; i >= 0; i--)
         {
             if (markers[i] == null) continue;
             DestroyImmediate(markers[i].gameObject);
         }
+    }
+
+    /// <summary>과거 버그로 씬 루트 등에 남은 미리보기 고아 오브젝트 일괄 제거.</summary>
+    public static void ClearAllEditorPreviewOrphansInOpenScenes()
+    {
+        var markers = Object.FindObjectsByType<EnemyBodyPartPreviewMarker>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        int removed = 0;
+        for (int i = markers.Length - 1; i >= 0; i--)
+        {
+            if (markers[i] == null) continue;
+            Object.DestroyImmediate(markers[i].gameObject);
+            removed++;
+        }
+
+        if (removed > 0)
+            Debug.Log($"[EnemyBodyPartSlots] 씬에 남아 있던 미리보기 고아 {removed}개를 제거했습니다.");
+        else
+            Debug.Log("[EnemyBodyPartSlots] 제거할 미리보기 고아가 없습니다.");
     }
 
     private void QueueEditorPreviewRefresh()
@@ -187,7 +235,7 @@ public class EnemyBodyPartSlots : MonoBehaviour
 
         ClearEditorPreviewNow();
 
-        if (!previewInEditor) return;
+        if (!IsEditorPreviewAllowed(out _)) return;
         if (headPartPrefab == null && hairPartPrefab == null) return;
 
         AttachPartsInternal(null, isEditorPreview: true);
@@ -219,8 +267,13 @@ public class EnemyBodyPartSlots : MonoBehaviour
             if (headInstance != null)
             {
                 ApplyLocalTransform(headInstance.transform, HeadLocalOffset, HeadLocalRotationEuler, GetUniformPartsScale());
-                if (!isEditorPreview)
+                if (isEditorPreview)
+                    RegisterEditorPreviewInstance(headInstance);
+                else
+                {
                     facade?.RegisterSpawnedPart(headInstance);
+                    NotifyHeadFaceAttached(headInstance, isEditorPreview);
+                }
             }
         }
 
@@ -239,13 +292,34 @@ public class EnemyBodyPartSlots : MonoBehaviour
                 if (hairInstance != null)
                 {
                     ApplyLocalTransform(hairInstance.transform, HairLocalOffset, HairLocalRotationEuler, GetUniformPartsScale());
-                    if (!isEditorPreview)
+                    if (isEditorPreview)
+                        RegisterEditorPreviewInstance(hairInstance);
+                    else
                         facade?.RegisterSpawnedPart(hairInstance);
                 }
             }
         }
 
         return true;
+    }
+
+    private void RegisterEditorPreviewInstance(GameObject instance)
+    {
+#if UNITY_EDITOR
+        if (instance == null) return;
+        if (!_editorPreviewInstances.Contains(instance))
+            _editorPreviewInstances.Add(instance);
+#endif
+    }
+
+    private void NotifyHeadFaceAttached(GameObject headInstance, bool isEditorPreview)
+    {
+        if (isEditorPreview || headInstance == null || !Application.isPlaying)
+            return;
+
+        var faceController = GetComponent<EnemyFaceController>()
+            ?? GetComponentInParent<EnemyFaceController>();
+        faceController?.BindHead(headInstance);
     }
 
     private static GameObject SpawnPartInstance(GameObject prefab, Transform parent, bool isEditorPreview)
@@ -255,14 +329,24 @@ public class EnemyBodyPartSlots : MonoBehaviour
 #if UNITY_EDITOR
         if (isEditorPreview)
         {
-            GameObject instance;
-            // Prefab Asset / Prefab Mode: 부모가 에셋이면 InstantiatePrefab(parent) 불가
             if (UnityEditor.PrefabUtility.IsPartOfPrefabAsset(parent))
-                instance = Object.Instantiate(prefab, parent);
-            else
-                instance = UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
+            {
+                Debug.LogWarning(
+                    $"[EnemyBodyPartSlots] 부모 '{parent.name}'가 프리팹 에셋이라 미리보기를 붙일 수 없습니다.");
+                return null;
+            }
 
-            if (instance == null) return null;
+            var instance = UnityEditor.PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
+            if (instance == null)
+                return null;
+
+            if (instance.transform.parent != parent)
+            {
+                Object.DestroyImmediate(instance);
+                Debug.LogWarning(
+                    $"[EnemyBodyPartSlots] '{prefab.name}' 미리보기 부착에 실패해 생성을 취소했습니다.");
+                return null;
+            }
 
             instance.name = prefab.name;
             instance.hideFlags = HideFlags.DontSaveInEditor | HideFlags.NotEditable;

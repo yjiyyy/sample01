@@ -46,9 +46,11 @@ public class Enemy : MonoBehaviour
     private bool lookLockActive = false;
     private Vector3 lockedLookDir = Vector3.forward;
     private float lookLockExpireTime = -1f;
+    private bool forceAttackLookLock = false;
 
     private HashSet<SuperArmorSource> manualSuperArmor = new HashSet<SuperArmorSource>();
     private int stateHoldCount = 0;
+    private EnemyFaceController _faceController;
 
     private const float ROT_SPEED_DEG_PER_SEC = 720f;
     private const float EPS = 0.0001f;
@@ -65,6 +67,7 @@ public class Enemy : MonoBehaviour
     {
         animCtrl = GetComponent<EnemyAnimationController>();
         attackCtrl = GetComponent<EnemyAttackController>();
+        _faceController = GetComponent<EnemyFaceController>();
         if (animator == null) animator = GetComponent<Animator>();
 
         ai = GetComponent<EnemyAI>() ?? gameObject.AddComponent<EnemyAI>();
@@ -81,7 +84,7 @@ public class Enemy : MonoBehaviour
             rb.isKinematic = false;
             rb.useGravity = true;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (dieCtrl != null)
@@ -174,7 +177,8 @@ public class Enemy : MonoBehaviour
 
             if (rb != null)
             {
-                if (disp.sqrMagnitude > EPS) rb.MovePosition(rb.position + disp);
+                if (disp.sqrMagnitude > EPS)
+                    MoveFilteredDisplacement(disp);
             }
             else
             {
@@ -198,7 +202,6 @@ public class Enemy : MonoBehaviour
         }
 
         // 충돌로 인해 생기는 "회전 스핀"만 빠르게 감쇠한다.
-        // (X/Z 회전은 Rigidbody constraints에서 이미 고정하지만, 충돌 토크로 Y 회전 성분이 누적될 수 있음)
         if (rb != null)
         {
             Vector3 av = rb.angularVelocity;
@@ -206,6 +209,17 @@ public class Enemy : MonoBehaviour
             {
                 av.y = 0f;
                 rb.angularVelocity = av;
+            }
+
+            // 지면에 붙어 있을 때 위쪽으로 쌓이는 속도 제거 (천장·충돌 보정으로 인한 떠오름/끼임 방지)
+            if (movementSettings != null && movementSettings.groundMask != 0 && IsGrounded())
+            {
+                Vector3 v = rb.linearVelocity;
+                if (v.y > 0f)
+                {
+                    v.y = 0f;
+                    rb.linearVelocity = v;
+                }
             }
         }
 
@@ -220,6 +234,15 @@ public class Enemy : MonoBehaviour
     {
         if (!force && CurrentState == newState) return;
         if (debugMode) Debug.Log($"[Enemy] State {CurrentState} → {newState}");
+
+        // 공격 상태를 벗어날 때 강제 회전 잠금을 해제한다.
+        if (CurrentState == EnemyState.Attack && newState != EnemyState.Attack)
+        {
+            forceAttackLookLock = false;
+            UnlockLookDirection(true);
+            ai?.OnAttackEnded(player);
+        }
+
         CurrentState = newState;
 
         switch (newState)
@@ -232,6 +255,9 @@ public class Enemy : MonoBehaviour
             case EnemyState.Attack:
                 ai?.ForceClearBackstep();
                 animCtrl?.SetSignedSpeed(0f);
+                // 공격 시작 시점 각도를 공격 종료까지 고정한다.
+                forceAttackLookLock = true;
+                LockLookDirection(transform.forward, force: true);
                 ai?.OnAttackStarted(this);
                 break;
 
@@ -264,11 +290,14 @@ public class Enemy : MonoBehaviour
                 attackCtrl?.InterruptCooldown();
                 if (animator) animator.speed = 1f;
                 stateHoldCount = 0;
-                UnlockLookDirection();
+                forceAttackLookLock = false;
+                UnlockLookDirection(true);
                 ai?.ForceClearBackstep();
                 animCtrl?.SetSignedSpeed(0f);
                 break;
         }
+
+        _faceController?.RefreshFace(force: true);
     }
 
     public void StartStateHold(float duration)
@@ -413,187 +442,41 @@ public class Enemy : MonoBehaviour
             transform.position = newPosition;
     }
 
+    private bool IsGrounded()
+    {
+        if (capsule == null || movementSettings == null) return false;
+        var ms = movementSettings;
+        if (ms.groundMask == 0) return false;
+
+        Vector3 centerWorld = transform.TransformPoint(capsule.center);
+        float halfH = Mathf.Max(capsule.height * 0.5f - capsule.radius, 0f);
+        Vector3 bottom = centerWorld - transform.up * halfH;
+        float checkDist = ms.floorCheckDepth + 0.05f;
+        if (Physics.Raycast(bottom + Vector3.up * 0.01f, Vector3.down, out RaycastHit hit, checkDist, ms.groundMask, QueryTriggerInteraction.Ignore))
+            return hit.normal.y >= ms.floorSlopeThreshold;
+        return false;
+    }
+
     public void MovePhysicsDisplacement(Vector3 disp)
     {
         if (rb == null || disp.sqrMagnitude <= EPS) return;
 
-        var ms = movementSettings;
-        LayerMask headMask = ms.headMask;
-        float headPortion = ms.headPortion;
-        float headMargin = ms.headMargin;
-        int headClampIterations = Mathf.Max(1, ms.headClampIterations);
+        var result = MovementCollisionSolver.TryResolvePosition(
+            rb.position,
+            disp,
+            capsule,
+            movementSettings,
+            overlapBuffer,
+            selfColliderIds);
 
-        LayerMask obstacleMask = ms.obstacleMask;
-        LayerMask floorMask = ms.floorMask;
-
-        float collisionSkin = ms.collisionSkin;
-        float floorThreshold = ms.floorThreshold;
-        float tinyDispThreshold = ms.tinyDispThreshold;
-
-        float maxStepHeight = ms.maxStepHeight;
-        int stepSearchIterations = Mathf.Max(1, ms.stepSearchIterations);
-        float floorCheckDepth = ms.floorCheckDepth;
-        float minStepProbeDistance = ms.minStepProbeDistance;
-
-        bool strictHeadroomBlock = ms.strictHeadroomBlock;
-
-        if (capsule != null && strictHeadroomBlock && headClampIterations > 0 && headPortion > 0f && headMask != 0)
+        if (result.blocked)
         {
-            Transform t = capsule.transform;
-            Vector3 worldCenterNow = t.TransformPoint(capsule.center) + (rb.position - t.position);
-
-            float radius = capsule.radius;
-            float height = capsule.height;
-            float cylLen = Mathf.Max(height - 2f * radius, 0f);
-            float headCylLen = cylLen * Mathf.Clamp01(headPortion);
-            float topLine = (height * 0.5f) - radius;
-            float usedRadius = Mathf.Max(radius - headMargin, radius * 0.5f);
-            Vector3 up = t.up;
-
-            Vector3 topSphereNow = worldCenterNow + up * topLine;
-            Vector3 bottomHeadNow = topSphereNow - up * headCylLen;
-
-            bool currentHeadOverlap = StepChecker.CheckHeadOverlap(
-                topSphereNow, bottomHeadNow, usedRadius, headMask, overlapBuffer, selfColliderIds);
-
-            Vector3 targetOrigin = rb.position + disp;
-            Vector3 worldCenterAtTarget = t.TransformPoint(capsule.center) + (targetOrigin - t.position);
-
-            Vector3 topSphereTarget = worldCenterAtTarget + up * topLine;
-            Vector3 bottomHeadTarget = topSphereTarget - up * headCylLen;
-
-            bool targetHeadOverlap = StepChecker.CheckHeadOverlap(
-                topSphereTarget, bottomHeadTarget, usedRadius, headMask, overlapBuffer, selfColliderIds);
-
-            if (!currentHeadOverlap && targetHeadOverlap)
-            {
-                if (debugMode) Debug.Log("[EnemyMovement] Movement blocked by strict headroom (target head overlap).");
-                return;
-            }
+            if (debugMode) Debug.Log("[EnemyMovement] Movement blocked by background collision.");
+            return;
         }
 
-        if (capsule != null && headClampIterations > 0 && headPortion > 0f)
-        {
-            disp = StepChecker.ClampHeadroomHorizontal(
-                capsule,
-                rb.position,
-                disp,
-                ms.headMask,
-                headClampIterations,
-                headPortion,
-                headMargin,
-                overlapBuffer,
-                selfColliderIds
-            );
-        }
-
-        if (capsule != null)
-        {
-            LayerMask obsMask = obstacleMask;
-            if (obsMask != 0)
-            {
-                Transform t = capsule.transform;
-                Vector3 targetOrigin = rb.position + disp;
-                Vector3 worldCenterAtTarget = t.TransformPoint(capsule.center) + (targetOrigin - t.position);
-
-                float radius = capsule.radius;
-                float height = capsule.height;
-                float halfLine = Mathf.Max(height * 0.5f - radius, 0f);
-                Vector3 up = t.up;
-
-                Vector3 topTarget = worldCenterAtTarget + up * halfLine;
-                Vector3 bottomTarget = worldCenterAtTarget - up * halfLine;
-
-                var summary = MovementPhysics.EvaluateCapsuleOverlapForMovement(
-                    bottomTarget,
-                    topTarget,
-                    radius,
-                    obsMask,
-                    overlapBuffer,
-                    selfColliderIds,
-                    rb,
-                    ms.pushableMassMultiplier
-                );
-
-                if (summary.externalCount > 0 && !summary.anyUnpushable)
-                {
-                    bool crowdBlocks = false;
-                    if (summary.totalPushableMass > rb.mass * ms.crowdMassThresholdMultiplier) crowdBlocks = true;
-                    if (summary.pushableCount >= ms.crowdCountThreshold) crowdBlocks = true;
-
-                    if (crowdBlocks)
-                    {
-                        if (debugMode) Debug.Log($"[EnemyMovement] Movement blocked by crowd resistance:  totalMass={summary.totalPushableMass:F2}, count={summary.pushableCount}");
-                        return;
-                    }
-                    else
-                    {
-                        MoveCapsuleDirect(rb.position + disp);
-
-                        if (ms.pushImpulseFactor > 0f)
-                        {
-                            float impulseBase = Mathf.Clamp01(disp.magnitude) * ms.pushImpulseFactor;
-                            MovementPhysics.ApplyPushImpulseToOverlap(overlapBuffer, summary.rawCount, summary.fallbackHits, selfColliderIds, rb, ms.pushableMassMultiplier, impulseBase);
-                        }
-                        return;
-                    }
-                }
-
-                bool foundAnyExternal = summary.externalCount > 0;
-                if (foundAnyExternal)
-                {
-                    Vector3 probeOrigin = targetOrigin;
-                    if (disp.sqrMagnitude > EPS)
-                    {
-                        Vector3 dir = disp.normalized;
-                        float probeDist = Mathf.Max(disp.magnitude, minStepProbeDistance);
-                        probeOrigin = rb.position + dir * probeDist;
-                    }
-
-                    float foundStep = StepChecker.FindValidStepHeight(
-                        capsule,
-                        probeOrigin,
-                        maxStepHeight,
-                        stepSearchIterations,
-                        overlapBuffer,
-                        selfColliderIds,
-                        obsMask,
-                        ms.headMask,
-                        out bool canStep);
-
-                    if (canStep && foundStep > EPS)
-                    {
-                        Vector3 steppedOrigin = targetOrigin + Vector3.up * foundStep;
-                        if (!StepChecker.WouldCapsuleOverlap(capsule, steppedOrigin, obsMask | ms.headMask, overlapBuffer, selfColliderIds))
-                        {
-                            if (ms.floorMask != 0)
-                            {
-                                Vector3 steppedCenter = capsule.transform.TransformPoint(capsule.center) + (steppedOrigin - capsule.transform.position);
-                                Vector3 steppedBottom = steppedCenter - up * halfLine;
-                                if (Physics.Raycast(steppedBottom + up * 0.01f, Vector3.down, out RaycastHit floorHit, ms.floorCheckDepth + 0.01f, ms.floorMask, QueryTriggerInteraction.Ignore))
-                                {
-                                    if (floorHit.normal.y >= ms.floorThreshold)
-                                    {
-                                        MoveCapsuleDirect(steppedOrigin);
-                                        return;
-                                    }
-                                    else if (debugMode) Debug.Log($"[EnemyMovement] Step denied:  floor normal too shallow {floorHit.normal.y:F3}");
-                                }
-                                else if (debugMode) Debug.Log("[EnemyMovement] Step denied: no floor found under stepped position");
-                            }
-                            else if (debugMode) Debug.Log("[EnemyMovement] Step denied: floorMask not set");
-                        }
-                        else if (debugMode) Debug.Log("[EnemyMovement] Step denied: overlap after stepping (head/obstacle)");
-                    }
-
-                    if (debugMode) Debug.Log("[EnemyMovement] Movement blocked:  obstacle overlap and cannot step.");
-                    return;
-                }
-            }
-        }
-
-        if (disp.sqrMagnitude <= EPS) return;
-        MoveCapsuleDirect(rb.position + disp);
+        if (result.moved)
+            MoveCapsuleDirect(result.finalPosition);
     }
 
     public void MoveFilteredDisplacement(Vector3 disp)
@@ -604,148 +487,22 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        var ms = movementSettings;
-        float tinyDispThreshold = ms.tinyDispThreshold;
+        var result = MovementCollisionSolver.Solve(
+            rb,
+            capsule,
+            disp,
+            movementSettings,
+            overlapBuffer,
+            selfColliderIds);
 
-        if (disp.sqrMagnitude <= tinyDispThreshold * tinyDispThreshold)
+        if (result.blocked)
         {
-            MovePhysicsDisplacement(disp);
+            if (debugMode) Debug.Log("[EnemyMovement] Filtered movement blocked by background collision.");
             return;
         }
 
-        if (capsule == null)
-        {
-            MovePhysicsDisplacement(disp);
-            return;
-        }
-
-        Vector3 remaining = disp;
-        Vector3 totalMove = Vector3.zero;
-
-        int maxIters = Mathf.Max(0, ms.slideIterations) + 1;
-        for (int iter = 0; iter < maxIters; ++iter)
-        {
-            if (remaining.sqrMagnitude <= tinyDispThreshold * tinyDispThreshold) break;
-
-            Vector3 origin = rb.position;
-            Vector3 dir = remaining.normalized;
-            float dist = remaining.magnitude;
-
-            Transform t = capsule.transform;
-            Vector3 worldCenterNow = t.TransformPoint(capsule.center) + (origin - t.position);
-
-            float radius = capsule.radius;
-            float height = capsule.height;
-            float halfLine = Mathf.Max(height * 0.5f - radius, 0f);
-            Vector3 up = t.up;
-            Vector3 top = worldCenterNow + up * halfLine;
-            Vector3 bottom = worldCenterNow - up * halfLine;
-
-            RaycastHit hit;
-            bool h = Physics.CapsuleCast(
-                bottom,
-                top,
-                radius,
-                dir,
-                out hit,
-                dist + ms.collisionSkin,
-                ms.obstacleMask,
-                QueryTriggerInteraction.Ignore);
-
-            if (!h)
-            {
-                totalMove += remaining;
-                remaining = Vector3.zero;
-                break;
-            }
-
-            if (hit.normal.y >= ms.floorThreshold)
-            {
-                totalMove += remaining;
-                remaining = Vector3.zero;
-                break;
-            }
-
-            if (hit.normal.y < ms.floorThreshold)
-            {
-                Vector3 probeOrigin = hit.point - dir * 0.02f + Vector3.up * 0.02f;
-                float probeDist = Mathf.Max(ms.minStepProbeDistance, 0.02f);
-                Vector3 probeCandidate = rb.position + dir * probeDist;
-
-                Vector3 tryOrigin = probeOrigin;
-                float foundStep = StepChecker.FindValidStepHeight(
-                    capsule,
-                    tryOrigin,
-                    ms.maxStepHeight,
-                    Mathf.Max(1, ms.stepSearchIterations),
-                    overlapBuffer,
-                    selfColliderIds,
-                    ms.obstacleMask,
-                    ms.headMask,
-                    out bool canStep);
-
-                if (!canStep)
-                {
-                    tryOrigin = probeCandidate;
-                    foundStep = StepChecker.FindValidStepHeight(
-                        capsule,
-                        tryOrigin,
-                        ms.maxStepHeight,
-                        Mathf.Max(1, ms.stepSearchIterations),
-                        overlapBuffer,
-                        selfColliderIds,
-                        ms.obstacleMask,
-                        ms.headMask,
-                        out canStep);
-                }
-
-                if (canStep && foundStep > EPS)
-                {
-                    Vector3 targetOrigin = rb.position + disp;
-                    Vector3 steppedOrigin = targetOrigin + Vector3.up * foundStep;
-                    if (!StepChecker.WouldCapsuleOverlap(capsule, steppedOrigin, ms.obstacleMask, overlapBuffer, selfColliderIds))
-                    {
-                        if (ms.floorMask != 0)
-                        {
-                            Vector3 steppedCenter = t.TransformPoint(capsule.center) + (steppedOrigin - t.position);
-                            Vector3 steppedBottom = steppedCenter - up * halfLine;
-                            if (Physics.Raycast(steppedBottom + Vector3.up * 0.01f, Vector3.down, out RaycastHit floorHit2, ms.floorCheckDepth + 0.01f, ms.floorMask, QueryTriggerInteraction.Ignore))
-                            {
-                                if (floorHit2.normal.y >= ms.floorThreshold)
-                                {
-                                    MoveCapsuleDirect(steppedOrigin);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            float allowed = Mathf.Max(hit.distance - ms.collisionSkin, 0f);
-            Vector3 allowedPart = dir * allowed;
-            totalMove += allowedPart;
-
-            float leftover = dist - allowed;
-            if (leftover <= tinyDispThreshold)
-            {
-                remaining = Vector3.zero;
-                break;
-            }
-
-            Vector3 remainingAfter = remaining - allowedPart;
-            Vector3 slide = Vector3.ProjectOnPlane(remainingAfter, hit.normal);
-
-            if (slide.sqrMagnitude <= tinyDispThreshold * tinyDispThreshold)
-            {
-                remaining = Vector3.zero;
-                break;
-            }
-
-            remaining = slide;
-        }
-
-        if (totalMove.sqrMagnitude > EPS) MovePhysicsDisplacement(totalMove);
+        if (result.moved)
+            MoveCapsuleDirect(result.finalPosition);
     }
 
     public void AddSuperArmor(SuperArmorSource src)
@@ -780,6 +537,13 @@ public class Enemy : MonoBehaviour
 
     public void LockLookDirection(Vector3 dir)
     {
+        LockLookDirection(dir, force: false);
+    }
+
+    public void LockLookDirection(Vector3 dir, bool force)
+    {
+        if (!force && forceAttackLookLock && CurrentState == EnemyState.Attack) return;
+
         dir.y = 0f;
         if (dir.sqrMagnitude < 1e-6f) dir = transform.forward;
         lockedLookDir = dir.normalized;
@@ -789,6 +553,8 @@ public class Enemy : MonoBehaviour
 
     public void LockLookDirection(Vector3 dir, float duration)
     {
+        if (forceAttackLookLock && CurrentState == EnemyState.Attack) return;
+
         dir.y = 0f;
         if (dir.sqrMagnitude < 1e-6f) dir = transform.forward;
         lockedLookDir = dir.normalized;
@@ -801,6 +567,13 @@ public class Enemy : MonoBehaviour
 
     public void UnlockLookDirection()
     {
+        UnlockLookDirection(false);
+    }
+
+    public void UnlockLookDirection(bool force)
+    {
+        if (!force && forceAttackLookLock && CurrentState == EnemyState.Attack) return;
+
         lookLockActive = false;
         lookLockExpireTime = -1f;
     }

@@ -13,9 +13,11 @@ MonoBehaviour:
   m_Name: StageList
   m_EditorClassIdentifier: 
   stages:
-  - sceneName: Stage01
-    displayName: Stage01
+  - sceneName: Stage00
+    displayName: Stage00
     thumbnail: {fileID: 21300028, guid: 7ab74e659e1f0a34d9cfec21c478fc12, type: 3}
+    stageData: {fileID: 11400000, guid: 1baa2a8ed4938f745b91f8334cb13d72, type: 2}
   - sceneName: Stage02
     displayName: Stage02
     thumbnail: {fileID: 21300030, guid: 7ab74e659e1f0a34d9cfec21c478fc12, type: 3}
+    stageData: {fileID: 0}

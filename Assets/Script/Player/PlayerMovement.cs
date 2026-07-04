@@ -175,7 +175,7 @@ public class PlayerMovement : MonoBehaviour
             rb.angularVelocity = Vector3.zero;
 
         // 지면에 붙어 있을 때 위쪽으로 쌓이는 속도 제거 (충돌 해소로 인한 계속 떠오름 방지)
-        if (rb != null && !suspendFalling && movementSettings != null && movementSettings.floorMask != 0 && IsGrounded())
+        if (rb != null && !suspendFalling && movementSettings != null && movementSettings.groundMask != 0 && IsGrounded())
         {
             var v = rb.linearVelocity;
             if (v.y > 0f)
@@ -234,7 +234,7 @@ public class PlayerMovement : MonoBehaviour
         return false;
     }
 
-    // Core movement checks & apply. Uses movementSettings fields.
+    // Core movement checks & apply. Uses MovementSettings + MovementCollisionSolver.
     public void MovePhysicsDisplacement(Vector3 disp)
     {
         lastAttemptedDisp = disp;
@@ -243,199 +243,25 @@ public class PlayerMovement : MonoBehaviour
 
         if (rb == null || disp.sqrMagnitude <= EPS) return;
 
-        // local copies for hot paths
-        var ms = movementSettings;
-        LayerMask headMask = ms.headMask;
-        float headPortion = ms.headPortion;
-        float headMargin = ms.headMargin;
-        int headClampIterations = Mathf.Max(1, ms.headClampIterations);
+        var result = MovementCollisionSolver.TryResolvePosition(
+            rb.position,
+            disp,
+            capsule,
+            movementSettings,
+            overlapBuffer,
+            selfColliderIds);
 
-        LayerMask obstacleMask = ms.obstacleMask;
-        LayerMask floorMask = ms.floorMask;
+        lastAttemptedBlocked = result.blocked;
+        lastAttemptedStepH = result.stepHeight;
 
-        float collisionSkin = ms.collisionSkin;
-        float floorThreshold = ms.floorThreshold;
-        int slideIterations = Mathf.Clamp(ms.slideIterations, 0, 4);
-        float tinyDispThreshold = ms.tinyDispThreshold;
-
-        float maxStepHeight = ms.maxStepHeight;
-        int stepSearchIterations = Mathf.Max(1, ms.stepSearchIterations);
-        float floorCheckDepth = ms.floorCheckDepth;
-        float minStepProbeDistance = ms.minStepProbeDistance;
-
-        float pushableMassMultiplier = ms.pushableMassMultiplier;
-        float pushImpulseFactor = ms.pushImpulseFactor;
-        float crowdMassThresholdMultiplier = ms.crowdMassThresholdMultiplier;
-        int crowdCountThreshold = ms.crowdCountThreshold;
-
-        // 1) strict headroom block
-        if (capsule != null && ms.strictHeadroomBlock && headClampIterations > 0 && headPortion > 0f && headMask != 0)
+        if (result.blocked)
         {
-            Transform t = capsule.transform;
-            Vector3 worldCenterNow = t.TransformPoint(capsule.center) + (rb.position - t.position);
-
-            float radius = capsule.radius;
-            float height = capsule.height;
-            float cylLen = Mathf.Max(height - 2f * radius, 0f);
-            float headCylLen = cylLen * Mathf.Clamp01(headPortion);
-            float topLine = (height * 0.5f) - radius;
-            float usedRadius = Mathf.Max(radius - headMargin, radius * 0.5f);
-            Vector3 up = t.up;
-
-            Vector3 topSphereNow = worldCenterNow + up * topLine;
-            Vector3 bottomHeadNow = topSphereNow - up * headCylLen;
-
-            bool currentHeadOverlap = StepChecker.CheckHeadOverlap(
-                topSphereNow, bottomHeadNow, usedRadius, headMask, overlapBuffer, selfColliderIds);
-
-            Vector3 targetOrigin = rb.position + disp;
-            Vector3 worldCenterAtTarget = t.TransformPoint(capsule.center) + (targetOrigin - t.position);
-
-            Vector3 topSphereTarget = worldCenterAtTarget + up * topLine;
-            Vector3 bottomHeadTarget = topSphereTarget - up * headCylLen;
-
-            bool targetHeadOverlap = StepChecker.CheckHeadOverlap(
-                topSphereTarget, bottomHeadTarget, usedRadius, headMask, overlapBuffer, selfColliderIds);
-
-            if (!currentHeadOverlap && targetHeadOverlap)
-            {
-                lastAttemptedBlocked = true;
-                if (debugLogs) Debug.Log("[PlayerMovement] Movement blocked by strict headroom (target head overlap).");
-                return;
-            }
+            if (debugLogs) Debug.Log("[PlayerMovement] Movement blocked by background collision.");
+            return;
         }
 
-        // 2) headroom clamp (partial allow)
-        if (capsule != null && headClampIterations > 0 && headPortion > 0f)
-        {
-            disp = StepChecker.ClampHeadroomHorizontal(
-                capsule,
-                rb.position,
-                disp,
-                ms.headMask,
-                headClampIterations,
-                headPortion,
-                headMargin,
-                overlapBuffer,
-                selfColliderIds
-            );
-        }
-
-        // 3) final overlap check at target origin
-        if (capsule != null)
-        {
-            LayerMask obsMask = obstacleMask;
-            if (obsMask != 0)
-            {
-                Transform t = capsule.transform;
-                Vector3 targetOrigin = rb.position + disp;
-                Vector3 worldCenterAtTarget = t.TransformPoint(capsule.center) + (targetOrigin - t.position);
-
-                float radius = capsule.radius;
-                float height = capsule.height;
-                float halfLine = Mathf.Max(height * 0.5f - radius, 0f);
-                Vector3 up = t.up;
-
-                Vector3 topTarget = worldCenterAtTarget + up * halfLine;
-                Vector3 bottomTarget = worldCenterAtTarget - up * halfLine;
-
-                var summary = MovementPhysics.EvaluateCapsuleOverlapForMovement(
-                    bottomTarget,
-                    topTarget,
-                    radius,
-                    obsMask,
-                    overlapBuffer,
-                    selfColliderIds,
-                    rb,
-                    pushableMassMultiplier
-                );
-
-                // all external pushable -> evaluate crowd
-                if (summary.externalCount > 0 && !summary.anyUnpushable)
-                {
-                    bool crowdBlocks = false;
-                    if (summary.totalPushableMass > rb.mass * crowdMassThresholdMultiplier) crowdBlocks = true;
-                    if (summary.pushableCount >= crowdCountThreshold) crowdBlocks = true;
-
-                    if (crowdBlocks)
-                    {
-                        lastAttemptedBlocked = true;
-                        if (debugLogs) Debug.Log($"[PlayerMovement] Movement blocked by crowd resistance: totalMass={summary.totalPushableMass:F2}, count={summary.pushableCount}");
-                        return;
-                    }
-                    else
-                    {
-                        // allow movement and optionally push impulse to overlapped bodies
-                        MoveCapsuleDirect(rb.position + disp);
-
-                        if (pushImpulseFactor > 0f)
-                        {
-                            float impulseBase = Mathf.Clamp01(disp.magnitude) * pushImpulseFactor;
-                            MovementPhysics.ApplyPushImpulseToOverlap(overlapBuffer, summary.rawCount, summary.fallbackHits, selfColliderIds, rb, pushableMassMultiplier, impulseBase);
-                        }
-                        return;
-                    }
-                }
-
-                // some external and at least one unpushable -> try step then block
-                bool foundAnyExternal = summary.externalCount > 0;
-                if (foundAnyExternal)
-                {
-                    Vector3 probeOrigin = targetOrigin;
-                    if (disp.sqrMagnitude > EPS)
-                    {
-                        Vector3 dir = disp.normalized;
-                        float probeDist = Mathf.Max(disp.magnitude, minStepProbeDistance);
-                        probeOrigin = rb.position + dir * probeDist;
-                    }
-
-                    float foundStep = StepChecker.FindValidStepHeight(
-                        capsule,
-                        probeOrigin,
-                        maxStepHeight,
-                        stepSearchIterations,
-                        overlapBuffer,
-                        selfColliderIds,
-                        obsMask,
-                        ms.headMask,
-                        out bool canStep);
-
-                    if (canStep && foundStep > EPS)
-                    {
-                        Vector3 steppedOrigin = targetOrigin + Vector3.up * foundStep;
-                        if (!StepChecker.WouldCapsuleOverlap(capsule, steppedOrigin, obsMask | ms.headMask, overlapBuffer, selfColliderIds))
-                        {
-                            if (floorMask != 0)
-                            {
-                                Vector3 steppedCenter = capsule.transform.TransformPoint(capsule.center) + (steppedOrigin - capsule.transform.position);
-                                Vector3 steppedBottom = steppedCenter - up * halfLine;
-                                if (Physics.Raycast(steppedBottom + up * 0.01f, Vector3.down, out RaycastHit floorHit, floorCheckDepth + 0.01f, floorMask, QueryTriggerInteraction.Ignore))
-                                {
-                                    if (floorHit.normal.y >= floorThreshold)
-                                    {
-                                        lastAttemptedStepH = foundStep;
-                                        MoveCapsuleDirect(steppedOrigin);
-                                        return;
-                                    }
-                                    else if (debugLogs) Debug.Log($"[PlayerMovement] Step denied: floor normal too shallow {floorHit.normal.y:F3}");
-                                }
-                                else if (debugLogs) Debug.Log("[PlayerMovement] Step denied: no floor found under stepped position");
-                            }
-                            else if (debugLogs) Debug.Log("[PlayerMovement] Step denied: floorMask not set");
-                        }
-                        else if (debugLogs) Debug.Log("[PlayerMovement] Step denied: overlap after stepping (head/obstacle)");
-                    }
-
-                    lastAttemptedBlocked = true;
-                    if (debugLogs) Debug.Log("[PlayerMovement] Movement blocked: obstacle overlap and cannot step.");
-                    return;
-                }
-            }
-        }
-
-        // final apply
-        if (disp.sqrMagnitude <= EPS) return;
-        MoveCapsuleDirect(rb.position + disp);
+        if (result.moved)
+            MoveCapsuleDirect(result.finalPosition);
     }
 
     private void MoveCapsuleDirect(Vector3 newPosition)
@@ -443,7 +269,6 @@ public class PlayerMovement : MonoBehaviour
         rb.MovePosition(newPosition);
     }
 
-    // Slide + capsulecast movement (keeps same semantics)
     public void MoveFilteredDisplacement(Vector3 disp)
     {
         lastAttemptedDisp = disp;
@@ -452,155 +277,25 @@ public class PlayerMovement : MonoBehaviour
 
         if (rb == null || disp.sqrMagnitude <= EPS) return;
 
-        var ms = movementSettings;
-        LayerMask obsMask = ms.obstacleMask;
-        float tinyDispThreshold = ms.tinyDispThreshold;
-        float collisionSkin = ms.collisionSkin;
-        float floorThreshold = ms.floorThreshold;
+        var result = MovementCollisionSolver.Solve(
+            rb,
+            capsule,
+            disp,
+            movementSettings,
+            overlapBuffer,
+            selfColliderIds);
 
-        if (disp.sqrMagnitude <= tinyDispThreshold * tinyDispThreshold)
+        lastAttemptedBlocked = result.blocked;
+        lastAttemptedStepH = result.stepHeight;
+
+        if (result.blocked)
         {
-            MovePhysicsDisplacement(disp);
+            if (debugLogs) Debug.Log("[PlayerMovement] Filtered movement blocked by background collision.");
             return;
         }
 
-        if (capsule == null)
-        {
-            MovePhysicsDisplacement(disp);
-            return;
-        }
-
-        Vector3 remaining = disp;
-        Vector3 totalMove = Vector3.zero;
-
-        int maxIters = Mathf.Max(0, ms.slideIterations) + 1;
-        for (int iter = 0; iter < maxIters; ++iter)
-        {
-            if (remaining.sqrMagnitude <= tinyDispThreshold * tinyDispThreshold) break;
-
-            Vector3 origin = rb.position;
-            Vector3 dir = remaining.normalized;
-            float dist = remaining.magnitude;
-
-            Transform t = capsule.transform;
-            Vector3 worldCenterNow = t.TransformPoint(capsule.center) + (origin - t.position);
-
-            float radius = capsule.radius;
-            float height = capsule.height;
-            float halfLine = Mathf.Max(height * 0.5f - radius, 0f);
-            Vector3 up = t.up;
-            Vector3 top = worldCenterNow + up * halfLine;
-            Vector3 bottom = worldCenterNow - up * halfLine;
-
-            RaycastHit hit;
-            bool h = Physics.CapsuleCast(
-                bottom,
-                top,
-                radius,
-                dir,
-                out hit,
-                dist + collisionSkin,
-                obsMask,
-                QueryTriggerInteraction.Ignore);
-
-            if (!h)
-            {
-                totalMove += remaining;
-                remaining = Vector3.zero;
-                break;
-            }
-
-            // treat gentle slope as floor
-            if (hit.normal.y >= floorThreshold)
-            {
-                totalMove += remaining;
-                remaining = Vector3.zero;
-                break;
-            }
-
-            // attempt step near hit point
-            if (hit.normal.y < floorThreshold)
-            {
-                Vector3 probeOrigin = hit.point - dir * 0.02f + Vector3.up * 0.02f;
-                float probeDist = Mathf.Max(ms.minStepProbeDistance, 0.02f);
-                Vector3 probeCandidate = rb.position + dir * probeDist;
-
-                Vector3 tryOrigin = probeOrigin;
-                float foundStep = StepChecker.FindValidStepHeight(
-                    capsule,
-                    tryOrigin,
-                    ms.maxStepHeight,
-                    Mathf.Max(1, ms.stepSearchIterations),
-                    overlapBuffer,
-                    selfColliderIds,
-                    obsMask,
-                    ms.headMask,
-                    out bool canStep);
-
-                if (!canStep)
-                {
-                    tryOrigin = probeCandidate;
-                    foundStep = StepChecker.FindValidStepHeight(
-                        capsule,
-                        tryOrigin,
-                        ms.maxStepHeight,
-                        Mathf.Max(1, ms.stepSearchIterations),
-                        overlapBuffer,
-                        selfColliderIds,
-                        obsMask,
-                        ms.headMask,
-                        out canStep);
-                }
-
-                if (canStep && foundStep > EPS)
-                {
-                    Vector3 targetOrigin = rb.position + disp;
-                    Vector3 steppedOrigin = targetOrigin + Vector3.up * foundStep;
-                    if (!StepChecker.WouldCapsuleOverlap(capsule, steppedOrigin, obsMask, overlapBuffer, selfColliderIds))
-                    {
-                        if (ms.floorMask != 0)
-                        {
-                            Vector3 steppedCenter = t.TransformPoint(capsule.center) + (steppedOrigin - t.position);
-                            Vector3 steppedBottom = steppedCenter - up * halfLine;
-                            if (Physics.Raycast(steppedBottom + Vector3.up * 0.01f, Vector3.down, out RaycastHit floorHit2, ms.floorCheckDepth + 0.01f, ms.floorMask, QueryTriggerInteraction.Ignore))
-                            {
-                                if (floorHit2.normal.y >= ms.floorThreshold)
-                                {
-                                    lastAttemptedStepH = foundStep;
-                                    MoveCapsuleDirect(steppedOrigin);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // slide logic
-            float allowed = Mathf.Max(hit.distance - collisionSkin, 0f);
-            Vector3 allowedPart = dir * allowed;
-            totalMove += allowedPart;
-
-            float leftover = dist - allowed;
-            if (leftover <= tinyDispThreshold)
-            {
-                remaining = Vector3.zero;
-                break;
-            }
-
-            Vector3 remainingAfter = remaining - allowedPart;
-            Vector3 slide = Vector3.ProjectOnPlane(remainingAfter, hit.normal);
-
-            if (slide.sqrMagnitude <= tinyDispThreshold * tinyDispThreshold)
-            {
-                remaining = Vector3.zero;
-                break;
-            }
-
-            remaining = slide;
-        }
-
-        if (totalMove.sqrMagnitude > EPS) MovePhysicsDisplacement(totalMove);
+        if (result.moved)
+            MoveCapsuleDirect(result.finalPosition);
     }
 
     private void HandleRotation(bool isARFiring)
@@ -671,14 +366,14 @@ public class PlayerMovement : MonoBehaviour
     {
         if (capsule == null || movementSettings == null) return false;
         var ms = movementSettings;
-        if (ms.floorMask == 0) return false;
+        if (ms.groundMask == 0) return false;
 
         Vector3 centerWorld = transform.TransformPoint(capsule.center);
         float halfH = Mathf.Max(capsule.height * 0.5f - capsule.radius, 0f);
         Vector3 bottom = centerWorld - transform.up * halfH;
         float checkDist = ms.floorCheckDepth + 0.05f;
-        if (Physics.Raycast(bottom + Vector3.up * 0.01f, Vector3.down, out RaycastHit hit, checkDist, ms.floorMask, QueryTriggerInteraction.Ignore))
-            return hit.normal.y >= ms.floorThreshold;
+        if (Physics.Raycast(bottom + Vector3.up * 0.01f, Vector3.down, out RaycastHit hit, checkDist, ms.groundMask, QueryTriggerInteraction.Ignore))
+            return hit.normal.y >= ms.floorSlopeThreshold;
         return false;
     }
 
