@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Unity.Cinemachine;
 
 /// <summary>
 /// 스테이지 씬에서 플레이어 스폰.
@@ -14,7 +13,7 @@ public class SpawnManager : MonoBehaviour
 
     [Tooltip("테스트용. Stage 씬을 직접 실행할 때만 사용. 로비→스테이지 흐름에서는 선택된 캐릭터가 스폰됩니다.")]
     public GameObject playerPrefab;
-    public CinemachineCamera followCamera;
+    public DiabloStyleCamera followCamera;
 
     private void Awake()
     {
@@ -31,7 +30,7 @@ public class SpawnManager : MonoBehaviour
     }
 
     /// <summary>StageSceneLoader가 Core+배경 준비 후 호출합니다.</summary>
-    public void SpawnInitialPlayer(Vector3 position, Quaternion rotation, CinemachineCamera camera = null)
+    public void SpawnInitialPlayer(Vector3 position, Quaternion rotation, DiabloStyleCamera camera = null)
     {
         if (camera != null)
             followCamera = camera;
@@ -145,13 +144,8 @@ public class SpawnManager : MonoBehaviour
 
         GameObject player = Instantiate(prefab, position, rotation);
 
-        // Follow 설정 (필수!)
         if (followCamera != null)
-        {
-            StageFollowCameraSetup.Apply(followCamera);
-            followCamera.Follow = player.transform;
-            followCamera.LookAt = player.transform;
-        }
+            followCamera.SetTarget(player.transform);
 
         // 안전하게 GameManager에 등록 — Instance가 없으면 대기 후 등록
         if (GameManager.Instance != null)

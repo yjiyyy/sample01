@@ -1,5 +1,4 @@
 using System.Collections;
-using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -95,21 +94,6 @@ public static class StageSceneLoader
         return true;
     }
 
-    public static CinemachineCamera FindFollowCameraInScene(Scene scene)
-    {
-        if (!scene.IsValid())
-            return null;
-
-        foreach (var root in scene.GetRootGameObjects())
-        {
-            var camera = root.GetComponentInChildren<CinemachineCamera>(true);
-            if (camera != null)
-                return camera;
-        }
-
-        return null;
-    }
-
     private static Transform FindChildByName(Transform parent, string childName)
     {
         if (parent.name == childName)
@@ -187,7 +171,10 @@ internal sealed class StageSceneLoaderRunner : MonoBehaviour
         }
 
         StageSceneLoader.TryGetSpawnPose(environmentScene, out Vector3 spawnPos, out Quaternion spawnRot);
-        var followCamera = StageSceneLoader.FindFollowCameraInScene(environmentScene);
+        var followCamera = StageFollowCamera.FindInScene(environmentScene);
+
+        if (followCamera == null)
+            Debug.LogWarning("[StageSceneLoader] Main Camera에 DiabloStyleCamera가 없습니다. 스테이지 씬 Main Camera를 확인하세요.");
 
         spawnManager.SpawnInitialPlayer(spawnPos, spawnRot, followCamera);
 
