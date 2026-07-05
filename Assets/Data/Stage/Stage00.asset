@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Stage00
   m_EditorClassIdentifier: 
   stageName: Stage00
-  clearType: 0
+  clearType: 2
   stageDuration: 50
   targetKillCount: 30
   targetEnemyPrefab: {fileID: 0}
   timeLimit: 0
-  monsterLevelUpInterval: 5
+  monsterLevelUpInterval: 50
   levelIcons:
   - {fileID: -9160987577138628238, guid: 215687feeab0b7445b4a1cd86c82c2e1, type: 3}

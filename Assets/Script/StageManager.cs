@@ -8,6 +8,7 @@ public class StageManager : MonoBehaviour
     public StageData stageData;
     public StageUI ui;
     public EnemySpawner spawner;
+    public ItemBoxSpawner itemBoxSpawner;
 
     [Header("낙하 처리")]
     [Tooltip("플레이어 y가 이 값 이하로 내려가면 낙사 처리")]
@@ -56,6 +57,13 @@ public class StageManager : MonoBehaviour
 
         if (spawner != null)
             spawner.SetSpawnLevel(currentLevel);
+
+        itemBoxSpawner = FindEnvironmentItemBoxSpawner();
+
+        if (itemBoxSpawner != null)
+            itemBoxSpawner.BeginSpawning();
+        else
+            Debug.LogWarning("[StageManager] ItemBoxSpawner가 아트 씬에 없습니다. 스테이지 씬에 ItemBoxSpawner를 배치하세요.");
 
         if (ui != null)
         {
@@ -177,6 +185,12 @@ public class StageManager : MonoBehaviour
         if (spawner != null)
             spawner.enabled = false;
 
+        if (itemBoxSpawner == null)
+            itemBoxSpawner = FindEnvironmentItemBoxSpawner();
+
+        itemBoxSpawner?.StopAndClear();
+        itemBoxSpawner = null;
+
         GameObject[] allEnemies = GameObject.FindGameObjectsWithTag("Enemy");
         foreach (var enemy in allEnemies)
             Destroy(enemy);
@@ -185,5 +199,37 @@ public class StageManager : MonoBehaviour
     public void HandlePlayerFall(GameObject player)
     {
         // TODO: 플레이어 사망/낙사 처리 연결
+    }
+
+    private static ItemBoxSpawner FindEnvironmentItemBoxSpawner()
+    {
+        ItemBoxSpawner[] spawners = FindObjectsByType<ItemBoxSpawner>(FindObjectsSortMode.None);
+        ItemBoxSpawner found = null;
+
+        for (int i = 0; i < spawners.Length; i++)
+        {
+            ItemBoxSpawner spawner = spawners[i];
+            if (spawner == null)
+                continue;
+
+            string sceneName = spawner.gameObject.scene.name;
+            if (StageSceneNames.IsCoreScene(sceneName) || sceneName == StageSceneNames.Backup)
+                continue;
+
+            if (!StageSceneNames.IsStageEnvironmentScene(sceneName))
+                continue;
+
+            if (found != null)
+            {
+                Debug.LogWarning(
+                    $"[StageManager] 아트 씬에 ItemBoxSpawner가 여러 개 있습니다. '{found.gameObject.scene.name}'의 '{found.name}'을 사용합니다.",
+                    found);
+                continue;
+            }
+
+            found = spawner;
+        }
+
+        return found;
     }
 }

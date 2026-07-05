@@ -391,7 +391,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
-  baseMoveSpeed: 4
+  baseMoveSpeed: 10
   stopWhenNoInput: 1
   rotationSpeedDegPerSec: 1080
   debugLogs: 0
@@ -578,7 +578,7 @@ MonoBehaviour:
   maxHealth: 90
   currentHealth: 90
   massMultiplier: 1
-  baseMoveSpeed: 4
+  baseMoveSpeed: 10
   rotationSpeedDegPerSec: 1080
   maxStamina: 10
   currentStamina: 10

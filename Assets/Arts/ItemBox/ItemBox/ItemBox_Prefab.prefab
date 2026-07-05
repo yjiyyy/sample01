@@ -103,8 +103,10 @@ MonoBehaviour:
   openTriggerName: Open
   openStateName: Open
   holdDurationAfterOpen: 10
-  idleFxSystems: []
-  openFxPrefab: {fileID: 0}
+  idleFxPrefabs:
+  - {fileID: 6532625474870085665, guid: e339ba2054febe542980a515b239ce70, type: 3}
+  idleFxSpawnPoint: {fileID: 819462560185200371}
+  openFxPrefab: {fileID: 5700784828077083704, guid: d8f4bcc784abdd0459335b5d4e365fc6, type: 3}
   openFxSpawnPoint: {fileID: 819462560185200371}
   dropDelayAfterOpen: 0.1
   totalDropCountMin: 1

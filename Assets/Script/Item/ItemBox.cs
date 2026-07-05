@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -42,13 +44,18 @@ public class ItemBox : MonoBehaviour
     [SerializeField] private float holdDurationAfterOpen = 5f;
 
     [Header("FX")]
-    [Tooltip("평소 재생할 루프 FX(자식 ParticleSystem). Open 시 Stop.")]
-    [SerializeField] private ParticleSystem[] idleFxSystems;
+    [Tooltip("평소 재생할 루프 FX 프리팹. Open 시 삭제.")]
+    [SerializeField] private GameObject[] idleFxPrefabs;
+
+    [Tooltip("Idle FX 스폰 위치. 비어 있으면 이 오브젝트 위치에 붙습니다.")]
+    [SerializeField] private Transform idleFxSpawnPoint;
 
     [Tooltip("Open 순간 1회 스폰할 FX 프리팹.")]
     [SerializeField] private GameObject openFxPrefab;
 
     [SerializeField] private Transform openFxSpawnPoint;
+
+    private readonly List<GameObject> idleFxInstances = new List<GameObject>();
 
     [Header("Item Drop")]
     [Tooltip("Open 시작 후 아이템을 방출하기까지 대기 시간(초).")]
@@ -60,6 +67,9 @@ public class ItemBox : MonoBehaviour
     [SerializeField] private int totalDropCountMax = 1;
     [SerializeField] private ItemDropEntry[] dropEntries = new ItemDropEntry[0];
     [SerializeField] private LayerMask dropGroundLayerMask = 0;
+
+    /// <summary>오픈 후 디스폰 직전에 호출됩니다. ItemBoxSpawner 등이 구독합니다.</summary>
+    public event Action<ItemBox> Removed;
 
     private int openTriggerHash;
     private int openStateHash;
@@ -176,6 +186,7 @@ public class ItemBox : MonoBehaviour
         if (holdDurationAfterOpen > 0f)
             yield return new WaitForSeconds(holdDurationAfterOpen);
 
+        Removed?.Invoke(this);
         Destroy(gameObject);
     }
 
@@ -246,30 +257,56 @@ public class ItemBox : MonoBehaviour
 
     private void PlayIdleFx()
     {
-        if (idleFxSystems == null)
+        if (idleFxPrefabs == null || idleFxPrefabs.Length == 0)
             return;
 
-        for (int i = 0; i < idleFxSystems.Length; i++)
+        Transform spawn = idleFxSpawnPoint != null ? idleFxSpawnPoint : transform;
+
+        for (int i = 0; i < idleFxPrefabs.Length; i++)
         {
-            var ps = idleFxSystems[i];
-            if (ps == null)
+            GameObject prefab = idleFxPrefabs[i];
+            if (prefab == null)
                 continue;
-            ps.Play(true);
+
+            if (prefab == gameObject || prefab.GetComponentInChildren<ItemBox>(true) != null)
+            {
+                Debug.LogWarning(
+                    $"[ItemBox] '{name}' Idle Fx Prefab에 ItemBox가 들어가 있습니다. FX를 스킵합니다.",
+                    this);
+                continue;
+            }
+
+            GameObject inst = Instantiate(prefab, spawn.position, spawn.rotation, spawn);
+            idleFxInstances.Add(inst);
+
+            ParticleSystem[] systems = inst.GetComponentsInChildren<ParticleSystem>(true);
+            for (int j = 0; j < systems.Length; j++)
+            {
+                if (systems[j] != null)
+                    systems[j].Play(true);
+            }
         }
     }
 
     private void StopIdleFx()
     {
-        if (idleFxSystems == null)
-            return;
-
-        for (int i = 0; i < idleFxSystems.Length; i++)
+        for (int i = idleFxInstances.Count - 1; i >= 0; i--)
         {
-            var ps = idleFxSystems[i];
-            if (ps == null)
+            GameObject inst = idleFxInstances[i];
+            if (inst == null)
                 continue;
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+
+            ParticleSystem[] systems = inst.GetComponentsInChildren<ParticleSystem>(true);
+            for (int j = 0; j < systems.Length; j++)
+            {
+                if (systems[j] != null)
+                    systems[j].Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            }
+
+            Destroy(inst);
         }
+
+        idleFxInstances.Clear();
     }
 
     private void SpawnOpenFx()

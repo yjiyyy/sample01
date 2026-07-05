@@ -148,6 +148,7 @@ public class SpawnManager : MonoBehaviour
         // Follow 설정 (필수!)
         if (followCamera != null)
         {
+            StageFollowCameraSetup.Apply(followCamera);
             followCamera.Follow = player.transform;
             followCamera.LookAt = player.transform;
         }
