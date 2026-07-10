@@ -56,6 +56,12 @@ public class Enemy : MonoBehaviour
     private const float EPS = 0.0001f;
 
     public bool IsStateHoldActive => stateHoldCount > 0;
+    public bool IsInSpawnIntro { get; private set; }
+
+    private Coroutine spawnIntroRoutine;
+    private const float DefaultSpawnIntroDuration = 1f;
+    private EnemyFacade enemyFacade;
+    private EnemyConfig enemyConfig;
 
     private Rigidbody rb;
     private CapsuleCollider capsule;
@@ -73,6 +79,8 @@ public class Enemy : MonoBehaviour
         ai = GetComponent<EnemyAI>() ?? gameObject.AddComponent<EnemyAI>();
         impact = GetComponent<EnemyImpact>() ?? gameObject.AddComponent<EnemyImpact>();
         dieCtrl = GetComponent<EnemyDie>() ?? gameObject.AddComponent<EnemyDie>();
+        enemyFacade = GetComponent<EnemyFacade>();
+        enemyConfig = enemyFacade != null ? enemyFacade.config : null;
 
         player = GameObject.FindWithTag("Player")?.transform;
         SetState(EnemyState.Chase, true);
@@ -322,11 +330,66 @@ public class Enemy : MonoBehaviour
         ReleaseStateHold();
     }
 
+    /// <summary>
+    /// EnemySpawner가 생성한 몬스터에만 호출. 스폰 애니·무적·제자리 대기 후 Peace AI 재개.
+    /// </summary>
+    public void BeginSpawnIntro(float duration = DefaultSpawnIntroDuration)
+    {
+        if (CurrentState == EnemyState.Dead) return;
+
+        if (spawnIntroRoutine != null)
+            StopCoroutine(spawnIntroRoutine);
+
+        AnimationClip spawnClip = null;
+        GameObject spawnFxPrefab = null;
+        float resolvedDuration = Mathf.Max(0.05f, duration);
+
+        EnemyConfig cfg = enemyFacade != null ? enemyFacade.config : enemyConfig;
+        if (cfg != null)
+        {
+            spawnClip = cfg.spawnAnimationClip;
+            spawnFxPrefab = cfg.spawnEffectPrefab;
+            if (spawnClip != null && spawnClip.length > 0f)
+                resolvedDuration = Mathf.Max(0.05f, spawnClip.length);
+        }
+
+        spawnIntroRoutine = StartCoroutine(SpawnIntroRoutine(resolvedDuration, spawnClip, spawnFxPrefab));
+    }
+
+    private IEnumerator SpawnIntroRoutine(float duration, AnimationClip spawnClip, GameObject spawnFxPrefab)
+    {
+        IsInSpawnIntro = true;
+
+        var health = GetComponent<EnemyHealth>();
+        health?.SetSpawnInvincible(true);
+
+        animCtrl?.SetSignedSpeed(0f);
+        animCtrl?.PlaySpawn(spawnClip);
+        if (spawnFxPrefab != null)
+            Instantiate(spawnFxPrefab, transform.position, Quaternion.identity);
+        StartStateHold(duration);
+
+        float end = Time.time + duration;
+        while (Time.time < end)
+            yield return null;
+
+        health?.SetSpawnInvincible(false);
+        IsInSpawnIntro = false;
+        spawnIntroRoutine = null;
+
+        if (CurrentState == EnemyState.Dead)
+            yield break;
+
+        animCtrl?.SetSignedSpeed(0f);
+        animCtrl?.PlayRun(crossFade: false, restart: true);
+    }
+
     public void ApplyKnockback(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (CurrentState == EnemyState.Dead) return;
 
         var health = GetComponent<EnemyHealth>();
+        if (health != null && health.IsSpawnInvincible) return;
         bool hasSuperArmor = (health != null && health.HasSuperArmor) || (manualSuperArmor != null && manualSuperArmor.Count > 0);
 
         bool allowInterrupt = !hasSuperArmor && CurrentState != EnemyState.ShieldBreak;
@@ -341,6 +404,10 @@ public class Enemy : MonoBehaviour
     public void ApplyPush(Vector3 hitDir, WeaponDataSO weapon, float impactScale = 1f)
     {
         if (CurrentState == EnemyState.Dead) return;
+
+        var health = GetComponent<EnemyHealth>();
+        if (health != null && health.IsSpawnInvincible) return;
+
         impact?.ApplyPush(this, hitDir, weapon, impactScale);
     }
 

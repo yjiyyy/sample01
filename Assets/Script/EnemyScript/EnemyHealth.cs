@@ -47,8 +47,10 @@ public class EnemyHealth : MonoBehaviour
     public event Action OnDeath;
 
     private bool deathInvoked;
+    private bool isSpawnInvincible;
 
     public bool IsDeadProcessed() => deathInvoked;
+    public bool IsSpawnInvincible => isSpawnInvincible;
 
     // Public read-only property to indicate super-armor state: shield > 0 => super-armor
     public bool HasSuperArmor => useShield && currentShield > 0f;
@@ -90,10 +92,25 @@ public class EnemyHealth : MonoBehaviour
     public void ApplyDamage(float amount, WeaponDataSO weapon) => ApplyDamage(amount, Vector3.zero, weapon, 1f, null);
     public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon) => ApplyDamage(amount, hitDir, weapon, 1f, null);
 
+    public void SetSpawnInvincible(bool value) => isSpawnInvincible = value;
+
+    /// <summary>
+    /// 자폭 타이머 등 외부 사망. 스폰 무적·실드 흡수 없이 즉시 애니메이션 사망 처리.
+    /// </summary>
+    public void ForceDieForSelfDestruct()
+    {
+        if (deathInvoked || currentHP <= 0f) return;
+        currentHP = 0f;
+        Die(Vector3.zero, null, 1f);
+    }
+
     // Main damage entry point (preserves existing behavior: shield absorbs first, shieldBreak triggers, then HP)
     public void ApplyDamage(float amount, Vector3 hitDir, WeaponDataSO weapon, float impactScale, System.Nullable<Vector3> hitPoint = null)
     {
         if (currentHP <= 0f || deathInvoked)
+            return;
+
+        if (isSpawnInvincible)
             return;
 
         if (amount <= 0f)
@@ -184,6 +201,7 @@ public class EnemyHealth : MonoBehaviour
     // Public helper: reduce shield (e.g., external effects)
     public void ReduceShield(float amount)
     {
+        if (isSpawnInvincible) return;
         if (!useShield || isShieldBreak || amount <= 0f) return;
 
         float prev = currentShield;
@@ -223,6 +241,7 @@ public class EnemyHealth : MonoBehaviour
     /// <summary>독 피해 없이 중독 상태만 걸거나 갱신합니다.</summary>
     public void ApplyPoisonStatus(PoisonStatusConfigSO config)
     {
+        if (isSpawnInvincible) return;
         if (config == null || currentHP <= 0f || deathInvoked)
             return;
 
@@ -241,6 +260,7 @@ public class EnemyHealth : MonoBehaviour
     /// </summary>
     public bool TryApplyBleedOnce(float duration, float tickInterval, float damagePerTick, GameObject bleedTickEffectPrefab = null)
     {
+        if (isSpawnInvincible) return false;
         if (currentHP <= 0f || deathInvoked)
             return false;
 

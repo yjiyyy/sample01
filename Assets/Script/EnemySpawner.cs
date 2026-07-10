@@ -219,7 +219,11 @@ public class EnemySpawner : MonoBehaviour
             return false;
         }
 
-        GameObject enemy = Instantiate(prefab, spawnPos, Quaternion.identity);
+        Quaternion spawnRot = GetSpawnFacingRotation(spawnPos);
+        GameObject enemy = Instantiate(prefab, spawnPos, spawnRot);
+
+        var spawnedEnemy = enemy.GetComponent<Enemy>();
+        spawnedEnemy?.BeginSpawnIntro();
 
         _totalSpawnedByThisSpawner++;
         _aliveFromThisSpawner++;
@@ -303,6 +307,18 @@ public class EnemySpawner : MonoBehaviour
         }
 
         return false;
+    }
+
+    /// <summary>스폰 순간 플레이어 방향(수평)을 바라보도록 회전. 추적은 하지 않음.</summary>
+    private Quaternion GetSpawnFacingRotation(Vector3 spawnPos)
+    {
+        if (_playerTransform == null) return Quaternion.identity;
+
+        Vector3 lookDir = _playerTransform.position - spawnPos;
+        lookDir.y = 0f;
+        if (lookDir.sqrMagnitude < 0.0001f) return Quaternion.identity;
+
+        return Quaternion.LookRotation(lookDir.normalized, Vector3.up);
     }
 
     /// <summary>플레이어와 같은 층에 가장 가까운 Ground 히트를 선택.</summary>

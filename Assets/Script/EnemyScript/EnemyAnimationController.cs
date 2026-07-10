@@ -13,6 +13,8 @@ public class EnemyAnimationController : MonoBehaviour
 
     // 내부 캐시
     private readonly int hashSpeed = Animator.StringToHash("Speed");
+    [SerializeField] private string spawnStateName = "Spawn";
+    [SerializeField] private string baseSpawnClipName = "Spawn";
 
     private void Awake()
     {
@@ -61,6 +63,33 @@ public class EnemyAnimationController : MonoBehaviour
         if (!Animator) return;
         int randomKnockback = Random.Range(1, 4);
         Animator.Play($"Knockback0{randomKnockback}", 0, 0f);
+    }
+
+    /// <summary>
+    /// 스폰 연출 애니메이션 재생.
+    /// spawnClip이 있으면 baseSpawnClipName에 해당하는 클립을 런타임 오버라이드하고 spawnStateName을 재생합니다.
+    /// </summary>
+    public void PlaySpawn(AnimationClip spawnClip)
+    {
+        if (!Animator) return;
+
+        ApplySpawnClipOverride(spawnClip);
+        Animator.Play(spawnStateName, 0, 0f);
+    }
+
+    private void ApplySpawnClipOverride(AnimationClip spawnClip)
+    {
+        if (Animator == null) return;
+
+        if (spawnClip == null) return;
+
+        RuntimeAnimatorController currentController = Animator.runtimeAnimatorController;
+        if (currentController == null)
+            return;
+
+        var overrideController = new AnimatorOverrideController(currentController);
+        overrideController[baseSpawnClipName] = spawnClip;
+        Animator.runtimeAnimatorController = overrideController;
     }
 
     /// <summary>

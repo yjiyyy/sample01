@@ -13,7 +13,7 @@ using System.Collections.Generic;
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
 [DisallowMultipleComponent]
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : MonoBehaviour, ICameraMoveInputProvider
 {
     private const float EPS = 0.0001f;
     private const float BACKSTEP_ENTER_ANGLE = 120f;
@@ -506,6 +506,9 @@ public class PlayerMovement : MonoBehaviour
 
     /// <summary>이동 입력이 있는지 여부 (차단 여부와 무관). 콤보 윈도우에서 Move 상태 전환 판정용.</summary>
     public bool HasMovementInput() => lastInput.sqrMagnitude > EPS;
+
+    /// <summary>화면 기준 이동 입력 (x=우/좌, y=상/하). 카메라 방향 오프셋용.</summary>
+    public Vector2 GetCameraMoveInput() => new Vector2(lastInput.x, lastInput.z);
 
     /// <summary>저장된 입력을 초기화. enabled=false 구간 후 복구 시 잔여 입력으로 인한 잘못된 이동 방지.</summary>
     public void ClearStoredInput() => lastInput = Vector3.zero;

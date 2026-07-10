@@ -36,6 +36,12 @@ public class EnemyDie : MonoBehaviour
     [Tooltip("Number of death variants (e.g.  3)")]
     [SerializeField] private int deathVariantCount = 3;
 
+    [Header("자폭 (시간 경과 후 애니메이션 사망)")]
+    [Tooltip("켜면 생성 후 일정 시간이 지나 자동으로 애니메이션 사망합니다. 폭발 피해는 없습니다.")]
+    public bool enableTimedSelfDestruct = false;
+    [Tooltip("생성(Start) 후 이 시간(초)이 지나면 사망")]
+    public float selfDestructDelay = 10f;
+
     [Header("랙돌 본 자동 수집")]
     public Transform excludeRoot;
 
@@ -52,6 +58,9 @@ public class EnemyDie : MonoBehaviour
 
     private bool initialized;
     private const float DESTROY_DELAY = 7f;
+
+    private Coroutine selfDestructRoutine;
+    private EnemyHealth cachedHealth;
 
     private readonly HashSet<Rigidbody> attachmentSlicedBodies = new HashSet<Rigidbody>();
 
@@ -80,6 +89,44 @@ public class EnemyDie : MonoBehaviour
         CollectRagdollParts();
         CollectPartRigidbodies(); // 첫 시도 (파츠가 없을 수 있음)
         InitializeRagdollOff();
+    }
+
+    private void Start()
+    {
+        if (!enableTimedSelfDestruct || selfDestructDelay <= 0f) return;
+
+        cachedHealth = GetComponent<EnemyHealth>();
+        if (cachedHealth != null)
+            cachedHealth.OnDeath += CancelTimedSelfDestruct;
+
+        selfDestructRoutine = StartCoroutine(TimedSelfDestructRoutine());
+    }
+
+    private void OnDestroy()
+    {
+        if (cachedHealth != null)
+            cachedHealth.OnDeath -= CancelTimedSelfDestruct;
+    }
+
+    private void CancelTimedSelfDestruct()
+    {
+        if (selfDestructRoutine == null) return;
+        StopCoroutine(selfDestructRoutine);
+        selfDestructRoutine = null;
+    }
+
+    private IEnumerator TimedSelfDestructRoutine()
+    {
+        float end = Time.time + selfDestructDelay;
+        while (Time.time < end)
+            yield return null;
+
+        selfDestructRoutine = null;
+
+        var health = cachedHealth != null ? cachedHealth : GetComponent<EnemyHealth>();
+        if (health == null || health.IsDeadProcessed()) yield break;
+
+        health.ForceDieForSelfDestruct();
     }
 
     /// <summary>EnemyFacade가 파츠 생성 후 호출. 랙돌 본/파츠 목록 재수집.</summary>

@@ -145,6 +145,12 @@ public class EnemyConfig : ScriptableObject
     [Header("References")]
     public AnimatorOverrideController overrideController = null;
 
+    [Header("Spawn Intro")]
+    [Tooltip("스폰 시작 시 Spawn 상태에 재생할 클립. 비어 있으면 Animator 기본 Spawn 모션 사용.")]
+    public AnimationClip spawnAnimationClip = null;
+    [Tooltip("스폰 시작 시 재생할 이펙트 프리팹. 비어 있으면 이펙트 없음.")]
+    public GameObject spawnEffectPrefab = null;
+
     [Header("Editor only")]
     [Tooltip("If true, EnemyFacade will automatically sync SO -> components on OnValidate.")]
     public bool editorAutoApplyDefault = true;

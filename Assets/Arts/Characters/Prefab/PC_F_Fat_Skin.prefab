@@ -450,6 +450,7 @@ MonoBehaviour:
   peaceMoveSpeedMultiplier: 0.6
   idleMin: 1
   idleMax: 3
+  chaseTrackingMode: 3
 --- !u!114 &4521070145796075303
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -481,6 +482,8 @@ MonoBehaviour:
   deathIndexParam: DeadMotionIndex
   deathStateName: DeadBlendTree
   deathVariantCount: 3
+  enableTimedSelfDestruct: 1
+  selfDestructDelay: 2
   excludeRoot: {fileID: 4294328816770936735}
   hipsBody: {fileID: 252307446338033551}
 --- !u!114 &4703980661627490085
@@ -516,6 +519,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4b6313ab66cfd74792d4be1d5360624, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  spawnStateName: Spawn
+  baseSpawnClipName: Spawn
 --- !u!114 &7921092626505240953
 MonoBehaviour:
   m_ObjectHideFlags: 0
