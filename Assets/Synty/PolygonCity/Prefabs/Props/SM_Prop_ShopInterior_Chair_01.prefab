@@ -11,10 +11,10 @@ GameObject:
   - component: {fileID: 459288}
   - component: {fileID: 3364646}
   - component: {fileID: 2300480}
-  - component: {fileID: 64341942290185190}
-  - component: {fileID: 64727388790175380}
-  - component: {fileID: 64856509702005328}
-  - component: {fileID: 64084451251330748}
+  - component: {fileID: 3979513987163772078}
+  - component: {fileID: 3038474519877102203}
+  - component: {fileID: 6274371458066221297}
+  - component: {fileID: 7356215284767781400}
   m_Layer: 14
   m_Name: SM_Prop_ShopInterior_Chair_01
   m_TagString: Untagged
@@ -90,8 +90,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64341942290185190
-MeshCollider:
+--- !u!65 &3979513987163772078
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -108,12 +108,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43743464397786214, guid: af59407df1c891742b908ffa0905eecd, type: 2}
---- !u!64 &64727388790175380
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 0.4987633, y: 0.12842655, z: 0.36577648}
+  m_Center: {x: 0.0110744685, y: 0.54261714, z: 0.047552735}
+--- !u!65 &3038474519877102203
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -130,12 +129,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43680647432419982, guid: af59407df1c891742b908ffa0905eecd, type: 2}
---- !u!64 &64856509702005328
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 0.39895073, y: 1.0639126, z: 0.16623922}
+  m_Center: {x: -0.055441722, y: 0.52376366, z: -0.21847787}
+--- !u!65 &6274371458066221297
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -152,12 +150,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43644365856557628, guid: af59407df1c891742b908ffa0905eecd, type: 2}
---- !u!64 &64084451251330748
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 0.5153569, y: 0.5995622, z: 0.06649178}
+  m_Center: {x: 0.002777636, y: 0.2916486, z: 0.2636869}
+--- !u!65 &7356215284767781400
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -174,7 +171,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43688898613706728, guid: af59407df1c891742b908ffa0905eecd, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.116349265, y: 1.0639126, z: 0.15870082}
+  m_Center: {x: 0.20228148, y: 0.52376366, z: -0.22224706}

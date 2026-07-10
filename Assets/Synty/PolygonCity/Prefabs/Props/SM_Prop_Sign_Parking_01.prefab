@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 453024}
   - component: {fileID: 3396874}
   - component: {fileID: 2368052}
-  - component: {fileID: 64210796150306190}
+  - component: {fileID: 3082833792215854527}
   m_Layer: 14
   m_Name: SM_Prop_Sign_Parking_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64210796150306190
-MeshCollider:
+--- !u!65 &3082833792215854527
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43753938985546398, guid: a0934f03912fd9f46b55ca51b217ee33, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.4561472, y: 1.7305553, z: 0.13416094}
+  m_Center: {x: -0.00004068017, y: 0.8586904, z: -0.0012921616}

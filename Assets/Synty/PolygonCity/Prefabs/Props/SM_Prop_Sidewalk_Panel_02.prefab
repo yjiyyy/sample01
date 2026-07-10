@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 443356}
   - component: {fileID: 3332558}
   - component: {fileID: 2344532}
-  - component: {fileID: 64804843357332880}
+  - component: {fileID: 2699947931729552047}
   m_Layer: 14
   m_Name: SM_Prop_Sidewalk_Panel_02
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64804843357332880
-MeshCollider:
+--- !u!65 &2699947931729552047
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43593159148685214, guid: 724dc7172baa5964385076bf82c4bcb2, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.4197008, y: 0.06599753, z: 0.4692921}
+  m_Center: {x: 0.012470931, y: 0.029332235, z: 0.00000423193}

@@ -30,6 +30,7 @@ public sealed class DiabloStyleCameraOcclusionFade
     private float fadeOutSpeed = 6f;
     private LayerMask occluderMask;
     private float raycastRadius;
+    private float castStopBeforeTarget;
     private float insideCheckRadius;
     private int maxOccluders;
     private bool useRayOcclusion;
@@ -43,6 +44,7 @@ public sealed class DiabloStyleCameraOcclusionFade
         float fadeIn,
         float fadeOut,
         float castRadius,
+        float stopBeforeTarget,
         float insideRadius,
         int maxCount,
         bool rayOcclusion,
@@ -54,6 +56,7 @@ public sealed class DiabloStyleCameraOcclusionFade
         fadeInSpeed = Mathf.Max(0.01f, fadeIn);
         fadeOutSpeed = Mathf.Max(0.01f, fadeOut);
         raycastRadius = Mathf.Max(0f, castRadius);
+        castStopBeforeTarget = Mathf.Max(0f, stopBeforeTarget);
         insideCheckRadius = Mathf.Max(0.01f, insideRadius);
         maxOccluders = Mathf.Max(1, maxCount);
         useRayOcclusion = rayOcclusion;
@@ -210,10 +213,15 @@ public sealed class DiabloStyleCameraOcclusionFade
         if (distance < 0.01f)
             return;
 
+        // 주인공 직전에서 캐스트를 끊어 옆·뒤 벽이 투명해지는 걸 줄입니다.
+        float castDistance = distance - castStopBeforeTarget;
+        if (castDistance < 0.01f)
+            return;
+
         Vector3 direction = delta / distance;
         int hitCount = raycastRadius > 0.001f
-            ? Physics.SphereCastNonAlloc(cameraPosition, raycastRadius, direction, raycastHits, distance, occluderMask, QueryTriggerInteraction.Ignore)
-            : Physics.RaycastNonAlloc(cameraPosition, direction, raycastHits, distance, occluderMask, QueryTriggerInteraction.Ignore);
+            ? Physics.SphereCastNonAlloc(cameraPosition, raycastRadius, direction, raycastHits, castDistance, occluderMask, QueryTriggerInteraction.Ignore)
+            : Physics.RaycastNonAlloc(cameraPosition, direction, raycastHits, castDistance, occluderMask, QueryTriggerInteraction.Ignore);
 
         for (int i = 0; i < hitCount && remainingSlots > 0; i++)
         {

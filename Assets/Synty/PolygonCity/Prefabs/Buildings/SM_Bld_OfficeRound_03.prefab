@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 445114}
   - component: {fileID: 3306082}
   - component: {fileID: 2321508}
-  - component: {fileID: 64379467585937282}
+  - component: {fileID: 1467608434187456986}
   m_Layer: 12
   m_Name: SM_Bld_OfficeRound_03
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64379467585937282
-MeshCollider:
+--- !u!136 &1467608434187456986
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,8 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43580509173949762, guid: 06728fba80a291642873ea2a53fb5c1c, type: 2}
+  serializedVersion: 2
+  m_Radius: 11.056475
+  m_Height: 38.35637
+  m_Direction: 1
+  m_Center: {x: -0.0000019073486, y: 19.178185, z: 0.0017504692}

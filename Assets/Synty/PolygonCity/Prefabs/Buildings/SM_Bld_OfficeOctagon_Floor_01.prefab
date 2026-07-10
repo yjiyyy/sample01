@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 445150}
   - component: {fileID: 3355784}
   - component: {fileID: 2361446}
-  - component: {fileID: 64660090400556856}
+  - component: {fileID: 3365024696113359741}
   m_Layer: 12
   m_Name: SM_Bld_OfficeOctagon_Floor_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64660090400556856
-MeshCollider:
+--- !u!136 &3365024696113359741
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,8 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43783137433739430, guid: baa74088bfa5d2546b378e39070d2b95, type: 2}
+  serializedVersion: 2
+  m_Radius: 11.394509
+  m_Height: 22.789019
+  m_Direction: 1
+  m_Center: {x: 0, y: 1.5, z: -0.00000047683716}

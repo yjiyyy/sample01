@@ -104,6 +104,9 @@ public class DiabloStyleCamera : MonoBehaviour
     [Tooltip("0이면 얇은 Ray, 0.2~0.5면 SphereCast")]
     [Min(0f)]
     [SerializeField] private float occlusionCastRadius;
+    [Tooltip("가림 캐스트를 주인공보다 이 거리(m)만큼 앞에서 끊습니다. 캐릭터 옆·뒤 벽이 투명해지는 걸 줄입니다.")]
+    [Min(0f)]
+    [SerializeField] private float occlusionCastStopBeforeTarget = 0.5f;
     [Tooltip("카메라가 Collider 안인지 검사할 OverlapSphere 반경")]
     [Min(0.01f)]
     [SerializeField] private float occlusionInsideCheckRadius = 0.05f;
@@ -329,6 +332,7 @@ public class DiabloStyleCamera : MonoBehaviour
             occlusionFadeInSpeed,
             occlusionFadeOutSpeed,
             occlusionCastRadius,
+            occlusionCastStopBeforeTarget,
             occlusionInsideCheckRadius,
             occlusionMaxCount,
             enableRayOcclusionFade,

@@ -20,10 +20,13 @@ MonoBehaviour:
     m_Bits: 20480
   collisionSkin: 0.02
   floorSlopeThreshold: 0.5
-  slideIterations: 0
+  slideIterations: 1
   tinyMoveThreshold: 0.002
   maxStepHeight: 0.3
   stepSearchIterations: 1
   floorCheckDepth: 0.15
   minStepProbeDistance: 0.15
+  enableHeadroomClamp: 1
+  headPortion: 0.35
+  headroomSearchIterations: 4
   overlapBufferSize: 4

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 2985608123594112568}
   - component: {fileID: 2216009955819385245}
   - component: {fileID: 4117466647206757719}
-  - component: {fileID: 418091292}
+  - component: {fileID: 7052339059402883279}
   m_Layer: 0
   m_Name: SM_Gen_Prop_Bottle_04
   m_TagString: Untagged
@@ -59,6 +59,9 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -84,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &418091292
-MeshCollider:
+--- !u!136 &7052339059402883279
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -102,7 +105,8 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 3168416503737108962, guid: 49478fd37ad74a14599adbc764c324b3, type: 2}
+  serializedVersion: 2
+  m_Radius: 0.057630066
+  m_Height: 0.3821641
+  m_Direction: 1
+  m_Center: {x: -0.002499381, y: 0.19412945, z: 0.0011203438}

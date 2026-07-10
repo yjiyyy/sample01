@@ -11,8 +11,8 @@ GameObject:
   - component: {fileID: 451858}
   - component: {fileID: 3321098}
   - component: {fileID: 2343282}
-  - component: {fileID: 64200068796743118}
-  - component: {fileID: 64526230041215666}
+  - component: {fileID: 1810291068847799337}
+  - component: {fileID: 5512186444462926754}
   m_Layer: 12
   m_Name: SM_Bld_Roof_Access_01
   m_TagString: Untagged
@@ -88,8 +88,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64200068796743118
-MeshCollider:
+--- !u!65 &1810291068847799337
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -106,12 +106,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43160724726929318, guid: 469e38b8efc09a84a9ed5a4b455d7f1e, type: 2}
---- !u!64 &64526230041215666
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 2.7248354, y: 2.6238885, z: 2.142577}
+  m_Center: {x: 0.006721318, y: 1.2898338, z: -0.33226955}
+--- !u!65 &5512186444462926754
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -128,7 +127,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43859301078971766, guid: 469e38b8efc09a84a9ed5a4b455d7f1e, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 2.8053951, y: 2.7530332, z: 0.82691157}
+  m_Center: {x: 0.0012259483, y: 1.354167, z: 1.0344899}

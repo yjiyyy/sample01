@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 451014}
   - component: {fileID: 3332310}
   - component: {fileID: 2311166}
-  - component: {fileID: 64851498745671372}
+  - component: {fileID: 4754349911799085386}
   m_Layer: 14
   m_Name: SM_Prop_Sign_Hotel_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64851498745671372
-MeshCollider:
+--- !u!65 &4754349911799085386
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43060891256214226, guid: 56dbd9cd7beb5f24b95d37992abdad3b, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 1.3271505, y: 3.861037, z: 0.36198553}
+  m_Center: {x: -0.07281023, y: 1.5711762, z: -0.006714195}

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 465568}
   - component: {fileID: 3338366}
   - component: {fileID: 2375026}
-  - component: {fileID: 64675428142620496}
+  - component: {fileID: 5042101591968503267}
   m_Layer: 14
   m_Name: SM_Prop_LargeSign_Soda_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64675428142620496
-MeshCollider:
+--- !u!65 &5042101591968503267
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43679534955826882, guid: d96dc2ae87528cc429f3c08d7728dc2b, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 2.042633, y: 5.327217, z: 2.042633}
+  m_Center: {x: 0.019483447, y: -0.00027823448, z: 0.019487739}

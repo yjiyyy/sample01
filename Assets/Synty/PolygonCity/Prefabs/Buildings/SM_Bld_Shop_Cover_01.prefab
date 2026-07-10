@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 498912}
   - component: {fileID: 3391306}
   - component: {fileID: 2314642}
-  - component: {fileID: 65183753706625858}
+  - component: {fileID: 3778847586653027029}
   m_Layer: 12
   m_Name: SM_Bld_Shop_Cover_01
   m_TagString: Untagged
@@ -87,7 +87,7 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &65183753706625858
+--- !u!65 &3778847586653027029
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

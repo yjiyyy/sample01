@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 446466}
   - component: {fileID: 3303064}
   - component: {fileID: 2333516}
-  - component: {fileID: 64377836311606602}
+  - component: {fileID: 8683721386899318650}
   m_Layer: 14
   m_Name: SM_Prop_LightPole_Arm_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64377836311606602
-MeshCollider:
+--- !u!65 &8683721386899318650
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43555664043239930, guid: 5a6c0f10c721f81489bd841bf2664558, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.45386064, y: 0.9454346, z: 6.240689}
+  m_Center: {x: 0.10439965, y: 4.5609093, z: 3.073426}

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 440144}
   - component: {fileID: 3367692}
   - component: {fileID: 2338348}
-  - component: {fileID: 64599329267151412}
+  - component: {fileID: 5924818552345159834}
   m_Layer: 14
   m_Name: SM_Prop_Pipe_Part_Connect_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64599329267151412
-MeshCollider:
+--- !u!65 &5924818552345159834
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43501795980105734, guid: 3e999e4aee3cf994a8f776f9aa9bc3b7, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.19704415, y: 0.40317178, z: 0.40317187}
+  m_Center: {x: 0.098522075, y: -0.00000008195639, z: 0.15523104}

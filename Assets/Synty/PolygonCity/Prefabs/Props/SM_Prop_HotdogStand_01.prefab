@@ -11,8 +11,8 @@ GameObject:
   - component: {fileID: 425504}
   - component: {fileID: 3346358}
   - component: {fileID: 2364350}
-  - component: {fileID: 64628011192525652}
-  - component: {fileID: 64269958822898852}
+  - component: {fileID: 486097359524310387}
+  - component: {fileID: 8437820312779967337}
   m_Layer: 14
   m_Name: SM_Prop_HotdogStand_01
   m_TagString: Untagged
@@ -88,8 +88,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64628011192525652
-MeshCollider:
+--- !u!65 &486097359524310387
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -106,12 +106,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43100836708769298, guid: 14bb07b3dbabf304689290c889cf3956, type: 2}
---- !u!64 &64269958822898852
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 2.3714223, y: 2.275592, z: 1.3020273}
+  m_Center: {x: 0.024885178, y: 1.1149825, z: -0.32964534}
+--- !u!65 &8437820312779967337
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -128,7 +127,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43716527868734136, guid: 14bb07b3dbabf304689290c889cf3956, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 1.9065402, y: 0.6850722, z: 1.7683017}
+  m_Center: {x: 0.16432428, y: 2.5513325, z: 0.0028696358}

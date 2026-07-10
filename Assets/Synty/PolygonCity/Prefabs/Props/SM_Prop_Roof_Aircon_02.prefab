@@ -11,10 +11,10 @@ GameObject:
   - component: {fileID: 422430}
   - component: {fileID: 3387758}
   - component: {fileID: 2386382}
-  - component: {fileID: 64240342534238196}
-  - component: {fileID: 64583178378303012}
-  - component: {fileID: 64534036594486038}
-  - component: {fileID: 64748741982845906}
+  - component: {fileID: 6072504177187901552}
+  - component: {fileID: 1786980541762940019}
+  - component: {fileID: 5052145186282132516}
+  - component: {fileID: 8300145904174367640}
   m_Layer: 14
   m_Name: SM_Prop_Roof_Aircon_02
   m_TagString: Untagged
@@ -90,8 +90,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64240342534238196
-MeshCollider:
+--- !u!65 &6072504177187901552
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -108,12 +108,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43231693376207974, guid: 9d05e2a6c8aedcc4da05a4531154cef3, type: 2}
---- !u!64 &64583178378303012
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 0.23371083, y: 0.80492514, z: 0.26764286}
+  m_Center: {x: -0.6885977, y: 0.38995376, z: -0.15997177}
+--- !u!65 &1786980541762940019
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -130,12 +129,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43923659793761598, guid: 9d05e2a6c8aedcc4da05a4531154cef3, type: 2}
---- !u!64 &64534036594486038
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 0.55383503, y: 0.27687442, z: 0.25176784}
+  m_Center: {x: 0.50336486, y: 0.4530673, z: -0.13483818}
+--- !u!65 &5052145186282132516
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -152,12 +150,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43633325612474762, guid: 9d05e2a6c8aedcc4da05a4531154cef3, type: 2}
---- !u!64 &64748741982845906
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 0.778993, y: 1.0621604, z: 0.7960912}
+  m_Center: {x: -0.17720217, y: 0.5423555, z: 0.001048997}
+--- !u!65 &8300145904174367640
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -174,7 +171,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43388604870757922, guid: 9d05e2a6c8aedcc4da05a4531154cef3, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.22653365, y: 0.32718328, z: 0.22653121}
+  m_Center: {x: 0.69218606, y: 0.15103845, z: -0.14739025}

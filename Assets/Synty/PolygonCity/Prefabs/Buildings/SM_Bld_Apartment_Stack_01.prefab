@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 467878}
   - component: {fileID: 3395774}
   - component: {fileID: 2306966}
-  - component: {fileID: 64732304882736528}
+  - component: {fileID: 1928981054795991301}
   m_Layer: 12
   m_Name: SM_Bld_Apartment_Stack_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64732304882736528
-MeshCollider:
+--- !u!65 &1928981054795991301
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43145123891503732, guid: 786104971c0b24244bd4083b3272a39f, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 4.9980364, y: 8.993757, z: 5.1910324}
+  m_Center: {x: -2.5009818, y: 4.5, z: -2.4044838}

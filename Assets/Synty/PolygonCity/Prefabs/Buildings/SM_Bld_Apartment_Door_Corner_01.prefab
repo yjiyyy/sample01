@@ -11,9 +11,9 @@ GameObject:
   - component: {fileID: 404840}
   - component: {fileID: 3369030}
   - component: {fileID: 2392796}
-  - component: {fileID: 64038488906414736}
-  - component: {fileID: 64539958955308398}
-  - component: {fileID: 64387176975575516}
+  - component: {fileID: 6406441484662547313}
+  - component: {fileID: 2459690464653952645}
+  - component: {fileID: 678733479783783031}
   m_Layer: 12
   m_Name: SM_Bld_Apartment_Door_Corner_01
   m_TagString: Untagged
@@ -89,8 +89,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64038488906414736
-MeshCollider:
+--- !u!65 &6406441484662547313
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -107,12 +107,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43931823140115254, guid: cb4a2682f46aaa14eb30b6b9023c6199, type: 2}
---- !u!64 &64539958955308398
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 3.897143, y: 2.5341778, z: 5.5452604}
+  m_Center: {x: -3.0514324, y: 1.2519605, z: -2.2273703}
+--- !u!65 &2459690464653952645
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -129,12 +128,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43191724511779864, guid: cb4a2682f46aaa14eb30b6b9023c6199, type: 2}
---- !u!64 &64387176975575516
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 1.6275407, y: 2.5186176, z: 5.0061812}
+  m_Center: {x: -0.2889443, y: 1.2593088, z: -2.4969099}
+--- !u!65 &678733479783783031
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -151,7 +149,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43165172879871892, guid: cb4a2682f46aaa14eb30b6b9023c6199, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 5.5045433, y: 0.50435376, z: 5.502998}
+  m_Center: {x: -2.3115754, y: 2.7741632, z: -2.3108962}

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 455612}
   - component: {fileID: 3331432}
   - component: {fileID: 2389784}
-  - component: {fileID: 64571435397272870}
+  - component: {fileID: 518307267726146675}
   m_Layer: 14
   m_Name: SM_Prop_ShopInterior_Cafe_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64571435397272870
-MeshCollider:
+--- !u!65 &518307267726146675
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43445619368816686, guid: ea301e1930c2c7d45a6f538166854cf4, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 5.077377, y: 1.6665114, z: 1.031746}
+  m_Center: {x: 0, y: 0.7936663, z: -0.003725648}

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 473768}
   - component: {fileID: 3353732}
   - component: {fileID: 2327272}
-  - component: {fileID: 64428188778724820}
+  - component: {fileID: 6983522159573957092}
   m_Layer: 14
   m_Name: SM_Prop_LargeSign_Lollypop_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64428188778724820
-MeshCollider:
+--- !u!65 &6983522159573957092
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43749211744912768, guid: 3f0a72c9bcc950247baefef35d8e2ea3, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 3.2296913, y: 6.2589674, z: 0.60575235}
+  m_Center: {x: -0.016468525, y: -0.10119641, z: -0.0035085082}

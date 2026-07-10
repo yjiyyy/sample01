@@ -43,7 +43,7 @@ GameObject:
   - component: {fileID: 251907069906689590}
   - component: {fileID: 6699438843618476600}
   - component: {fileID: 5721346329030070607}
-  - component: {fileID: 344082663985144127}
+  - component: {fileID: 1851183747107042841}
   m_Layer: 10
   m_Name: SM_Env_Road_Patch_01
   m_TagString: Untagged
@@ -119,8 +119,8 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1021268540244847961}
   m_Mesh: {fileID: 4300000, guid: 4e878d01561e49e41be1e9bee4545a66, type: 3}
---- !u!64 &344082663985144127
-MeshCollider:
+--- !u!65 &1851183747107042841
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -137,7 +137,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4300000, guid: 4e878d01561e49e41be1e9bee4545a66, type: 3}
+  serializedVersion: 3
+  m_Size: {x: 1, y: 0.4817454, z: 1.0204346}
+  m_Center: {x: 0, y: 0.24087296, z: 0.010217339}

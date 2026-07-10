@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3219605147069017598}
   - component: {fileID: 1945992953656664667}
   - component: {fileID: 4388046513382528657}
-  - component: {fileID: 1263147103}
+  - component: {fileID: 449986508585652551}
   m_Layer: 0
   m_Name: SM_Gen_Prop_Barrel_Metal_02
   m_TagString: Untagged
@@ -59,6 +59,9 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -84,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &1263147103
-MeshCollider:
+--- !u!136 &449986508585652551
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -102,7 +105,8 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -5070546394248356799, guid: b7983411811cb6b4cb9291138face510, type: 2}
+  serializedVersion: 2
+  m_Radius: 0.35817033
+  m_Height: 1.0256392
+  m_Direction: 1
+  m_Center: {x: -0.0057522357, y: 0.5241689, z: 0.0027741492}

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 414952}
   - component: {fileID: 3390406}
   - component: {fileID: 2399814}
-  - component: {fileID: 64743687456066828}
+  - component: {fileID: 8789958086691849807}
   m_Layer: 14
   m_Name: SM_Prop_Roof_Aircon_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64743687456066828
-MeshCollider:
+--- !u!65 &8789958086691849807
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43688092181248474, guid: b5ab7789dd0b3c84eb8208ec5ca03577, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.95008904, y: 0.6019205, z: 0.4814421}
+  m_Center: {x: -0.0064816177, y: 0.29343623, z: -0.0004956573}

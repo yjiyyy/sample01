@@ -11,8 +11,7 @@ GameObject:
   - component: {fileID: 417310}
   - component: {fileID: 3318896}
   - component: {fileID: 2303918}
-  - component: {fileID: 64503935442861210}
-  - component: {fileID: 64769559987184210}
+  - component: {fileID: 1875716923972659216}
   m_Layer: 12
   m_Name: SM_Bld_Spire_01
   m_TagString: Untagged
@@ -88,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64503935442861210
-MeshCollider:
+--- !u!65 &1875716923972659216
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -106,29 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43712636598532470, guid: ba2b512393eab4341a488fa8681866c2, type: 2}
---- !u!64 &64769559987184210
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 152408}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43109697441109772, guid: ba2b512393eab4341a488fa8681866c2, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 2.6600075, y: 21.313847, z: 2.6600075}
+  m_Center: {x: 0, y: 10.656923, z: 0}

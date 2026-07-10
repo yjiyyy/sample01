@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 465818}
   - component: {fileID: 3346640}
   - component: {fileID: 2375266}
-  - component: {fileID: 64845463806003382}
+  - component: {fileID: 5029256741167170413}
   m_Layer: 14
   m_Name: SM_Prop_Washingline_04
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64845463806003382
-MeshCollider:
+--- !u!65 &5029256741167170413
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43187393875958044, guid: f0f57c7d850aeaf4ba9bf825196188c9, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 5.222264, y: 0.38166595, z: 0.052050456}
+  m_Center: {x: 2.595342, y: -0.18698347, z: -0.010136597}

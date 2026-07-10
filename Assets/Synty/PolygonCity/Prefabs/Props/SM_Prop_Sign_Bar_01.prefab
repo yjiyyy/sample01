@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 415648}
   - component: {fileID: 3332004}
   - component: {fileID: 2308808}
-  - component: {fileID: 64357597043815120}
+  - component: {fileID: 4978629434636301495}
   m_Layer: 14
   m_Name: SM_Prop_Sign_Bar_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64357597043815120
-MeshCollider:
+--- !u!65 &4978629434636301495
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43281819131058170, guid: 29b0d5fa0f8a17f49a962262ae4d2d7f, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 1.3264523, y: 0.6737498, z: 0.16844466}
+  m_Center: {x: -0.010552347, y: 0.3263471, z: 0.0046379343}

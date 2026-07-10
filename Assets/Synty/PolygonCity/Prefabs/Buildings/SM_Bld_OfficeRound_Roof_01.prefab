@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 488086}
   - component: {fileID: 3342970}
   - component: {fileID: 2339944}
-  - component: {fileID: 64621539492296192}
+  - component: {fileID: 554755950894726020}
   m_Layer: 12
   m_Name: SM_Bld_OfficeRound_Roof_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64621539492296192
-MeshCollider:
+--- !u!65 &554755950894726020
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43320002937143690, guid: 6084313b6139c0f4e84bf48f7ee77b50, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 22.966366, y: 1.1523323, z: 23.05133}
+  m_Center: {x: 0, y: 0.30436897, z: -0.00000047683716}

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 478786}
   - component: {fileID: 3369430}
   - component: {fileID: 2348392}
-  - component: {fileID: 64281602321540160}
+  - component: {fileID: 1999862574165851372}
   m_Layer: 14
   m_Name: SM_Prop_Burger_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64281602321540160
-MeshCollider:
+--- !u!65 &1999862574165851372
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43495560659606826, guid: 02c882be55c48dc44a39b0688715f981, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.2841303, y: 0.19523792, z: 0.28943962}
+  m_Center: {x: -0.0000028312206, y: 0.099111654, z: -0.0014891773}

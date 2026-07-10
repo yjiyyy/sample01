@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 490886}
   - component: {fileID: 3379712}
   - component: {fileID: 2302706}
-  - component: {fileID: 64216288153195994}
+  - component: {fileID: 8288012728749100785}
   m_Layer: 14
   m_Name: SM_Prop_Paper_05
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64216288153195994
-MeshCollider:
+--- !u!65 &8288012728749100785
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43439381473107588, guid: 2df10f956f6fb744e8221e1c0f0a4542, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.335948, y: 0.13484041, z: 0.3092097}
+  m_Center: {x: -0.0075717866, y: -0.09698408, z: -0.03451497}

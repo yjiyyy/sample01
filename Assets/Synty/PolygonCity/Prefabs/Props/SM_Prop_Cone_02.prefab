@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 414112}
   - component: {fileID: 3362336}
   - component: {fileID: 2305028}
-  - component: {fileID: 64447037402591744}
+  - component: {fileID: 2158396978424260163}
   m_Layer: 14
   m_Name: SM_Prop_Cone_02
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64447037402591744
-MeshCollider:
+--- !u!65 &2158396978424260163
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43363757776587622, guid: 57cf152f8511e664889b34ca9f5c11fc, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.9555933, y: 1.0063324, z: 0.9465897}
+  m_Center: {x: 0.008342981, y: 0.5113648, z: 0.0039474964}

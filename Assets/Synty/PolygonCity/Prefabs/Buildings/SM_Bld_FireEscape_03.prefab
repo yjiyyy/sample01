@@ -11,12 +11,12 @@ GameObject:
   - component: {fileID: 457278}
   - component: {fileID: 3353552}
   - component: {fileID: 2308262}
-  - component: {fileID: 64591475882772306}
-  - component: {fileID: 64847892076776102}
-  - component: {fileID: 64659557287567194}
-  - component: {fileID: 64853672918131986}
-  - component: {fileID: 64898005112730966}
-  - component: {fileID: 64465966727508294}
+  - component: {fileID: 1982956920347977130}
+  - component: {fileID: 6891756751492169251}
+  - component: {fileID: 7433710090287574411}
+  - component: {fileID: 8217303921158087717}
+  - component: {fileID: 4121549616910742162}
+  - component: {fileID: 1691628613577649604}
   m_Layer: 12
   m_Name: SM_Bld_FireEscape_03
   m_TagString: Untagged
@@ -92,8 +92,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64591475882772306
-MeshCollider:
+--- !u!65 &1982956920347977130
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -110,12 +110,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43540522481675108, guid: bd1b089805fe58543936dca5e51e2494, type: 2}
---- !u!64 &64847892076776102
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 1.214942, y: 2.321546, z: 0.26996732}
+  m_Center: {x: -3.8525643, y: 2.1202455, z: 1.6536614}
+--- !u!65 &6891756751492169251
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -132,12 +131,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43372488467993786, guid: bd1b089805fe58543936dca5e51e2494, type: 2}
---- !u!64 &64659557287567194
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 2.8779202, y: 1.552426, z: 0.35082853}
+  m_Center: {x: -3.266621, y: 0.27741152, z: 1.6131516}
+--- !u!65 &7433710090287574411
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -154,12 +152,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43445798400437210, guid: bd1b089805fe58543936dca5e51e2494, type: 2}
---- !u!64 &64853672918131986
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 2.0242453, y: 3.0021658, z: 0.8375677}
+  m_Center: {x: -1.6250329, y: 1.577445, z: 1.167232}
+--- !u!65 &8217303921158087717
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -176,12 +173,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43911630065890426, guid: bd1b089805fe58543936dca5e51e2494, type: 2}
---- !u!64 &64898005112730966
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 0.33748436, y: 1.552426, z: 1.6870892}
+  m_Center: {x: -4.763771, y: 0.20991474, z: 0.80996144}
+--- !u!65 &4121549616910742162
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -198,12 +194,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43887761979775674, guid: bd1b089805fe58543936dca5e51e2494, type: 2}
---- !u!64 &64465966727508294
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 0.2699871, y: 0.7424646, z: 1.6870892}
+  m_Center: {x: -2.3001385, y: -0.19506595, z: 0.80996144}
+--- !u!65 &1691628613577649604
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -220,7 +215,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43452803794894002, guid: bd1b089805fe58543936dca5e51e2494, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 2.2704492, y: 0.21283379, z: 1.6872544}
+  m_Center: {x: -3.5703566, y: 0.069729656, z: 0.8098788}

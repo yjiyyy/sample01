@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 456430}
   - component: {fileID: 3384708}
   - component: {fileID: 2323080}
-  - component: {fileID: 64702844678176456}
+  - component: {fileID: 5700609917244400143}
   m_Layer: 14
   m_Name: SM_Prop_Sign_Attachment_02
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64702844678176456
-MeshCollider:
+--- !u!65 &5700609917244400143
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43587457744692982, guid: a12c5b4bf84689344b503ee0dfd9492a, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.22154394, y: 0.6751815, z: 0.34286562}
+  m_Center: {x: -0.0019842088, y: -0.036554486, z: 0.17143281}

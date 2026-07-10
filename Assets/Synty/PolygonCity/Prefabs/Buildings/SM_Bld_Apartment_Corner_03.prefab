@@ -11,8 +11,8 @@ GameObject:
   - component: {fileID: 498122}
   - component: {fileID: 3373738}
   - component: {fileID: 2322114}
-  - component: {fileID: 64253576116498310}
-  - component: {fileID: 64943744163857638}
+  - component: {fileID: 6892897528792770223}
+  - component: {fileID: 3456923807767896561}
   m_Layer: 12
   m_Name: SM_Bld_Apartment_Corner_03
   m_TagString: Untagged
@@ -88,8 +88,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64253576116498310
-MeshCollider:
+--- !u!65 &6892897528792770223
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -106,12 +106,11 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43865143850906056, guid: cf707266b7730b24e95d89c3a681b7eb, type: 2}
---- !u!64 &64943744163857638
-MeshCollider:
+  serializedVersion: 3
+  m_Size: {x: 5.3151617, y: 2.525498, z: 5.3151617}
+  m_Center: {x: -2.4731078, y: 1.262749, z: -2.4755325}
+--- !u!65 &3456923807767896561
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -128,7 +127,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43129005994196292, guid: cf707266b7730b24e95d89c3a681b7eb, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 5.275427, y: 0.45270538, z: 5.275122}
+  m_Center: {x: -2.4729962, y: 2.7736454, z: -2.475804}

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 498056}
   - component: {fileID: 3335110}
   - component: {fileID: 2362326}
-  - component: {fileID: 64013415323866188}
+  - component: {fileID: 8621364009634868648}
   m_Layer: 14
   m_Name: SM_Prop_Light_Attachment_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64013415323866188
-MeshCollider:
+--- !u!65 &8621364009634868648
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43607251908238236, guid: ec674c2530b937747895f5ebe37749a6, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.22885874, y: 0.35207137, z: 2.6579523}
+  m_Center: {x: 0.0042103454, y: -0.08895816, z: 1.3201737}

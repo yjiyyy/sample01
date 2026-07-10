@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 415030}
   - component: {fileID: 3331108}
   - component: {fileID: 2351870}
-  - component: {fileID: 64342122634748378}
+  - component: {fileID: 7976152133876503682}
   m_Layer: 12
   m_Name: SM_Bld_Apartment_Stairs_Corner_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64342122634748378
-MeshCollider:
+--- !u!65 &7976152133876503682
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4300000, guid: 2d700aadc684b324492f69c4c4f08534, type: 3}
+  serializedVersion: 3
+  m_Size: {x: 10.079835, y: 4.1706996, z: 10.005354}
+  m_Center: {x: -5.0062356, y: 0.47073984, z: -5.0134306}

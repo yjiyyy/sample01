@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 437978}
   - component: {fileID: 3321500}
   - component: {fileID: 2303046}
-  - component: {fileID: 64486958200567730}
+  - component: {fileID: 5234743427837006708}
   m_Layer: 14
   m_Name: SM_Prop_Billboard_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64486958200567730
-MeshCollider:
+--- !u!65 &5234743427837006708
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43821057981625824, guid: 3d7cad8f008896d4184f590aff04d0e8, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 4.4981833, y: 2.3545177, z: 0.9136934}
+  m_Center: {x: 0, y: 1.8946849, z: 0.40707386}

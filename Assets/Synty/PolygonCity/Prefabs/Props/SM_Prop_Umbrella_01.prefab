@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 490492}
   - component: {fileID: 3344948}
   - component: {fileID: 2354422}
-  - component: {fileID: 64052535471332412}
+  - component: {fileID: 3225914656597363041}
   m_Layer: 14
   m_Name: SM_Prop_Umbrella_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64052535471332412
-MeshCollider:
+--- !u!65 &3225914656597363041
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43139833840751848, guid: 64b7c92b502371f4caadcc8d24685d7c, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 1.5205607, y: 1.2367879, z: 1.6220161}
+  m_Center: {x: -0.050727695, y: 0.3434509, z: 0}

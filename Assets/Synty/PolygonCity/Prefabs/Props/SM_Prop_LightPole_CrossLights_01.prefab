@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 479914}
   - component: {fileID: 3313490}
   - component: {fileID: 2313872}
-  - component: {fileID: 64082082623491028}
+  - component: {fileID: 8309401910477946723}
   m_Layer: 14
   m_Name: SM_Prop_LightPole_CrossLights_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64082082623491028
-MeshCollider:
+--- !u!65 &8309401910477946723
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43612578541127056, guid: 9d87df247aba9aa4ca67fb68b8436704, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.45975658, y: 0.402287, z: 0.31014195}
+  m_Center: {x: -0.23932345, y: 2.6509726, z: 0.123968415}

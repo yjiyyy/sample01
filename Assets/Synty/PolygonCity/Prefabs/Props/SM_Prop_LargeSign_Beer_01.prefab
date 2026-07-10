@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 466184}
   - component: {fileID: 3360546}
   - component: {fileID: 2305762}
-  - component: {fileID: 64327982866602724}
+  - component: {fileID: 3391110864713857677}
   m_Layer: 14
   m_Name: SM_Prop_LargeSign_Beer_01
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64327982866602724
-MeshCollider:
+--- !u!65 &3391110864713857677
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43032375745203696, guid: 28905ea446f6d6c4a9d94dd9efb79435, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 1.9041358, y: 3.1786242, z: 2.0061202}
+  m_Center: {x: -0.013486564, y: -0.016565442, z: 0.024221718}

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 475946}
   - component: {fileID: 3376070}
   - component: {fileID: 2354276}
-  - component: {fileID: 64520211492914196}
+  - component: {fileID: 6517018768692988842}
   m_Layer: 14
   m_Name: SM_Prop_Soda_03
   m_TagString: Untagged
@@ -87,8 +87,8 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &64520211492914196
-MeshCollider:
+--- !u!65 &6517018768692988842
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,7 +105,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 43794339436908854, guid: d21898f357d4c2642b7635d08fde7301, type: 2}
+  serializedVersion: 3
+  m_Size: {x: 0.2102725, y: 0.148561, z: 0.22953522}
+  m_Center: {x: 0.0024710968, y: -0.0014494471, z: 0.0117574}
