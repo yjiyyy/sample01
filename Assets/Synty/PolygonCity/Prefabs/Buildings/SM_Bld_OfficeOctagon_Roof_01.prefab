@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3395592}
   - component: {fileID: 2361742}
   - component: {fileID: 6341698576803979574}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_OfficeOctagon_Roof_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

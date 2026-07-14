@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3333522}
   - component: {fileID: 2344520}
   - component: {fileID: 1659547762550474347}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_Apartment_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

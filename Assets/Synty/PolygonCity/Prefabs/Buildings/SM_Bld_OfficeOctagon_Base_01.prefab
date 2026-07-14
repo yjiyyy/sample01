@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 405784}
   - component: {fileID: 3378346}
   - component: {fileID: 2377826}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_OfficeOctagon_Base_01_Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -98,7 +98,7 @@ GameObject:
   - component: {fileID: 3372620}
   - component: {fileID: 2345382}
   - component: {fileID: 1450167987581472482}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_OfficeOctagon_Base_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

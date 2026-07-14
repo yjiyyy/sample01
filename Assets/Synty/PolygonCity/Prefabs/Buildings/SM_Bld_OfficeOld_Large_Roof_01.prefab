@@ -11,9 +11,8 @@ GameObject:
   - component: {fileID: 431146}
   - component: {fileID: 3333358}
   - component: {fileID: 2308990}
-  - component: {fileID: 2785956346833039963}
-  - component: {fileID: 6057982967939835829}
-  m_Layer: 12
+  - component: {fileID: 5867958534191658240}
+  m_Layer: 19
   m_Name: SM_Bld_OfficeOld_Large_Roof_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -88,7 +87,7 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &2785956346833039963
+--- !u!65 &5867958534191658240
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -107,26 +106,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 15.716621, y: 1.517604, z: 15.753456}
-  m_Center: {x: -7.529438, y: 0.6309884, z: -7.499996}
---- !u!65 &6057982967939835829
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 187662}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 15.867523, y: 3.0351899, z: 15.866797}
-  m_Center: {x: -7.5110207, y: 2.9608412, z: -7.4996333}
+  m_Size: {x: 16.086617, y: 4.2270317, z: 16.123451}
+  m_Center: {x: -7.529438, y: 2.1135159, z: -7.499996}

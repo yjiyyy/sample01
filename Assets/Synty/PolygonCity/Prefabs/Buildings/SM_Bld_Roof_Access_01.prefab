@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2343282}
   - component: {fileID: 1810291068847799337}
   - component: {fileID: 5512186444462926754}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_Roof_Access_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

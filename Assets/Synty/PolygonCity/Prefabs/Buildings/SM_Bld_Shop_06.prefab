@@ -11,9 +11,8 @@ GameObject:
   - component: {fileID: 481430}
   - component: {fileID: 3301052}
   - component: {fileID: 2382568}
-  - component: {fileID: 3447622798501753456}
-  - component: {fileID: 8109865024952357533}
-  m_Layer: 12
+  - component: {fileID: 3036953662911147456}
+  m_Layer: 19
   m_Name: SM_Bld_Shop_06
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -88,7 +87,7 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &3447622798501753456
+--- !u!65 &3036953662911147456
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -107,26 +106,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5.2237573, y: 0.65284157, z: 0.5595787}
-  m_Center: {x: -2.5223935, y: 2.7052236, z: 0.5558882}
---- !u!65 &8109865024952357533
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 113012}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 5.115856, y: 3, z: 5.298566}
-  m_Center: {x: -2.5223937, y: 1.5, z: -2.4288511}
+  m_Size: {x: 5.1752625, y: 3.0000005, z: 5.8767266}
+  m_Center: {x: -2.5, y: 1.5000002, z: -2.1492717}

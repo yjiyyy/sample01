@@ -11,9 +11,8 @@ GameObject:
   - component: {fileID: 419446}
   - component: {fileID: 3364760}
   - component: {fileID: 2307512}
-  - component: {fileID: 6994892011250692068}
-  - component: {fileID: 6108781825919215063}
-  m_Layer: 12
+  - component: {fileID: 4349683634925116093}
+  m_Layer: 19
   m_Name: SM_Bld_OfficeOld_Large_02
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -88,7 +87,7 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &6994892011250692068
+--- !u!65 &4349683634925116093
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -107,26 +106,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 16.433155, y: 0.80161667, z: 0.40080833}
-  m_Center: {x: -7.5565815, y: 21.84407, z: -15.561722}
---- !u!65 &6108781825919215063
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 144178}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 16.227514, y: 25.406757, z: 15.659009}
-  m_Center: {x: -7.456938, y: 12.7479725, z: -7.3560205}
+  m_Size: {x: 16.086624, y: 25.250944, z: 16.123451}
+  m_Center: {x: -7.529442, y: 12.625472, z: -7.499996}

@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 3221617551609175034}
   - component: {fileID: 1022279240779342724}
   - component: {fileID: 1745806613927992043}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_CityHall_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -11,8 +11,7 @@ GameObject:
   - component: {fileID: 402396}
   - component: {fileID: 3331090}
   - component: {fileID: 2374326}
-  - component: {fileID: 4341690897429165040}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_OfficeRound_Base_01_Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -87,29 +86,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!136 &4341690897429165040
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 144846}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 10.9
-  m_Height: 20.603788
-  m_Direction: 1
-  m_Center: {x: 0.010656357, y: 3.0148354, z: -0.00039815903}
 --- !u!1 &185420
 GameObject:
   m_ObjectHideFlags: 0
@@ -121,7 +97,8 @@ GameObject:
   - component: {fileID: 492454}
   - component: {fileID: 3390442}
   - component: {fileID: 2355552}
-  m_Layer: 12
+  - component: {fileID: 5930055335626295205}
+  m_Layer: 19
   m_Name: SM_Bld_OfficeRound_Base_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -197,3 +174,26 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!136 &5930055335626295205
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 185420}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 11.525665
+  m_Height: 63.58
+  m_Direction: 1
+  m_Center: {x: 0, y: 20.7, z: 0.0000014305115}

@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 65995452968665610}
   - component: {fileID: 65392026178564298}
   - component: {fileID: 65576360546340080}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_Apartment_Roof_Corner_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}

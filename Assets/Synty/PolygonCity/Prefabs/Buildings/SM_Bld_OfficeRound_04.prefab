@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3303566}
   - component: {fileID: 2344198}
   - component: {fileID: 4468045844395245738}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_OfficeRound_04
   m_TagString: Untagged
   m_Icon: {fileID: 0}

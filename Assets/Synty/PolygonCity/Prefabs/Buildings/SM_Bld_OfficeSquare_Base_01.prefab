@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 437496}
   - component: {fileID: 3324360}
   - component: {fileID: 2367790}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_OfficeSquare_Base_01_Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -98,7 +98,7 @@ GameObject:
   - component: {fileID: 3332606}
   - component: {fileID: 2324128}
   - component: {fileID: 65360870157553034}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_OfficeSquare_Base_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

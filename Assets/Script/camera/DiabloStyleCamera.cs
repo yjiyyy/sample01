@@ -94,22 +94,27 @@ public class DiabloStyleCamera : MonoBehaviour
     [SerializeField] private bool enableOcclusionFade;
     [SerializeField] private bool enableRayOcclusionFade = true;
     [SerializeField] private bool enableInsideColliderFade = true;
+    [SerializeField] private bool enableNearCameraFade = true;
     [SerializeField] private bool enableBuildingVolumeFade;
     [Tooltip("가릴 수 있는 오브젝트 레이어 (건물 Wall 등)")]
     [SerializeField] private LayerMask occluderLayers;
     [Range(0f, 1f)]
     [SerializeField] private float occlusionMinAlpha = 0.25f;
-    [SerializeField] private float occlusionFadeInSpeed = 8f;
-    [SerializeField] private float occlusionFadeOutSpeed = 6f;
     [Tooltip("0이면 얇은 Ray, 0.2~0.5면 SphereCast")]
     [Min(0f)]
     [SerializeField] private float occlusionCastRadius;
     [Tooltip("가림 캐스트를 주인공보다 이 거리(m)만큼 앞에서 끊습니다. 캐릭터 옆·뒤 벽이 투명해지는 걸 줄입니다.")]
     [Min(0f)]
     [SerializeField] private float occlusionCastStopBeforeTarget = 0.5f;
+    [Tooltip("캐릭터가 건물에 이 거리(m) 이내로 붙어 있어도, hit가 캐릭터 근처(옆면)일 때만 페이드를 막습니다. 카메라 근처 바닥/천장은 페이드합니다.")]
+    [Min(0f)]
+    [SerializeField] private float occlusionAdjacentDistance = 1.5f;
     [Tooltip("카메라가 Collider 안인지 검사할 OverlapSphere 반경")]
     [Min(0.01f)]
     [SerializeField] private float occlusionInsideCheckRadius = 0.05f;
+    [Tooltip("카메라에 거의 붙은 바닥/천장처럼 Ray/SphereCast가 놓치는 면을 잡기 위한 근처 Overlap 반경")]
+    [Min(0.05f)]
+    [SerializeField] private float occlusionNearCheckRadius = 0.35f;
     [Min(1)]
     [SerializeField] private int occlusionMaxCount = 16;
 
@@ -122,6 +127,9 @@ public class DiabloStyleCamera : MonoBehaviour
     private float blendedPitchOffset;
     private float blendedDistanceOffset;
 
+    private const string DebrisLayerName = "D_Prop";
+    private static int cachedDebrisLayer = int.MinValue;
+
     public Transform Target => target;
     public float PitchDegrees => pitchDegrees;
     public float YawDegrees => yawDegrees;
@@ -131,6 +139,7 @@ public class DiabloStyleCamera : MonoBehaviour
     {
         cam = GetComponent<Camera>();
         ApplyLens();
+        EnsureDebrisLayerVisible();
         EnsureOcclusionFade();
     }
 
@@ -140,6 +149,7 @@ public class DiabloStyleCamera : MonoBehaviour
             cam = GetComponent<Camera>();
 
         ApplyLens();
+        EnsureDebrisLayerVisible();
         if (!Application.isPlaying)
             ApplyRigToTransform(ResolveAnchorForGizmo());
     }
@@ -158,12 +168,35 @@ public class DiabloStyleCamera : MonoBehaviour
         distance = Mathf.Max(0.1f, distance);
 
         ApplyLens();
+        EnsureDebrisLayerVisible();
 
         if (!Application.isPlaying)
             ApplyRigToTransform(ResolveAnchorForGizmo());
 
         if (Application.isPlaying)
             ApplyOcclusionFadeSettings();
+    }
+
+    /// <summary>
+    /// 파괴 잔해(D_Prop) 레이어는 Prop과 별도로 Culling Mask에 넣어야 보입니다.
+    /// </summary>
+    private void EnsureDebrisLayerVisible()
+    {
+        if (cam == null)
+            return;
+
+        if (cachedDebrisLayer == int.MinValue)
+            cachedDebrisLayer = LayerMask.NameToLayer(DebrisLayerName);
+
+        int layer = cachedDebrisLayer;
+        if (layer < 0)
+            return;
+
+        int layerBit = 1 << layer;
+        if ((cam.cullingMask & layerBit) != 0)
+            return;
+
+        cam.cullingMask |= layerBit;
     }
 
     private void LateUpdate()
@@ -329,14 +362,15 @@ public class DiabloStyleCamera : MonoBehaviour
         occlusionFade.Configure(
             occluderLayers,
             occlusionMinAlpha,
-            occlusionFadeInSpeed,
-            occlusionFadeOutSpeed,
             occlusionCastRadius,
             occlusionCastStopBeforeTarget,
+            occlusionAdjacentDistance,
             occlusionInsideCheckRadius,
+            occlusionNearCheckRadius,
             occlusionMaxCount,
             enableRayOcclusionFade,
             enableInsideColliderFade,
+            enableNearCameraFade,
             enableBuildingVolumeFade);
         occlusionFade.SetIgnoreRoot(target);
     }

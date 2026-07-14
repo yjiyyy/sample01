@@ -11,9 +11,8 @@ GameObject:
   - component: {fileID: 430828}
   - component: {fileID: 3397806}
   - component: {fileID: 2365550}
-  - component: {fileID: 4539754291849906888}
-  - component: {fileID: 7040888281646968866}
-  m_Layer: 12
+  - component: {fileID: 4326593406638609984}
+  m_Layer: 19
   m_Name: SM_Bld_Shop_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -89,7 +88,7 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &4539754291849906888
+--- !u!65 &4326593406638609984
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -108,29 +107,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 2.2089698, y: 3.053089, z: 5.4570427}
-  m_Center: {x: -3.895515, y: 1.5265445, z: -2.2367716}
---- !u!65 &7040888281646968866
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 109168}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 2.720498, y: 3.0530908, z: 5.4581175}
-  m_Center: {x: -1.360249, y: 1.5265454, z: -2.237309}
+  m_Size: {x: 5, y: 3.0538864, z: 5.5358915}
+  m_Center: {x: -2.5, y: 1.5269432, z: -2.2320542}
 --- !u!1 &145354
 GameObject:
   m_ObjectHideFlags: 0
@@ -142,7 +120,8 @@ GameObject:
   - component: {fileID: 436742}
   - component: {fileID: 3348816}
   - component: {fileID: 2395052}
-  m_Layer: 12
+  - component: {fileID: 4512736157669550604}
+  m_Layer: 19
   m_Name: SM_Bld_Shop_01_Glass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -217,3 +196,24 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &4512736157669550604
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 145354}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 4.890793, y: 1.862503, z: 0.32266808}
+  m_Center: {x: -2.5000076, y: 1.1035347, z: 0.11668873}

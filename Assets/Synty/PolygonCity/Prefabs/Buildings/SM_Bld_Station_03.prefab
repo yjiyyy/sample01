@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2325110}
   - component: {fileID: 696675418469324331}
   - component: {fileID: 6404073256809331489}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_Station_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}

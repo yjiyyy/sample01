@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 1815126071165058596}
   - component: {fileID: 8893382126134174279}
   - component: {fileID: 3303459640548217419}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_Apartment_Door_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

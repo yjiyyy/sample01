@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3306944}
   - component: {fileID: 2364110}
   - component: {fileID: 5520941114264124530}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Prop_Water_Tower_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

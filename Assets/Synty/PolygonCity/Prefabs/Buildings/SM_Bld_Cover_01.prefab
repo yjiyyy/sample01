@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 6465990236429296841}
   - component: {fileID: 5517105426971130050}
   - component: {fileID: 3259629137615870828}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_Cover_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

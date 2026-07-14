@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3318896}
   - component: {fileID: 2303918}
   - component: {fileID: 1875716923972659216}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_Spire_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}

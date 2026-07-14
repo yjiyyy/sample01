@@ -17,7 +17,7 @@ GameObject:
   - component: {fileID: 8217303921158087717}
   - component: {fileID: 4121549616910742162}
   - component: {fileID: 1691628613577649604}
-  m_Layer: 12
+  m_Layer: 19
   m_Name: SM_Bld_FireEscape_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}

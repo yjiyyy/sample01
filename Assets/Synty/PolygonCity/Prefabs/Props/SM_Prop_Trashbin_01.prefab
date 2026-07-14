@@ -11,7 +11,9 @@ GameObject:
   - component: {fileID: 422298}
   - component: {fileID: 3312692}
   - component: {fileID: 2378010}
-  - component: {fileID: 9060025900331077518}
+  - component: {fileID: -5432462456170267800}
+  - component: {fileID: 6351466368287879096}
+  - component: {fileID: -2125617405388169641}
   m_Layer: 14
   m_Name: SM_Prop_Trashbin_01
   m_TagString: Untagged
@@ -87,8 +89,79 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &9060025900331077518
-BoxCollider:
+--- !u!114 &-5432462456170267800
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 122224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fad7a7c20a154b40a5cb4f86000a4de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hitsToBreak: 3
+  hitCollider: {fileID: 0}
+  despawnDelay: 3
+  breakImpulse: 8
+  breakTorque: 0.5
+  breakImpulseUpBias: 2
+  detachParts: []
+  partBreakImpulseScale: 0.1
+  partBreakTorqueScale: 1
+  pulseColor: {r: 0.6981132, g: 0.6981132, b: 0.6981132, a: 1}
+  pulseIntensity: 1
+  pulseBrighten: 5
+  pulseOutDuration: 0.2
+  shakeMode: 1
+  shakeIntensity: 5
+  shakeDuration: 0.5
+  shakeFrequency: 10
+  totalDropCountMin: 2
+  totalDropCountMax: 5
+  dropEntries:
+  - itemPrefab: {fileID: 1745013137664592741, guid: 1d5be34bf3b17d2419a9566ad03a8391, type: 3}
+    dropChance: 0.5
+  - itemPrefab: {fileID: 8987695404800486066, guid: 932d99dfdfecd3240bc4484283a64d08, type: 3}
+    dropChance: 0.5
+  dropGroundLayerMask:
+    serializedVersion: 2
+    m_Bits: 529408
+  enableProximityOutline: 0
+  proximityOutlineRadius: 5
+  proximityOutlineCheckInterval: 0.15
+  outlineColor: {r: 1, g: 0.85, b: 0.1, a: 1}
+  outlineWidth: 0.1
+--- !u!54 &6351466368287879096
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 122224}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!136 &-2125617405388169641
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -105,6 +178,8 @@ BoxCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.6470232, y: 1.1784372, z: 0.6470337}
+  serializedVersion: 2
+  m_Radius: 0.32351685
+  m_Height: 1.1784372
+  m_Direction: 1
   m_Center: {x: -0.00000047683716, y: 0.5892186, z: 0}
