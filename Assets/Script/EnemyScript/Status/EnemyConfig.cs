@@ -98,6 +98,9 @@ public class EnemyConfig : ScriptableObject
     public float backstepDistance = 5f;
     [Tooltip("Backstep speed multiplier (1.0 = base move speed).")]
     public float backstepSpeedMultiplier = 1.0f;
+    [Tooltip("쿨타임(거리 유지) 중 너무 가까울 때 백스텝을 고를 확률. 1=항상 백스텝, 0=항상 제자리. 쿨타임 진입 시 1회만 결정.")]
+    [Range(0f, 1f)]
+    public float cooldownBackstepChance = 1f;
     [Tooltip("Forward speed normalization time used by EnemyAI (seconds).")]
     [Range(0.05f, 2f)]
     public float forwardSpeedNormalizeTime = 0.25f;
@@ -164,6 +167,7 @@ public class EnemyConfig : ScriptableObject
         findDuration = Mathf.Max(0f, findDuration);
         backstepDistance = Mathf.Max(0f, backstepDistance);
         backstepSpeedMultiplier = Mathf.Max(0f, backstepSpeedMultiplier);
+        cooldownBackstepChance = Mathf.Clamp01(cooldownBackstepChance);
         forwardSpeedNormalizeTime = Mathf.Max(0.01f, forwardSpeedNormalizeTime);
         roamRadius = Mathf.Max(0f, roamRadius);
         peaceMoveSpeedMultiplier = Mathf.Clamp01(peaceMoveSpeedMultiplier);

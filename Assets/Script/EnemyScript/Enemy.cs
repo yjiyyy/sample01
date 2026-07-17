@@ -54,6 +54,8 @@ public class Enemy : MonoBehaviour
 
     private const float ROT_SPEED_DEG_PER_SEC = 720f;
     private const float EPS = 0.0001f;
+    /// <summary>공격 시작 시 플레이어 방향과 이 각도(도) 이상 어긋나면 플레이어 쪽으로 잠근다.</summary>
+    private const float ATTACK_FACE_ANGLE_THRESHOLD = 30f;
 
     public bool IsStateHoldActive => stateHoldCount > 0;
     public bool IsInSpawnIntro { get; private set; }
@@ -263,9 +265,9 @@ public class Enemy : MonoBehaviour
             case EnemyState.Attack:
                 ai?.ForceClearBackstep();
                 animCtrl?.SetSignedSpeed(0f);
-                // 공격 시작 시점 각도를 공격 종료까지 고정한다.
+                // 공격 시작 시 플레이어와 30도 이상 어긋나면 플레이어 쪽으로 돌린 뒤 그 각도를 고정한다.
                 forceAttackLookLock = true;
-                LockLookDirection(transform.forward, force: true);
+                LockLookDirection(ResolveAttackLookLockDirection(), force: true);
                 ai?.OnAttackStarted(this);
                 break;
 
@@ -331,9 +333,22 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// EnemySpawner가 생성한 몬스터에만 호출. 스폰 애니·무적·제자리 대기 후 Peace AI 재개.
+    /// 스폰 애니·무적·제자리 대기 후 Peace AI를 재개.
     /// </summary>
     public void BeginSpawnIntro(float duration = DefaultSpawnIntroDuration)
+    {
+        BeginSpawnIntroInternal(duration, enterCombatAfterIntro: false);
+    }
+
+    /// <summary>
+    /// 전투 스폰용. 스폰 애니·무적·제자리 대기 후 발견 연출 없이 바로 추적을 시작.
+    /// </summary>
+    public void BeginCombatSpawnIntro(float duration = DefaultSpawnIntroDuration)
+    {
+        BeginSpawnIntroInternal(duration, enterCombatAfterIntro: true);
+    }
+
+    private void BeginSpawnIntroInternal(float duration, bool enterCombatAfterIntro)
     {
         if (CurrentState == EnemyState.Dead) return;
 
@@ -353,10 +368,18 @@ public class Enemy : MonoBehaviour
                 resolvedDuration = Mathf.Max(0.05f, spawnClip.length);
         }
 
-        spawnIntroRoutine = StartCoroutine(SpawnIntroRoutine(resolvedDuration, spawnClip, spawnFxPrefab));
+        spawnIntroRoutine = StartCoroutine(SpawnIntroRoutine(
+            resolvedDuration,
+            spawnClip,
+            spawnFxPrefab,
+            enterCombatAfterIntro));
     }
 
-    private IEnumerator SpawnIntroRoutine(float duration, AnimationClip spawnClip, GameObject spawnFxPrefab)
+    private IEnumerator SpawnIntroRoutine(
+        float duration,
+        AnimationClip spawnClip,
+        GameObject spawnFxPrefab,
+        bool enterCombatAfterIntro)
     {
         IsInSpawnIntro = true;
 
@@ -379,6 +402,9 @@ public class Enemy : MonoBehaviour
 
         if (CurrentState == EnemyState.Dead)
             yield break;
+
+        if (enterCombatAfterIntro)
+            ai?.SkipFindGoToCombat();
 
         animCtrl?.SetSignedSpeed(0f);
         animCtrl?.PlayRun(crossFade: false, restart: true);
@@ -600,6 +626,45 @@ public class Enemy : MonoBehaviour
         var health = GetComponent<EnemyHealth>();
         bool healthSA = (health != null && health.HasSuperArmor);
         return healthSA || HasManualSuperArmor();
+    }
+
+    /// <summary>
+    /// 공격 시작용 잠금 방향.
+    /// 플레이어가 현재 정면과 30도 이상 어긋나면 플레이어 방향, 아니면 현재 정면을 유지한다.
+    /// </summary>
+    private Vector3 ResolveAttackLookLockDirection()
+    {
+        Vector3 currentFwd = transform.forward;
+        currentFwd.y = 0f;
+        if (currentFwd.sqrMagnitude < EPS)
+            currentFwd = Vector3.forward;
+        else
+            currentFwd.Normalize();
+
+        Vector3 playerPos;
+        if (!PlayerTargetCache.TryGetPosition(out playerPos))
+        {
+            if (player == null)
+                return currentFwd;
+            playerPos = player.position;
+        }
+
+        Vector3 toPlayer = playerPos - transform.position;
+        toPlayer.y = 0f;
+        if (toPlayer.sqrMagnitude < EPS)
+            return currentFwd;
+
+        toPlayer.Normalize();
+        if (Vector3.Angle(currentFwd, toPlayer) < ATTACK_FACE_ANGLE_THRESHOLD)
+            return currentFwd;
+
+        // 즉시 스냅해 공격 모션이 옛 각도로 시작되지 않게 한다.
+        Quaternion faceQ = Quaternion.LookRotation(toPlayer, Vector3.up);
+        transform.rotation = faceQ;
+        if (rb != null)
+            rb.rotation = faceQ;
+
+        return toPlayer;
     }
 
     public void LockLookDirection(Vector3 dir)

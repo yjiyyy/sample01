@@ -150,8 +150,7 @@ public class EnemyImpact : MonoBehaviour
         float targetStateHoldDuration = ResolveTargetStateHold(weapon);
         float targetAnimationHoldDuration = ResolveTargetAnimationHold(weapon);
 
-        var ai = ctx.GetComponent<EnemyAI>();
-        if (ai != null) ai.SkipFindGoToCombat();
+        // Push는 밀림 + hold만 적용한다. Peace/발견 상태를 Combat으로 깨우지 않는다.
         pushRoutine = StartCoroutine(PushRoutine(ctx, hitDir, pushPower, pushDuration, targetAnimationHoldDuration, targetStateHoldDuration));
     }
 

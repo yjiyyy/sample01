@@ -441,11 +441,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be2821b1ccca2dc47a504fc08cf3e42e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  backstepDistance: 5
+  backstepDistance: 3
   backstepSpeedMultiplier: 1
+  cooldownBackstepChance: 0.5
   forwardSpeedNormalizeTime: 0.25
   detectionRadius: 5
-  findDuration: 2
+  findDuration: 1
   roamRadius: 3
   peaceMoveSpeedMultiplier: 0.6
   idleMin: 1
@@ -482,7 +483,7 @@ MonoBehaviour:
   deathIndexParam: DeadMotionIndex
   deathStateName: DeadBlendTree
   deathVariantCount: 3
-  enableTimedSelfDestruct: 1
+  enableTimedSelfDestruct: 0
   selfDestructDelay: 2
   excludeRoot: {fileID: 4294328816770936735}
   hipsBody: {fileID: 252307446338033551}
@@ -535,8 +536,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   attackPatterns:
   - {fileID: 11400000, guid: ed6f8f9e13b90a04faa58b61dd502cc7, type: 2}
-  "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0.35
-  defaultPatternHoldDuration: 1
+  "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0
+  defaultPatternHoldDuration: 0
   debugDecisionLogs: 1
 --- !u!114 &3966798157978771124
 MonoBehaviour:

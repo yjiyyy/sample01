@@ -90,12 +90,16 @@ public class StageManager : MonoBehaviour
         CheckSurviveClear();
     }
 
-    public void RegisterEnemyKillTracking(EnemyHealth health, GameObject sourcePrefab)
+    public bool IsStageActive => stageActive;
+
+    /// <returns>스테이지가 활성일 때만 true. 배치 스포너가 등록 타이밍을 재시도할 때 사용.</returns>
+    public bool RegisterEnemyKillTracking(EnemyHealth health, GameObject sourcePrefab)
     {
         if (!stageActive || health == null)
-            return;
+            return false;
 
         health.OnDeath += () => HandleEnemyKilled(sourcePrefab);
+        return true;
     }
 
     private void HandleEnemyKilled(GameObject sourcePrefab)

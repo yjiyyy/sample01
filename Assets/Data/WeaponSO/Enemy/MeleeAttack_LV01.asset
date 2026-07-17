@@ -15,29 +15,33 @@ MonoBehaviour:
   attackName: Attack
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   grantSuperArmor: 0
-  damage: 150
+  damage: 1
   range: 1
-  cooldown: 0
-  attackTime: 1.5
+  cooldown: 5
+  attackTime: 0.8
   variantClips:
-  - {fileID: 1827226128182048838, guid: a0907f69574492244a3fcd4129ad4278, type: 3}
-  - {fileID: 1827226128182048838, guid: 9f2a5c2164cacdf449c4dbc962ba6733, type: 3}
+  - {fileID: 1827226128182048838, guid: 3d785207e6983f9439446fa36b34791f, type: 3}
   hitboxSpawnDelay: 1
   hitBoxLifetime: 0.1
+  hitTimings:
+  - spawnDelay: 0.2
+    hitBoxLifetime: 0.1
+  - spawnDelay: 0.6
+    hitBoxLifetime: 0.1
   attackFXPhases: []
-  attachHitboxToEnemy: 0
+  attachHitboxToEnemy: 1
   knockbackPower: 10
   knockbackDuration: 0.3
   stunDuration: 0
-  usePushInsteadOfKnockback: 0
+  usePushInsteadOfKnockback: 1
   targetHoldDuration: 0.1
   attackerHoldDuration: 0.1
   allowDuplicateHit: 0
   duplicateHitInterval: 0.1
   deathMode: 1
-  ragdollImpulse: 5
-  ragdollUpImpulse: 10
-  ragdollSpinTorque: 500
+  ragdollImpulse: 4
+  ragdollUpImpulse: 3
+  ragdollSpinTorque: 1500
   sliceTargets: 
   sliceImpulse: 12
   isPoisonAttack: 0

@@ -22,6 +22,11 @@ public class EnemyAI : MonoBehaviour
     [Header("백스텝 속도 계수")]
     public float backstepSpeedMultiplier = 1.0f;
 
+    [Header("쿨타임 거리 유지")]
+    [Tooltip("쿨타임 중 너무 가까울 때 백스텝 확률(0~1). 1=항상 백스텝. 쿨타임 진입 시 1회만 결정.")]
+    [Range(0f, 1f)]
+    public float cooldownBackstepChance = 1f;
+
     [Header("Forward 속도 정규화 시간")]
     [Range(0.1f, 2f)] public float forwardSpeedNormalizeTime = 0.25f;
 
@@ -50,8 +55,15 @@ public class EnemyAI : MonoBehaviour
     private float forwardSpeedLerpT;
     private bool distanceMaintenanceModeLast = false;
 
+    /// <summary>이번 쿨타임(거리 유지) 구간에 대해 백스텝/제자리 선택이 끝났는지.</summary>
+    private bool cooldownHoldChoiceActive;
+    /// <summary>true면 너무 가까울 때 백스텝, false면 제자리 유지(플레이어가 더 붙어도 유지).</summary>
+    private bool cooldownAllowBackstep = true;
+
     private float LowerBand => backstepDistance - 1f;
     private float UpperBand => backstepDistance + 1f;
+
+    private const float BACKSTEP_CHASE_INTERVAL = 0.5f;
 
     private enum AIState { Peace, Finding, Combat }
     private AIState aiState = AIState.Peace;
@@ -115,7 +127,7 @@ public class EnemyAI : MonoBehaviour
                 PeaceTick(ctx, player);
                 break;
             case AIState.Finding:
-                IdleFacing(ctx, player);
+                ctx.animCtrl?.SetSignedSpeed(0f);
                 break;
             case AIState.Combat:
                 if (backstepping) UpdateBackstep(ctx, player);
@@ -179,6 +191,10 @@ public class EnemyAI : MonoBehaviour
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
 
+        Vector3 look = GetLivePlayerPosition(player) - ctx.transform.position;
+        look.y = 0f;
+        ctx.LockLookDirection(look.sqrMagnitude > 0.0001f ? look.normalized : ctx.transform.forward);
+
         if (findingCoroutine != null) StopCoroutine(findingCoroutine);
         findingCoroutine = StartCoroutine(FindingCoroutine(ctx, player));
     }
@@ -190,14 +206,26 @@ public class EnemyAI : MonoBehaviour
         float t = 0f;
         while (t < findDuration)
         {
-            if (ctx.CurrentState == Enemy.EnemyState.Dead ||
-                ctx.CurrentState == Enemy.EnemyState.ShieldBreak ||
+            if (ctx.CurrentState == Enemy.EnemyState.Dead)
+            {
+                ctx.UnlockLookDirection();
+                findingCoroutine = null;
+                yield break;
+            }
+
+            // 피격/경직으로 Find가 끊기면 Peace로 돌리지 않고 Combat으로 유지한다.
+            // (현재 EnemyState가 Knockback/Stun이므로 여기서 Run 애니를 덮어쓰지 않는다.)
+            if (ctx.CurrentState == Enemy.EnemyState.ShieldBreak ||
                 ctx.CurrentState == Enemy.EnemyState.Stunned ||
                 ctx.CurrentState == Enemy.EnemyState.Knockback)
             {
-                aiState = AIState.Peace;
-                SetFacePhase(FacePhase.Peace);
                 findingCoroutine = null;
+                aiState = AIState.Combat;
+                SetFacePhase(FacePhase.Combat);
+                ctx.UnlockLookDirection();
+                signedForwardSpeed = 0f;
+                forwardSpeedLerpT = 0f;
+                ForceRefreshChaseTarget();
                 yield break;
             }
 
@@ -205,13 +233,21 @@ public class EnemyAI : MonoBehaviour
             yield return null;
         }
 
+        findingCoroutine = null;
+        EnterCombatAfterFind(ctx);
+    }
+
+    /// <summary>Find 정상 종료 후 Combat 진입. AI 상태와 이동(Run) 애니가 같이 바뀐다.</summary>
+    private void EnterCombatAfterFind(Enemy ctx)
+    {
         aiState = AIState.Combat;
         SetFacePhase(FacePhase.Combat);
-        findingCoroutine = null;
-
+        ctx?.UnlockLookDirection();
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
         ForceRefreshChaseTarget();
+        ctx?.animCtrl?.SetSignedSpeed(0f);
+        ctx?.animCtrl?.PlayRun(crossFade: false, restart: true);
     }
 
     private void DriveDecision(Enemy ctx, Transform player)
@@ -226,9 +262,15 @@ public class EnemyAI : MonoBehaviour
         string reason;
         bool distanceMaintenanceMode = ShouldDistanceMaintain(distance, out reason);
 
-        if (attackCtrl.debugDecisionLogs && distanceMaintenanceMode != distanceMaintenanceModeLast)
+        if (distanceMaintenanceMode != distanceMaintenanceModeLast)
         {
-            Debug.Log($"[AI] DistanceMaintenance {(distanceMaintenanceMode ? "ON" : "OFF")} (reason={reason}, dist={distance:F2})");
+            if (distanceMaintenanceMode)
+                BeginCooldownHoldChoice();
+            else
+                ClearCooldownHoldChoice();
+
+            if (attackCtrl.debugDecisionLogs)
+                Debug.Log($"[AI] DistanceMaintenance {(distanceMaintenanceMode ? "ON" : "OFF")} (reason={reason}, dist={distance:F2}, allowBackstep={cooldownAllowBackstep})");
             distanceMaintenanceModeLast = distanceMaintenanceMode;
         }
 
@@ -250,6 +292,24 @@ public class EnemyAI : MonoBehaviour
         }
 
         ForwardChase(ctx, player);
+    }
+
+    private void BeginCooldownHoldChoice()
+    {
+        cooldownHoldChoiceActive = true;
+        float chance = Mathf.Clamp01(cooldownBackstepChance);
+        if (chance <= 0f)
+            cooldownAllowBackstep = false;
+        else if (chance >= 1f)
+            cooldownAllowBackstep = true;
+        else
+            cooldownAllowBackstep = Random.value < chance;
+    }
+
+    private void ClearCooldownHoldChoice()
+    {
+        cooldownHoldChoiceActive = false;
+        cooldownAllowBackstep = true;
     }
 
     private bool ShouldDistanceMaintain(float distance, out string reason)
@@ -350,7 +410,14 @@ public class EnemyAI : MonoBehaviour
         }
         if (!backstepping && distance < LowerBand)
         {
-            StartBackstep(ctx, player);
+            // 쿨타임 진입 시 1회 선택한 결과 유지. 제자리면 더 붙어도 백스텝으로 바꾸지 않음.
+            if (!cooldownHoldChoiceActive)
+                BeginCooldownHoldChoice();
+
+            if (cooldownAllowBackstep)
+                StartBackstep(ctx, player);
+            else
+                IdleFacing(ctx, player);
             return;
         }
         IdleFacing(ctx, player);
@@ -359,6 +426,7 @@ public class EnemyAI : MonoBehaviour
     private void StartBackstep(Enemy ctx, Transform player)
     {
         backstepping = true;
+        ForceRefreshChaseTarget();
         ctx.animCtrl?.SetSignedSpeed(-1f);
         if (attackCtrl?.debugDecisionLogs == true)
             Debug.Log($"[AI] Backstep START dist={Vector3.Distance(GetLivePlayerPosition(player), ctx.transform.position):F2}");
@@ -406,12 +474,12 @@ public class EnemyAI : MonoBehaviour
 
         ctx.animCtrl?.SetSignedSpeed(-1f);
 
-        float distCurrent = face.magnitude;
-        if (distCurrent >= backstepDistance ||
-            (distCurrent >= LowerBand && distCurrent <= UpperBand))
-        {
+        // 히스테리시스: LowerBand에서 시작하면 backstepDistance(중심)까지 간 뒤에만 종료한다.
+        // LowerBand 진입만으로 끝내면 플레이어가 다가올 때 시작↔종료가 반복되어 떨린다.
+        Vector3 liveOffset = livePlayerPos - ctx.transform.position;
+        liveOffset.y = 0f;
+        if (liveOffset.magnitude >= backstepDistance)
             EndBackstep(ctx, true);
-        }
     }
 
     private void EndBackstep(Enemy ctx, bool success)
@@ -506,16 +574,25 @@ public class EnemyAI : MonoBehaviour
     /// </summary>
     public void SkipFindGoToCombat()
     {
+        bool wasFinding = aiState == AIState.Finding;
         if (findingCoroutine != null)
         {
             StopCoroutine(findingCoroutine);
             findingCoroutine = null;
         }
+        if (wasFinding)
+            enemy?.UnlockLookDirection();
         aiState = AIState.Combat;
         SetFacePhase(FacePhase.Combat);
         signedForwardSpeed = 0f;
         forwardSpeedLerpT = 0f;
         ForceRefreshChaseTarget();
+        // Find에서 바로 Combat으로 올 때만 Find 애니가 남아 있을 수 있으니 Run으로 교체한다.
+        if (wasFinding)
+        {
+            enemy?.animCtrl?.SetSignedSpeed(0f);
+            enemy?.animCtrl?.PlayRun(crossFade: false, restart: true);
+        }
     }
 
     private Vector3 GetLivePlayerPosition(Transform player)
@@ -532,6 +609,9 @@ public class EnemyAI : MonoBehaviour
 
     private float GetChaseIntervalSeconds()
     {
+        if (backstepping)
+            return BACKSTEP_CHASE_INTERVAL;
+
         switch (chaseTrackingMode)
         {
             case EnemyChaseTrackingMode.Realtime:
@@ -579,7 +659,8 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        if (chaseTrackingMode == EnemyChaseTrackingMode.Realtime)
+        // 백스텝 중에는 Config의 Realtime이어도 0.5초 주기로만 갱신한다.
+        if (!backstepping && chaseTrackingMode == EnemyChaseTrackingMode.Realtime)
         {
             cachedChasePosition = livePos;
             chaseCacheInitialized = true;

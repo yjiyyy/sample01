@@ -361,6 +361,14 @@ public class MeleeComboBehavior : MonoBehaviour
             yield return null;
         }
 
+        var stAfterDelay = getCurrentState != null ? getCurrentState() : PlayerState.Idle;
+        if (stAfterDelay == PlayerState.Knockback || stAfterDelay == PlayerState.Stun ||
+            stAfterDelay == PlayerState.Dead || stAfterDelay == PlayerState.Evade)
+        {
+            EndCombo();
+            yield break;
+        }
+
         // Determine prefab (step -> weapon default)
         GameObject prefabToSpawn = step.hitBoxPrefab;
         var weapon = getWeaponData != null ? getWeaponData() : null;
@@ -450,6 +458,15 @@ public class MeleeComboBehavior : MonoBehaviour
         {
             try { StopCoroutine(activeStepRoutine); } catch { }
             activeStepRoutine = null;
+        }
+
+        // 공격이 끊긴 경우에만 예약 스폰/무기 콜라이더를 정리한다.
+        // 정상 콤보 종료 때는 hitBoxLifetime 동안 콜라이더가 남아 있어야 한다.
+        var st = getCurrentState != null ? getCurrentState() : PlayerState.Idle;
+        if (st == PlayerState.Knockback || st == PlayerState.Stun ||
+            st == PlayerState.Evade || st == PlayerState.Dead)
+        {
+            try { GetComponent<WeaponBehavior>()?.CancelPendingAttackHitboxes(); } catch { }
         }
 
         // restore movement.enabled only if we explicitly disabled it for combo

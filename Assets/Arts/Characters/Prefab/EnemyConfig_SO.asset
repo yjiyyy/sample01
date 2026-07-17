@@ -27,9 +27,10 @@ MonoBehaviour:
   baseMoveSpeed: 3.5
   movementSettings: {fileID: 0}
   detectionRadius: 5
-  findDuration: 2
-  backstepDistance: 5
+  findDuration: 1
+  backstepDistance: 3
   backstepSpeedMultiplier: 1
+  cooldownBackstepChance: 0.5
   forwardSpeedNormalizeTime: 0.25
   roamRadius: 3
   peaceMoveSpeedMultiplier: 0.6
@@ -38,9 +39,9 @@ MonoBehaviour:
   chaseTrackingMode: 3
   attackPatterns:
   - {fileID: 11400000, guid: ed6f8f9e13b90a04faa58b61dd502cc7, type: 2}
-  globalPatternCooldown: 0.35
-  defaultPatternHoldDuration: 1
-  enablePerPatternHoldOverride: 1
+  globalPatternCooldown: 0
+  defaultPatternHoldDuration: 0
+  enablePerPatternHoldOverride: 0
   totalDropCountMin: 1
   totalDropCountMax: 3
   dropEntries: []

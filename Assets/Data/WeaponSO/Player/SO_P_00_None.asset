@@ -17,14 +17,14 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: a9e04d62599b8354885ac89756a251cf, type: 3}
   category: 0
   damageType: 0
-  isPoisonAttack: 1
+  isPoisonAttack: 0
   poisonOnHitStatus: {fileID: 11400000, guid: c3d4e5f60718293a4b5c6d7e8f901234, type: 2}
   weaponPrefab: {fileID: 3350901239660307828, guid: 75e8b8f9d5d4f9e4fb8c9cea2df47110, type: 3}
   overrideController: {fileID: 0}
   attackAnimVariantCount: 4
   attackVariantHandModes: 
   cooldown: 0.5
-  damage: 20
+  damage: 50
   range: 2.5
   staminaCost: 0
   hitboxSpawnDelay: 0.13

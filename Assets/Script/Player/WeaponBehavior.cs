@@ -41,6 +41,12 @@ public class WeaponBehavior : MonoBehaviour
     /// <summary>무기 데이터가 바뀔 때마다 증가. 보너스 샷 지연 스폰이 취소되는 데 사용합니다.</summary>
     private int bonusShotEquipToken;
 
+    /// <summary>공격 출력(지연 히트박스·지연 발사) 세대. 취소 시 증가해 예약된 스폰을 무효화합니다.</summary>
+    private int attackOutputGeneration;
+
+    /// <summary>아직 실행 중인 지연 공격 출력 코루틴.</summary>
+    private readonly List<Coroutine> pendingAttackOutputRoutines = new List<Coroutine>(8);
+
     private bool IsPlayerTimeHoldActive()
     {
         if (cachedPlayerCtrl == null)
@@ -335,6 +341,7 @@ public class WeaponBehavior : MonoBehaviour
         data = newData;
         ClearPendingAttackVariantHandMode();
         bonusShotEquipToken++;
+        StopPendingAttackOutputRoutines();
 
         ResolveSpawnPointsFromSO();
         EnsurePreviewLine();
@@ -577,25 +584,75 @@ public class WeaponBehavior : MonoBehaviour
     {
         if (data == null) return;
         bool dual = data.dualWield;
+        int generation = attackOutputGeneration;
 
         switch (mode)
         {
             case AttackVariantHandMode.MainOnly:
-                StartCoroutine(DelayedHitbox(false));
+                StartPendingAttackOutput(DelayedHitbox(false, generation));
                 break;
             case AttackVariantHandMode.OffOnly:
                 if (dual)
-                    StartCoroutine(DelayedHitbox(true));
+                    StartPendingAttackOutput(DelayedHitbox(true, generation));
                 else
-                    StartCoroutine(DelayedHitbox(false));
+                    StartPendingAttackOutput(DelayedHitbox(false, generation));
                 break;
             case AttackVariantHandMode.Both:
             default:
-                StartCoroutine(DelayedHitbox(false));
+                StartPendingAttackOutput(DelayedHitbox(false, generation));
                 if (dual)
-                    StartCoroutine(DelayedHitbox(true));
+                    StartPendingAttackOutput(DelayedHitbox(true, generation));
                 break;
         }
+    }
+
+    private void StartPendingAttackOutput(IEnumerator routine)
+    {
+        if (routine == null) return;
+        pendingAttackOutputRoutines.Add(StartCoroutine(routine));
+    }
+
+    private void StopPendingAttackOutputRoutines()
+    {
+        attackOutputGeneration++;
+        for (int i = 0; i < pendingAttackOutputRoutines.Count; i++)
+        {
+            Coroutine routine = pendingAttackOutputRoutines[i];
+            if (routine != null)
+                StopCoroutine(routine);
+        }
+        pendingAttackOutputRoutines.Clear();
+    }
+
+    /// <summary>
+    /// 공격 취소(넉백/스턴/회피 등) 시 호출.
+    /// 아직 나오지 않은 지연 히트박스·지연 발사는 막고, 무기 콜라이더가 켜져 있으면 끕니다.
+    /// 이미 생성된 히트박스/투사체는 그대로 둡니다.
+    /// </summary>
+    public void CancelPendingAttackHitboxes()
+    {
+        StopPendingAttackOutputRoutines();
+        ClearPendingAttackVariantHandMode();
+        EnsureWeaponHitboxDisabled();
+    }
+
+    private bool CanEmitAttackOutput()
+    {
+        if (cachedPlayerCtrl == null)
+            cachedPlayerCtrl = GetComponentInParent<PlayerWeaponController>();
+        if (cachedPlayerCtrl == null && transform.root != null)
+            cachedPlayerCtrl = transform.root.GetComponentInChildren<PlayerWeaponController>();
+
+        if (cachedPlayerCtrl == null)
+            return true;
+
+        // 정상 공격은 Idle/Move로 넘어간 뒤에도 딜레이 히트박스가 나올 수 있다.
+        // 공격이 취소된 CC/회피/사망 상태에서만 새로 나오지 않게 막는다.
+        PlayerState state = cachedPlayerCtrl.CurrentState;
+        return state != PlayerState.Knockback
+            && state != PlayerState.Stun
+            && state != PlayerState.Evade
+            && state != PlayerState.Dead;
     }
 
     public void AttackHit()
@@ -610,6 +667,13 @@ public class WeaponBehavior : MonoBehaviour
         // 애니메이션 AttackHit 이벤트가 그대로 들어오면 DelayedHitbox→SpawnProjectile이 호출되는데,
         // SpawnProjectile은 WeaponDataSO_Gun일 때만 탄약을 차감하므로 예비탄이 0이어도 발사체가 계속 나가는 현상이 생깁니다.
         if (data is WeaponDataSO_AR)
+        {
+            ClearPendingAttackVariantHandMode();
+            return;
+        }
+
+        // 공격이 이미 취소된 뒤 애니 이벤트가 남아 있어도 새 히트박스를 예약하지 않음.
+        if (!CanEmitAttackOutput())
         {
             ClearPendingAttackVariantHandMode();
             return;
@@ -640,26 +704,29 @@ public class WeaponBehavior : MonoBehaviour
             return;
         }
 
+        if (!CanEmitAttackOutput())
+            return;
+
         var handMode = data.dualWield ? AttackVariantHandMode.Both : AttackVariantHandMode.MainOnly;
         ScheduleAttackFXFromData(data, AttackFXPhase.Attack, handMode);
-        StartCoroutine(DelayedARProjectileFire(shootDir, preserveVerticalLocal, damageMultiplier));
-    }
 
-    private IEnumerator DelayedARProjectileFire(Vector3 shootDir, bool preserveVerticalLocal, float damageMultiplier)
-    {
-        if (data == null) yield break;
-
-        // AR 듀얼은 메인/오프핸드 지연을 분리 적용:
-        // - 메인: hitboxSpawnDelay
-        // - 오프핸드: hitboxSpawnDelay2
-        StartCoroutine(DelayedForcedProjectileByHand(shootDir, preserveVerticalLocal, useSecond: false, delay: data.hitboxSpawnDelay, damageMultiplier: damageMultiplier));
+        int generation = attackOutputGeneration;
+        StartPendingAttackOutput(DelayedForcedProjectileByHand(
+            shootDir, preserveVerticalLocal, useSecond: false, delay: data.hitboxSpawnDelay, damageMultiplier: damageMultiplier, generation: generation));
         if (data.dualWield)
-            StartCoroutine(DelayedForcedProjectileByHand(shootDir, preserveVerticalLocal, useSecond: true, delay: data.hitboxSpawnDelay2, damageMultiplier: damageMultiplier));
-
-        yield break;
+        {
+            StartPendingAttackOutput(DelayedForcedProjectileByHand(
+                shootDir, preserveVerticalLocal, useSecond: true, delay: data.hitboxSpawnDelay2, damageMultiplier: damageMultiplier, generation: generation));
+        }
     }
 
-    private IEnumerator DelayedForcedProjectileByHand(Vector3 shootDir, bool preserveVerticalLocal, bool useSecond, float delay, float damageMultiplier)
+    private IEnumerator DelayedForcedProjectileByHand(
+        Vector3 shootDir,
+        bool preserveVerticalLocal,
+        bool useSecond,
+        float delay,
+        float damageMultiplier,
+        int generation)
     {
         float d = Mathf.Max(0f, delay);
         if (d > 0f)
@@ -667,6 +734,9 @@ public class WeaponBehavior : MonoBehaviour
             float elapsed = 0f;
             while (elapsed < d)
             {
+                if (generation != attackOutputGeneration)
+                    yield break;
+
                 if (IsPlayerTimeHoldActive())
                 {
                     yield return null;
@@ -677,6 +747,11 @@ public class WeaponBehavior : MonoBehaviour
                 yield return null;
             }
         }
+
+        if (generation != attackOutputGeneration)
+            yield break;
+        if (!CanEmitAttackOutput())
+            yield break;
 
         FireProjectileForced(shootDir, preserveVerticalLocal, useSecond, damageMultiplier);
     }
@@ -771,7 +846,7 @@ public class WeaponBehavior : MonoBehaviour
         }
     }
 
-    private IEnumerator DelayedHitbox(bool useSecond)
+    private IEnumerator DelayedHitbox(bool useSecond, int generation)
     {
         float delay = useSecond ? data.hitboxSpawnDelay2 : data.hitboxSpawnDelay;
         if (delay > 0f)
@@ -779,6 +854,9 @@ public class WeaponBehavior : MonoBehaviour
             float elapsed = 0f;
             while (elapsed < delay)
             {
+                if (generation != attackOutputGeneration)
+                    yield break;
+
                 if (IsPlayerTimeHoldActive())
                 {
                     yield return null;
@@ -789,6 +867,11 @@ public class WeaponBehavior : MonoBehaviour
                 yield return null;
             }
         }
+
+        if (generation != attackOutputGeneration)
+            yield break;
+        if (!CanEmitAttackOutput())
+            yield break;
 
         if (data is WeaponDataSO_Melee) { SpawnMeleeHitbox(useSecond); yield break; }
         if (data is WeaponDataSO_Gun) { SpawnProjectile(useSecond); yield break; }

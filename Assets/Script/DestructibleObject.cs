@@ -62,11 +62,11 @@ public class DestructibleObject : MonoBehaviour
     [Tooltip("펄스 때 섞일 색. Synty처럼 BaseColor가 흰색인 머티리얼은 아래 Brighten이 보여줍니다.")]
     [SerializeField] private Color pulseColor = Color.white;
     [Tooltip("0~1. 펄스 세기(색 혼합 비율).")]
-    [SerializeField] private float pulseIntensity = 1f;
+    [SerializeField] private float pulseIntensity = 0.8f;
     [Tooltip("베이스 색을 이 배수만큼 더 밝게(HDR). 흰색 BaseColor 텍스처도 반짝이게 합니다.")]
-    [SerializeField] private float pulseBrighten = 5f;
+    [SerializeField] private float pulseBrighten = 1.5f;
     [Tooltip("맞는 순간 바로 밝아진 뒤, 원래 색으로 돌아오는 시간(초). In 구간 없음.")]
-    [SerializeField] private float pulseOutDuration = 0.2f;
+    [SerializeField] private float pulseOutDuration = 0.3f;
 
     public enum HitShakeMode
     {
@@ -93,17 +93,17 @@ public class DestructibleObject : MonoBehaviour
     [SerializeField] private LayerMask dropGroundLayerMask = (1 << 10) | (1 << 12) | (1 << 19);
 
     [Header("근접 외곽선 (테스트용)")]
-    [Tooltip("켜면 플레이어가 가까이 올 때 외곽선을 표시합니다. 기본 OFF.")]
-    [SerializeField] private bool enableProximityOutline = false;
+    [Tooltip("켜면 플레이어가 가까이 올 때 외곽선을 표시합니다.")]
+    [SerializeField] private bool enableProximityOutline = true;
 
     [Tooltip("플레이어와의 수평(XZ) 거리. 이 값 이내면 외곽선 ON.")]
-    [SerializeField] private float proximityOutlineRadius = 5f;
+    [SerializeField] private float proximityOutlineRadius = 4f;
 
     [Tooltip("거리 검사 주기(초).")]
     [SerializeField] private float proximityOutlineCheckInterval = 0.15f;
 
-    [SerializeField] private Color outlineColor = Color.yellow;
-    [SerializeField] private float outlineWidth = 0.1f;
+    [SerializeField] private Color outlineColor = Color.white;
+    [SerializeField] private float outlineWidth = 0.01f;
 
     private int remainingHits;
     private bool isBroken;
@@ -183,9 +183,9 @@ public class DestructibleObject : MonoBehaviour
         partBreakImpulseScale = 0.1f;
         partBreakTorqueScale = 1f;
         pulseColor = Color.white;
-        pulseIntensity = 1f;
-        pulseBrighten = 5f;
-        pulseOutDuration = 0.2f;
+        pulseIntensity = 0.8f;
+        pulseBrighten = 1.5f;
+        pulseOutDuration = 0.3f;
         shakeMode = HitShakeMode.Rotation;
         shakeIntensity = 5f;
         shakeDuration = 0.5f;
@@ -193,11 +193,11 @@ public class DestructibleObject : MonoBehaviour
         totalDropCountMin = 2;
         totalDropCountMax = 5;
         dropGroundLayerMask = (1 << 10) | (1 << 12) | (1 << 19);
-        enableProximityOutline = false;
-        proximityOutlineRadius = 5f;
+        enableProximityOutline = true;
+        proximityOutlineRadius = 4f;
         proximityOutlineCheckInterval = 0.15f;
-        outlineColor = Color.yellow;
-        outlineWidth = 0.1f;
+        outlineColor = Color.white;
+        outlineWidth = 0.01f;
 
         var money = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
             "Assets/Arts/DropItem/DropItem_Money.prefab");

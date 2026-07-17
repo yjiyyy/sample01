@@ -203,6 +203,7 @@ public class EnemyFacade : MonoBehaviour
             bool ok = false;
             ok |= TrySetSerializedFloat(aiComp, "backstepDistance", config.backstepDistance);
             ok |= TrySetSerializedFloat(aiComp, "backstepSpeedMultiplier", config.backstepSpeedMultiplier);
+            ok |= TrySetSerializedFloat(aiComp, "cooldownBackstepChance", config.cooldownBackstepChance);
             ok |= TrySetSerializedFloat(aiComp, "forwardSpeedNormalizeTime", config.forwardSpeedNormalizeTime);
             ok |= TrySetSerializedFloat(aiComp, "detectionRadius", config.detectionRadius);
             ok |= TrySetSerializedFloat(aiComp, "findDuration", config.findDuration);
@@ -216,6 +217,7 @@ public class EnemyFacade : MonoBehaviour
 #else
             TrySetPublicPropertyOrField(aiComp, "backstepDistance", config.backstepDistance);
             TrySetPublicPropertyOrField(aiComp, "backstepSpeedMultiplier", config.backstepSpeedMultiplier);
+            TrySetPublicPropertyOrField(aiComp, "cooldownBackstepChance", config.cooldownBackstepChance);
             TrySetPublicPropertyOrField(aiComp, "forwardSpeedNormalizeTime", config.forwardSpeedNormalizeTime);
             TrySetPublicPropertyOrField(aiComp, "detectionRadius", config.detectionRadius);
             TrySetPublicPropertyOrField(aiComp, "findDuration", config.findDuration);

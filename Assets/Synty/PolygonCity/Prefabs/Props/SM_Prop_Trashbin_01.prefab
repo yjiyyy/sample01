@@ -110,10 +110,10 @@ MonoBehaviour:
   detachParts: []
   partBreakImpulseScale: 0.1
   partBreakTorqueScale: 1
-  pulseColor: {r: 0.6981132, g: 0.6981132, b: 0.6981132, a: 1}
-  pulseIntensity: 1
-  pulseBrighten: 5
-  pulseOutDuration: 0.2
+  pulseColor: {r: 0.8207547, g: 0.8207547, b: 0.8207547, a: 1}
+  pulseIntensity: 0.8
+  pulseBrighten: 1.5
+  pulseOutDuration: 0.3
   shakeMode: 1
   shakeIntensity: 5
   shakeDuration: 0.5
@@ -128,11 +128,11 @@ MonoBehaviour:
   dropGroundLayerMask:
     serializedVersion: 2
     m_Bits: 529408
-  enableProximityOutline: 0
-  proximityOutlineRadius: 5
+  enableProximityOutline: 1
+  proximityOutlineRadius: 4
   proximityOutlineCheckInterval: 0.15
-  outlineColor: {r: 1, g: 0.85, b: 0.1, a: 1}
-  outlineWidth: 0.1
+  outlineColor: {r: 0.8207547, g: 0.8207547, b: 0.8207547, a: 1}
+  outlineWidth: 0.01
 --- !u!54 &6351466368287879096
 Rigidbody:
   m_ObjectHideFlags: 0

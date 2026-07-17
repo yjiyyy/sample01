@@ -4,6 +4,15 @@ using System.Collections.Generic;
 [CreateAssetMenu(menuName = "Enemy/Attack/MeleeAttackData", fileName = "MeleeAttackData_SO")]
 public class MeleeAttackData : ScriptableObject
 {
+    [System.Serializable]
+    public class MeleeHitTiming
+    {
+        [Tooltip("공격 시작 후 히트박스 생성 시각(초).")]
+        public float spawnDelay = 0f;
+        [Tooltip("해당 타이밍에서 생성된 히트박스 유지 시간(초).")]
+        public float hitBoxLifetime = 0.2f;
+    }
+
     [Header("공격 기본 정보")]
     public string attackName = "Melee_Attack";
     public GameObject hitBoxPrefab;
@@ -25,6 +34,8 @@ public class MeleeAttackData : ScriptableObject
     [Header("히트박스 타이밍 및 지속")]
     public float hitboxSpawnDelay = 0f;
     public float hitBoxLifetime = 0.2f;
+    [Tooltip("다단 히트 타이밍 목록(공격 시작 기준, 초). 비어 있으면 위 단일 타이밍 필드를 사용합니다.")]
+    public List<MeleeHitTiming> hitTimings = new List<MeleeHitTiming>();
 
     [Header("공격 FX")]
     [Tooltip("페이즈별 공격 FX. 근접 단타는 Attack 페이즈를 주로 사용.")]
@@ -132,6 +143,32 @@ public class MeleeAttackData : ScriptableObject
         return null;
     }
 
+    public int GetHitTimingCount()
+    {
+        return (hitTimings != null && hitTimings.Count > 0) ? hitTimings.Count : 1;
+    }
+
+    public void GetHitTiming(int index, out float spawnDelay, out float lifeTime)
+    {
+        if (hitTimings != null && hitTimings.Count > 0)
+        {
+            int safeIndex = Mathf.Clamp(index, 0, hitTimings.Count - 1);
+            var timing = hitTimings[safeIndex];
+            spawnDelay = timing != null ? Mathf.Max(0f, timing.spawnDelay) : 0f;
+            lifeTime = timing != null ? Mathf.Max(0f, timing.hitBoxLifetime) : Mathf.Max(0f, hitBoxLifetime);
+            return;
+        }
+
+        spawnDelay = Mathf.Max(0f, hitboxSpawnDelay);
+        lifeTime = Mathf.Max(0f, hitBoxLifetime);
+    }
+
+    public float GetFirstHitDelay()
+    {
+        GetHitTiming(0, out float delay, out _);
+        return delay;
+    }
+
     private void OnValidate()
     {
         hitboxSpawnDelay = Mathf.Max(0f, hitboxSpawnDelay);
@@ -149,5 +186,15 @@ public class MeleeAttackData : ScriptableObject
 
         // forceApplyTime 검증
         forceApplyTime = Mathf.Max(0f, forceApplyTime);
+
+        if (hitTimings != null)
+        {
+            for (int i = 0; i < hitTimings.Count; i++)
+            {
+                if (hitTimings[i] == null) continue;
+                hitTimings[i].spawnDelay = Mathf.Max(0f, hitTimings[i].spawnDelay);
+                hitTimings[i].hitBoxLifetime = Mathf.Max(0f, hitTimings[i].hitBoxLifetime);
+            }
+        }
     }
 }

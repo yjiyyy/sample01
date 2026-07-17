@@ -3,7 +3,8 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 
 /// <summary>
-/// 적 스폰. 플레이어 중심 반경에서 Ground 레이어 위에만 생성.
+/// 전투 적 스폰. 플레이어 중심 반경에서 Ground 레이어 위에 생성하고,
+/// 스폰 연출이 끝나면 발견 연출 없이 바로 추적을 시작.
 /// 동시 생존 수·총 스폰 수 제한 가능 (각각 0이면 무제한).
 /// </summary>
 public class EnemySpawner : MonoBehaviour
@@ -223,7 +224,7 @@ public class EnemySpawner : MonoBehaviour
         GameObject enemy = Instantiate(prefab, spawnPos, spawnRot);
 
         var spawnedEnemy = enemy.GetComponent<Enemy>();
-        spawnedEnemy?.BeginSpawnIntro();
+        spawnedEnemy?.BeginCombatSpawnIntro();
 
         _totalSpawnedByThisSpawner++;
         _aliveFromThisSpawner++;

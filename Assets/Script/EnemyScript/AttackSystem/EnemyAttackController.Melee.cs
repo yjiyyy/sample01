@@ -6,7 +6,6 @@ public partial class EnemyAttackController
 {
     /* Melee */
     private bool attackInProgress = false;
-    private bool meleeHitboxSpawned = false;
 
     private float meleeRequestedDuration;
     private float meleeClipLength;
@@ -14,9 +13,8 @@ public partial class EnemyAttackController
     private float meleeElapsed;
     private bool meleeWillFreeze;
     private bool meleeFrozenApplied;
-    private Coroutine meleeHitDelayRoutine;
+    private Coroutine meleeHitSequenceRoutine;
     private Coroutine meleeMoveRoutine;
-    private Coroutine attackHitDeferredRoutine;
     private AnimationClip meleeSelectedClip;
 
     // --- Combo / override helpers ---
@@ -70,30 +68,30 @@ public partial class EnemyAttackController
     #region AnimationEvent (Melee)
     public void AttackHit()
     {
-        if (!attackInProgress) return;
-        if (!(currentAttack is MeleeAttackData data)) return;
-        if (meleeHitboxSpawned) return;
-
-        if (enemy != null && enemy.IsStateHoldActive)
-        {
-            if (attackHitDeferredRoutine != null)
-                StopCoroutine(attackHitDeferredRoutine);
-            attackHitDeferredRoutine = StartCoroutine(DeferredAttackHitSpawn(data));
-            return;
-        }
-
-        SpawnMeleeHitbox(data);
+        // 근접 히트 생성은 SO 타이밍 기반 코루틴에서 일괄 처리.
+        // (애니메이션 이벤트를 남겨둔 클립과 중복 생성되지 않게 방지)
     }
     #endregion
 
     #region Melee Hitbox Spawn (Delay via SO)
-    private IEnumerator DelayedMeleeHitbox(MeleeAttackData data)
+    private IEnumerator SpawnMeleeHitboxSequence(MeleeAttackData data)
     {
-        float delay = (data != null && data.hitboxSpawnDelay > 0f) ? data.hitboxSpawnDelay : 0f;
-        if (delay > 0f)
+        if (data == null)
         {
+            meleeHitSequenceRoutine = null;
+            yield break;
+        }
+
+        int hitCount = Mathf.Max(1, data.GetHitTimingCount());
+        float lastDelay = 0f;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            data.GetHitTiming(i, out float delay, out float life);
+            float waitDuration = Mathf.Max(0f, delay - lastDelay);
+
             float waited = 0f;
-            while (waited < delay)
+            while (waited < waitDuration)
             {
                 if (enemy != null && enemy.IsStateHoldActive)
                 {
@@ -101,39 +99,27 @@ public partial class EnemyAttackController
                     continue;
                 }
 
-                if (!attackInProgress) { meleeHitDelayRoutine = null; yield break; }
-                if (currentAttack != data) { meleeHitDelayRoutine = null; yield break; }
+                if (!attackInProgress) { meleeHitSequenceRoutine = null; yield break; }
+                if (currentAttack != data) { meleeHitSequenceRoutine = null; yield break; }
 
                 waited += Time.deltaTime;
                 yield return null;
             }
+
+            while (enemy != null && enemy.IsStateHoldActive)
+                yield return null;
+
+            if (!attackInProgress) { meleeHitSequenceRoutine = null; yield break; }
+            if (currentAttack != data) { meleeHitSequenceRoutine = null; yield break; }
+
+            SpawnMeleeHitbox(data, life);
+            lastDelay = delay;
         }
 
-        while (enemy != null && enemy.IsStateHoldActive)
-            yield return null;
-
-        if (!attackInProgress) { meleeHitDelayRoutine = null; yield break; }
-        if (currentAttack != data) { meleeHitDelayRoutine = null; yield break; }
-        if (meleeHitboxSpawned) { meleeHitDelayRoutine = null; yield break; }
-
-        SpawnMeleeHitbox(data);
-        meleeHitDelayRoutine = null;
+        meleeHitSequenceRoutine = null;
     }
 
-    private IEnumerator DeferredAttackHitSpawn(MeleeAttackData data)
-    {
-        while (enemy != null && enemy.IsStateHoldActive)
-            yield return null;
-
-        if (!attackInProgress) { attackHitDeferredRoutine = null; yield break; }
-        if (currentAttack != data) { attackHitDeferredRoutine = null; yield break; }
-        if (meleeHitboxSpawned) { attackHitDeferredRoutine = null; yield break; }
-
-        SpawnMeleeHitbox(data);
-        attackHitDeferredRoutine = null;
-    }
-
-    private void SpawnMeleeHitbox(MeleeAttackData data)
+    private void SpawnMeleeHitbox(MeleeAttackData data, float lifeOverride = -1f)
     {
         if (data == null || data.hitBoxPrefab == null)
         {
@@ -156,11 +142,12 @@ public partial class EnemyAttackController
             go = Instantiate(data.hitBoxPrefab, transform.position, transform.rotation);
         }
 
-        meleeHitboxSpawned = true;
 
         if (go.TryGetComponent<HitBox_Enemy>(out var hb))
         {
-            float life = data.hitBoxLifetime > 0f ? data.hitBoxLifetime : 0.1f;
+            float life = lifeOverride > 0f
+                ? lifeOverride
+                : (data.hitBoxLifetime > 0f ? data.hitBoxLifetime : 0.1f);
             hb.Initialize(
                 data.damage,
                 useRange,
@@ -182,7 +169,10 @@ public partial class EnemyAttackController
             if (go.TryGetComponent<HitBox_PC>(out var hbpc))
             {
                 hbpc.SetWeapon(null);
-                hbpc.Initialize(data.damage, useRange, data.knockbackPower, Mathf.Max(0.01f, data.hitBoxLifetime));
+                float life = lifeOverride > 0f
+                    ? lifeOverride
+                    : Mathf.Max(0.01f, data.hitBoxLifetime);
+                hbpc.Initialize(data.damage, useRange, data.knockbackPower, Mathf.Max(0.01f, life));
             }
         }
 
@@ -261,17 +251,11 @@ public partial class EnemyAttackController
         MarkExecuted();
         ClearHold();
 
-        if (meleeHitDelayRoutine != null)
+        if (meleeHitSequenceRoutine != null)
         {
-            StopCoroutine(meleeHitDelayRoutine);
-            meleeHitDelayRoutine = null;
+            StopCoroutine(meleeHitSequenceRoutine);
+            meleeHitSequenceRoutine = null;
         }
-        if (attackHitDeferredRoutine != null)
-        {
-            StopCoroutine(attackHitDeferredRoutine);
-            attackHitDeferredRoutine = null;
-        }
-
         if (meleeMoveRoutine != null)
         {
             StopCoroutine(meleeMoveRoutine);
@@ -279,7 +263,6 @@ public partial class EnemyAttackController
         }
 
         attackInProgress = true;
-        meleeHitboxSpawned = false;
 
         currentAttack = data;
         currentAttackIndex = index;
@@ -336,7 +319,7 @@ public partial class EnemyAttackController
             }
         }
 
-        meleeHitDelayRoutine = StartCoroutine(DelayedMeleeHitbox(data));
+        meleeHitSequenceRoutine = StartCoroutine(SpawnMeleeHitboxSequence(data));
 
         if (data.isMovingAttack)
         {
@@ -344,7 +327,7 @@ public partial class EnemyAttackController
         }
 
         string clipLabel = meleeSelectedClip != null ? meleeSelectedClip.name : data.attackName;
-        Log($"MELEE START idx={index} anim={clipLabel} req={meleeRequestedDuration:F3}s clipLen={meleeClipLength:F3}s freeze={(meleeWillFreeze ? "Y" : "N")}, hitDelay={data.hitboxSpawnDelay:F3}s");
+        Log($"MELEE START idx={index} anim={clipLabel} req={meleeRequestedDuration:F3}s clipLen={meleeClipLength:F3}s freeze={(meleeWillFreeze ? "Y" : "N")}, hitCount={data.GetHitTimingCount()}, firstHitDelay={data.GetFirstHitDelay():F3}s");
     }
 
     private float GetMeleeClipLength(MeleeAttackData data)
@@ -364,10 +347,10 @@ public partial class EnemyAttackController
         if (enemy?.animator != null)
             enemy.animator.speed = 1f;
 
-        if (meleeHitDelayRoutine != null)
+        if (meleeHitSequenceRoutine != null)
         {
-            StopCoroutine(meleeHitDelayRoutine);
-            meleeHitDelayRoutine = null;
+            StopCoroutine(meleeHitSequenceRoutine);
+            meleeHitSequenceRoutine = null;
         }
 
         if (meleeMoveRoutine != null)
@@ -405,7 +388,6 @@ public partial class EnemyAttackController
         currentAttack = null;
         currentAttackIndex = -1;
         meleeSelectedClip = null;
-        meleeHitboxSpawned = false;
         meleeWillFreeze = false;
         meleeFrozenApplied = false;
         meleeElapsed = 0f;

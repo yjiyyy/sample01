@@ -154,11 +154,11 @@ public class PlayerWeaponController : MonoBehaviour
             return;
         }
 
-        // 방향 전환 스킵: 슈퍼아머·단타 공격 중은 바라보는 방향 유지. 콤보 중 넉백은 넉백 우선이라 회전함.
+        // 일반 공격 중에도 넉백이 우선되어 공격자 방향으로 회전한다.
+        // 차지 슈퍼아머가 활성인 동안에만 기존 방향을 유지한다.
         var wbForCombo = equipComp?.WeaponBehavior;
         var comboComp = wbForCombo != null ? wbForCombo.GetComponent<MeleeComboBehavior>() : null;
-        bool wasInCombo = comboComp != null && comboComp.IsComboActive;
-        bool skipFaceHit = (state == PlayerState.Attack && !wasInCombo) || (chargeComp != null && chargeComp.HasSuperArmorActive);
+        bool skipFaceHit = chargeComp != null && chargeComp.HasSuperArmorActive;
 
         // 새로 스턴 CC를 시작하는 경우에만 잠금 시간 설정
         // stun==0이면 “스턴 잠금”이 아니라 기존 넉백 로직은 그대로 중복 허용(요구사항에 맞춰)
@@ -180,6 +180,7 @@ public class PlayerWeaponController : MonoBehaviour
         chargeComp?.CancelAll();
         chargeInvincible = false;
         CancelRecoil();
+        CancelPendingWeaponAttackOutputs();
 
         equipComp?.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
         equipComp?.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
@@ -486,6 +487,8 @@ public class PlayerWeaponController : MonoBehaviour
             if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
             EndARFireState();
 
+            chargeComp?.CancelAll();
+            CancelPendingWeaponAttackOutputs();
             CancelAllWeaponTrailsImmediate();
             CancelRecoil();
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
@@ -556,13 +559,17 @@ public class PlayerWeaponController : MonoBehaviour
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime>()?.InterruptReload();
             equipComp.WeaponBehavior?.GetComponent<WeaponAmmoRuntime_AR>()?.InterruptReload();
             chargeComp?.CancelAll();
+            CancelPendingWeaponAttackOutputs();
             ExecutePendingSwitchIfAnyImmediate();
         }
 
         // 회피/넉백/스턴/사망 시 트레일 즉시 제거 (메인 + 서브 코루틴)
         if (newState == PlayerState.Evade || newState == PlayerState.Knockback ||
             newState == PlayerState.Stun || newState == PlayerState.Dead)
+        {
+            CancelPendingWeaponAttackOutputs();
             CancelAllWeaponTrailsImmediate();
+        }
 
         if (newState != PlayerState.Attack)
             CancelRecoil();
@@ -798,6 +805,12 @@ public class PlayerWeaponController : MonoBehaviour
             secondaryTrailEmitRoutine = null;
         }
         GetSecondaryWeaponTrailController()?.CancelTrailImmediate();
+    }
+
+    /// <summary>공격 취소 시 아직 안 나온 지연 히트박스/발사를 막고 무기 콜라이더를 끈다.</summary>
+    private void CancelPendingWeaponAttackOutputs()
+    {
+        equipComp?.WeaponBehavior?.CancelPendingAttackHitboxes();
     }
 
     private int ReadAttackIndexFromAnimator()
