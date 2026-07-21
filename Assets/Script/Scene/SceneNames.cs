@@ -9,5 +9,4 @@ public static class SceneNames
     public const string CharacterSelection = "02_CharacterSelectionLevel";
     public const string Lobby = "03_Lobby";
     public const string Demo = "DemoScene";
-    public const string StageCore = "Stage_Core";
 }

@@ -29,7 +29,7 @@ public class SpawnManager : MonoBehaviour
         }
     }
 
-    /// <summary>StageSceneLoader가 Core+배경 준비 후 호출합니다.</summary>
+    /// <summary>StageSceneLoader가 스테이지 씬 로드 후 호출합니다.</summary>
     public void SpawnInitialPlayer(Vector3 position, Quaternion rotation, DiabloStyleCamera camera = null)
     {
         if (camera != null)

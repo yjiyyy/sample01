@@ -18,6 +18,6 @@ MonoBehaviour:
   targetKillCount: 30
   targetEnemyPrefab: {fileID: 0}
   timeLimit: 0
-  monsterLevelUpInterval: 50
+  monsterLevelUpInterval: 10
   levelIcons:
   - {fileID: -9160987577138628238, guid: 215687feeab0b7445b4a1cd86c82c2e1, type: 3}

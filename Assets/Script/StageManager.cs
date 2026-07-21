@@ -32,7 +32,7 @@ public class StageManager : MonoBehaviour
             Active = null;
     }
 
-    /// <summary>StageSceneLoader가 스테이지 시작 시 호출합니다.</summary>
+    /// <summary>StageSceneLoader가 스테이지 씬 로드 후 호출합니다.</summary>
     public void BeginStage(StageData overrideData = null)
     {
         if (hasBegun)
@@ -55,8 +55,9 @@ public class StageManager : MonoBehaviour
         stageActive = true;
         stageEnded = false;
 
+        ResolveSpawner();
         if (spawner != null)
-            spawner.SetSpawnLevel(currentLevel);
+            spawner.SetSpawnLevel(currentLevel, isStageBegin: true);
 
         itemBoxSpawner = FindEnvironmentItemBoxSpawner();
 
@@ -136,6 +137,7 @@ public class StageManager : MonoBehaviour
             return;
 
         currentLevel = newLevel;
+        ResolveSpawner();
         spawner?.SetSpawnLevel(currentLevel);
         ui?.UpdateLevel(GetDisplayLevel());
     }
@@ -172,6 +174,16 @@ public class StageManager : MonoBehaviour
     private int GetDisplayLevel()
     {
         return currentLevel + 1;
+    }
+
+    private void ResolveSpawner()
+    {
+        if (spawner != null)
+            return;
+
+        spawner = FindFirstObjectByType<EnemySpawner>();
+        if (spawner == null)
+            Debug.LogWarning("[StageManager] EnemySpawner를 찾을 수 없습니다. StageManager.spawner를 연결하세요.");
     }
 
     private void EndStage(bool success)
@@ -217,7 +229,7 @@ public class StageManager : MonoBehaviour
                 continue;
 
             string sceneName = spawner.gameObject.scene.name;
-            if (StageSceneNames.IsCoreScene(sceneName) || sceneName == StageSceneNames.Backup)
+            if (sceneName == StageSceneNames.Backup)
                 continue;
 
             if (!StageSceneNames.IsStageEnvironmentScene(sceneName))

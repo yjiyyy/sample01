@@ -17,7 +17,7 @@ public class StageInfo
     [Tooltip("선택 UI에 표시할 썸네일 (선택 사항)")]
     public Sprite thumbnail;
 
-    [Tooltip("이 스테이지의 규칙 데이터. 비우면 Stage_Core의 StageManager 설정을 사용합니다.")]
+    [Tooltip("이 스테이지의 규칙 데이터. 비우면 스테이지 씬의 StageManager 설정을 사용합니다.")]
     public StageData stageData;
 }
 

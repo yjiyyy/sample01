@@ -4,8 +4,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// 전투 적 스폰. 플레이어 중심 반경에서 Ground 레이어 위에 생성하고,
-/// 스폰 연출이 끝나면 발견 연출 없이 바로 추적을 시작.
-/// 동시 생존 수·총 스폰 수 제한 가능 (각각 0이면 무제한).
+/// StageManager 레벨(StageLevelIconBar 표시와 동일)에 맞춰 난이도를 적용합니다.
 /// </summary>
 public class EnemySpawner : MonoBehaviour
 {
@@ -17,15 +16,17 @@ public class EnemySpawner : MonoBehaviour
     public float maxSpawnRadius = 15f;
 
     [Header("스폰 설정")]
-    public GameObject[] enemyPrefabsByLevel;
     public GameObject hpuiPrefab;
-    public float spawnInterval = 2f;
+
+    [Tooltip("index 0 = 표시 레벨 1. StageManager.SetSpawnLevel과 동일 인덱스.")]
+    public EnemySpawnLevelSettings[] levelSettings;
+
+    [Tooltip("스테이지 진입 후 첫 스폰까지 대기 시간(초). 이후 첫 스폰은 즉시, 다음부터 spawnInterval 적용.")]
+    [Min(0f)]
+    public float initialSpawnDelay = 3f;
 
     [Header("스폰 개수 제한 (이 스포너 기준)")]
-    [Tooltip("0이면 무제한. 동시에 살아 있을 수 있는 유닛 수(이 스포너가 스폰한 것만).")]
-    public int maxConcurrentAlive = 0;
-
-    [Tooltip("0이면 무제한. 이 스포너가 생성할 수 있는 총 스폰 횟수(누적).")]
+    [Tooltip("0이면 무제한. 이 스포너가 생성할 수 있는 총 스폰 횟수(누적, 레벨 무관).")]
     public int maxTotalSpawns = 0;
 
     [Header("지면 (Ground 레이어)")]
@@ -63,21 +64,23 @@ public class EnemySpawner : MonoBehaviour
     public EnemyConfig[] despawnExceptionConfigs;
 
     private float spawnTimer;
-    private int currentLevel = 0;
-    private bool hasSpawnedInitial = false;
-    private bool playerMissingLogged = false;
+    private int currentLevel;
+    private bool playerMissingLogged;
+    private bool _stageSpawnActive;
+    private bool _waitingInitialSpawnDelay;
+    private float _initialSpawnDelayTimer;
 
     private Transform _playerTransform;
-    private int _aliveFromThisSpawner;
     private int _totalSpawnedByThisSpawner;
+
+    // 레벨별 생존 카운터. OnDeath 즉시 감소하여 정확한 동시 생존 수를 보장.
+    private int[] _alivePerLevel = new int[0];
+
     private LayerMask _spawnClearanceMask;
     private Collider[] _overlapBuffer;
     private readonly RaycastHit[] _groundHitBuffer = new RaycastHit[8];
     private readonly List<TrackedEnemy> _trackedEnemies = new List<TrackedEnemy>(32);
     private float _despawnCheckTimer;
-
-    /// <summary>이 스포너가 스폰해 아직 사망 처리 전으로 잡고 있는 수(EnemyHealth.OnDeath 기준).</summary>
-    public int AliveFromThisSpawner => _aliveFromThisSpawner;
 
     /// <summary>이 스포너가 실제로 Instantiate한 누적 횟수.</summary>
     public int TotalSpawnedByThisSpawner => _totalSpawnedByThisSpawner;
@@ -94,6 +97,9 @@ public class EnemySpawner : MonoBehaviour
         ResolveSpawnClearanceMask();
         int bufferSize = movementSettings != null ? movementSettings.overlapBufferSize : 16;
         _overlapBuffer = new Collider[Mathf.Max(4, bufferSize)];
+
+        int levelCount = levelSettings != null ? levelSettings.Length : 0;
+        _alivePerLevel = new int[Mathf.Max(1, levelCount)];
     }
 
     private void ResolveSpawnClearanceMask()
@@ -112,58 +118,114 @@ public class EnemySpawner : MonoBehaviour
             _spawnClearanceMask |= 1 << playerLayer;
     }
 
-    public void SetSpawnLevel(int level)
+    /// <summary>StageManager currentLevel(0=표시 Lv.1)과 동기화.</summary>
+    public void SetSpawnLevel(int level, bool isStageBegin = false)
     {
-        if (enemyPrefabsByLevel == null || enemyPrefabsByLevel.Length == 0)
+        currentLevel = ResolveLevelIndex(level);
+
+        if (isStageBegin)
         {
-            currentLevel = 0;
-            return;
+            _stageSpawnActive = true;
+            _waitingInitialSpawnDelay = true;
+            _initialSpawnDelayTimer = 0f;
+            spawnTimer = 0f;
         }
-        currentLevel = Mathf.Clamp(level, 0, enemyPrefabsByLevel.Length - 1);
+        else
+        {
+            // 레벨업: 즉시 스폰 (타이머를 인터벌 이상으로 세팅)
+            EnemySpawnLevelSettings settings = GetCurrentLevelSettings();
+            spawnTimer = settings != null ? settings.spawnInterval : 0f;
+        }
+
+        if (debugSpawnLog)
+            Debug.Log($"[EnemySpawner] SetSpawnLevel displayLevel={currentLevel + 1}, isStageBegin={isStageBegin}");
     }
 
     /// <summary>레벨 재시작 등에서 카운터 초기화.</summary>
     public void ResetSpawnCounters()
     {
-        _aliveFromThisSpawner = 0;
         _totalSpawnedByThisSpawner = 0;
-        hasSpawnedInitial = false;
+        for (int i = 0; i < _alivePerLevel.Length; i++) _alivePerLevel[i] = 0;
         spawnTimer = 0f;
         _despawnCheckTimer = 0f;
         _playerTransform = null;
         _trackedEnemies.Clear();
+        _stageSpawnActive = false;
+        _waitingInitialSpawnDelay = false;
+        _initialSpawnDelayTimer = 0f;
     }
 
     void Start()
     {
         spawnTimer = 0f;
-        hasSpawnedInitial = false;
         _despawnCheckTimer = 0f;
     }
 
     void Update()
     {
         if (!TryResolvePlayer()) return;
-        if (enemyPrefabsByLevel == null || enemyPrefabsByLevel.Length == 0) return;
+        if (!_stageSpawnActive) return;
 
-        if (!hasSpawnedInitial)
+        EnemySpawnLevelSettings settings = GetCurrentLevelSettings();
+        if (settings == null) return;
+
+        if (_waitingInitialSpawnDelay)
         {
-            if (TrySpawnEnemy())
+            _initialSpawnDelayTimer += Time.deltaTime;
+            if (_initialSpawnDelayTimer >= initialSpawnDelay)
             {
-                hasSpawnedInitial = true;
+                _waitingInitialSpawnDelay = false;
+                TrySpawnEnemy(settings);
                 spawnTimer = 0f;
             }
+
+            TickDistanceDespawn();
             return;
         }
 
         spawnTimer += Time.deltaTime;
-        if (spawnTimer >= spawnInterval)
+        if (spawnTimer >= settings.spawnInterval)
         {
             spawnTimer = 0f;
-            TrySpawnEnemy();
+            TrySpawnEnemy(settings);
         }
 
         TickDistanceDespawn();
+    }
+
+    private int ResolveLevelIndex(int level)
+    {
+        if (levelSettings == null || levelSettings.Length == 0)
+            return 0;
+
+        if (level < 0)
+            return 0;
+
+        if (level >= levelSettings.Length)
+            return levelSettings.Length - 1;
+
+        return level;
+    }
+
+    private EnemySpawnLevelSettings GetCurrentLevelSettings()
+    {
+        if (levelSettings == null || levelSettings.Length == 0)
+            return null;
+
+        return levelSettings[ResolveLevelIndex(currentLevel)];
+    }
+
+    private int GetAliveAtLevel(int levelIndex)
+    {
+        if (levelIndex < 0 || levelIndex >= _alivePerLevel.Length)
+            return 0;
+        return _alivePerLevel[levelIndex];
+    }
+
+    internal void ReleaseOneAliveAtLevel(int levelIndex)
+    {
+        if (levelIndex >= 0 && levelIndex < _alivePerLevel.Length)
+            _alivePerLevel[levelIndex] = Mathf.Max(0, _alivePerLevel[levelIndex] - 1);
     }
 
     private bool TryResolvePlayer()
@@ -187,10 +249,10 @@ public class EnemySpawner : MonoBehaviour
     }
 
     /// <returns>스폰 성공 여부</returns>
-    private bool TrySpawnEnemy()
+    private bool TrySpawnEnemy(EnemySpawnLevelSettings settings)
     {
         if (!TryResolvePlayer()) return false;
-        if (enemyPrefabsByLevel == null || enemyPrefabsByLevel.Length == 0) return false;
+        if (settings == null) return false;
 
         if (maxTotalSpawns > 0 && _totalSpawnedByThisSpawner >= maxTotalSpawns)
         {
@@ -199,17 +261,18 @@ public class EnemySpawner : MonoBehaviour
             return false;
         }
 
-        if (maxConcurrentAlive > 0 && _aliveFromThisSpawner >= maxConcurrentAlive)
+        int levelIndex = ResolveLevelIndex(currentLevel);
+        if (settings.maxConcurrentAlive > 0 && GetAliveAtLevel(levelIndex) >= settings.maxConcurrentAlive)
         {
             if (debugSpawnLog)
-                Debug.Log("[EnemySpawner] 동시 생존 상한 도달 — 스폰 생략.");
+                Debug.Log("[EnemySpawner] 현재 레벨 동시 생존 상한 도달 — 스폰 생략.");
             return false;
         }
 
-        GameObject prefab = enemyPrefabsByLevel[currentLevel];
-        if (prefab == null)
+        if (!settings.TryPickPrefab(out GameObject prefab))
         {
-            if (debugSpawnLog) Debug.LogWarning("[EnemySpawner] 선택된 레벨 프리팹이 null입니다.");
+            if (debugSpawnLog)
+                Debug.LogWarning($"[EnemySpawner] 레벨 {levelIndex + 1} 몬스터 풀이 비어 있거나 가중치가 0입니다.");
             return false;
         }
 
@@ -227,12 +290,15 @@ public class EnemySpawner : MonoBehaviour
         spawnedEnemy?.BeginCombatSpawnIntro();
 
         _totalSpawnedByThisSpawner++;
-        _aliveFromThisSpawner++;
-        RegisterAliveTracking(enemy, prefab);
+        if (levelIndex < _alivePerLevel.Length)
+            _alivePerLevel[levelIndex]++;
+        RegisterAliveTracking(enemy, prefab, levelIndex);
 
         if (debugSpawnLog)
         {
-            Debug.Log($"[EnemySpawner] Spawned enemy level={currentLevel} at {spawnPos} (alive={_aliveFromThisSpawner}, total={_totalSpawnedByThisSpawner})");
+            Debug.Log(
+                $"[EnemySpawner] Spawned enemy displayLevel={levelIndex + 1} at {spawnPos} " +
+                $"(aliveAtLevel={GetAliveAtLevel(levelIndex)}, total={_totalSpawnedByThisSpawner})");
         }
 
         if (hpuiPrefab != null && enemy != null)
@@ -310,7 +376,6 @@ public class EnemySpawner : MonoBehaviour
         return false;
     }
 
-    /// <summary>스폰 순간 플레이어 방향(수평)을 바라보도록 회전. 추적은 하지 않음.</summary>
     private Quaternion GetSpawnFacingRotation(Vector3 spawnPos)
     {
         if (_playerTransform == null) return Quaternion.identity;
@@ -322,7 +387,6 @@ public class EnemySpawner : MonoBehaviour
         return Quaternion.LookRotation(lookDir.normalized, Vector3.up);
     }
 
-    /// <summary>플레이어와 같은 층에 가장 가까운 Ground 히트를 선택.</summary>
     private static bool TryPickGroundHit(
         RaycastHit[] hits,
         int hitCount,
@@ -353,7 +417,6 @@ public class EnemySpawner : MonoBehaviour
         return found;
     }
 
-    /// <summary>프리팹 루트 캡슐 기준 장애물 겹침 여부 (Enemy 레이어는 마스크에 없음).</summary>
     private bool HasSpawnClearanceBlocked(CapsuleCollider prefabCapsule, Vector3 spawnRootPosition)
     {
         return StepChecker.WouldCapsuleOverlap(
@@ -364,7 +427,7 @@ public class EnemySpawner : MonoBehaviour
             null);
     }
 
-    private void RegisterAliveTracking(GameObject enemy, GameObject sourcePrefab)
+    private void RegisterAliveTracking(GameObject enemy, GameObject sourcePrefab, int spawnLevelIndex)
     {
         if (enemy == null) return;
 
@@ -372,12 +435,13 @@ public class EnemySpawner : MonoBehaviour
         var runtime = enemy.GetComponent<SpawnedEnemyRuntime>();
         if (runtime == null)
             runtime = enemy.AddComponent<SpawnedEnemyRuntime>();
-        runtime.Init(this);
+        runtime.Init(this, spawnLevelIndex);
 
         _trackedEnemies.Add(new TrackedEnemy
         {
             root = enemy.transform,
             runtime = runtime,
+            spawnLevelIndex = spawnLevelIndex,
             isDespawnException = isDespawnException,
             outOfRangeSince = -1f
         });
@@ -387,6 +451,7 @@ public class EnemySpawner : MonoBehaviour
         {
             StageManager.Active?.RegisterEnemyKillTracking(h, sourcePrefab);
 
+            // OnDeath 즉시 레벨별 카운터 감소 (오브젝트 Destroy 전에 바로 반영)
             void Handler()
             {
                 h.OnDeath -= Handler;
@@ -394,11 +459,6 @@ public class EnemySpawner : MonoBehaviour
             }
             h.OnDeath += Handler;
         }
-    }
-
-    internal void ReleaseOneAlive()
-    {
-        _aliveFromThisSpawner = Mathf.Max(0, _aliveFromThisSpawner - 1);
     }
 
     private bool IsDespawnException(GameObject sourcePrefab, GameObject spawnedInstance)
@@ -482,8 +542,7 @@ public class EnemySpawner : MonoBehaviour
             if (debugSpawnLog)
                 Debug.Log($"[EnemySpawner] Distance despawn: {tracked.root.name}");
 
-            if (tracked.runtime != null)
-                tracked.runtime.ReleaseFromOwner();
+            tracked.runtime?.ReleaseFromOwner();
 
             Destroy(tracked.root.gameObject);
             _trackedEnemies.RemoveAt(i);
@@ -494,6 +553,7 @@ public class EnemySpawner : MonoBehaviour
     {
         public Transform root;
         public SpawnedEnemyRuntime runtime;
+        public int spawnLevelIndex;
         public bool isDespawnException;
         public float outOfRangeSince;
     }
@@ -501,11 +561,13 @@ public class EnemySpawner : MonoBehaviour
     private sealed class SpawnedEnemyRuntime : MonoBehaviour
     {
         private EnemySpawner _owner;
+        private int _spawnLevelIndex;
         private bool _released;
 
-        public void Init(EnemySpawner owner)
+        public void Init(EnemySpawner owner, int spawnLevelIndex)
         {
             _owner = owner;
+            _spawnLevelIndex = spawnLevelIndex;
             _released = false;
         }
 
@@ -513,7 +575,7 @@ public class EnemySpawner : MonoBehaviour
         {
             if (_released) return;
             _released = true;
-            _owner?.ReleaseOneAlive();
+            _owner?.ReleaseOneAliveAtLevel(_spawnLevelIndex);
         }
 
         private void OnDestroy()
