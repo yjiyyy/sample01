@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/SuicideAttackData", fileName = "SuicideAttackData_SO")]
-public class SuicideAttackData : ScriptableObject
+public class SuicideAttackData : EnemyAttackDataBase
 {
     [Header("General")]
     [Tooltip("패턴 이름(디버그/애니 폴백)")]

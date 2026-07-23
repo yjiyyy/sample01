@@ -153,6 +153,9 @@ public class WeaponDataSO : ScriptableObject
     [Header("Slice(본 분리)")]
     public List<SliceTarget> sliceTargets = new List<SliceTarget>();
     public float sliceImpulse = 0f;
+    [Tooltip("신체 슬라이스(머리/팔/다리)에만 곱합니다. 무기·어태치먼트는 sliceImpulse 그대로입니다.")]
+    [Min(0f)]
+    public float bodySliceImpulseScale = 2f;
 
     [Header("Charge Attack (무기별 선택 적용)")]
     public PlayerChargeAttackSO chargeSlot;
@@ -303,6 +306,7 @@ public class WeaponDataSO : ScriptableObject
         ragdollSpinTorque = Mathf.Max(0f, ragdollSpinTorque);
 
         sliceImpulse = Mathf.Max(0f, sliceImpulse);
+        bodySliceImpulseScale = Mathf.Max(0f, bodySliceImpulseScale);
 
         staminaCost = Mathf.Max(0f, staminaCost);
 

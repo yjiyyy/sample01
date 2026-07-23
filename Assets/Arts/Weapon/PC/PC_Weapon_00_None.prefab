@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5329416540054877802}
   - component: {fileID: 92215680915729346}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: PC_Weapon_00_None
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ec766595c2f438438a231ec09b5daed, type: 3}
+  m_Name: Throw_Attack_Stone
+  m_EditorClassIdentifier: 
+  attackName: TimeProjectile
+  range: 10
+  attackTime: 2
+  fireAtTime: 0.6
+  cooldown: 0
+  clip: {fileID: -6286757389625586605, guid: 4924f88a229df5341b63ef2d08e0c9a3, type: 3}
+  muzzleBoneName: Fire_Point_Throw
+  explosionTrigger: 1
+  projectilePrefab: {fileID: 1183057563308587319, guid: ef9eedff4778bf146b9c9276fbbae6ae, type: 3}
+  projectileSpeed: 1
+  arcHeight: 5
+  projectileLifeTime: 5
+  useGravity: 1
+  damage: 200
+  explosionRadius: 7
+  edgeDamageMultiplier: 0.275
+  knockbackPower: 10
+  knockbackDuration: 0.5
+  stunDuration: 5
+  explosionTargets: 2
+  spawnDebugSphereOnExplode: 1
+  rigidbodyMass: 0.001
+  linearDrag: 0.05
+  angularDrag: 0.2
+  spinSpeedDeg: 960
+  deathMode: 1
+  ragdollImpulse: 10
+  ragdollUpImpulse: 15
+  ragdollSpinTorque: 500
+  sliceTargets: 
+  sliceImpulse: 0
+  targetHoldDuration: 0
+  attackerHoldDuration: 0
+  usePushInsteadOfKnockback: 0
+  jerkIntensity: 1
+  jerkDuration: 0.2

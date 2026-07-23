@@ -104,10 +104,31 @@ public partial class EnemyAttackController : MonoBehaviour
         SyncReadyTimes(initialFill: true);
         globalReadyTime = Time.time;
 
-        if (AttackCount == 0)
-            Debug.LogWarning("[EnemyAttackController] 등록된 유효 공격 패턴이 0개입니다. (공격 비활성 상태)");
-
+        // 공용 바디는 Awake 시점 패턴이 비어 있고, 직후 EnemyFacade가 Config로 채움
         Log($"INIT (validPatterns={AttackCount})");
+    }
+
+    /// <summary>
+    /// EnemyFacade / EnemyConfigSpawner가 스폰 후 Config 패턴을 넣을 때 호출.
+    /// Awake보다 늦게 패턴이 오면 readyTimes를 다시 맞춰야 공격이 가능합니다.
+    /// </summary>
+    public void ApplyPatternsFromConfig(
+        ScriptableObject[] patterns,
+        float globalCooldown,
+        float defaultHoldDuration)
+    {
+        attackPatterns = patterns;
+        글로벌쿨타임 = Mathf.Max(0f, globalCooldown);
+        defaultPatternHoldDuration = Mathf.Max(0f, defaultHoldDuration);
+
+        CleanPatterns();
+        SyncReadyTimes(initialFill: true);
+        globalReadyTime = Time.time;
+
+        if (AttackCount == 0)
+            Debug.LogWarning("[EnemyAttackController] Config에서 받은 유효 공격 패턴이 0개입니다.", this);
+        else
+            Log($"CONFIG APPLY (validPatterns={AttackCount})");
     }
 
     private void CleanPatterns()

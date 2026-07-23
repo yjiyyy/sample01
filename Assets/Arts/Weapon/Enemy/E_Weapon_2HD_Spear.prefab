@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1022254142642501966}
   m_Layer: 15
-  m_Name: Enemy_Weapon_Spear
+  m_Name: E_Weapon_2HD_Spear
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

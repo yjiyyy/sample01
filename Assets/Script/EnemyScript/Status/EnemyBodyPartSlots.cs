@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 적 루트에 붙여 Head / Hair 파츠 프리팹을 지정합니다.
+/// 적 공용 바디 루트에 붙입니다. Head / Hair 슬롯·피부 마스크 등.
 /// Play 시 Bip001 Head / HairSocket 에 인스턴스를 생성합니다.
+/// Head/Hair/피부색은 보통 EnemyConfig Appearance Pool이 스폰 시 채웁니다 (바디에는 비워 두는 것을 권장).
 /// 에디터에서는 「미리보기 갱신」 버튼으로 Play 전 Head/Hair 확인 가능 (프리팹·씬에 저장되지 않음).
 /// </summary>
 [DisallowMultipleComponent]
@@ -12,12 +13,18 @@ public class EnemyBodyPartSlots : MonoBehaviour
 {
     public const string HeadBoneName = "Bip001 Head";
     public const string HairSocketName = "HairSocket";
+    public const string FirePointHeadName = "Fire_Point_Head";
 
-    [Header("파츠 프리팹")]
-    [Tooltip("Bip001 Head 본에 붙일 Head 파츠 (MeshRenderer 등).")]
+    /// <summary>PC_F_Fat_Skin 기준 Fire_Point_Head 로컬 위치.</summary>
+    private static readonly Vector3 FirePointHeadLocalPosition = new Vector3(0f, 0.3f, 0f);
+    /// <summary>PC_F_Fat_Skin 기준 Fire_Point_Head 로컬 회전(오일러).</summary>
+    private static readonly Vector3 FirePointHeadLocalEuler = new Vector3(0f, 0f, 90f);
+
+    [Header("파츠 프리팹 (보통 SO에서 채움)")]
+    [Tooltip("비워 두는 것을 권장. EnemyConfig.headPrefabs가 스폰 시 채웁니다. 여기 값이 있으면 풀이 비었을 때만 fallback.")]
     public GameObject headPartPrefab;
 
-    [Tooltip("HairSocket 자식에 붙일 Hair 파츠 (SkinnedMesh + SpringBone).")]
+    [Tooltip("비워 두는 것을 권장. EnemyConfig.hairPrefabs가 스폰 시 채웁니다. 여기 값이 있으면 풀이 비었을 때만 fallback.")]
     public GameObject hairPartPrefab;
 
     [Header("스케일")]
@@ -32,7 +39,7 @@ public class EnemyBodyPartSlots : MonoBehaviour
     [HideInInspector]
     public bool applyBodySkinTint = true;
 
-    [Tooltip("선택된 피부 톤에서 계산된 실제 색 값 (내부용).")]
+    [Tooltip("선택된 피부 톤. EnemyConfig.skinColors가 있으면 스폰 시 덮어씁니다. 기본은 텍스처 기준색 #F0D1B2.")]
     [HideInInspector]
     public Color bodySkinColor = new Color(240f / 255f, 209f / 255f, 178f / 255f, 1f);
 
@@ -399,6 +406,24 @@ public class EnemyBodyPartSlots : MonoBehaviour
         socketGo.transform.localPosition = Vector3.zero;
         socketGo.transform.localRotation = Quaternion.identity;
         socketGo.transform.localScale = Vector3.one;
+        return true;
+    }
+
+    /// <summary>에디터: Bip001 Head 하위에 Fire_Point_Head가 없으면 PC_F_Fat_Skin 기준으로 생성.</summary>
+    public static bool EnsureFirePointHead(Transform modelRoot)
+    {
+        if (modelRoot == null) return false;
+
+        Transform headBone = FindBoneRecursive(modelRoot, HeadBoneName);
+        if (headBone == null) return false;
+
+        if (FindBoneRecursive(headBone, FirePointHeadName) != null) return false;
+
+        var firePointGo = new GameObject(FirePointHeadName);
+        firePointGo.transform.SetParent(headBone, false);
+        firePointGo.transform.localPosition = FirePointHeadLocalPosition;
+        firePointGo.transform.localRotation = Quaternion.Euler(FirePointHeadLocalEuler);
+        firePointGo.transform.localScale = Vector3.one;
         return true;
     }
 

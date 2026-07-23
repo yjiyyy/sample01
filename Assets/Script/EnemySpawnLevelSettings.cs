@@ -7,7 +7,8 @@ using UnityEngine;
 [Serializable]
 public class EnemySpawnEntry
 {
-    public GameObject prefab;
+    [Tooltip("스폰할 적 종류(EnemyConfig). 외형은 SO의 Appearance Pool에서 랜덤 조합됩니다.")]
+    public EnemyConfig config;
 
     [Min(0f)]
     public float weight = 1f;
@@ -27,9 +28,9 @@ public class EnemySpawnLevelSettings
 
     public EnemySpawnEntry[] enemies;
 
-    public bool TryPickPrefab(out GameObject prefab)
+    public bool TryPickConfig(out EnemyConfig config)
     {
-        prefab = null;
+        config = null;
         if (enemies == null || enemies.Length == 0)
             return false;
 
@@ -37,7 +38,7 @@ public class EnemySpawnLevelSettings
         for (int i = 0; i < enemies.Length; i++)
         {
             EnemySpawnEntry entry = enemies[i];
-            if (entry == null || entry.prefab == null || entry.weight <= 0f)
+            if (entry == null || entry.config == null || entry.weight <= 0f)
                 continue;
 
             totalWeight += entry.weight;
@@ -48,24 +49,24 @@ public class EnemySpawnLevelSettings
 
         float roll = UnityEngine.Random.Range(0f, totalWeight);
         float accumulated = 0f;
-        GameObject fallback = null;
+        EnemyConfig fallback = null;
 
         for (int i = 0; i < enemies.Length; i++)
         {
             EnemySpawnEntry entry = enemies[i];
-            if (entry == null || entry.prefab == null || entry.weight <= 0f)
+            if (entry == null || entry.config == null || entry.weight <= 0f)
                 continue;
 
-            fallback = entry.prefab;
+            fallback = entry.config;
             accumulated += entry.weight;
             if (roll <= accumulated)
             {
-                prefab = entry.prefab;
+                config = entry.config;
                 return true;
             }
         }
 
-        prefab = fallback;
-        return prefab != null;
+        config = fallback;
+        return config != null;
     }
 }

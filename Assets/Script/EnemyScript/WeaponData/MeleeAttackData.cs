@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/MeleeAttackData", fileName = "MeleeAttackData_SO")]
-public class MeleeAttackData : ScriptableObject
+public class MeleeAttackData : EnemyAttackDataBase
 {
     [System.Serializable]
     public class MeleeHitTiming

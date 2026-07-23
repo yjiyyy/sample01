@@ -451,7 +451,8 @@ public class PlayerHealth : MonoBehaviour
             }
 
             float sImpulseBase = weapon != null ? weapon.sliceImpulse : 0f;
-            float sImpulse = Randomize20Percent(sImpulseBase) * Mathf.Max(impactScale, 0f);
+            float bodyScale = weapon != null ? weapon.bodySliceImpulseScale : 2f;
+            float sImpulse = Randomize20Percent(sImpulseBase * bodyScale) * Mathf.Max(impactScale, 0f);
             if (sImpulse > 0f)
             {
                 Vector3 dir = hitDir;
@@ -486,13 +487,13 @@ public class PlayerHealth : MonoBehaviour
         if (animator != null) animator.enabled = false;
         if (rootRb != null) rootRb.isKinematic = true;
         if (rootCollider != null) rootCollider.enabled = false;
-        foreach (var rb in ragdollBodies) { if (rb != null) rb.isKinematic = false; }
-        foreach (var col in ragdollColliders) { if (col != null) col.enabled = true; }
+        // 전신 랙돌은 슬라이스 분리·속도 예약 후에만 켠다 (애니 슬라이스와 출발 조건 맞춤)
 
         SliceTarget target = ChooseSliceTarget(weapon.sliceTargets);
         List<Transform> sliceRoots = CollectSliceRoots(target);
         if (sliceRoots.Count == 0)
         {
+            ActivateRemainingRagdollAfterSlice(null);
             ApplyRagdollImpulse(hitDir, weapon, impactScale, FilterRagdollBodiesForImpulse(ragdollBodies));
             if (rootTransform != null) Destroy(rootTransform.gameObject, DESTROY_DELAY);
             else Destroy(gameObject, DESTROY_DELAY);
@@ -528,21 +529,32 @@ public class PlayerHealth : MonoBehaviour
 
             DisconnectJointsFromSliceToBody(root, slicedSet);
 
+            root.SetParent(null, worldPositionStays: true);
+            root.gameObject.name = root.gameObject.name + "_Sliced";
+            root.position = worldPos;
+            root.rotation = worldRot;
+
             foreach (var col in partCols) { if (col != null) col.enabled = true; }
             foreach (var rb in partBodies)
             {
                 if (rb == null) continue;
+
+                rb.position = rb.transform.position;
+                rb.rotation = rb.transform.rotation;
+                rb.ResetInertiaTensor();
+                rb.ResetCenterOfMass();
+
                 rb.isKinematic = false;
                 rb.useGravity = true;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+                rb.MovePosition(rb.transform.position);
+                rb.MoveRotation(rb.transform.rotation);
             }
 
-            Vector3 lateral = (transform.right * Random.Range(-1f, 1f) + transform.forward * Random.Range(-1f, 1f));
-            if (lateral.sqrMagnitude > 0.0001f) lateral = lateral.normalized * 0.02f;
-            root.position += lateral;
-
             float sImpulseBase = weapon != null ? weapon.sliceImpulse : 0f;
-            float sImpulse = Randomize20Percent(sImpulseBase) * Mathf.Max(impactScale, 0f);
+            float bodyScale = weapon != null ? weapon.bodySliceImpulseScale : 2f;
+            float sImpulse = Randomize20Percent(sImpulseBase * bodyScale) * Mathf.Max(impactScale, 0f);
             if (sImpulse > 0f)
             {
                 Vector3 dir = hitDir;
@@ -555,12 +567,7 @@ public class PlayerHealth : MonoBehaviour
                 if (finalHoriz.sqrMagnitude > 0.0001f) finalHoriz = finalHoriz.normalized;
                 Vector3 velChange = finalHoriz * sImpulse * 0.3f + Vector3.up * sImpulse * 0.7f;
                 Vector3 spinAxis = MakeRandomSpinAxisAvoidPitch(dir);
-                foreach (var rb in partBodies)
-                {
-                    if (rb == null) continue;
-                    rb.AddForce(velChange, ForceMode.VelocityChange);
-                    rb.AddTorque(spinAxis * sImpulse, ForceMode.VelocityChange);
-                }
+                StartCoroutine(ApplySliceVelocityDelayed(partBodies, velChange, spinAxis, sImpulse));
             }
             Destroy(root.gameObject, DESTROY_DELAY);
         }
@@ -571,8 +578,47 @@ public class PlayerHealth : MonoBehaviour
             if (rb == null) continue;
             if (!slicedSet.Contains(rb) && !attachmentSlicedBodies.Contains(rb)) nonSliced.Add(rb);
         }
+
+        ActivateRemainingRagdollAfterSlice(slicedSet);
+
         if (nonSliced.Count > 0)
-            ApplyGlobalImpulseAndSpin(nonSliced, hitDir, weapon, impactScale);
+            StartCoroutine(ApplyGlobalImpulseAndSpinDelayed(nonSliced, hitDir, weapon, impactScale));
+    }
+
+    /// <summary>
+    /// 슬라이스·어태치먼트 분리 후, 남는 몸통만 랙돌 물리 활성화.
+    /// </summary>
+    private void ActivateRemainingRagdollAfterSlice(HashSet<Rigidbody> slicedSet)
+    {
+        foreach (var rb in ragdollBodies)
+        {
+            if (rb == null) continue;
+            if (slicedSet != null && slicedSet.Contains(rb)) continue;
+            if (attachmentSlicedBodies.Contains(rb)) continue;
+            rb.isKinematic = false;
+        }
+
+        foreach (var col in ragdollColliders)
+        {
+            if (col == null) continue;
+            Rigidbody arb = col.attachedRigidbody;
+            if (arb != null)
+            {
+                if (slicedSet != null && slicedSet.Contains(arb)) continue;
+                if (attachmentSlicedBodies.Contains(arb)) continue;
+            }
+            col.enabled = true;
+        }
+    }
+
+    private IEnumerator ApplyGlobalImpulseAndSpinDelayed(
+        List<Rigidbody> targets,
+        Vector3 hitDir,
+        WeaponDataSO weapon,
+        float impactScale)
+    {
+        yield return new WaitForFixedUpdate();
+        ApplyGlobalImpulseAndSpin(targets, hitDir, weapon, impactScale);
     }
 
     private List<Rigidbody> FilterRagdollBodiesForImpulse(IList<Rigidbody> source)

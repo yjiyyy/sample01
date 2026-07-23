@@ -2,40 +2,44 @@ using UnityEngine;
 
 public enum StageClearType
 {
-    [Tooltip("ÁöÁ¤ ½Ã°£(ÃÊ) µ¿¾È ¹öÆ¼¸é Å¬¸®¾î")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½(ï¿½ï¿½) ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ¼ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½")]
     SurviveTime = 0,
-    [Tooltip("¸ó½ºÅÍ N¸¶¸® Ã³Ä¡ ½Ã Å¬¸®¾î")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ Nï¿½ï¿½ï¿½ï¿½ Ã³Ä¡ ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½")]
     KillCount = 1,
-    [Tooltip("µî·ÏÇÑ Æ¯Á¤ ¸ó½ºÅÍ ÇÁ¸®ÆÕÀ» Ã³Ä¡ÇÏ¸é Å¬¸®¾î")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½ Æ¯ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã³Ä¡ï¿½Ï¸ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½")]
     KillSpecific = 2,
 }
 
 [CreateAssetMenu(fileName = "StageData", menuName = "Game/StageData")]
 public class StageData : ScriptableObject
 {
-    [Header("±âº»")]
+    [Header("ï¿½âº»")]
     public string stageName = "Stage 1";
 
-    [Header("Å¬¸®¾î Á¶°Ç")]
+    [Header("Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public StageClearType clearType = StageClearType.SurviveTime;
 
-    [Tooltip("SurviveTime: ÀÌ ½Ã°£(ÃÊ)±îÁö ¹öÆ¼¸é Å¬¸®¾î")]
+    [Tooltip("SurviveTime: ï¿½ï¿½ ï¿½Ã°ï¿½(ï¿½ï¿½)ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ¼ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½")]
     public float stageDuration = 300f;
 
-    [Tooltip("KillCount: Ã³Ä¡ÇØ¾ß ÇÏ´Â ¸ó½ºÅÍ ¼ö")]
+    [Tooltip("KillCount: Ã³Ä¡ï¿½Ø¾ï¿½ ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½")]
     public int targetKillCount = 30;
 
-    [Tooltip("KillSpecific: Ã³Ä¡ÇØ¾ß ÇÏ´Â ¸ó½ºÅÍ ÇÁ¸®ÆÕ")]
-    public GameObject targetEnemyPrefab;
+    [Tooltip("KillSpecific: ì²˜ì¹˜í•´ì•¼ í•˜ëŠ” ì  ì¢…ë¥˜(EnemyConfig)")]
+    public EnemyConfig targetEnemyConfig;
 
-    [Tooltip("KillCount/KillSpecific¿ë Á¦ÇÑ ½Ã°£(ÃÊ). 0ÀÌ¸é ½Ã°£ Á¦ÇÑ ¾øÀ½")]
+    [Tooltip("KillCount/KillSpecificï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½(ï¿½ï¿½). 0ï¿½Ì¸ï¿½ ï¿½Ã°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public float timeLimit = 0f;
 
-    [Header("½ºÅ×ÀÌÁö ·¹º§ (½ºÆù ³­ÀÌµµ)")]
-    [Tooltip("°æ°ú ½Ã°£ÀÌ ÀÌ °£°İ(ÃÊ)¸¶´Ù ½ºÅ×ÀÌÁö ·¹º§ÀÌ 1 ¿À¸¨´Ï´Ù. 0ÀÌ¸é ·¹º§¾÷ ¾øÀ½")]
+    [Header("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ìµï¿½)")]
+    [Tooltip("ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½)ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 1 ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½. 0ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public float monsterLevelUpInterval = 60f;
 
-    [Header("·¹º§ UI ¾ÆÀÌÄÜ")]
-    [Tooltip("·¹º§ 1, 2, 3¡¦ ¼ø¼­´ë·Î Ç¥½ÃÇÒ ¾ÆÀÌÄÜ. ºñ¾î ÀÖÀ¸¸é StageLevelIconBar ±âº» ¾ÆÀÌÄÜ »ç¿ë")]
+    [Tooltip("Ç¥ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ë°ª. ï¿½ï¿½ ï¿½Ì»ï¿½ï¿½ï¿½ï¿½Î´ï¿½ ï¿½Ã¶ï¿½ï¿½ï¿½ ï¿½Ê½ï¿½ï¿½Ï´ï¿½. (ï¿½ï¿½: 5ï¿½ï¿½ Lv.1~5)")]
+    [Min(1)]
+    public int maxStageLevel = 5;
+
+    [Header("ï¿½ï¿½ï¿½ï¿½ UI ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ 1, 2, 3ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ç¥ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½. ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ StageLevelIconBar ï¿½âº» ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½")]
     public Sprite[] levelIcons;
 }

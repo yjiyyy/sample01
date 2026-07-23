@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [CreateAssetMenu(fileName = "RushAttack", menuName = "Enemy/Attack/RushAttackData")]
-public class RushAttackData : ScriptableObject
+public class RushAttackData : EnemyAttackDataBase
 {
     [Header("???? ?? ????")]
     public string attackName = "Rush_Attack";

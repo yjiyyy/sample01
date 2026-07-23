@@ -15,10 +15,10 @@ public class EnemyPlacementSpawner : MonoBehaviour
     [Serializable]
     public class PlacementEntry
     {
-        [Tooltip("배치할 적 프리팹")]
-        public GameObject enemyPrefab;
+        [Tooltip("배치할 적 종류(EnemyConfig). 외형은 SO Appearance Pool에서 랜덤 조합됩니다.")]
+        public EnemyConfig enemyConfig;
 
-        [Min(1), Tooltip("이 프리팹을 배치할 수")]
+        [Min(1), Tooltip("이 Config로 배치할 수")]
         public int count = 1;
     }
 
@@ -72,7 +72,7 @@ public class EnemyPlacementSpawner : MonoBehaviour
     private struct PendingKillTracking
     {
         public EnemyHealth health;
-        public GameObject sourcePrefab;
+        public EnemyConfig sourceConfig;
     }
 
     private void Reset()
@@ -171,16 +171,16 @@ public class EnemyPlacementSpawner : MonoBehaviour
             for (int i = 0; i < placements.Length; i++)
             {
                 PlacementEntry entry = placements[i];
-                if (entry == null || entry.enemyPrefab == null)
+                if (entry == null || entry.enemyConfig == null)
                     continue;
 
                 int count = Mathf.Max(1, entry.count);
                 for (int j = 0; j < count; j++)
                 {
-                    if (!TryPlaceEnemy(entry.enemyPrefab) && debugPlacementLog)
+                    if (!TryPlaceEnemy(entry.enemyConfig) && debugPlacementLog)
                     {
                         Debug.LogWarning(
-                            $"[EnemyPlacementSpawner] '{entry.enemyPrefab.name}' 배치 위치를 찾지 못했습니다. ({j + 1}/{count})",
+                            $"[EnemyPlacementSpawner] '{entry.enemyConfig.name}' 배치 위치를 찾지 못했습니다. ({j + 1}/{count})",
                             this);
                     }
 
@@ -192,24 +192,41 @@ public class EnemyPlacementSpawner : MonoBehaviour
         placementRoutine = null;
     }
 
-    private bool TryPlaceEnemy(GameObject prefab)
+    private bool TryPlaceEnemy(EnemyConfig config)
     {
-        if (!TryFindPlacementPosition(prefab, out Vector3 spawnPosition))
+        if (config == null || !config.TryPickBodyPrefab(out GameObject bodyPrefab))
+        {
+            if (debugPlacementLog && config != null)
+            {
+                Debug.LogWarning(
+                    $"[EnemyPlacementSpawner] '{config.name}' Appearance Pool에 Body Prefabs가 없습니다.",
+                    this);
+            }
+
+            return false;
+        }
+
+        if (!TryFindPlacementPosition(bodyPrefab, out Vector3 spawnPosition))
             return false;
 
         Quaternion spawnRotation = randomizeFacing
             ? Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f)
             : transform.rotation;
 
-        GameObject enemy = Instantiate(prefab, spawnPosition, spawnRotation);
+        GameObject enemy = EnemyConfigSpawner.Spawn(config, bodyPrefab, spawnPosition, spawnRotation);
+        if (enemy == null)
+            return false;
+
         spawnedEnemies.Add(enemy);
         occupiedPositions.Add(spawnPosition);
 
-        RegisterKillTracking(enemy, prefab);
+        RegisterKillTracking(enemy, config);
         CreateHpUi(enemy);
 
         if (debugPlacementLog)
-            Debug.Log($"[EnemyPlacementSpawner] Peace 상태로 배치: {enemy.name} at {spawnPosition}", enemy);
+            Debug.Log(
+                $"[EnemyPlacementSpawner] Peace 배치: config={config.name} body={bodyPrefab.name} at {spawnPosition}",
+                enemy);
 
         return true;
     }
@@ -218,7 +235,7 @@ public class EnemyPlacementSpawner : MonoBehaviour
     {
         spawnPosition = default;
 
-        CapsuleCollider prefabCapsule = prefab.GetComponent<CapsuleCollider>();
+        CapsuleCollider prefabCapsule = prefab != null ? prefab.GetComponent<CapsuleCollider>() : null;
         bool useClearance =
             checkSpawnClearance &&
             prefabCapsule != null &&
@@ -385,7 +402,7 @@ public class EnemyPlacementSpawner : MonoBehaviour
             spawnClearanceMask |= 1 << playerLayer;
     }
 
-    private void RegisterKillTracking(GameObject enemy, GameObject sourcePrefab)
+    private void RegisterKillTracking(GameObject enemy, EnemyConfig sourceConfig)
     {
         if (enemy == null)
             return;
@@ -395,13 +412,13 @@ public class EnemyPlacementSpawner : MonoBehaviour
             return;
 
         StageManager stage = StageManager.Active;
-        if (stage != null && stage.RegisterEnemyKillTracking(health, sourcePrefab))
+        if (stage != null && stage.RegisterEnemyKillTracking(health, sourceConfig))
             return;
 
         pendingKillTracking.Add(new PendingKillTracking
         {
             health = health,
-            sourcePrefab = sourcePrefab
+            sourceConfig = sourceConfig
         });
     }
 
@@ -423,7 +440,7 @@ public class EnemyPlacementSpawner : MonoBehaviour
                 continue;
             }
 
-            if (stage.RegisterEnemyKillTracking(pending.health, pending.sourcePrefab))
+            if (stage.RegisterEnemyKillTracking(pending.health, pending.sourceConfig))
                 pendingKillTracking.RemoveAt(i);
         }
     }

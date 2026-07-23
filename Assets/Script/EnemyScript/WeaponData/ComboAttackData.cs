@@ -2,23 +2,23 @@ using System;
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/ComboAttackData", fileName = "ComboAttackData_SO")]
-public class ComboAttackData : ScriptableObject
+public class ComboAttackData : EnemyAttackDataBase
 {
-    [Header("½Äº°")]
+    [Header("ï¿½Äºï¿½")]
     public string attackName = "Combo_Attack";
 
-    [Header("½½·Ô(¼ø¼­´ë·Î Àç»ý)")]
-    [Tooltip("¼ø¼­´ë·Î ½ÇÇàÇÒ MeleeAttackDataµéÀ» ³ÖÀ¸¼¼¿ä. ºó ½½·Ô(null)Àº ¹«½ÃµË´Ï´Ù.")]
+    [Header("ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½)")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ MeleeAttackDataï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½. ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½(null)ï¿½ï¿½ ï¿½ï¿½ï¿½ÃµË´Ï´ï¿½.")]
     public MeleeAttackData[] slots = new MeleeAttackData[0];
 
-    [Header("ÄÞº¸ ÀüÃ¼ ¿É¼Ç")]
-    [Tooltip("ÄÞº¸ ÀüÃ¼°¡ ³¡³­ ÀÌÈÄ(¶Ç´Â ÀÎÅÍ·´Æ® ½Ã) Àû¿ëµÇ´Â Äð´Ù¿î(ÃÊ)")]
+    [Header("ï¿½Þºï¿½ ï¿½ï¿½Ã¼ ï¿½É¼ï¿½")]
+    [Tooltip("ï¿½Þºï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½Í·ï¿½Æ® ï¿½ï¿½) ï¿½ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½ï¿½Ù¿ï¿½(ï¿½ï¿½)")]
     public float cooldown = 1.5f;
 
-    [Tooltip("ÄÞº¸ ÀüÃ¼ÀÇ À¯È¿ °Å¸®(EnemyAttackController.GetAttackRange¿¡¼­ »ç¿ë)")]
+    [Tooltip("ï¿½Þºï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½È¿ ï¿½Å¸ï¿½(EnemyAttackController.GetAttackRangeï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½)")]
     public float range = 2.5f;
 
-    [Tooltip("ÀÎÅÍ·´Æ® ¹ß»ý ½Ã ÀüÃ¼ ÄÞº¸ Äð´Ù¿îÀ» Àû¿ëÇÒÁö ¿©ºÎ (±ÇÀå: true)")]
+    [Tooltip("ï¿½ï¿½ï¿½Í·ï¿½Æ® ï¿½ß»ï¿½ ï¿½ï¿½ ï¿½ï¿½Ã¼ ï¿½Þºï¿½ ï¿½ï¿½Ù¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½: true)")]
     public bool applyFullCooldownOnInterrupt = true;
 
 #if UNITY_EDITOR

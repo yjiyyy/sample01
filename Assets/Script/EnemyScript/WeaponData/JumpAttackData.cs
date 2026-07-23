@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/JumpAttackData")]
-public class JumpAttackData : ScriptableObject
+public class JumpAttackData : EnemyAttackDataBase
 {
     [Header("General")]
     [Tooltip("패턴 이름(애니메이션 폴백 등)")]

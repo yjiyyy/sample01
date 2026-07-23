@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dc3491976d90564db1812b88ae1fd44, type: 3}
+  m_Name: EnemyConfig_LV01_1HD_Board
+  m_EditorClassIdentifier: 
+  displayName: LV01
+  tagName: Enemy
+  layer:
+    serializedVersion: 2
+    m_Bits: 128
+  maxHealth: 100
+  mass: 1
+  useShield: 0
+  maxShield: 10
+  shieldBreakDuration: 2
+  shieldRechargeDelay: 3
+  shieldRechargeRate: 10
+  baseMoveSpeed: 5
+  movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
+  detectionRadius: 5
+  findDuration: 3
+  backstepDistance: 5
+  backstepSpeedMultiplier: 1
+  cooldownBackstepChance: 1
+  forwardSpeedNormalizeTime: 0.25
+  roamRadius: 3
+  peaceMoveSpeedMultiplier: 0.5
+  idleMin: 1
+  idleMax: 3
+  chaseTrackingMode: 3
+  attackPatterns:
+  - {fileID: 11400000, guid: 2fb166928bf9e0a408670fea7ab158bc, type: 2}
+  globalPatternCooldown: 0
+  defaultPatternHoldDuration: 0
+  enablePerPatternHoldOverride: 0
+  totalDropCountMin: 3
+  totalDropCountMax: 6
+  dropEntries:
+  - itemPrefab: {fileID: 8987695404800486066, guid: 932d99dfdfecd3240bc4484283a64d08, type: 3}
+    dropChance: 0.8
+  - itemPrefab: {fileID: 1745013137664592741, guid: 1d5be34bf3b17d2419a9566ad03a8391, type: 3}
+    dropChance: 0.2
+  dropGroundLayerMask:
+    serializedVersion: 2
+    m_Bits: 29696
+  bodyPrefabs:
+  - {fileID: 7512254375196626866, guid: 6b014fc8a40a38c4fa762aeaf0e73baf, type: 3}
+  - {fileID: 5074230647745752728, guid: 98e50f81b407c7c4fa37a0ea738b1e7e, type: 3}
+  headPrefabs:
+  - {fileID: 2802387193775170961, guid: 12ea92c8ea2e0c64ea0bd25b5a27f28d, type: 3}
+  hairPrefabs:
+  - {fileID: 4148957149732144116, guid: bcb58a3fabaa82546a956b2fc0dfce83, type: 3}
+  skinColors:
+  - {r: 0.9411765, g: 0.81960785, b: 0.69803923, a: 1}
+  - {r: 0.2627451, g: 0.11372549, b: 0, a: 1}
+  - {r: 0.8, g: 0.6, b: 0.45, a: 1}
+  partSlotCount: 0
+  partSlots: []
+  overrideController: {fileID: 22100000, guid: 6b5e8f74926b16d44b05f71bfb2b478d, type: 2}
+  spawnAnimationClip: {fileID: 1827226128182048838, guid: 2606b1853c8dcf94684142993d27ab46, type: 3}
+  spawnEffectPrefab: {fileID: 110497693158398255, guid: c3d4e5f6a7b8488990abcdef1234567a, type: 3}
+  editorAutoApplyDefault: 1

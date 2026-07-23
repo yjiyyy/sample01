@@ -63,7 +63,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5218704982322523485}
   m_Layer: 15
-  m_Name: Enemy_Weapon_BattleAxe
+  m_Name: E_Weapon_2HD_BattleAxe
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

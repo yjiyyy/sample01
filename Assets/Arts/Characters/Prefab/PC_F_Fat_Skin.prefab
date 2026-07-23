@@ -62,6 +62,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 5113989899164593930}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &311030199511775727
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 723869357838655300}
+  m_Layer: 0
+  m_Name: Fire_Point_Head
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &723869357838655300
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 311030199511775727}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
+  m_LocalPosition: {x: -0, y: 0.3, z: -0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2527192330269607716}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
 --- !u!1 &947202194341201971
 GameObject:
   m_ObjectHideFlags: 0
@@ -441,14 +472,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be2821b1ccca2dc47a504fc08cf3e42e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  backstepDistance: 3
+  backstepDistance: 5
   backstepSpeedMultiplier: 1
-  cooldownBackstepChance: 0.5
+  cooldownBackstepChance: 1
   forwardSpeedNormalizeTime: 0.25
   detectionRadius: 5
-  findDuration: 1
+  findDuration: 3
   roamRadius: 3
-  peaceMoveSpeedMultiplier: 0.6
+  peaceMoveSpeedMultiplier: 0.5
   idleMin: 1
   idleMax: 3
   chaseTrackingMode: 3
@@ -505,7 +536,7 @@ MonoBehaviour:
   ai: {fileID: 4310409828128300178}
   impact: {fileID: 4521070145796075303}
   dieCtrl: {fileID: 4223284423090311427}
-  moveSpeed: 3.5
+  moveSpeed: 5
   debugMode: 1
   movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
 --- !u!114 &8407391842236054729
@@ -535,7 +566,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackPatterns:
-  - {fileID: 11400000, guid: ed6f8f9e13b90a04faa58b61dd502cc7, type: 2}
+  - {fileID: 11400000, guid: 2fb166928bf9e0a408670fea7ab158bc, type: 2}
   "\uAE00\uB85C\uBC8C\uCFE8\uD0C0\uC784": 0
   defaultPatternHoldDuration: 0
   debugDecisionLogs: 1
@@ -566,7 +597,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHP: 100
   useShield: 0
-  maxShield: 50
+  maxShield: 10
   shieldBreakDuration: 2
   shieldRechargeDelay: 3
   showShieldLogs: 0
@@ -582,7 +613,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aaa64412d32813b4387ecfcd229cf98b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  config: {fileID: 11400000, guid: b12215c05e3a9f34797d8377a0f67d72, type: 2}
+  config: {fileID: 0}
   autoSync: 1
   targetEnemy: {fileID: 0}
   extraTargets: []
@@ -611,12 +642,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39d8024688ff1ac45bdaeb487e602a9a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  headPartPrefab: {fileID: 2802387193775170961, guid: 12ea92c8ea2e0c64ea0bd25b5a27f28d, type: 3}
-  hairPartPrefab: {fileID: 4148957149732144116, guid: bcb58a3fabaa82546a956b2fc0dfce83, type: 3}
+  headPartPrefab: {fileID: 0}
+  hairPartPrefab: {fileID: 0}
   partsScale: 1
   bodySkinMaterial: {fileID: 2100000, guid: 6da517d0addfedb40999e81d49e23aec, type: 2}
   applyBodySkinTint: 1
-  bodySkinColor: {r: 0.2627451, g: 0.11372549, b: 0, a: 1}
+  bodySkinColor: {r: 0.9411765, g: 0.81960785, b: 0.69803923, a: 1}
   skinMaskTexture: {fileID: 2800000, guid: 8f894c1508fbcb44e874d970b431cd01, type: 3}
   maskBakeColorThreshold: 0.15
   previewInEditor: 1
@@ -824,6 +855,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -4095004972572062428, guid: a800ee3f955cd8d4b956aadf53e184f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7030888612926597350}
+    - targetCorrespondingSourceObject: {fileID: -4095004972572062428, guid: a800ee3f955cd8d4b956aadf53e184f2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 723869357838655300}
     - targetCorrespondingSourceObject: {fileID: -6552467859128464921, guid: a800ee3f955cd8d4b956aadf53e184f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8636533308135456815}

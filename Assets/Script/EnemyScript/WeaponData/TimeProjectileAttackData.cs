@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/TimeProjectileAttackData")]
-public class TimeProjectileAttackData : ScriptableObject
+public class TimeProjectileAttackData : EnemyAttackDataBase
 {
     [Header("?? ????")]
     [Tooltip("???? ???(???????)")]

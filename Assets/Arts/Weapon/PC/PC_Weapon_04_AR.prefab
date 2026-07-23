@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5513406984449509888}
   - component: {fileID: 4698332341637077151}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: PC_Weapon_04_AR
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -58,7 +58,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6442819436729211788}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: Fire_Point
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -131,6 +131,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 97bfc1611f9c53f4488d89fb98b703b4, type: 3}
       propertyPath: m_Name
       value: PC_Weapon_AR
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 97bfc1611f9c53f4488d89fb98b703b4, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

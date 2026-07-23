@@ -40,6 +40,17 @@ MonoBehaviour:
   globalPatternCooldown: 0
   defaultPatternHoldDuration: 0
   enablePerPatternHoldOverride: 0
+  bodyPrefabs:
+  - {fileID: 7512254375196626866, guid: 6b014fc8a40a38c4fa762aeaf0e73baf, type: 3}
+  headPrefabs:
+  - {fileID: 2802387193775170961, guid: 12ea92c8ea2e0c64ea0bd25b5a27f28d, type: 3}
+  - {fileID: 3690453781320253799, guid: f38e5b3d93cdfd44e86c6580bf213cb6, type: 3}
+  hairPrefabs:
+  - {fileID: 4148957149732144116, guid: bcb58a3fabaa82546a956b2fc0dfce83, type: 3}
+  skinColors:
+  - {r: 0.9411765, g: 0.81960785, b: 0.69803923, a: 1}
+  - {r: 0.2627451, g: 0.11372549, b: 0, a: 1}
+  - {r: 0.8, g: 0.6, b: 0.45, a: 1}
   partSlotCount: 0
   partSlots: []
   overrideController: {fileID: 0}

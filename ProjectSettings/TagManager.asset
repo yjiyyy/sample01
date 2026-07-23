@@ -16,7 +16,7 @@ TagManager:
   - UI
   - Player
   - Enemy
-  - Boss
+  - 
   - Ragdoll
   - Ground
   - Hit_Collider
@@ -29,8 +29,8 @@ TagManager:
   - UI_Cam
   - Building
   - D_Prop
-  - 
-  - 
+  - Weapon_Enemy
+  - Weapon_PC
   - 
   - 
   - 

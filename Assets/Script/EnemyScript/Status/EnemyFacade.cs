@@ -8,12 +8,15 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// Enemy + 관련 컴포넌트들에 EnemyConfig SO 값을 적용하는 facade.
-/// - 파츠 시스템:  Start()에서 config.partSlots 기반으로 파츠 생성 및 부착.
+/// EnemyConfig SO 값을 Enemy·관련 컴포넌트에 적용하는 facade.
+/// 공용 바디 프리팹에는 config를 비워 두고, 스폰 시 EnemyConfigSpawner가 SO를 넣습니다.
+/// - 파츠: Start()에서 attackPatterns[0] 무기 파츠 + config.partSlots(비무기) 생성.
+/// - Head/Hair: EnemyBodyPartSlots (스폰 시 SO Appearance Pool에서 채움).
 /// </summary>
 public class EnemyFacade : MonoBehaviour
 {
     [Header("Core")]
+    [Tooltip("공용 바디는 비워 둡니다. 전투/배치 스폰 시 EnemyConfigSpawner가 SO를 할당합니다. NPC는 계속 비워 둘 수 있습니다.")]
     public EnemyConfig config;
 
     [Tooltip("If true, sync from SO to components automatically in OnValidate() (editor) and Awake() (runtime).")]
@@ -66,9 +69,10 @@ public class EnemyFacade : MonoBehaviour
                 bodyPartSlots.TryAttachParts(this);
         }
 
-        // EnemyConfig 슬롯 파츠 (무기·액세서리 등 — Head/Hair는 Body 슬롯 사용 권장)
+        // Attack SO 무기 파츠 + Config 슬롯 파츠 (Head/Hair는 Body 슬롯 사용 권장)
         if (Application.isPlaying && config != null)
         {
+            SpawnWeaponPartsFromAttackPattern();
             SpawnParts();
             GetComponent<EnemyDie>()?.RefreshRagdollFromHierarchy();
         }
@@ -87,8 +91,7 @@ public class EnemyFacade : MonoBehaviour
     {
         if (config == null)
         {
-            if (Application.isPlaying)
-                Debug.LogWarning("[EnemyFacade] No EnemyConfig assigned.");
+            // 공용 바디·NPC는 config 없이 존재할 수 있음. 스폰 직후 Awake 시점에도 아직 비어 있을 수 있음.
             return;
         }
 
@@ -236,61 +239,69 @@ public class EnemyFacade : MonoBehaviour
             TrySetSerializedFloat(impactComp, "softKnockRatio", config.shieldRechargeRate);
         }
 
-        // 6) EnemyAttackController
-        var attackComp = FindComponentByTypeName("EnemyAttackController");
-        if (attackComp != null)
-        {
-#if UNITY_EDITOR
-            var so = new SerializedObject((UnityEngine.Object)attackComp);
-            var arr = so.FindProperty("attackPatterns") ?? so.FindProperty("m_attackPatterns");
-            if (arr != null && config.attackPatterns != null)
-            {
-                arr.arraySize = config.attackPatterns.Length;
-                for (int i = 0; i < arr.arraySize; ++i)
-                    arr.GetArrayElementAtIndex(i).objectReferenceValue = config.attackPatterns[i];
-            }
-
-            var p1 = so.FindProperty("defaultPatternHoldDuration") ?? so.FindProperty("m_defaultPatternHoldDuration");
-            if (p1 != null) p1.floatValue = config.defaultPatternHoldDuration;
-
-            var p2 = so.FindProperty("enablePerPatternHoldOverride") ?? so.FindProperty("m_enablePerPatternHoldOverride");
-            if (p2 != null) p2.boolValue = config.enablePerPatternHoldOverride;
-
-            var p3 = so.FindProperty("글로벌쿨타임") ?? so.FindProperty("globalReadyTime") ?? so.FindProperty("m_글로벌쿨타임");
-            if (p3 != null && p3.propertyType == SerializedPropertyType.Float)
-                p3.floatValue = config.globalPatternCooldown;
-
-            so.ApplyModifiedProperties();
-#else
-            try
-            {
-                TrySetPublicPropertyOrField(attackComp, "attackPatterns", config. attackPatterns);
-                TrySetPublicPropertyOrField(attackComp, "defaultPatternHoldDuration", config.defaultPatternHoldDuration);
-                TrySetPublicPropertyOrField(attackComp, "enablePerPatternHoldOverride", config.enablePerPatternHoldOverride);
-                TrySetPublicPropertyOrField(attackComp, "글로벌쿨타임", config.globalPatternCooldown);
-                TrySetPublicPropertyOrField(attackComp, "globalPatternCooldown", config.globalPatternCooldown);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[EnemyFacade] Failed to apply EnemyAttackController runtime fields: {ex.Message}");
-            }
-#endif
-        }
-
-        // 7) Animator override (E_Animator 베이스 → Config AOC)
-        var animator = GetComponent<Animator>();
-        if (animator != null && config.overrideController != null)
+        // 6) EnemyAttackController — 공용 바디는 패턴이 비어 있고, 스폰 시 SO에서 채움
+        var attackCtrl = GetComponent<EnemyAttackController>();
+        if (attackCtrl != null)
         {
             if (Application.isPlaying)
             {
-                animator.runtimeAnimatorController = config.overrideController;
+                // Awake가 빈 패턴으로 먼저 돌 수 있으므로, 직접 넣고 readyTimes까지 재동기화
+                attackCtrl.ApplyPatternsFromConfig(
+                    config.attackPatterns,
+                    config.globalPatternCooldown,
+                    config.defaultPatternHoldDuration);
             }
 #if UNITY_EDITOR
             else
             {
-                TrySetSerializedObjectField(animator, "m_Controller", config.overrideController);
+                var so = new SerializedObject(attackCtrl);
+                var arr = so.FindProperty("attackPatterns") ?? so.FindProperty("m_attackPatterns");
+                if (arr != null && config.attackPatterns != null)
+                {
+                    arr.arraySize = config.attackPatterns.Length;
+                    for (int i = 0; i < arr.arraySize; ++i)
+                        arr.GetArrayElementAtIndex(i).objectReferenceValue = config.attackPatterns[i];
+                }
+
+                var p1 = so.FindProperty("defaultPatternHoldDuration") ?? so.FindProperty("m_defaultPatternHoldDuration");
+                if (p1 != null) p1.floatValue = config.defaultPatternHoldDuration;
+
+                var p3 = so.FindProperty("글로벌쿨타임") ?? so.FindProperty("globalReadyTime") ?? so.FindProperty("m_글로벌쿨타임");
+                if (p3 != null && p3.propertyType == SerializedPropertyType.Float)
+                    p3.floatValue = config.globalPatternCooldown;
+
+                so.ApplyModifiedProperties();
             }
 #endif
+        }
+
+        // 7) Animator: Config AOC 또는 E_Animator 기본 Controller
+        var animator = GetComponent<Animator>();
+        if (animator != null)
+        {
+            RuntimeAnimatorController targetController = config.overrideController != null
+                ? config.overrideController
+                : EnemyAnimatorDefaults.GetDefaultController();
+
+            if (targetController != null)
+            {
+                if (Application.isPlaying)
+                {
+                    if (animator.runtimeAnimatorController != targetController)
+                    {
+                        animator.runtimeAnimatorController = targetController;
+                        // 스폰 직후 컨트롤러 교체 시 한 프레임 바인딩이 어긋날 수 있어 재바인딩
+                        animator.Rebind();
+                        animator.Update(0f);
+                    }
+                }
+#if UNITY_EDITOR
+                else
+                {
+                    TrySetSerializedObjectField(animator, "m_Controller", targetController);
+                }
+#endif
+            }
         }
 
         // 8) EnemyDeath
@@ -333,56 +344,104 @@ public class EnemyFacade : MonoBehaviour
     }
 
     /// <summary>
-    /// Parts System: config.partSlots 기반으로 파츠 생성 및 부착.
-    /// - boneName(문자열)으로 본을 검색해서 부착. 
-    /// - 생성된 파츠는 spawnedParts 리스트에 보관.
+    /// attackPatterns[0]의 weaponPart 기반으로 무기 파츠 1개 생성 및 부착 (프리팹 후보 중 랜덤).
+    /// </summary>
+    private void SpawnWeaponPartsFromAttackPattern()
+    {
+        if (config?.attackPatterns == null || config.attackPatterns.Length == 0)
+            return;
+
+        if (config.attackPatterns[0] is not EnemyAttackDataBase attackData)
+            return;
+
+        SpawnWeaponPart(attackData.weaponPart);
+    }
+
+    private void SpawnWeaponPart(EnemyWeaponPartAttachment attachment)
+    {
+        if (attachment == null || !attachment.HasAnyPrefab())
+            return;
+
+        GameObject prefab = attachment.PickRandomPrefab();
+        if (prefab == null)
+            return;
+
+        string boneName = EnemyAttackDataBase.ResolveWeaponBoneName(attachment.boneName);
+        Transform attachBone = FindBoneByName(boneName);
+        if (attachBone == null)
+        {
+            Debug.LogWarning($"[EnemyFacade] Bone '{boneName}' not found in '{gameObject.name}'. Skipping weapon part.");
+            return;
+        }
+
+        GameObject partInstance = Instantiate(prefab, attachBone);
+        partInstance.name = prefab.name;
+
+        partInstance.transform.localPosition = attachment.localOffset;
+        partInstance.transform.localRotation = Quaternion.Euler(attachment.localRotationEuler);
+        partInstance.transform.localScale = attachment.localScale;
+
+        InitializePartPhysics(partInstance);
+        spawnedParts.Add(partInstance);
+
+        Debug.Log($"[EnemyFacade] Spawned weapon part '{partInstance.name}' on bone '{attachBone.name}'");
+    }
+
+    /// <summary>
+    /// Parts System: config.partSlots 기반으로 파츠 생성 및 부착 (무기 제외).
     /// </summary>
     private void SpawnParts()
     {
         if (config == null || config.partSlots == null || config.partSlots.Length == 0)
             return;
 
-        foreach (var slot in config.partSlots)
+        SpawnPartSlots(config.partSlots, useDefaultBoneWhenEmpty: false, logPrefix: "Part");
+    }
+
+    private void SpawnPartSlots(EnemyPartSlot[] slots, bool useDefaultBoneWhenEmpty, string logPrefix)
+    {
+        if (slots == null || slots.Length == 0)
+            return;
+
+        foreach (var slot in slots)
         {
             if (slot == null) continue;
 
-            // boneName이 비어있으면 스킵
-            if (string.IsNullOrEmpty(slot.boneName))
+            string boneName = useDefaultBoneWhenEmpty
+                ? EnemyAttackDataBase.ResolveWeaponBoneName(slot.boneName)
+                : slot.boneName;
+
+            if (string.IsNullOrEmpty(boneName))
             {
-                Debug.LogWarning($"[EnemyFacade] Part slot has empty boneName.  Skipping.");
+                Debug.LogWarning($"[EnemyFacade] {logPrefix} slot has empty boneName. Skipping.");
                 continue;
             }
 
-            // partPrefab이 없으면 스킵
             if (slot.partPrefab == null)
             {
-                Debug.LogWarning($"[EnemyFacade] Part slot (bone='{slot.boneName}') has no partPrefab assigned. Skipping.");
+                Debug.LogWarning($"[EnemyFacade] {logPrefix} slot (bone='{boneName}') has no partPrefab assigned. Skipping.");
                 continue;
             }
 
-            // boneName으로 본 검색
-            Transform attachBone = FindBoneByName(slot.boneName);
+            Transform attachBone = FindBoneByName(boneName);
             if (attachBone == null)
             {
-                Debug.LogWarning($"[EnemyFacade] Bone '{slot.boneName}' not found in '{gameObject.name}'. Skipping part.");
+                Debug.LogWarning($"[EnemyFacade] Bone '{boneName}' not found in '{gameObject.name}'. Skipping {logPrefix.ToLower()}.");
                 continue;
             }
 
-            // 파츠 생성
             GameObject partInstance = Instantiate(slot.partPrefab, attachBone);
             partInstance.name = slot.partPrefab.name;
 
-            // 로컬 Transform 적용
             partInstance.transform.localPosition = slot.localOffset;
             partInstance.transform.localRotation = Quaternion.Euler(slot.localRotationEuler);
             partInstance.transform.localScale = slot.localScale;
 
-            // ★★★ 생성 직후 파츠 물리 비활성화 ★★★
             InitializePartPhysics(partInstance);
 
             spawnedParts.Add(partInstance);
 
-            Debug.Log($"[EnemyFacade] Spawned part '{partInstance.name}' on bone '{attachBone.name}'");
+            Debug.Log($"[EnemyFacade] Spawned {logPrefix.ToLower()} '{partInstance.name}' on bone '{attachBone.name}'");
         }
     }
     private void InitializePartPhysics(GameObject partObj)

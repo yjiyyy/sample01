@@ -94,16 +94,16 @@ public class StageManager : MonoBehaviour
     public bool IsStageActive => stageActive;
 
     /// <returns>스테이지가 활성일 때만 true. 배치 스포너가 등록 타이밍을 재시도할 때 사용.</returns>
-    public bool RegisterEnemyKillTracking(EnemyHealth health, GameObject sourcePrefab)
+    public bool RegisterEnemyKillTracking(EnemyHealth health, EnemyConfig sourceConfig)
     {
         if (!stageActive || health == null)
             return false;
 
-        health.OnDeath += () => HandleEnemyKilled(sourcePrefab);
+        health.OnDeath += () => HandleEnemyKilled(sourceConfig);
         return true;
     }
 
-    private void HandleEnemyKilled(GameObject sourcePrefab)
+    private void HandleEnemyKilled(EnemyConfig sourceConfig)
     {
         if (!stageActive || stageEnded)
             return;
@@ -121,7 +121,7 @@ public class StageManager : MonoBehaviour
                 break;
 
             case StageClearType.KillSpecific:
-                if (IsTargetEnemy(sourcePrefab))
+                if (IsTargetEnemy(sourceConfig))
                     EndStage(success: true);
                 break;
         }
@@ -132,7 +132,12 @@ public class StageManager : MonoBehaviour
         if (stageData.monsterLevelUpInterval <= 0f)
             return;
 
+        int maxIndex = Mathf.Max(0, stageData.maxStageLevel - 1);
+        if (currentLevel >= maxIndex)
+            return;
+
         int newLevel = Mathf.FloorToInt(elapsedTime / stageData.monsterLevelUpInterval);
+        newLevel = Mathf.Min(newLevel, maxIndex);
         if (newLevel == currentLevel)
             return;
 
@@ -163,12 +168,12 @@ public class StageManager : MonoBehaviour
             EndStage(success: false);
     }
 
-    private bool IsTargetEnemy(GameObject sourcePrefab)
+    private bool IsTargetEnemy(EnemyConfig sourceConfig)
     {
-        if (stageData.targetEnemyPrefab == null || sourcePrefab == null)
+        if (stageData.targetEnemyConfig == null || sourceConfig == null)
             return false;
 
-        return sourcePrefab == stageData.targetEnemyPrefab;
+        return sourceConfig == stageData.targetEnemyConfig;
     }
 
     private int GetDisplayLevel()

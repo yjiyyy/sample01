@@ -5,13 +5,13 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Enemy용 FBX를 프로젝트에 넣은 뒤, 해당 FBX를 선택하고 메뉴에서 실행하면
-/// Enemy 전용 프리팹(Enemy, Animator, Rigidbody, CapsuleCollider, EnemyDie 등 + 랙돌)을 생성합니다.
+/// 공용 바디 프리팹(Enemy, Animator, Rigidbody, CapsuleCollider, EnemyDie, EnemyFacade 등 + 랙돌)을 생성합니다.
+/// EnemyConfig·Head/Hair는 프리팹에 넣지 않습니다. SO Appearance Pool / 스포너에서 완성합니다.
 /// Player는 별도로 만들 예정이면 이 메뉴를 쓰지 마세요.
 /// </summary>
 public static class EnemyPrefabGenerator
 {
     private const string MenuName = "Assets/Create Enemy Prefab from FBX";
-    private const string MenuNameBatch = "Assets/Create Enemy Prefab from FBX (Batch)";
 
     [MenuItem(MenuName, true)]
     private static bool ValidateCreateEnemyPrefab()
@@ -28,33 +28,6 @@ public static class EnemyPrefabGenerator
         if (fbx == null) return;
         string assetPath = AssetDatabase.GetAssetPath(fbx);
         GenerateAndSave(fbx, assetPath);
-    }
-
-    [MenuItem(MenuNameBatch, true)]
-    private static bool ValidateCreateEnemyPrefabBatch()
-    {
-        foreach (var obj in Selection.objects)
-        {
-            if (obj is GameObject go)
-            {
-                string path = AssetDatabase.GetAssetPath(go);
-                if (!string.IsNullOrEmpty(path) && path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-        }
-        return false;
-    }
-
-    [MenuItem(MenuNameBatch, false, 2)]
-    private static void CreateEnemyPrefabBatch()
-    {
-        foreach (var obj in Selection.objects)
-        {
-            if (!(obj is GameObject fbx)) continue;
-            string path = AssetDatabase.GetAssetPath(fbx);
-            if (string.IsNullOrEmpty(path) || !path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase)) continue;
-            GenerateAndSave(fbx, path);
-        }
     }
 
     private static void GenerateAndSave(GameObject fbxSource, string fbxAssetPath)
@@ -134,7 +107,7 @@ public static class EnemyPrefabGenerator
             AddSliceBloodEffectSpawner(root, settings);
         }
 
-        // 저장 직전: HairSocket(모델) + EnemyBodyPartSlots(적 루트 — FBX 자식에 붙이면 저장 시 빠질 수 있음)
+        // 저장 직전: HairSocket / Fire_Point_Head(모델) + EnemyBodyPartSlots·Face(적 루트)
         EnsureBodyPartSlotsSetup(root, fbxInstance);
 
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, savePath, InteractionMode.AutomatedAction);
@@ -142,16 +115,27 @@ public static class EnemyPrefabGenerator
         Debug.Log($"[EnemyPrefabGenerator] Enemy 프리팹 생성 완료: {savePath}");
     }
 
-    /// <summary>Bip001 Head 하위 HairSocket(모델) + EnemyBodyPartSlots(적 루트).</summary>
+    /// <summary>Bip001 Head 하위 HairSocket·Fire_Point_Head(모델) + EnemyBodyPartSlots / Face(적 루트).</summary>
     private static void EnsureBodyPartSlotsSetup(GameObject enemyRoot, GameObject modelRoot)
     {
         if (modelRoot != null)
         {
+            bool nestedChanged = false;
+
             if (EnemyBodyPartSlots.EnsureHairSocket(modelRoot.transform))
             {
                 Debug.Log("[EnemyPrefabGenerator] Bip001 Head 하위에 HairSocket을 생성했습니다.");
-                RecordNestedPrefabOverrides(modelRoot);
+                nestedChanged = true;
             }
+
+            if (EnemyBodyPartSlots.EnsureFirePointHead(modelRoot.transform))
+            {
+                Debug.Log("[EnemyPrefabGenerator] Bip001 Head 하위에 Fire_Point_Head를 생성했습니다.");
+                nestedChanged = true;
+            }
+
+            if (nestedChanged)
+                RecordNestedPrefabOverrides(modelRoot);
         }
 
         if (enemyRoot == null) return;
@@ -160,6 +144,12 @@ public static class EnemyPrefabGenerator
         {
             enemyRoot.AddComponent<EnemyBodyPartSlots>();
             Debug.Log("[EnemyPrefabGenerator] 적 루트에 EnemyBodyPartSlots를 추가했습니다.");
+        }
+
+        if (enemyRoot.GetComponent<EnemyFaceController>() == null)
+        {
+            enemyRoot.AddComponent<EnemyFaceController>();
+            Debug.Log("[EnemyPrefabGenerator] 적 루트에 EnemyFaceController를 추가했습니다.");
         }
     }
 
@@ -195,7 +185,9 @@ public static class EnemyPrefabGenerator
         root.AddComponent<EnemyAttackController>();
         root.AddComponent<MultiBoneJerkController>();
         root.AddComponent<EnemyHealth>();
+        // 공용 바디: Config는 비운 채 Facade만 추가. 스폰 시 EnemyConfigSpawner가 SO를 넣음.
         root.AddComponent<EnemyFacade>();
+        // Face는 EnsureBodyPartSlotsSetup에서 추가 (Head 부착 후 BindHead)
 
         var die = root.GetComponent<EnemyDie>();
         if (die != null)
@@ -228,7 +220,7 @@ public static class EnemyPrefabGenerator
         }
     }
 
-    private const string EnemyAnimatorControllerPath = "Assets/Arts/Enemy/Ani/E_Animator.controller";
+    private const string EnemyAnimatorControllerPath = "Assets/Arts/Characters/Ani_Enemy/E_Animator.controller";
     private const string EnemyAvatarSourcePath = "Assets/Arts/Player/New01/Model/PC001_new.fbx";
     private const string E_AnimatorGUID = "0c585f06e6c97534cac89d91d9e0726d";
     /// <summary>공통 Humanoid Avatar (PC_M_Normal_Skin.fbx)</summary>

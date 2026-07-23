@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5dc3491976d90564db1812b88ae1fd44, type: 3}
-  m_Name: EnemyConfig_LV01
+  m_Name: EnemyConfig_LV01_Throw
   m_EditorClassIdentifier: 
   displayName: LV01
   tagName: Enemy
@@ -30,13 +30,15 @@ MonoBehaviour:
   findDuration: 3
   backstepDistance: 5
   backstepSpeedMultiplier: 1
+  cooldownBackstepChance: 1
   forwardSpeedNormalizeTime: 0.25
   roamRadius: 3
   peaceMoveSpeedMultiplier: 0.5
   idleMin: 1
   idleMax: 3
+  chaseTrackingMode: 3
   attackPatterns:
-  - {fileID: 11400000, guid: ed6f8f9e13b90a04faa58b61dd502cc7, type: 2}
+  - {fileID: 11400000, guid: c260fbc3e1c72b74b9f6289e591dffdc, type: 2}
   globalPatternCooldown: 0
   defaultPatternHoldDuration: 0
   enablePerPatternHoldOverride: 0
@@ -50,7 +52,20 @@ MonoBehaviour:
   dropGroundLayerMask:
     serializedVersion: 2
     m_Bits: 29696
+  bodyPrefabs:
+  - {fileID: 7512254375196626866, guid: 6b014fc8a40a38c4fa762aeaf0e73baf, type: 3}
+  headPrefabs:
+  - {fileID: 2802387193775170961, guid: 12ea92c8ea2e0c64ea0bd25b5a27f28d, type: 3}
+  - {fileID: 3690453781320253799, guid: f38e5b3d93cdfd44e86c6580bf213cb6, type: 3}
+  hairPrefabs:
+  - {fileID: 4148957149732144116, guid: bcb58a3fabaa82546a956b2fc0dfce83, type: 3}
+  skinColors:
+  - {r: 0.9411765, g: 0.81960785, b: 0.69803923, a: 1}
+  - {r: 0.2627451, g: 0.11372549, b: 0, a: 1}
+  - {r: 0.8, g: 0.6, b: 0.45, a: 1}
   partSlotCount: 0
   partSlots: []
-  overrideController: {fileID: 0}
+  overrideController: {fileID: 22100000, guid: 6b5e8f74926b16d44b05f71bfb2b478d, type: 2}
+  spawnAnimationClip: {fileID: 0}
+  spawnEffectPrefab: {fileID: 0}
   editorAutoApplyDefault: 1

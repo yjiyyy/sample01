@@ -46,7 +46,9 @@ public class EnemyFacadeEditor : Editor
         }
         else
         {
-            EditorGUILayout.HelpBox("Assign an EnemyConfig ScriptableObject to apply to components.", MessageType.Info);
+            EditorGUILayout.HelpBox(
+                "공용 바디는 Config를 비워 둡니다. 스폰 시 EnemyConfigSpawner가 SO를 넣습니다. 에디터에서 미리 적용하려면 SO를 임시로 넣고 Apply 하세요.",
+                MessageType.Info);
         }
 
         EditorGUILayout.BeginHorizontal();
@@ -69,7 +71,9 @@ public class EnemyFacadeEditor : Editor
 
         EditorGUILayout.Space();
 
-        EditorGUILayout.HelpBox("AutoSync will run ApplyToComponents in OnValidate (editor) and Awake (runtime). If you want to keep custom per-instance overrides, turn AutoSync off and use Apply manually.", MessageType.Info);
+        EditorGUILayout.HelpBox(
+            "공용 바디 + SO 스폰이 기본입니다. AutoSync는 Config가 있을 때만 OnValidate/Awake에서 적용합니다. 인스턴스만 따로 두고 싶으면 AutoSync를 끄고 Apply를 수동으로 쓰세요.",
+            MessageType.Info);
 
         serializedObject.ApplyModifiedProperties();
     }

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Enemy/Attack/AoE Attack Data")]
-public class AoEAttackData : ScriptableObject
+public class AoEAttackData : EnemyAttackDataBase
 {
     [Header("Identification")]
     public string attackName = "AoE_Attack";

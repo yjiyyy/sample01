@@ -139,8 +139,21 @@ public class EnemyConfig : ScriptableObject
     [Tooltip("착지 레이캐스트용 지면 레이어. 비탈/계단 포함. 0이면 DefaultRaycastLayers 사용.")]
     public LayerMask dropGroundLayerMask = 0;
 
+    [Header("Appearance Pool (스폰 시 균등 랜덤)")]
+    [Tooltip("공유 골격 바디 프리팹 목록. 스포너는 이 중에서 하나를 골라 Instantiate합니다. 비어 있으면 스폰 불가.")]
+    public GameObject[] bodyPrefabs = new GameObject[0];
+
+    [Tooltip("Head 파츠 후보. 비어 있으면 바디 프리팹에 설정된 Head를 그대로 씁니다.")]
+    public GameObject[] headPrefabs = new GameObject[0];
+
+    [Tooltip("Hair 파츠 후보. 비어 있으면 바디 프리팹에 설정된 Hair를 그대로 씁니다.")]
+    public GameObject[] hairPrefabs = new GameObject[0];
+
+    [Tooltip("피부색 후보. 비어 있으면 바디 프리팹에 설정된 피부색을 그대로 씁니다.")]
+    public Color[] skinColors = new Color[0];
+
     [Header("Parts System")]
-    [Tooltip("파츠 슬롯 개수.  이 값을 변경하면 OnValidate에서 배열 크기를 자동 조정합니다.")]
+    [Tooltip("비무기 파츠 슬롯 개수(장식 등). 무기는 Attack SO의 Weapon Parts에 설정합니다.")]
     public int partSlotCount = 0;
     [Tooltip("각 슬롯에 붙을 본 이름(문자열)과 파츠 프리펩을 설정합니다.")]
     public EnemyPartSlot[] partSlots = new EnemyPartSlot[0];
@@ -157,6 +170,77 @@ public class EnemyConfig : ScriptableObject
     [Header("Editor only")]
     [Tooltip("If true, EnemyFacade will automatically sync SO -> components on OnValidate.")]
     public bool editorAutoApplyDefault = true;
+
+    /// <summary>외형 풀에서 바디 프리팹을 균등 랜덤으로 고릅니다.</summary>
+    public bool TryPickBodyPrefab(out GameObject bodyPrefab)
+    {
+        bodyPrefab = PickRandomPrefab(bodyPrefabs);
+        return bodyPrefab != null;
+    }
+
+    /// <summary>
+    /// 인스턴스의 EnemyBodyPartSlots에 Head/Hair/피부색을 풀에서 골라 넣습니다.
+    /// Start의 파츠 부착보다 먼저 호출해야 합니다.
+    /// </summary>
+    public void ApplyRandomAppearance(GameObject enemyInstance)
+    {
+        if (enemyInstance == null)
+            return;
+
+        EnemyBodyPartSlots slots = enemyInstance.GetComponentInChildren<EnemyBodyPartSlots>(true);
+        if (slots == null)
+            return;
+
+        GameObject head = PickRandomPrefab(headPrefabs);
+        if (head != null)
+            slots.headPartPrefab = head;
+
+        GameObject hair = PickRandomPrefab(hairPrefabs);
+        if (hair != null)
+            slots.hairPartPrefab = hair;
+
+        if (TryPickSkinColor(out Color skin))
+            slots.bodySkinColor = skin;
+    }
+
+    /// <summary>배열에서 null이 아닌 항목만 모아 균등 랜덤으로 고릅니다.</summary>
+    public static GameObject PickRandomPrefab(GameObject[] prefabs)
+    {
+        if (prefabs == null || prefabs.Length == 0)
+            return null;
+
+        int validCount = 0;
+        for (int i = 0; i < prefabs.Length; i++)
+        {
+            if (prefabs[i] != null)
+                validCount++;
+        }
+
+        if (validCount == 0)
+            return null;
+
+        int pick = UnityEngine.Random.Range(0, validCount);
+        for (int i = 0; i < prefabs.Length; i++)
+        {
+            if (prefabs[i] == null)
+                continue;
+            if (pick == 0)
+                return prefabs[i];
+            pick--;
+        }
+
+        return null;
+    }
+
+    private bool TryPickSkinColor(out Color color)
+    {
+        color = default;
+        if (skinColors == null || skinColors.Length == 0)
+            return false;
+
+        color = skinColors[UnityEngine.Random.Range(0, skinColors.Length)];
+        return true;
+    }
 
     private void OnValidate()
     {

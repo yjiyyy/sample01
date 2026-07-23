@@ -8,7 +8,7 @@ public enum RangedProjectileMovementType
 }
 
 [CreateAssetMenu(fileName = "RangedAttack", menuName = "Enemy/Attack/RangedAttackData")]
-public class RangedAttackData : ScriptableObject
+public class RangedAttackData : EnemyAttackDataBase
 {
     [Header("???? ?? ????")]
     public string attackName = "Ranged_Attack";

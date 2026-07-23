@@ -58,7 +58,7 @@ public class EnemySpawner : MonoBehaviour
     public float despawnDelay = 3f;
     [Tooltip("거리 디스폰 체크 주기(초). 너무 낮추면 불필요한 연산이 늘어납니다.")]
     public float despawnCheckInterval = 0.25f;
-    [Tooltip("여기에 등록된 프리팹은 거리 디스폰 예외로 처리합니다.")]
+    [Tooltip("여기에 등록된 바디 프리팹은 거리 디스폰 예외로 처리합니다.")]
     public GameObject[] despawnExceptionPrefabs;
     [Tooltip("여기에 등록된 EnemyConfig를 사용하는 몬스터는 거리 디스폰 예외로 처리합니다.")]
     public EnemyConfig[] despawnExceptionConfigs;
@@ -269,14 +269,22 @@ public class EnemySpawner : MonoBehaviour
             return false;
         }
 
-        if (!settings.TryPickPrefab(out GameObject prefab))
+        if (!settings.TryPickConfig(out EnemyConfig config))
         {
             if (debugSpawnLog)
                 Debug.LogWarning($"[EnemySpawner] 레벨 {levelIndex + 1} 몬스터 풀이 비어 있거나 가중치가 0입니다.");
             return false;
         }
 
-        if (!TryFindSpawnPosition(prefab, out Vector3 spawnPos))
+        if (!config.TryPickBodyPrefab(out GameObject bodyPrefab))
+        {
+            if (debugSpawnLog)
+                Debug.LogWarning(
+                    $"[EnemySpawner] '{config.name}' Appearance Pool에 Body Prefabs가 없습니다.");
+            return false;
+        }
+
+        if (!TryFindSpawnPosition(bodyPrefab, out Vector3 spawnPos))
         {
             if (debugSpawnLog)
                 Debug.Log("[EnemySpawner] Ground·장애물 검사를 통과한 스폰 위치를 찾지 못해 스폰 생략.");
@@ -284,7 +292,9 @@ public class EnemySpawner : MonoBehaviour
         }
 
         Quaternion spawnRot = GetSpawnFacingRotation(spawnPos);
-        GameObject enemy = Instantiate(prefab, spawnPos, spawnRot);
+        GameObject enemy = EnemyConfigSpawner.Spawn(config, bodyPrefab, spawnPos, spawnRot);
+        if (enemy == null)
+            return false;
 
         var spawnedEnemy = enemy.GetComponent<Enemy>();
         spawnedEnemy?.BeginCombatSpawnIntro();
@@ -292,12 +302,12 @@ public class EnemySpawner : MonoBehaviour
         _totalSpawnedByThisSpawner++;
         if (levelIndex < _alivePerLevel.Length)
             _alivePerLevel[levelIndex]++;
-        RegisterAliveTracking(enemy, prefab, levelIndex);
+        RegisterAliveTracking(enemy, bodyPrefab, config, levelIndex);
 
         if (debugSpawnLog)
         {
             Debug.Log(
-                $"[EnemySpawner] Spawned enemy displayLevel={levelIndex + 1} at {spawnPos} " +
+                $"[EnemySpawner] Spawned '{config.name}' body={bodyPrefab.name} displayLevel={levelIndex + 1} at {spawnPos} " +
                 $"(aliveAtLevel={GetAliveAtLevel(levelIndex)}, total={_totalSpawnedByThisSpawner})");
         }
 
@@ -427,11 +437,15 @@ public class EnemySpawner : MonoBehaviour
             null);
     }
 
-    private void RegisterAliveTracking(GameObject enemy, GameObject sourcePrefab, int spawnLevelIndex)
+    private void RegisterAliveTracking(
+        GameObject enemy,
+        GameObject sourceBodyPrefab,
+        EnemyConfig sourceConfig,
+        int spawnLevelIndex)
     {
         if (enemy == null) return;
 
-        bool isDespawnException = IsDespawnException(sourcePrefab, enemy);
+        bool isDespawnException = IsDespawnException(sourceBodyPrefab, sourceConfig);
         var runtime = enemy.GetComponent<SpawnedEnemyRuntime>();
         if (runtime == null)
             runtime = enemy.AddComponent<SpawnedEnemyRuntime>();
@@ -449,7 +463,7 @@ public class EnemySpawner : MonoBehaviour
         var h = enemy.GetComponent<EnemyHealth>();
         if (h != null)
         {
-            StageManager.Active?.RegisterEnemyKillTracking(h, sourcePrefab);
+            StageManager.Active?.RegisterEnemyKillTracking(h, sourceConfig);
 
             // OnDeath 즉시 레벨별 카운터 감소 (오브젝트 Destroy 전에 바로 반영)
             void Handler()
@@ -461,28 +475,23 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
-    private bool IsDespawnException(GameObject sourcePrefab, GameObject spawnedInstance)
+    private bool IsDespawnException(GameObject sourceBodyPrefab, EnemyConfig sourceConfig)
     {
-        if (sourcePrefab != null && despawnExceptionPrefabs != null)
+        if (sourceBodyPrefab != null && despawnExceptionPrefabs != null)
         {
             for (int i = 0; i < despawnExceptionPrefabs.Length; i++)
             {
-                if (despawnExceptionPrefabs[i] == sourcePrefab)
+                if (despawnExceptionPrefabs[i] == sourceBodyPrefab)
                     return true;
             }
         }
 
-        if (despawnExceptionConfigs != null && despawnExceptionConfigs.Length > 0)
+        if (sourceConfig != null && despawnExceptionConfigs != null)
         {
-            EnemyFacade facade = spawnedInstance != null ? spawnedInstance.GetComponent<EnemyFacade>() : null;
-            EnemyConfig cfg = facade != null ? facade.config : null;
-            if (cfg != null)
+            for (int i = 0; i < despawnExceptionConfigs.Length; i++)
             {
-                for (int i = 0; i < despawnExceptionConfigs.Length; i++)
-                {
-                    if (despawnExceptionConfigs[i] == cfg)
-                        return true;
-                }
+                if (despawnExceptionConfigs[i] == sourceConfig)
+                    return true;
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 /// <summary>
 /// EnemyAnimationController
@@ -79,17 +80,34 @@ public class EnemyAnimationController : MonoBehaviour
 
     private void ApplySpawnClipOverride(AnimationClip spawnClip)
     {
-        if (Animator == null) return;
-
-        if (spawnClip == null) return;
+        if (Animator == null || spawnClip == null)
+            return;
 
         RuntimeAnimatorController currentController = Animator.runtimeAnimatorController;
         if (currentController == null)
             return;
 
-        var overrideController = new AnimatorOverrideController(currentController);
-        overrideController[baseSpawnClipName] = spawnClip;
-        Animator.runtimeAnimatorController = overrideController;
+        // 이미 AOC인 컨트롤러를 다시 AOC로 감싸면 기존 클립 오버라이드가 사라질 수 있음.
+        // base Controller를 기준으로 기존 오버라이드를 복사한 뒤 Spawn만 교체한다.
+        var sourceAoc = currentController as AnimatorOverrideController;
+        RuntimeAnimatorController baseController = sourceAoc != null
+            ? sourceAoc.runtimeAnimatorController
+            : currentController;
+
+        if (baseController == null)
+            return;
+
+        var newAoc = new AnimatorOverrideController(baseController);
+
+        if (sourceAoc != null)
+        {
+            var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(32);
+            sourceAoc.GetOverrides(overrides);
+            newAoc.ApplyOverrides(overrides);
+        }
+
+        newAoc[baseSpawnClipName] = spawnClip;
+        Animator.runtimeAnimatorController = newAoc;
     }
 
     /// <summary>

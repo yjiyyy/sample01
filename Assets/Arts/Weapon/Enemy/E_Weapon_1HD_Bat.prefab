@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 9205679274564803}
   - component: {fileID: 9205679274564806}
   m_Layer: 15
-  m_Name: Enemy_Weapon_Bat
+  m_Name: E_Weapon_1HD_Bat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

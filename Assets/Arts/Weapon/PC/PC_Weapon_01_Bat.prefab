@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 9205679274564803}
   - component: {fileID: -9059883641714844934}
   - component: {fileID: 9205679274564806}
-  m_Layer: 15
+  m_Layer: 22
   m_Name: PC_Weapon_01_Bat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -82,7 +82,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9205679274564804}
-  m_Layer: 15
+  m_Layer: 22
   m_Name: TrailEnd
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -113,7 +113,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9205679274564807}
-  m_Layer: 15
+  m_Layer: 22
   m_Name: TrailStart
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -145,7 +145,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6687021782207398308}
   - component: {fileID: 5703292427683435881}
-  m_Layer: 15
+  m_Layer: 22
   m_Name: DieCollider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -199,7 +199,7 @@ GameObject:
   - component: {fileID: 1620085821709169463}
   - component: {fileID: 7530951197900472699}
   - component: {fileID: 6940302975011234078}
-  m_Layer: 15
+  m_Layer: 22
   m_Name: HitBox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -308,7 +308,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: c38f62f1a46dcb74caf454c0303dd29b, type: 3}
       propertyPath: m_Layer
-      value: 15
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

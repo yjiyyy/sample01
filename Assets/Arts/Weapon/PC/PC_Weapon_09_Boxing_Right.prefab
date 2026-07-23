@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4826929253471279000}
   - component: {fileID: 2895014839747996020}
   - component: {fileID: 2180170820312418738}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: PC_Weapon_09_Boxing_Right
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -83,7 +83,7 @@ GameObject:
   - component: {fileID: 1804176413380221219}
   - component: {fileID: 3084937581529699087}
   - component: {fileID: 7588260698596967789}
-  m_Layer: 11
+  m_Layer: 22
   m_Name: HitBox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -147,7 +147,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3152115422712983422}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: TrailEnd
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -178,7 +178,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1056433644616047691}
-  m_Layer: 0
+  m_Layer: 22
   m_Name: TrailStart
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -251,6 +251,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 5f2d85fd495020d498daceaeb96cce67, type: 3}
       propertyPath: m_Name
       value: PC_Weapon_Boxing_Right
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5f2d85fd495020d498daceaeb96cce67, type: 3}
+      propertyPath: m_Layer
+      value: 22
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

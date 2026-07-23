@@ -159,7 +159,7 @@ public class PlayerEquipmentController : MonoBehaviour
             mainMount = FindRightHandWeaponSocket(playerRoot, CurrentWeaponData.socketNames);
 
         AttachToMount(instMain.transform, mainMount);
-        DieColliderUtility.ApplyPartsLayer(instMain.transform);
+        // 프리팹 레이어 유지 (Weapon_PC / Hit_Collider). Parts는 사망 슬라이스 시에만 적용.
         DieColliderUtility.DisablePartCollidersForLife(instMain.transform);
 
         ApplyAnimatorOverride(debugLogs);
@@ -206,7 +206,6 @@ public class PlayerEquipmentController : MonoBehaviour
             if (subAmmoAR != null) Destroy(subAmmoAR);
 
             AttachToMount(instSub.transform, subMount);
-            DieColliderUtility.ApplyPartsLayer(instSub.transform);
             DieColliderUtility.DisablePartCollidersForLife(instSub.transform);
 
             if (CurrentWeaponData.UseWeaponCollider)

@@ -149,7 +149,8 @@ public static class AttachmentBoneDeathSlice
                 Vector3 velChange = finalHoriz * sImpulse * 0.3f + Vector3.up * sImpulse * 0.7f;
                 Vector3 spinAxis = MakeRandomSpinAxisAvoidPitch(dir, right, forward);
 
-                if (keepAnimator && coroutineHost != null)
+                // 애니/랙돌 모두 1 FixedUpdate 뒤 속도를 덮어써서, 분리·충돌 직후 힘이 깎이지 않게 함
+                if (coroutineHost != null)
                     coroutineHost.StartCoroutine(ApplySliceVelocityDelayed(partBodies, velChange, spinAxis, sImpulse));
                 else
                 {

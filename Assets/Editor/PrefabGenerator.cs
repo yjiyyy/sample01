@@ -4,7 +4,7 @@ using System.IO;
 
 public class PrefabGenerator
 {
-    [MenuItem("Assets/Generate Prefab from FBX", true)]
+    [MenuItem("Assets/Generate Prefab from FBX", true, 0)]
     private static bool ValidateGeneratePrefab()
     {
         foreach (var obj in Selection.objects)
@@ -16,7 +16,7 @@ public class PrefabGenerator
         return true;
     }
 
-    [MenuItem("Assets/Generate Prefab from FBX")]
+    [MenuItem("Assets/Generate Prefab from FBX", false, 0)]
     private static void GeneratePrefabs()
     {
         foreach (var obj in Selection.objects)

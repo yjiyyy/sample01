@@ -10,7 +10,6 @@ using System.Collections.Generic;
 public static class PlayerPrefabGenerator
 {
     private const string MenuName = "Assets/Create Player Prefab from FBX";
-    private const string MenuNameBatch = "Assets/Create Player Prefab from FBX (Batch)";
 
     private static readonly HumanBodyBones[] RagdollBones = new[]
     {
@@ -30,36 +29,13 @@ public static class PlayerPrefabGenerator
         return !string.IsNullOrEmpty(path) && path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase);
     }
 
-    [MenuItem(MenuName, false, 1)]
+    [MenuItem(MenuName, false, 3)]
     private static void CreatePlayerPrefab()
     {
         var fbx = Selection.activeObject as GameObject;
         if (fbx == null) return;
         string assetPath = AssetDatabase.GetAssetPath(fbx);
         GenerateAndSave(fbx, assetPath);
-    }
-
-    [MenuItem(MenuNameBatch, true)]
-    private static bool ValidateCreatePlayerPrefabBatch()
-    {
-        foreach (var obj in Selection.objects)
-        {
-            if (obj is GameObject go && AssetDatabase.GetAssetPath(go).EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
-    }
-
-    [MenuItem(MenuNameBatch, false, 2)]
-    private static void CreatePlayerPrefabBatch()
-    {
-        foreach (var obj in Selection.objects)
-        {
-            if (!(obj is GameObject fbx)) continue;
-            string path = AssetDatabase.GetAssetPath(fbx);
-            if (string.IsNullOrEmpty(path) || !path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase)) continue;
-            GenerateAndSave(fbx, path);
-        }
     }
 
     private static void GenerateAndSave(GameObject fbxSource, string fbxAssetPath)

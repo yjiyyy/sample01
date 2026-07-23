@@ -10,24 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c55a14bd6d57f04c9dcd658e386f567, type: 3}
-  m_Name: MeleeAttack_LV01
+  m_Name: Melee_Attack_Board
   m_EditorClassIdentifier: 
+  weaponPart:
+    boneName: R_Hand_Weapon
+    partPrefabs:
+    - {fileID: 7554157672315398616, guid: 176fd05af47d916409f688257722e1cc, type: 3}
+    - {fileID: 1412765267159074636, guid: 7fc7fc876437c424f9dd4491de2329a3, type: 3}
+    - {fileID: 779386090103561541, guid: 1d17b08764232554da798d1a8f51d4db, type: 3}
+    localOffset: {x: 0, y: 0, z: 0}
+    localRotationEuler: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
+  weaponPartSlotCount: 0
+  weaponPartSlots: []
   attackName: Attack
   hitBoxPrefab: {fileID: 5040539009807493084, guid: 40acc47dbdaa6da4ebf338e4e892f28e, type: 3}
   grantSuperArmor: 0
   damage: 1
   range: 1
   cooldown: 5
-  attackTime: 0.8
+  attackTime: 2
   variantClips:
-  - {fileID: 1827226128182048838, guid: 3d785207e6983f9439446fa36b34791f, type: 3}
+  - {fileID: 1827226128182048838, guid: a0907f69574492244a3fcd4129ad4278, type: 3}
+  - {fileID: 1827226128182048838, guid: 9f2a5c2164cacdf449c4dbc962ba6733, type: 3}
   hitboxSpawnDelay: 1
   hitBoxLifetime: 0.1
-  hitTimings:
-  - spawnDelay: 0.2
-    hitBoxLifetime: 0.1
-  - spawnDelay: 0.6
-    hitBoxLifetime: 0.1
+  hitTimings: []
   attackFXPhases: []
   attachHitboxToEnemy: 1
   knockbackPower: 10
