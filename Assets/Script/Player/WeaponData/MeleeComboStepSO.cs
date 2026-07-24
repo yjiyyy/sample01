@@ -16,10 +16,8 @@ public class MeleeComboStepSO : ScriptableObject
     public AttackVariantHandMode comboStepHandMode = AttackVariantHandMode.Both;
 
     [Header("Animation")]
-    [Tooltip("우선 재생할 애니메이션 클립(클립 이름을 재생에 사용).")]
+    [Tooltip("참고용(선택). 실제 재생은 스텝 순서(0,1,2…) → AttackIndex → AOC의 None_Attack 오버라이드입니다.")]
     public AnimationClip animClip;
-    // NOTE: 요청에 따라 fallbackStateName 필드는 제거되었습니다.
-    // 추후에 상태명 기반 폴백이 필요하면 별도 로직으로 구현하세요.
 
     [Header("전투 관련")]
     [Tooltip("스텝 자체의 쿨다운 (optional). 음수면 무기 기본값 사용.")]

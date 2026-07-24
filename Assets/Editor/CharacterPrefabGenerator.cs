@@ -109,10 +109,41 @@ public static class EnemyPrefabGenerator
 
         // 저장 직전: HairSocket / Fire_Point_Head(모델) + EnemyBodyPartSlots·Face(적 루트)
         EnsureBodyPartSlotsSetup(root, fbxInstance);
+        TryAutoBakeSkinMask(root);
 
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, savePath, InteractionMode.AutomatedAction);
         Object.DestroyImmediate(root);
         Debug.Log($"[EnemyPrefabGenerator] Enemy 프리팹 생성 완료: {savePath}");
+    }
+
+    /// <summary>
+    /// Config SO 피부색이 바로 먹히도록, 생성 시점에 Skin Mask를 한 번 Bake합니다.
+    /// bodySkinMaterial은 비워 둬도 M_Body / Mat_PC_* 자동 탐색으로 동작합니다.
+    /// </summary>
+    private static void TryAutoBakeSkinMask(GameObject enemyRoot)
+    {
+        if (enemyRoot == null) return;
+
+        var slots = enemyRoot.GetComponent<EnemyBodyPartSlots>();
+        if (slots == null) return;
+
+        if (slots.skinMaskTexture != null)
+        {
+            Debug.Log("[EnemyPrefabGenerator] Skin Mask가 이미 있어 Bake를 건너뜁니다.");
+            return;
+        }
+
+        if (EnemyBodySkinMaskBaker.TryBakeForEnemyBodyPartSlots(
+                slots, slots.maskBakeColorThreshold, out string msg))
+        {
+            Debug.Log($"[EnemyPrefabGenerator] Skin Mask 자동 Bake 완료: {msg}");
+        }
+        else
+        {
+            Debug.LogWarning(
+                "[EnemyPrefabGenerator] Skin Mask 자동 Bake 실패. " +
+                "Config SO 피부색이 적용되지 않을 수 있습니다.\n" + msg);
+        }
     }
 
     /// <summary>Bip001 Head 하위 HairSocket·Fire_Point_Head(모델) + EnemyBodyPartSlots / Face(적 루트).</summary>

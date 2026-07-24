@@ -21,10 +21,10 @@ MonoBehaviour:
   poisonOnHitStatus: {fileID: 0}
   weaponPrefab: {fileID: 3664053158159759860, guid: 7e9f32e31cf53424cbabfadfe88394ff, type: 3}
   overrideController: {fileID: 22100000, guid: 7b26443918c412e498884a1d95344e2c, type: 2}
-  attackAnimVariantCount: 4
+  attackAnimVariantCount: 3
   attackVariantHandModes: 00000000
   cooldown: 1
-  damage: 50
+  damage: 150
   range: 2.5
   staminaCost: 0
   hitboxSpawnDelay: 0.1
@@ -43,11 +43,11 @@ MonoBehaviour:
   targetAnimationHoldDuration: 0.2
   attackerStateHoldDuration: 0.1
   attackerAnimationHoldDuration: 0.1
-  deathMode: 0
+  deathMode: 1
   ragdollImpulse: 7
   ragdollUpImpulse: 2
   ragdollSpinTorque: 10000
-  sliceTargets: 0000000001000000020000000400000003000000
+  sliceTargets: 05000000
   sliceImpulse: 5
   bodySliceImpulseScale: 2
   chargeSlot: {fileID: 0}

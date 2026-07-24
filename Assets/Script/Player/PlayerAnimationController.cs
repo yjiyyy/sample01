@@ -695,6 +695,23 @@ public class PlayerAnimationController : MonoBehaviour
         Debug.Log($"[PlayerAnim] ChargedAttack 시작 → {s}");
     }
 
+    /// <summary>
+    /// 근접 콤보 스텝 애니. None_Combo 상태 대신 Attack_BlendTree + AttackIndex 사용.
+    /// AOC의 None_Attack01/02/03 오버라이드가 스텝별 클립이 됩니다.
+    /// </summary>
+    public void PlayComboStepAttack(int stepIndex)
+    {
+        if (animator == null) return;
+
+        int index = Mathf.Max(0, stepIndex);
+
+        ResetAllAnimatorParams();
+        SafeSetFloat(hashAttackIndex, index);
+        SafeSetBool(hashIsAttacking, true);
+        TryPlaySafe("Attack_BlendTree", 0, 0f);
+        Debug.Log($"[PlayerAnim] ComboStep Attack 시작 → Index:{index}");
+    }
+
     /* 애니메이션 이벤트 */
     public void AttackHit()
     {

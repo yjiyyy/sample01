@@ -144,10 +144,10 @@ MonoBehaviour:
     colliderHeight: 0.2
     colliderDirection: 0
     colliderCenter: {x: -0.1, y: 0, z: 0}
-    jointAxis: {x: 0, y: 0, z: 1}
+    jointAxis: {x: 0, y: 0, z: -1}
     jointSwingAxis: {x: 1, y: 0, z: 0}
-    lowTwistLimit: -90
-    highTwistLimit: 0
+    lowTwistLimit: 35
+    highTwistLimit: 130
     swing1Limit: 30
     swing2Limit: 30
   - boneKey: RightArm
@@ -168,10 +168,10 @@ MonoBehaviour:
     colliderHeight: 0.2
     colliderDirection: 0
     colliderCenter: {x: -0.1, y: 0, z: 0}
-    jointAxis: {x: 0, y: 0, z: 1}
+    jointAxis: {x: 0, y: 0, z: -1}
     jointSwingAxis: {x: 1, y: 0, z: 0}
-    lowTwistLimit: -90
-    highTwistLimit: 0
+    lowTwistLimit: 35
+    highTwistLimit: 130
     swing1Limit: 30
     swing2Limit: 30
   fxBloodDummies:

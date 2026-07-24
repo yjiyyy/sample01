@@ -331,21 +331,15 @@ public class MeleeComboBehavior : MonoBehaviour
             AttackFXEntry.ScheduleAttackFX(wb, fxList, wb.ResolveAttackFXRoot, IsHold);
         }
 
-        // Play animation
-        // ????: ???? animClip?? ?????? ???? ??????? ????? ???????. (???? ????? ??? ????)
-        if (step.animClip != null)
+        // 애니: Attack_BlendTree + AttackIndex(스텝 번호).
+        // AOC의 None_Attack01/02/03 → 무기별 콤보 클립. (None_Combo 상태 불필요)
+        try
         {
-            string animName = step.animClip.name;
-            try
-            {
-                animCtrl?.PlayChargedAttack(animName);
-            }
-            catch { try { animCtrl?.PlayChargedAttack(animName); } catch { } }
+            animCtrl?.PlayComboStepAttack(stepIndex);
         }
-        else
+        catch
         {
-            // animClip?? ?????? ?????? ??????? ?????? (?????? ????)
-            if (debugMode) Debug.Log("[Combo] step has no animClip -> no animation will be played for this step.");
+            try { animCtrl?.PlayComboStepAttack(stepIndex); } catch { }
         }
 
         // Spawn hitbox after hitboxSpawnDelay

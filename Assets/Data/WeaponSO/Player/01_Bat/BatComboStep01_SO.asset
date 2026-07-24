@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: BatComboStep01_SO
   m_EditorClassIdentifier: 
   comboStepHandMode: 0
-  animClip: {fileID: 1827226128182048838, guid: d724bce0a66919c44a5a0606767f1235, type: 3}
+  animClip: {fileID: 1827226128182048838, guid: b0f66f15dc048fd45a5bc9a297336d19, type: 3}
   cooldown: 1
   damage: 10
   range: 1
-  staminaCost: 2
+  staminaCost: 0.5
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.15
   hitBoxPrefab: {fileID: 0}
