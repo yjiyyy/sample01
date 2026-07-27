@@ -8,6 +8,9 @@ public partial class EnemyAttackController
     private Transform rangedTarget;
     private int runningRangedIndex = -1;
     private bool rangedProjectileFired = false;
+    /// <summary>Attack 진입 시 고정한 조준 위치. 발사까지 이 좌표를 사용합니다.</summary>
+    private Vector3 rangedAimPos;
+    private bool rangedAimLocked;
 
     private void StartRanged(RangedAttackData data, Transform target, int index)
     {
@@ -22,6 +25,7 @@ public partial class EnemyAttackController
 
         runningRangedIndex = index;
         rangedTarget = target;
+        rangedAimLocked = false;
 
         enemy.SetState(Enemy.EnemyState.Attack);
         if (data.grantSuperArmor) enemy.AddSuperArmor(SuperArmorSource.Attack);
@@ -33,7 +37,7 @@ public partial class EnemyAttackController
 
     private IEnumerator RangedRoutine(RangedAttackData data)
     {
-        // PREPARE
+        // PREPARE — 플레이어 실시간 추적
         if (data.prepareTime > 0f)
         {
             float prepClipLen = data.prepareClip != null ? data.prepareClip.length : 0f;
@@ -58,7 +62,7 @@ public partial class EnemyAttackController
                 if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                     enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
                 {
-                    Log("RANGED PREPARE INTERRUPT noCooldown");
+                    Log("RANGED PREPARE INTERRUPT noData");
                     CancelRangedNoCooldown();
                     yield break;
                 }
@@ -78,8 +82,14 @@ public partial class EnemyAttackController
             if (enemy.animator) enemy.animator.speed = 1f;
         }
 
-        // ATTACK
+        // ATTACK — 진입 순간의 플레이어 위치로 조준 고정 (fireAtTime까지 추적하지 않음)
         rangedProjectileFired = false;
+        if (rangedTarget != null)
+            rangedAimPos = rangedTarget.position;
+        else
+            rangedAimPos = transform.position + transform.forward * 5f;
+        rangedAimLocked = true;
+        FaceTargetPosition(rangedAimPos);
 
         float atkReq = data.attackTime > 0f ? data.attackTime : 0.8f;
         float atkClipLen = GetRangedAttackClipLength(data);
@@ -109,12 +119,12 @@ public partial class EnemyAttackController
             if (enemy.CurrentState != Enemy.EnemyState.Attack ||
                 enemy.CurrentState == Enemy.EnemyState.ShieldBreak)
             {
-                Log("RANGED ATTACK INTERRUPT noCooldown");
+                Log("RANGED ATTACK INTERRUPT noData");
                 CancelRangedNoCooldown();
                 yield break;
             }
 
-            FaceTarget(rangedTarget);
+            FaceTargetPosition(rangedAimPos);
 
             if (!rangedProjectileFired && atkElapsed >= fireTime)
             {
@@ -160,7 +170,9 @@ public partial class EnemyAttackController
         Transform firePoint = FindChildRecursive(transform, data.firePointName);
         if (firePoint == null) firePoint = transform;
 
-        Vector3 targetPos = rangedTarget != null ? rangedTarget.position : (firePoint.position + transform.forward * 5f);
+        Vector3 targetPos = rangedAimLocked
+            ? rangedAimPos
+            : (rangedTarget != null ? rangedTarget.position : (firePoint.position + transform.forward * 5f));
 
         Vector3 shootDir = (targetPos - firePoint.position);
         if (shootDir.sqrMagnitude < 0.0001f) shootDir = transform.forward;
@@ -202,7 +214,7 @@ public partial class EnemyAttackController
             );
         }
 
-        Log($"RANGED FIRE proj@{firePoint.name} ?? target {targetPos} type={data.movementType}");
+        Log($"RANGED FIRE proj@{firePoint.name} -> target {targetPos} type={data.movementType}");
     }
 
     private void FinishRanged(RangedAttackData data, bool success)
@@ -220,6 +232,7 @@ public partial class EnemyAttackController
 
         enemy.RemoveSuperArmor(SuperArmorSource.Attack);
         runningRangedIndex = -1;
+        rangedAimLocked = false;
 
         if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
             enemy.SetState(Enemy.EnemyState.Chase);
@@ -235,6 +248,7 @@ public partial class EnemyAttackController
     {
         enemy.RemoveSuperArmor(SuperArmorSource.Attack);
         runningRangedIndex = -1;
+        rangedAimLocked = false;
 
         if (enemy.animator) enemy.animator.speed = 1f;
 

@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a4b5f4aad4650641a3cd36a22093e42, type: 3}
+  m_Name: Throw_Attack_Gun
+  m_EditorClassIdentifier: 
+  weaponPart:
+    boneName: 
+    partPrefabs:
+    - {fileID: 7696554681474183416, guid: c7009ff6446909a46b7c3070ad752f64, type: 3}
+    localOffset: {x: 0, y: 0, z: 0}
+    localRotationEuler: {x: 0, y: 0, z: 0}
+    localScale: {x: 1, y: 1, z: 1}
+  weaponPartSlotCount: 0
+  weaponPartSlots: []
+  attackName: Ranged_Attack
+  grantSuperArmor: 0
+  damage: 10
+  range: 8
+  cooldown: 3
+  prepareTime: 0
+  attackTime: 2.5
+  fireAtTime: 1.5
+  prepareClip: {fileID: 0}
+  attackClip: {fileID: 1827226128182048838, guid: ce27c092e1d09e4499c483f39730b1c4, type: 3}
+  projectilePrefab: {fileID: 2537177249189597722, guid: f7ff3ef830e75d746bb3c7e0a196181d, type: 3}
+  firePointName: Fire_Point
+  movementType: 0
+  projectileSpeed: 7
+  projectileLifetime: 10
+  arcHeight: 5
+  knockbackPower: 5
+  knockbackDuration: 0.2
+  stunDuration: 0
+  usePushInsteadOfKnockback: 0
+  targetHoldDuration: 0
+  attackerHoldDuration: 0
+  allowDuplicateHit: 0
+  duplicateHitInterval: 0.1
+  deathMode: 0
+  ragdollImpulse: 5
+  ragdollUpImpulse: 0
+  ragdollSpinTorque: 0
+  sliceTargets: 
+  sliceImpulse: 0
+  isPoisonAttack: 0
+  poisonOnHitStatus: {fileID: 0}
+  destroyOnObstacle: 1
+  obstacleLayers:
+    serializedVersion: 2
+    m_Bits: 29760
+  faceToMovement: 0
+  spinWhileFlying: 1
+  spinAxis: {x: 360, y: 90, z: 0}
+  spinSpeed: 360

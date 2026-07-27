@@ -17,7 +17,7 @@ MonoBehaviour:
   cooldown: 1
   damage: 10
   range: 1
-  staminaCost: 0.5
+  staminaCost: 0
   hitboxSpawnDelay: 0.12
   hitBoxLifetime: 0.1
   hitBoxPrefab: {fileID: 0}
