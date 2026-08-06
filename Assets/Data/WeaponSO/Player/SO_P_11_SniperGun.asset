@@ -17,13 +17,16 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: 98228aa838065ff4b9e726b1c48398c7, type: 3}
   category: 0
   damageType: 2
-  weaponPrefab: {fileID: 2514819526148707759, guid: c0f820a178d62374b8956a70ad8f2e54, type: 3}
+  isPoisonAttack: 0
+  poisonOnHitStatus: {fileID: 0}
+  weaponPrefab: {fileID: 2547876702277691074, guid: 1d15d5e1fd6f0434e878f67f31fd964d, type: 3}
   overrideController: {fileID: 22100000, guid: 2b3ac060d9ca91c46be6af90e3b9cf71, type: 2}
   attackAnimVariantCount: 3
   attackVariantHandModes: 
   cooldown: 1
   damage: 10
   range: 2.5
+  staminaCost: 0
   hitboxSpawnDelay: 0
   hitBoxLifetime: 0.2
   trailEmitStartDelay: 0
@@ -46,11 +49,12 @@ MonoBehaviour:
   ragdollSpinTorque: 15000
   sliceTargets: 0000000001000000020000000300000004000000
   sliceImpulse: 20
+  bodySliceImpulseScale: 2
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}
   recoilStartDelay: 0
-  recoilPower: 0
-  recoilDuration: 0
+  recoilPower: 2
+  recoilDuration: 0.5
   socketNames:
   - R_Hand_Weapon
   projectileSpawnPointPathOrName: 

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -30,6 +31,11 @@ public class StageLevelIconBar : MonoBehaviour
     [Header("에디터 미리보기 (플레이 전 위치 확인용)")]
     [SerializeField] private bool showEditorPreview = true;
     [SerializeField] private int editorPreviewIconCount = 1;
+
+    [Header("Boss time")]
+    [Tooltip("비어 있으면 ShowBossTime 시 이 오브젝트 아래에서 BossTimeText를 찾아 씁니다.")]
+    [SerializeField] private TMP_Text bossTimeTmp;
+    [SerializeField] private Text bossTimeLegacy;
 
     private readonly List<Image> _icons = new List<Image>();
     private StageData _stageData;
@@ -66,7 +72,10 @@ public class StageLevelIconBar : MonoBehaviour
     {
         EnsureContainer();
         if (Application.isPlaying)
+        {
             ClearIcons();
+            SetBossTimeVisible(false);
+        }
     }
 
     public void Initialize(StageData data)
@@ -74,6 +83,7 @@ public class StageLevelIconBar : MonoBehaviour
         _stageData = data;
         EnsureContainer();
         ClearIcons();
+        SetBossTimeVisible(false);
         SetIconCount(1);
     }
 
@@ -83,6 +93,8 @@ public class StageLevelIconBar : MonoBehaviour
         EnsureContainer();
         if (iconContainer == null)
             return;
+
+        SetBossTimeVisible(false);
 
         int target = Mathf.Max(0, displayLevel);
 
@@ -99,6 +111,26 @@ public class StageLevelIconBar : MonoBehaviour
         }
 
         ApplyLayoutToAllIcons();
+    }
+
+    /// <summary>레벨 아이콘을 지우고 Boss time 문구를 표시합니다.</summary>
+    /// <returns>Boss time용 텍스트가 있어 표시에 성공하면 true.</returns>
+    public bool ShowBossTime(string label = "Boss time")
+    {
+        EnsureContainer();
+        ClearIcons();
+        ResolveBossTimeText();
+
+        if (bossTimeTmp == null && bossTimeLegacy == null)
+            return false;
+
+        if (bossTimeTmp != null)
+            bossTimeTmp.text = label;
+        if (bossTimeLegacy != null)
+            bossTimeLegacy.text = label;
+
+        SetBossTimeVisible(true);
+        return true;
     }
 
     private void RefreshEditorPreview()
@@ -234,6 +266,58 @@ public class StageLevelIconBar : MonoBehaviour
             if (child != null && child.name.StartsWith(IconNamePrefix))
                 DestroyIconObject(child.gameObject);
         }
+    }
+
+    private void ResolveBossTimeText()
+    {
+        if (bossTimeTmp != null || bossTimeLegacy != null)
+            return;
+
+        Transform searchRoot = iconContainer != null ? iconContainer : transform;
+        bossTimeTmp = FindChildTmp(searchRoot, "BossTimeText");
+        if (bossTimeTmp == null && searchRoot != transform)
+            bossTimeTmp = FindChildTmp(transform, "BossTimeText");
+
+        bossTimeLegacy = FindChildLegacyText(searchRoot, "BossTimeText");
+        if (bossTimeLegacy == null && searchRoot != transform)
+            bossTimeLegacy = FindChildLegacyText(transform, "BossTimeText");
+    }
+
+    private void SetBossTimeVisible(bool visible)
+    {
+        ResolveBossTimeText();
+        if (bossTimeTmp != null)
+            bossTimeTmp.gameObject.SetActive(visible);
+        if (bossTimeLegacy != null)
+            bossTimeLegacy.gameObject.SetActive(visible);
+    }
+
+    private static TMP_Text FindChildTmp(Transform root, string objectName)
+    {
+        if (root == null)
+            return null;
+
+        var tmps = root.GetComponentsInChildren<TMP_Text>(true);
+        for (int i = 0; i < tmps.Length; i++)
+        {
+            if (tmps[i] != null && tmps[i].name == objectName)
+                return tmps[i];
+        }
+        return null;
+    }
+
+    private static Text FindChildLegacyText(Transform root, string objectName)
+    {
+        if (root == null)
+            return null;
+
+        var texts = root.GetComponentsInChildren<Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            if (texts[i] != null && texts[i].name == objectName)
+                return texts[i];
+        }
+        return null;
     }
 
     private void DestroyIconObject(GameObject go)

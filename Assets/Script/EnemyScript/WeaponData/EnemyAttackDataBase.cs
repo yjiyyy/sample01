@@ -23,6 +23,9 @@ public class EnemyWeaponPartAttachment
     [Tooltip("부착 후 로컬 스케일.")]
     public Vector3 localScale = Vector3.one;
 
+    [Tooltip("켜면 스폰 시에는 안 붙고, 이 공격(Prepare~Attack 전체) 실행 중에만 붙었다가 끝나면 제거됩니다.")]
+    public bool spawnOnlyDuringAttack = false;
+
     public bool HasAnyPrefab()
     {
         if (partPrefabs == null) return false;

@@ -155,6 +155,14 @@ public class EnemySpawner : MonoBehaviour
         _initialSpawnDelayTimer = 0f;
     }
 
+    /// <summary>신규 스폰만 중지합니다. 이미 나온 적은 그대로 둡니다.</summary>
+    public void StopSpawning()
+    {
+        _stageSpawnActive = false;
+        _waitingInitialSpawnDelay = false;
+        _initialSpawnDelayTimer = 0f;
+    }
+
     void Start()
     {
         spawnTimer = 0f;

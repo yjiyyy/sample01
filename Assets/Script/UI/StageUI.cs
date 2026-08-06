@@ -95,6 +95,27 @@ public class StageUI : MonoBehaviour
         SetText(tmpLevelText, levelText, $"Lv. {displayLevel}");
     }
 
+    /// <summary>레벨 아이콘을 숨기고 Boss time 문구를 표시합니다.</summary>
+    public void ShowBossTime(string label = "Boss time")
+    {
+        if (levelIconBar != null && levelIconBar.ShowBossTime(label))
+        {
+            SetActive(tmpLevelText, levelText, false);
+            return;
+        }
+
+        // LevelIconBar에 BossTimeText가 없으면 기존 LevelText로 대체
+        bool hasLevelUi = tmpLevelText != null || levelText != null;
+        SetActive(tmpLevelText, levelText, hasLevelUi);
+        if (!hasLevelUi)
+        {
+            Debug.LogWarning("[StageUI] Boss time을 표시할 텍스트가 없습니다. LevelIconBar에 BossTimeText를 추가하세요.", this);
+            return;
+        }
+
+        SetText(tmpLevelText, levelText, label);
+    }
+
     public void SetKillProgressVisible(bool visible)
     {
         SetActive(tmpKillProgressText, killProgressText, visible);

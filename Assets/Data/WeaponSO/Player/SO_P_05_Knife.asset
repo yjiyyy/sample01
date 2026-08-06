@@ -16,13 +16,17 @@ MonoBehaviour:
   weaponName: Knife
   icon: {fileID: 21300000, guid: a634407387f703940a842ddc1cf582eb, type: 3}
   category: 0
-  weaponPrefab: {fileID: 7915004520250278488, guid: 9b5fc49388ff07341aa97e025ee15a9b, type: 3}
+  damageType: 1
+  isPoisonAttack: 0
+  poisonOnHitStatus: {fileID: 0}
+  weaponPrefab: {fileID: 3081999249513271987, guid: 8b4f975eb602b2c45a06555978db2932, type: 3}
   overrideController: {fileID: 22100000, guid: 5c86630a3e0679d429c889705b784cb1, type: 2}
   attackAnimVariantCount: 3
   attackVariantHandModes: 000000000000000000000000
   cooldown: 0.5
   damage: 1
   range: 2.5
+  staminaCost: 0
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.15
   trailEmitStartDelay: 0.1
@@ -45,6 +49,7 @@ MonoBehaviour:
   ragdollSpinTorque: 10000
   sliceTargets: 0000000001000000020000000400000003000000
   sliceImpulse: 10
+  bodySliceImpulseScale: 2
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}
   recoilStartDelay: 0
@@ -56,9 +61,8 @@ MonoBehaviour:
   projectileSpawnPointPathOrName: 
   meleeHitboxMode: 1
   meleeHitboxPrefab: {fileID: 0}
-  _useWeaponColliderLegacy: 1
+  _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 0}
-  shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
   attackFXPhases: []
   dualWield: 0

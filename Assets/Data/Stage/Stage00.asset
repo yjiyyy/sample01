@@ -18,7 +18,7 @@ MonoBehaviour:
   targetKillCount: 30
   targetEnemyConfig: {fileID: 0}
   timeLimit: 0
-  monsterLevelUpInterval: 10
-  maxStageLevel: 5
+  monsterLevelUpInterval: 5
+  maxStageLevel: 2
   levelIcons:
   - {fileID: -9160987577138628238, guid: 215687feeab0b7445b4a1cd86c82c2e1, type: 3}

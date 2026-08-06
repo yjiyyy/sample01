@@ -10,7 +10,8 @@ using UnityEditor;
 /// <summary>
 /// EnemyConfig SO 값을 Enemy·관련 컴포넌트에 적용하는 facade.
 /// 공용 바디 프리팹에는 config를 비워 두고, 스폰 시 EnemyConfigSpawner가 SO를 넣습니다.
-/// - 파츠: Start()에서 attackPatterns[0] 무기 파츠 + config.partSlots(비무기) 생성.
+/// - 파츠: Start()에서 attackPatterns 중 '항상 스폰' 무기 파츠 + config.partSlots(비무기) 생성.
+///         spawnOnlyDuringAttack 무기는 해당 공격 실행 중에만 EnemyAttackController가 붙입니다.
 /// - Head/Hair: EnemyBodyPartSlots (스폰 시 SO Appearance Pool에서 채움).
 /// </summary>
 public class EnemyFacade : MonoBehaviour
@@ -31,6 +32,9 @@ public class EnemyFacade : MonoBehaviour
 
     // Parts System:  생성된 파츠 오브젝트들을 보관 (EnemyDie에서 참조)
     private List<GameObject> spawnedParts = new List<GameObject>();
+
+    /// <summary>공격 중에만 붙는 임시 무기 (spawnOnlyDuringAttack).</summary>
+    private GameObject attackOnlyWeaponInstance;
 
     /// <summary>
     /// EnemyDie에서 접근할 수 있도록 public으로 노출.
@@ -344,34 +348,63 @@ public class EnemyFacade : MonoBehaviour
     }
 
     /// <summary>
-    /// attackPatterns[0]의 weaponPart 기반으로 무기 파츠 1개 생성 및 부착 (프리팹 후보 중 랜덤).
+    /// attackPatterns 중 spawnOnlyDuringAttack이 꺼진 무기 파츠를 스폰 시 부착.
     /// </summary>
     private void SpawnWeaponPartsFromAttackPattern()
     {
         if (config?.attackPatterns == null || config.attackPatterns.Length == 0)
             return;
 
-        if (config.attackPatterns[0] is not EnemyAttackDataBase attackData)
-            return;
+        for (int i = 0; i < config.attackPatterns.Length; i++)
+        {
+            if (config.attackPatterns[i] is not EnemyAttackDataBase attackData)
+                continue;
+            if (attackData.weaponPart == null || !attackData.weaponPart.HasAnyPrefab())
+                continue;
+            if (attackData.weaponPart.spawnOnlyDuringAttack)
+                continue;
 
-        SpawnWeaponPart(attackData.weaponPart);
+            SpawnWeaponPart(attackData.weaponPart);
+        }
     }
 
-    private void SpawnWeaponPart(EnemyWeaponPartAttachment attachment)
+    /// <summary>공격 전용 무기 스폰. 이미 있으면 먼저 제거 후 다시 붙입니다.</summary>
+    public void BeginAttackOnlyWeapon(EnemyWeaponPartAttachment attachment)
+    {
+        EndAttackOnlyWeapon();
+
+        if (attachment == null || !attachment.spawnOnlyDuringAttack || !attachment.HasAnyPrefab())
+            return;
+
+        attackOnlyWeaponInstance = SpawnWeaponPart(attachment);
+    }
+
+    /// <summary>공격 전용 무기를 제거하고 목록에서도 빼니다.</summary>
+    public void EndAttackOnlyWeapon()
+    {
+        if (attackOnlyWeaponInstance == null)
+            return;
+
+        spawnedParts.Remove(attackOnlyWeaponInstance);
+        Destroy(attackOnlyWeaponInstance);
+        attackOnlyWeaponInstance = null;
+    }
+
+    private GameObject SpawnWeaponPart(EnemyWeaponPartAttachment attachment)
     {
         if (attachment == null || !attachment.HasAnyPrefab())
-            return;
+            return null;
 
         GameObject prefab = attachment.PickRandomPrefab();
         if (prefab == null)
-            return;
+            return null;
 
         string boneName = EnemyAttackDataBase.ResolveWeaponBoneName(attachment.boneName);
         Transform attachBone = FindBoneByName(boneName);
         if (attachBone == null)
         {
             Debug.LogWarning($"[EnemyFacade] Bone '{boneName}' not found in '{gameObject.name}'. Skipping weapon part.");
-            return;
+            return null;
         }
 
         GameObject partInstance = Instantiate(prefab, attachBone);
@@ -385,6 +418,7 @@ public class EnemyFacade : MonoBehaviour
         spawnedParts.Add(partInstance);
 
         Debug.Log($"[EnemyFacade] Spawned weapon part '{partInstance.name}' on bone '{attachBone.name}'");
+        return partInstance;
     }
 
     /// <summary>

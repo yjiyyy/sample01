@@ -688,7 +688,15 @@ public class WeaponBehavior : MonoBehaviour
     /// AR 연사 전용: Gun의 <see cref="AttackHit"/>과 같이 공격 FX 스케줄 후 <see cref="WeaponDataSO.hitboxSpawnDelay"/>만큼 대기한 뒤
     /// <see cref="FireProjectileForced"/>로 탄을 낸다. (DelayedHitbox의 SpawnProjectile 경로와 달리 스프레드/방향 유지)
     /// </summary>
-    public void ARAttackHit(Vector3 shootDir, bool preserveVerticalLocal, float damageMultiplier = 1f)
+    /// <param name="spawnPoseOverride">
+    /// null이 아니면 메인 손 FirePoint FX·탄 스폰에 이 위치/회전을 사용합니다.
+    /// (스나이퍼: Aim 종료 순간 Fire_Point 스냅샷. FX 회전=총구, 탄 방향은 shootDir/스프레드)
+    /// </param>
+    public void ARAttackHit(
+        Vector3 shootDir,
+        bool preserveVerticalLocal,
+        float damageMultiplier = 1f,
+        Pose? spawnPoseOverride = null)
     {
         if (data == null)
         {
@@ -708,15 +716,28 @@ public class WeaponBehavior : MonoBehaviour
             return;
 
         var handMode = data.dualWield ? AttackVariantHandMode.Both : AttackVariantHandMode.MainOnly;
-        ScheduleAttackFXFromData(data, AttackFXPhase.Attack, handMode);
+        ScheduleAttackFXFromData(data, AttackFXPhase.Attack, handMode, spawnPoseOverride);
 
         int generation = attackOutputGeneration;
         StartPendingAttackOutput(DelayedForcedProjectileByHand(
-            shootDir, preserveVerticalLocal, useSecond: false, delay: data.hitboxSpawnDelay, damageMultiplier: damageMultiplier, generation: generation));
+            shootDir,
+            preserveVerticalLocal,
+            useSecond: false,
+            delay: data.hitboxSpawnDelay,
+            damageMultiplier: damageMultiplier,
+            generation: generation,
+            spawnPositionOverride: spawnPoseOverride.HasValue ? spawnPoseOverride.Value.position : (Vector3?)null));
         if (data.dualWield)
         {
+            // 왼손은 스냅샷 오버라이드 없이 현재 Fire_Point2 사용
             StartPendingAttackOutput(DelayedForcedProjectileByHand(
-                shootDir, preserveVerticalLocal, useSecond: true, delay: data.hitboxSpawnDelay2, damageMultiplier: damageMultiplier, generation: generation));
+                shootDir,
+                preserveVerticalLocal,
+                useSecond: true,
+                delay: data.hitboxSpawnDelay2,
+                damageMultiplier: damageMultiplier,
+                generation: generation,
+                spawnPositionOverride: null));
         }
     }
 
@@ -726,7 +747,8 @@ public class WeaponBehavior : MonoBehaviour
         bool useSecond,
         float delay,
         float damageMultiplier,
-        int generation)
+        int generation,
+        Vector3? spawnPositionOverride)
     {
         float d = Mathf.Max(0f, delay);
         if (d > 0f)
@@ -753,11 +775,16 @@ public class WeaponBehavior : MonoBehaviour
         if (!CanEmitAttackOutput())
             yield break;
 
-        FireProjectileForced(shootDir, preserveVerticalLocal, useSecond, damageMultiplier);
+        FireProjectileForced(shootDir, preserveVerticalLocal, useSecond, damageMultiplier, spawnPositionOverride);
     }
 
     /// <summary>공격 FX 스케줄. phase 목록 사용.</summary>
-    private void ScheduleAttackFXFromData(WeaponDataSO weaponData, AttackFXPhase phase, AttackVariantHandMode handMode)
+    /// <param name="mainFirePointPoseOverride">메인 FirePoint FX에만 적용. 탄 스프레드와 무관하게 총구 회전 유지.</param>
+    private void ScheduleAttackFXFromData(
+        WeaponDataSO weaponData,
+        AttackFXPhase phase,
+        AttackVariantHandMode handMode,
+        Pose? mainFirePointPoseOverride = null)
     {
         if (weaponData == null) return;
         var fxList = AttackFXPhaseResolver.Resolve(weaponData.attackFXPhases, phase);
@@ -788,7 +815,20 @@ public class WeaponBehavior : MonoBehaviour
         }
 
         if (runtimeList.Count == 0) return;
-        AttackFXEntry.ScheduleAttackFX(this, runtimeList, ResolveAttackFXRoot, IsPlayerTimeHoldActive);
+
+        if (mainFirePointPoseOverride.HasValue)
+        {
+            AttackFXEntry.ScheduleAttackFX(
+                this,
+                runtimeList,
+                entry => ResolveAttackFXRoot(entry),
+                IsPlayerTimeHoldActive,
+                mainFirePointPoseOverride);
+        }
+        else
+        {
+            AttackFXEntry.ScheduleAttackFX(this, runtimeList, ResolveAttackFXRoot, IsPlayerTimeHoldActive);
+        }
     }
 
     private static bool IncludesMainHand(AttackVariantHandMode mode, bool dual)
@@ -1367,7 +1407,12 @@ public class WeaponBehavior : MonoBehaviour
         }
     }
 
-    public void FireProjectileForced(Vector3 shootDir, bool preserveVerticalLocal = false, bool useSecond = false, float damageMultiplier = 1f)
+    public void FireProjectileForced(
+        Vector3 shootDir,
+        bool preserveVerticalLocal = false,
+        bool useSecond = false,
+        float damageMultiplier = 1f,
+        Vector3? spawnPositionOverride = null)
     {
         if (data == null)
         {
@@ -1405,7 +1450,11 @@ public class WeaponBehavior : MonoBehaviour
         if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
         dir.Normalize();
 
-        GameObject bulletGO = Instantiate(projPrefab, spawnPoint.position, Quaternion.LookRotation(dir, Vector3.up));
+        Vector3 spawnPos = spawnPositionOverride.HasValue
+            ? spawnPositionOverride.Value
+            : spawnPoint.position;
+
+        GameObject bulletGO = Instantiate(projPrefab, spawnPos, Quaternion.LookRotation(dir, Vector3.up));
 
         if (bulletGO.TryGetComponent(out HitBox_PC_Projectile_Sector sectorProj))
         {

@@ -136,8 +136,36 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    private bool standStillPeace;
+
+    public void SetStandStillPeace(bool enabled)
+    {
+        standStillPeace = enabled;
+        if (!enabled)
+            return;
+
+        aiState = AIState.Peace;
+        SetFacePhase(FacePhase.Peace);
+        hasRoamTarget = false;
+        idleTimer = float.MaxValue;
+        signedForwardSpeed = 0f;
+        backstepping = false;
+
+        if (findingCoroutine != null)
+        {
+            StopCoroutine(findingCoroutine);
+            findingCoroutine = null;
+        }
+    }
+
     private void PeaceTick(Enemy ctx, Transform player)
     {
+        if (standStillPeace)
+        {
+            ctx.animCtrl?.SetSignedSpeed(0f);
+            return;
+        }
+
         Vector3 livePlayerPos = GetLivePlayerPosition(player);
         float sqrDist = (livePlayerPos - ctx.transform.position).sqrMagnitude;
         if (sqrDist <= detectionRadius * detectionRadius)

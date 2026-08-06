@@ -16,13 +16,17 @@ MonoBehaviour:
   weaponName: DBoxing
   icon: {fileID: 21300000, guid: da200a80c0ee7e9468a359e1da09cb69, type: 3}
   category: 0
-  weaponPrefab: {fileID: 5160777796813185063, guid: e34dbfeab0e8ecd4998bf18e1688d186, type: 3}
+  damageType: 1
+  isPoisonAttack: 0
+  poisonOnHitStatus: {fileID: 0}
+  weaponPrefab: {fileID: 3359054159082418404, guid: 23c6a513b4e453c439b86fe413f49228, type: 3}
   overrideController: {fileID: 22100000, guid: 94322b86abc45a04b98bb7d002a160ca, type: 2}
   attackAnimVariantCount: 2
   attackVariantHandModes: 00000000000000000100000001000000
   cooldown: 0.5
   damage: 1
   range: 2.5
+  staminaCost: 0
   hitboxSpawnDelay: 0.1
   hitBoxLifetime: 0.15
   trailEmitStartDelay: 0.1
@@ -45,6 +49,7 @@ MonoBehaviour:
   ragdollSpinTorque: 10000
   sliceTargets: 0000000001000000020000000400000003000000
   sliceImpulse: 10
+  bodySliceImpulseScale: 2
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}
   recoilStartDelay: 0
@@ -56,12 +61,11 @@ MonoBehaviour:
   projectileSpawnPointPathOrName: 
   meleeHitboxMode: 1
   meleeHitboxPrefab: {fileID: 0}
-  _useWeaponColliderLegacy: 1
+  _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 0}
-  shotgunSectorPrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
   attackFXPhases: []
   dualWield: 1
-  dualWeaponPrefab: {fileID: 127521127449397818, guid: 0bf664ac03e75ad429108b2b3ae51386, type: 3}
+  dualWeaponPrefab: {fileID: 3359054159082418404, guid: 23c6a513b4e453c439b86fe413f49228, type: 3}
   hitboxSpawnDelay2: 0.1
   projectileSpawnPoint2PathOrName: 

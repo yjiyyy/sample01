@@ -49,6 +49,11 @@ public class PlayerAnimationController : MonoBehaviour
     // 상태 관련 경고 캐시 (Play 시 상태가 없을 때 중복 로그 방지)
     private HashSet<string> warnedMissingStates = new HashSet<string>();
 
+    // 스나이퍼 등: 상체 Attack 첫 프레임 고정(조준 홀드). animator.speed는 건드리지 않음(하체 이동 유지).
+    private bool upperAttackHoldActive = false;
+    private int upperAttackHoldLayer = -1;
+    private int upperAttackHoldStateHash;
+
     void Awake()
     {
         animator = GetComponent<Animator>();
@@ -71,6 +76,7 @@ public class PlayerAnimationController : MonoBehaviour
         if (animator == null) return;
         float speed = (movement != null) ? movement.GetAnimatorSpeedEstimate() : 0f;
         SafeSetFloat(hashSpeed, speed);
+        KeepUpperAttackHoldFrozen();
     }
 
     /* ───────── 안전 호출 헬퍼 (캐시 사용) ───────── */
@@ -502,6 +508,8 @@ public class PlayerAnimationController : MonoBehaviour
     {
         if (animator == null) return;
 
+        ClearUpperAttackHold();
+
         SafeResetTrigger(hashKnockback);
         SafeResetTrigger(hashStun);
 
@@ -563,9 +571,94 @@ public class PlayerAnimationController : MonoBehaviour
 
     /* ───────── 공격 실행 ───────── */
 
+    /// <summary>
+    /// 상체 Attack을 시작하고 첫 프레임에 고정합니다. (스나이퍼 조준 등)
+    /// ReleaseUpperAttackHold() 호출 시 같은 클립이 이어서 재생됩니다.
+    /// </summary>
+    public void BeginUpperAttackHold(WeaponDataSO weaponData)
+    {
+        if (animator == null) return;
+
+        ClearUpperAttackHold();
+
+        int variantCount = weaponData != null ? weaponData.attackAnimVariantCount : 3;
+        if (variantCount < 1) variantCount = 3;
+        float randomIndex = UnityEngine.Random.Range(0, variantCount);
+
+        if (weaponBehavior != null)
+        {
+            if (weaponData != null)
+                weaponBehavior.SetPendingAttackVariantHandMode(weaponData.GetAttackVariantHandMode((int)randomIndex));
+            else
+                weaponBehavior.ClearPendingAttackVariantHandMode();
+        }
+
+        SafeSetFloat(hashAttackIndex, randomIndex);
+        SafeSetBool(hashIsUpperAttacking, true);
+
+        int upperLayer = GetUpperLayerIndex();
+        if (upperLayer >= 0)
+        {
+            if (animator.GetLayerWeight(upperLayer) <= 0f)
+                animator.SetLayerWeight(upperLayer, 1f);
+
+            TryPlaySafe("Attack_BlendTree", upperLayer, 0f);
+            animator.Update(0f);
+
+            upperAttackHoldActive = true;
+            upperAttackHoldLayer = upperLayer;
+            var info = animator.GetCurrentAnimatorStateInfo(upperLayer);
+            upperAttackHoldStateHash = info.fullPathHash;
+            KeepUpperAttackHoldFrozen();
+            Debug.Log($"[PlayerAnim] Upper Attack Hold 시작 → Index:{randomIndex}, 무기:{weaponData?.weaponName}");
+        }
+        else
+        {
+            // Upper 레이어 없으면 전체 Attack 시작 후 홀드 (하체까지 멈출 수 있음 — 폴백)
+            ResetAllAnimatorParams();
+            SafeSetFloat(hashAttackIndex, randomIndex);
+            SafeSetBool(hashIsAttacking, true);
+            TryPlaySafe("Attack_BlendTree", 0, 0f);
+            animator.Update(0f);
+            upperAttackHoldActive = true;
+            upperAttackHoldLayer = 0;
+            upperAttackHoldStateHash = animator.GetCurrentAnimatorStateInfo(0).fullPathHash;
+            KeepUpperAttackHoldFrozen();
+            Debug.LogWarning($"[PlayerAnim] UpperLayer 없음 → Base Attack Hold 폴백 Index:{randomIndex}");
+        }
+    }
+
+    /// <summary>조준 홀드를 해제하고 Attack 애니가 첫 프레임부터 재생되게 합니다.</summary>
+    public void ReleaseUpperAttackHold()
+    {
+        if (!upperAttackHoldActive) return;
+        upperAttackHoldActive = false;
+        upperAttackHoldLayer = -1;
+        upperAttackHoldStateHash = 0;
+        Debug.Log("[PlayerAnim] Upper Attack Hold 해제 → Attack 재생");
+    }
+
+    private void ClearUpperAttackHold()
+    {
+        upperAttackHoldActive = false;
+        upperAttackHoldLayer = -1;
+        upperAttackHoldStateHash = 0;
+    }
+
+    private void KeepUpperAttackHoldFrozen()
+    {
+        if (!upperAttackHoldActive || animator == null) return;
+        if (upperAttackHoldLayer < 0) return;
+        if (upperAttackHoldStateHash == 0) return;
+
+        animator.Play(upperAttackHoldStateHash, upperAttackHoldLayer, 0f);
+    }
+
     public void PlayAttack(WeaponDataSO weaponData, bool upperBodyOnly = false)
     {
         if (animator == null) return;
+
+        ClearUpperAttackHold();
 
         int variantCount = weaponData != null ? weaponData.attackAnimVariantCount : 3;
         if (variantCount < 1) variantCount = 3;
@@ -619,17 +712,27 @@ public class PlayerAnimationController : MonoBehaviour
         }
         else
         {
+            // 전신 Attack: UpperBody 레이어를 꺼서 Idle/Run(하체)과 상체 Attack이 섞이지 않게 함
+            int upperLayer = GetUpperLayerIndex();
+            if (upperLayer >= 0 && animator.GetLayerWeight(upperLayer) > 0f)
+            {
+                SafeSetBool(hashIsUpperAttacking, false);
+                animator.SetLayerWeight(upperLayer, 0f);
+                animator.Update(0f);
+            }
+
             ResetAllAnimatorParams();
             SafeSetFloat(hashAttackIndex, randomIndex);
             SafeSetBool(hashIsAttacking, true);
             TryPlaySafe("Attack_BlendTree", 0, 0f);
-            Debug.Log($"[PlayerAnim] Attack 시작 → Index:{randomIndex}, 무기:{weaponData?.weaponName}");
+            Debug.Log($"[PlayerAnim] Attack 시작(전신) → Index:{randomIndex}, 무기:{weaponData?.weaponName}");
         }
     }
 
     public void EndAttack()
     {
         if (animator == null) return;
+        ClearUpperAttackHold();
         SafeSetBool(hashIsAttacking, false);
         SafeSetBool(hashIsUpperAttacking, false);
         SafeSetFloat(hashLowerBodySpeed, 1f);
@@ -662,6 +765,7 @@ public class PlayerAnimationController : MonoBehaviour
         }
         else
         {
+            ClearUpperAttackHold();
             SafeSetBool(hashIsAttacking, false);
             SafeSetBool(hashIsUpperAttacking, false);
             SafeSetBool(hashIsBackStep, false);

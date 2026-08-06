@@ -59,20 +59,22 @@ public class AttackFXEntry
         MonoBehaviour mb,
         IReadOnlyList<AttackFXEntry> list,
         Func<AttackFXEntry, Transform> resolveEntry,
-        Func<bool> isTimeHoldActive = null)
+        Func<bool> isTimeHoldActive = null,
+        Pose? mainFirePointWorldPoseOverride = null)
     {
         if (mb == null || list == null || list.Count == 0) return;
         foreach (var entry in list)
         {
             if (entry == null || entry.prefab == null) continue;
-            mb.StartCoroutine(SpawnFXAfterDelay(entry, resolveEntry, isTimeHoldActive));
+            mb.StartCoroutine(SpawnFXAfterDelay(entry, resolveEntry, isTimeHoldActive, mainFirePointWorldPoseOverride));
         }
     }
 
     private static IEnumerator SpawnFXAfterDelay(
         AttackFXEntry entry,
         Func<AttackFXEntry, Transform> resolveEntry,
-        Func<bool> isTimeHoldActive)
+        Func<bool> isTimeHoldActive,
+        Pose? mainFirePointWorldPoseOverride)
     {
         float delay = Mathf.Max(0f, entry.startDelay);
         float elapsed = 0f;
@@ -86,6 +88,20 @@ public class AttackFXEntry
             }
             elapsed += Time.deltaTime;
             yield return null;
+        }
+
+        // 메인 FirePoint + 월드 포즈 오버라이드: Aim 종료 스냅샷 위치에 고정 (스프레드 방향과 무관, 총구 회전 유지)
+        bool useMainFirePoseOverride =
+            mainFirePointWorldPoseOverride.HasValue &&
+            entry.attachRoot == AttackFXAttachRoot.FirePoint &&
+            entry.firePointHand != AttackFXFirePointHand.OffHand;
+
+        if (useMainFirePoseOverride)
+        {
+            Pose pose = mainFirePointWorldPoseOverride.Value;
+            var inst = UnityEngine.Object.Instantiate(entry.prefab, pose.position, pose.rotation);
+            StartAutoCleanupIfNeeded(inst);
+            yield break;
         }
 
         var root = resolveEntry != null ? resolveEntry(entry) : null;

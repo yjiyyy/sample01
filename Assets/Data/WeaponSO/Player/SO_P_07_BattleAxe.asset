@@ -19,7 +19,7 @@ MonoBehaviour:
   damageType: 1
   isPoisonAttack: 0
   poisonOnHitStatus: {fileID: 0}
-  weaponPrefab: {fileID: 7349134072108011570, guid: dcbbf2d8c54a6cd4a9302b78a0c2523d, type: 3}
+  weaponPrefab: {fileID: 6300079757903284016, guid: 690e94298565e434eb98abb1777de919, type: 3}
   overrideController: {fileID: 22100000, guid: 0fdebf9f2c67b1f45a5e23c535a3a847, type: 2}
   attackAnimVariantCount: 1
   attackVariantHandModes: 
@@ -49,6 +49,7 @@ MonoBehaviour:
   ragdollSpinTorque: 10000
   sliceTargets: 0000000001000000020000000400000003000000
   sliceImpulse: 10
+  bodySliceImpulseScale: 2
   chargeSlot: {fileID: 0}
   comboSlot: {fileID: 0}
   recoilStartDelay: 0
@@ -57,9 +58,9 @@ MonoBehaviour:
   socketNames:
   - R_Hand_Weapon
   projectileSpawnPointPathOrName: 
-  meleeHitboxMode: 1
-  meleeHitboxPrefab: {fileID: 0}
-  _useWeaponColliderLegacy: 1
+  meleeHitboxMode: 0
+  meleeHitboxPrefab: {fileID: 1988047932026333537, guid: 4f98ed13c83d79348b3d04aa2cd0e190, type: 3}
+  _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
   attackFXPhases: []

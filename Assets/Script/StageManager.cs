@@ -20,6 +20,7 @@ public class StageManager : MonoBehaviour
     private bool stageActive;
     private bool stageEnded;
     private bool hasBegun;
+    private bool maxLevelBossNotified;
 
     private void OnEnable()
     {
@@ -54,6 +55,7 @@ public class StageManager : MonoBehaviour
         killCount = 0;
         stageActive = true;
         stageEnded = false;
+        maxLevelBossNotified = false;
 
         ResolveSpawner();
         if (spawner != null)
@@ -77,6 +79,21 @@ public class StageManager : MonoBehaviour
             if (showKillProgress)
                 ui.UpdateKillProgress(0, stageData.targetKillCount);
         }
+
+        // maxStageLevel이 1이면 시작 시점부터 이미 max → 보스전이 있으면 즉시 시작
+        TryNotifyBossEncounterIfAtMaxLevel();
+    }
+
+    /// <summary>잡몹·아이템 박스 신규 스폰만 중지합니다. 이미 나온 오브젝트는 유지합니다.</summary>
+    public void StopWaveSpawning()
+    {
+        ResolveSpawner();
+        spawner?.StopSpawning();
+
+        if (itemBoxSpawner == null)
+            itemBoxSpawner = FindEnvironmentItemBoxSpawner();
+
+        itemBoxSpawner?.StopSpawning();
     }
 
     private void Update()
@@ -142,9 +159,41 @@ public class StageManager : MonoBehaviour
             return;
 
         currentLevel = newLevel;
+
+        // 보스전이 있는 스테이지: max 도달 시 BossEncounter가 UI·스폰 중지를 담당
+        if (currentLevel >= maxIndex && TryNotifyBossEncounter())
+            return;
+
         ResolveSpawner();
         spawner?.SetSpawnLevel(currentLevel);
         ui?.UpdateLevel(GetDisplayLevel());
+    }
+
+    private void TryNotifyBossEncounterIfAtMaxLevel()
+    {
+        if (stageData == null)
+            return;
+
+        int maxIndex = Mathf.Max(0, stageData.maxStageLevel - 1);
+        if (currentLevel < maxIndex)
+            return;
+
+        TryNotifyBossEncounter();
+    }
+
+    /// <returns>씬에 BossEncounter가 있어 보스 페이즈를 시작했으면 true.</returns>
+    private bool TryNotifyBossEncounter()
+    {
+        if (maxLevelBossNotified)
+            return true;
+
+        BossEncounter encounter = FindFirstObjectByType<BossEncounter>();
+        if (encounter == null)
+            return false;
+
+        maxLevelBossNotified = true;
+        encounter.HandleMaxStageLevelReached(this);
+        return true;
     }
 
     private void CheckSurviveClear()

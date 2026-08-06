@@ -318,17 +318,23 @@ public class ItemBoxSpawner : MonoBehaviour
         initialSpawnRoutine = StartCoroutine(InitialSpawnRoutine());
     }
 
-    public void StopAndClear()
+    /// <summary>신규 스폰만 중지합니다. 이미 나온 박스는 그대로 둡니다.</summary>
+    public void StopSpawning()
     {
         spawningActive = false;
         respawnPending = false;
-        resolvedMapSpawnAreas.Clear();
 
         if (initialSpawnRoutine != null)
         {
             StopCoroutine(initialSpawnRoutine);
             initialSpawnRoutine = null;
         }
+    }
+
+    public void StopAndClear()
+    {
+        StopSpawning();
+        resolvedMapSpawnAreas.Clear();
 
         for (int i = trackedBoxes.Count - 1; i >= 0; i--)
         {

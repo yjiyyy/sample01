@@ -14,6 +14,8 @@ public partial class EnemyAttackController : MonoBehaviour
     private int currentAttackIndex = -1;
 
     private Enemy enemy;
+    private EnemyFacade enemyFacade;
+    private bool attackOnlyWeaponSpawned;
 
     private float[] readyTimes;
 
@@ -100,6 +102,7 @@ public partial class EnemyAttackController : MonoBehaviour
         CleanPatterns();
 
         enemy = GetComponent<Enemy>();
+        enemyFacade = GetComponent<EnemyFacade>();
 
         SyncReadyTimes(initialFill: true);
         globalReadyTime = Time.time;
@@ -202,6 +205,9 @@ public partial class EnemyAttackController : MonoBehaviour
         }
 
         TickTimeProjectileUpdate();
+
+        if (attackOnlyWeaponSpawned && !IsAttackExecuting)
+            EndAttackOnlyWeaponVisual();
     }
 
     #region 외부 조회
@@ -314,6 +320,8 @@ public partial class EnemyAttackController : MonoBehaviour
 
         var so = attackPatterns[index];
 
+        BeginAttackOnlyWeaponVisual(so);
+
         if (so is MeleeAttackData m) { StartMelee(m, index); return true; }
         if (so is ComboAttackData c) { StartCombo(c, target, index); return true; }
         if (so is RushAttackData r) { StartRush(r, target, index); return true; }
@@ -323,7 +331,37 @@ public partial class EnemyAttackController : MonoBehaviour
         if (so is TimeProjectileAttackData tpa) { StartTimeProjectile(tpa, target, index); return true; }
         if (so is SuicideAttackData sda) { StartSuicide(sda, target, index); return true; }
 
+        EndAttackOnlyWeaponVisual();
         return false;
+    }
+
+    private void BeginAttackOnlyWeaponVisual(ScriptableObject so)
+    {
+        if (so is EnemyAttackDataBase data &&
+            data.weaponPart != null &&
+            data.weaponPart.spawnOnlyDuringAttack &&
+            data.weaponPart.HasAnyPrefab())
+        {
+            if (enemyFacade == null)
+                enemyFacade = GetComponent<EnemyFacade>();
+            enemyFacade?.BeginAttackOnlyWeapon(data.weaponPart);
+            attackOnlyWeaponSpawned = true;
+        }
+        else
+        {
+            EndAttackOnlyWeaponVisual();
+        }
+    }
+
+    private void EndAttackOnlyWeaponVisual()
+    {
+        if (!attackOnlyWeaponSpawned)
+            return;
+
+        if (enemyFacade == null)
+            enemyFacade = GetComponent<EnemyFacade>();
+        enemyFacade?.EndAttackOnlyWeapon();
+        attackOnlyWeaponSpawned = false;
     }
     #endregion
 
@@ -388,6 +426,7 @@ public partial class EnemyAttackController : MonoBehaviour
         InterruptComboIfNeeded();
         InterruptTimeProjectileIfNeeded();
         InterruptSuicideIfNeeded();
+        EndAttackOnlyWeaponVisual();
 
         if (pendingAttackIndex >= 0 && !pendingExecuted)
         {

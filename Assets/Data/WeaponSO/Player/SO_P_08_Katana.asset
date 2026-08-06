@@ -60,7 +60,7 @@ MonoBehaviour:
   projectileSpawnPointPathOrName: 
   meleeHitboxMode: 1
   meleeHitboxPrefab: {fileID: 0}
-  _useWeaponColliderLegacy: 1
+  _useWeaponColliderLegacy: 0
   projectilePrefab: {fileID: 0}
   hitEffectPrefab: {fileID: 6823200998282874702, guid: 4e174cdbc2e3a674cb819d689fb36442, type: 3}
   attackFXPhases: []

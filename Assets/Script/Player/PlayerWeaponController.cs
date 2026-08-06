@@ -695,8 +695,46 @@ public class PlayerWeaponController : MonoBehaviour
         {
             float delta = Time.time - lastAttackTime;
             if (delta < sniperData.cooldown) return;
-            lastAttackTime = Time.time;
 
+            var wbSniper = equipComp.WeaponBehavior;
+            if (wbSniper == null)
+            {
+                if (debugMode) Debug.LogWarning("[Sniper] WeaponBehavior missing");
+                return;
+            }
+
+            var ammoSniper = wbSniper.GetComponent<WeaponAmmoRuntime_AR>();
+            if (ammoSniper == null) ammoSniper = wbSniper.gameObject.AddComponent<WeaponAmmoRuntime_AR>();
+            ammoSniper.Initialize(sniperData, force: false);
+
+            if (ammoSniper.IsReloading)
+            {
+                if (Time.time - lastReloadMsgTime >= RELOAD_MSG_COOLDOWN)
+                {
+                    Debug.Log($"[Ammo] Reloading… ({ammoSniper.GetReloadRemaining():F2}s)");
+                    lastReloadMsgTime = Time.time;
+                }
+                return;
+            }
+
+            if (!ammoSniper.CanFire(sniperData.consumePerShot))
+            {
+                if (!ammoSniper.HasAnyReserveOrInfinite())
+                {
+                    Debug.Log("[Ammo] Sniper out of ammo → switch to default");
+                    EquipWeapon((GameObject)null);
+                    return;
+                }
+                ammoSniper.TryStartReload();
+                return;
+            }
+
+            EnsurePlayerStats();
+            float sniperStamina = Mathf.Max(0f, sniperData.staminaCost);
+            if (!PlayerAttackStamina.CanPay(playerStats, sniperStamina))
+                return;
+
+            // 쿨다운은 발사 성공 시점에 시작 (조준 시작 시 lastAttackTime 갱신하지 않음)
             if (arFireRoutine != null) { StopCoroutine(arFireRoutine); arFireRoutine = null; }
             arFireRoutine = StartCoroutine(SniperAimAndFireRoutine(sniperData));
             return;
@@ -1128,15 +1166,19 @@ public class PlayerWeaponController : MonoBehaviour
     private IEnumerator SniperAimAndFireRoutine(WeaponDataSO_Sniper sniper)
     {
         ChangeState(PlayerState.Attack);
-        animationController?.PlayAttack(sniper, true);
         BeginARFireState(sniper);
+        // Aim 중에는 SO 설정과 관계없이 이동 허용
+        arAllowMoveWhileFiringFlag = true;
+        animationController?.BeginUpperAttackHold(sniper);
 
         var wb = equipComp.WeaponBehavior;
         if (wb == null)
         {
             Debug.LogWarning("[Sniper] WeaponBehavior missing");
+            animationController?.EndAttack();
             ChangeState(PlayerState.Idle);
             EndARFireState();
+            arFireRoutine = null;
             yield break;
         }
 
@@ -1182,6 +1224,8 @@ public class PlayerWeaponController : MonoBehaviour
             yield return null;
         }
 
+        bool fired = false;
+
         if (!cancelled && releasedByInput)
         {
             bool fullAimSuccess = holdElapsed >= sniper.fullAimTime;
@@ -1195,7 +1239,7 @@ public class PlayerWeaponController : MonoBehaviour
                 float sc = Mathf.Max(0f, sniper.staminaCost);
                 if (!PlayerAttackStamina.CanPay(playerStats, sc))
                 {
-                    // 스테미너 부족 — 발사 없음 (조준만 종료)
+                    // 스테미너 부족 — 발사 없음 (진입 시 막았지만 예외 상황)
                 }
                 else if (ammo.TryConsumeForShot(sniper.consumePerShot))
                 {
@@ -1217,9 +1261,18 @@ public class PlayerWeaponController : MonoBehaviour
                         ? sniper.fullAimDamageMultiplier
                         : 1f;
 
-                    animationController?.PlayAttack(sniper, true);
-                    wb.ARAttackHit(shootDir, sniper.spread3D, damageMultiplier);
+                    // Aim 종료 순간 Fire_Point 스냅샷 → 전신 Attack 전에 위치 고정
+                    // FX 회전=총구, 탄 방향=shootDir(스프레드). 위치는 둘 다 스냅샷.
+                    Transform firePoint = wb.GetPrimaryProjectileSpawnPoint();
+                    Pose? firePose = null;
+                    if (firePoint != null)
+                        firePose = new Pose(firePoint.position, firePoint.rotation);
+
+                    lastAttackTime = Time.time;
+                    animationController?.PlayAttack(sniper, false);
+                    wb.ARAttackHit(shootDir, sniper.spread3D, damageMultiplier, firePose);
                     StartRecoilIfNeeded(sniper);
+                    fired = true;
 
                     if (ammo.IsMagazineEmpty() && !ammo.HasAnyReserveOrInfinite())
                         RequestSwitchToDefault();
@@ -1235,11 +1288,56 @@ public class PlayerWeaponController : MonoBehaviour
             }
         }
 
-        animationController?.EndAttack();
-        if (movement != null && movement.GetVelocityMagnitude() > 0.1f)
-            ChangeState(PlayerState.Move);
-        else
-            ChangeState(PlayerState.Idle);
+        SetSniperAimLinesVisible(false);
+
+        // 발사 실패·취소: 쿨다운 없음, 즉시 종료
+        if (!fired)
+        {
+            animationController?.EndAttack();
+            if (state != PlayerState.Knockback && state != PlayerState.Stun &&
+                state != PlayerState.Dead && state != PlayerState.Evade)
+            {
+                if (movement != null && movement.GetVelocityMagnitude() > 0.1f)
+                    ChangeState(PlayerState.Move);
+                else
+                    ChangeState(PlayerState.Idle);
+            }
+            EndARFireState();
+            arFireRoutine = null;
+            yield break;
+        }
+
+        // 쿨다운: 이동 차단, Attack 상태 유지
+        arAllowMoveWhileFiringFlag = false;
+
+        float elapsed = 0f;
+        float wait = Mathf.Max(0f, sniper.cooldown);
+        while (elapsed < wait)
+        {
+            if (state == PlayerState.Dead ||
+                state == PlayerState.Knockback ||
+                state == PlayerState.Stun ||
+                state == PlayerState.Evade)
+                break;
+
+            if (stateHoldCount > 0)
+            {
+                yield return null;
+                continue;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (state == PlayerState.Attack)
+        {
+            animationController?.EndAttack();
+            if (movement != null && movement.GetVelocityMagnitude() > 0.1f)
+                ChangeState(PlayerState.Move);
+            else
+                ChangeState(PlayerState.Idle);
+        }
 
         EndARFireState();
         arFireRoutine = null;

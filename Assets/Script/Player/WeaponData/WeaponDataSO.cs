@@ -185,8 +185,13 @@ public class WeaponDataSO : ScriptableObject
     [Tooltip("meleeHitboxMode가 SpawnPrefab일 때 사용. 비어있으면 경고.")]
     public GameObject meleeHitboxPrefab;
 
-    /// <summary>무기 콜라이더 사용 여부. meleeHitboxMode 또는 레거시 useWeaponCollider 기준.</summary>
-    public bool UseWeaponCollider => _useWeaponColliderLegacy || meleeHitboxMode == MeleeHitboxMode.WeaponCollider;
+    /// <summary>무기 콜라이더 사용 여부. Inspector의 meleeHitboxMode만 따릅니다.</summary>
+    public bool UseWeaponCollider => meleeHitboxMode == MeleeHitboxMode.WeaponCollider;
+
+    /// <summary>
+    /// 구버전 useWeaponCollider 마이그레이션용. 런타임 판정에는 쓰지 않습니다.
+    /// OnValidate에서 한 번 WeaponCollider로 옮긴 뒤 false가 됩니다.
+    /// </summary>
     [SerializeField, HideInInspector]
     [UnityEngine.Serialization.FormerlySerializedAs("useWeaponCollider")]
     private bool _useWeaponColliderLegacy = false;
@@ -316,10 +321,12 @@ public class WeaponDataSO : ScriptableObject
         if (trailEmitDuration < 0f)
             trailEmitDuration = 0f;
 
-        // 레거시 useWeaponCollider → meleeHitboxMode 마이그레이션
+        // 레거시 useWeaponCollider → meleeHitboxMode 1회 마이그레이션.
+        // 런타임 판정은 meleeHitboxMode만 사용하므로, 여기서 legacy를 끈다.
         if (_useWeaponColliderLegacy)
         {
-            meleeHitboxMode = MeleeHitboxMode.WeaponCollider;
+            if (meleeHitboxMode != MeleeHitboxMode.WeaponCollider)
+                meleeHitboxMode = MeleeHitboxMode.WeaponCollider;
             _useWeaponColliderLegacy = false;
         }
 
