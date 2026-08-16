@@ -8,7 +8,7 @@ public class TitleMenuController : MonoBehaviour
 {
     [Header("씬 전환 (Inspector에서 지정)")]
     [SceneName]
-    [SerializeField] private string newGameScene = "01_Story";
+    [SerializeField] private string newGameScene = "Loading_00";
     [SceneName]
     [SerializeField] private string loadGameScene = "";
 
@@ -30,7 +30,13 @@ public class TitleMenuController : MonoBehaviour
 
     public void OnOption()
     {
-        // TODO: 옵션 UI 연동 시 구현
+        if (OptionsUI.Instance != null)
+        {
+            OptionsUI.Instance.Show();
+            return;
+        }
+
+        Debug.LogWarning("[TitleMenuController] OptionsUI가 없습니다. 타이틀 씬에 OptionsUI를 배치하세요.");
     }
 
     public void OnExit()

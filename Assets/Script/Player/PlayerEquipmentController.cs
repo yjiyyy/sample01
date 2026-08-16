@@ -2,18 +2,26 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 
-/// <summary>부활 시 죽기 직전 무기·탄약 상태를 넘기기 위한 스냅샷.</summary>
+/// <summary>부활 시 죽기 직전 무기 슬롯·탄약 상태를 넘기기 위한 스냅샷.</summary>
 public struct PlayerReviveWeaponSnapshot
 {
     public enum AmmoCategory { None, Gun, AR, Shotgun }
 
-    public WeaponDataSO weaponData;
-    public bool hasAmmo;
-    public int magazine;
-    public int reserve;
-    public AmmoCategory ammoCategory;
+    public WeaponDataSO slot0;
+    public WeaponDataSO slot1;
+    public int activeSlotIndex;
 
-    public bool HasWeapon => weaponData != null;
+    public bool slot0HasAmmo;
+    public int slot0Magazine;
+    public int slot0Reserve;
+    public AmmoCategory slot0AmmoCategory;
+
+    public bool slot1HasAmmo;
+    public int slot1Magazine;
+    public int slot1Reserve;
+    public AmmoCategory slot1AmmoCategory;
+
+    public bool HasWeapon => slot0 != null || slot1 != null;
 }
 
 [DisallowMultipleComponent]
@@ -27,12 +35,26 @@ public class PlayerEquipmentController : MonoBehaviour
     public WeaponBehavior WeaponBehavior { get; private set; }
     public WeaponDataSO CurrentWeaponData { get; private set; }
 
+    public const int SlotCount = 2;
+    private readonly WeaponDataSO[] weaponSlots = new WeaponDataSO[SlotCount];
+    private int activeSlotIndex;
+    private WeaponDataSO unarmedWeaponData;
+    private bool loadoutConfigured;
+
     private WeaponDataSO defaultWeaponData;
     public WeaponDataSO DefaultWeaponData
     {
-        get => defaultWeaponData;
-        set => defaultWeaponData = value;
+        get => unarmedWeaponData != null ? unarmedWeaponData : defaultWeaponData;
+        set
+        {
+            defaultWeaponData = value;
+            if (unarmedWeaponData == null)
+                unarmedWeaponData = value;
+        }
     }
+
+    public int ActiveSlotIndex => activeSlotIndex;
+    public WeaponDataSO InactiveWeaponData => weaponSlots[OtherSlot(activeSlotIndex)];
 
     // UI 구독용 이벤트
     public event Action<WeaponDataSO> OnWeaponChanged;
@@ -108,8 +130,6 @@ public class PlayerEquipmentController : MonoBehaviour
         if (playerRoot == null) playerRoot = transform.root;
 
         SaveCurrentSnapshots();
-
-        DefaultWeaponData = so;
 
         EquipPrefabInternal(so.weaponPrefab, playerRoot, dataToApply: so, debugLogs: debugLogs);
         OnWeaponChanged?.Invoke(CurrentWeaponData);
@@ -225,86 +245,207 @@ public class PlayerEquipmentController : MonoBehaviour
 
     public void EquipDefault(Transform playerRoot)
     {
-        if (DefaultWeaponData == null)
-        {
-#if UNITY_EDITOR
-            Debug.LogWarning("[Equip] DefaultWeaponData is null.");
-#endif
-            return;
-        }
-
-        if (DefaultWeaponData.weaponPrefab == null)
-        {
-            Debug.LogWarning($"[Equip] DefaultWeaponData '{DefaultWeaponData.name}' has no weaponPrefab.");
-            return;
-        }
-
-        EquipByData(DefaultWeaponData, playerRoot, debugLogs: false);
+        EquipActive(playerRoot);
     }
+
+    public void ConfigureLoadout(WeaponDataSO slot0, WeaponDataSO slot1, WeaponDataSO unarmed)
+    {
+        unarmedWeaponData = unarmed != null ? unarmed : defaultWeaponData;
+        defaultWeaponData = unarmedWeaponData;
+        weaponSlots[0] = ResolveSlot(slot0);
+        weaponSlots[1] = ResolveSlot(slot1);
+        activeSlotIndex = 0;
+        loadoutConfigured = true;
+    }
+
+    public WeaponDataSO GetSlot(int index)
+    {
+        if (index < 0 || index >= SlotCount)
+            return null;
+        return weaponSlots[index];
+    }
+
+    public void EquipActive(Transform playerRoot = null)
+    {
+        if (!loadoutConfigured)
+        {
+            WeaponDataSO fallback = DefaultWeaponData;
+            if (fallback == null)
+            {
+#if UNITY_EDITOR
+                Debug.LogWarning("[Equip] Loadout is empty and DefaultWeaponData is null.");
+#endif
+                return;
+            }
+
+            ConfigureLoadout(fallback, fallback, fallback);
+        }
+
+        WeaponDataSO active = ResolveSlot(weaponSlots[activeSlotIndex]);
+        if (active == null || active.weaponPrefab == null)
+        {
+            Debug.LogWarning($"[Equip] Active slot weapon is missing a prefab: {(active != null ? active.name : "null")}");
+            return;
+        }
+
+        EquipByData(active, playerRoot, debugLogs: false);
+    }
+
+    /// <summary>지금 켜진 슬롯에 무기를 넣습니다. 다른 칸과 같은 무기(None 제외)면 false.</summary>
+    public bool TryAssignToActiveSlot(WeaponDataSO so, Transform playerRoot = null)
+    {
+        if (!loadoutConfigured)
+            ConfigureLoadout(so, null, unarmedWeaponData ?? so);
+
+        WeaponDataSO resolved = ResolveSlot(so);
+        int other = OtherSlot(activeSlotIndex);
+        if (!IsUnarmed(resolved) && IsSameWeapon(resolved, weaponSlots[other]))
+        {
+            Debug.LogWarning($"[Equip] '{resolved.weaponName}' 은 이미 다른 슬롯에 있습니다.");
+            return false;
+        }
+
+        weaponSlots[activeSlotIndex] = resolved;
+        EquipByData(resolved, playerRoot, debugLogs: false);
+        return true;
+    }
+
+    public void SwitchActiveSlot(Transform playerRoot = null)
+    {
+        if (!loadoutConfigured)
+            return;
+
+        int next = OtherSlot(activeSlotIndex);
+        WeaponDataSO target = ResolveSlot(weaponSlots[next]);
+        activeSlotIndex = next;
+
+        if (CurrentWeaponData == target && CurrentWeapon != null)
+        {
+            OnWeaponChanged?.Invoke(CurrentWeaponData);
+            return;
+        }
+
+        EquipByData(target, playerRoot, debugLogs: false);
+    }
+
+    public bool IsUnarmed(WeaponDataSO so)
+    {
+        if (so == null)
+            return true;
+        if (unarmedWeaponData != null && so == unarmedWeaponData)
+            return true;
+        return PlayerConfig.IsUnarmedAsset(so);
+    }
+
+    public bool IsSameWeapon(WeaponDataSO a, WeaponDataSO b)
+    {
+        if (a == null || b == null)
+            return false;
+        if (ReferenceEquals(a, b))
+            return true;
+        return !string.IsNullOrEmpty(a.id) && a.id == b.id;
+    }
+
+    private WeaponDataSO ResolveSlot(WeaponDataSO so)
+    {
+        return so != null ? so : unarmedWeaponData;
+    }
+
+    private static int OtherSlot(int index) => index == 0 ? 1 : 0;
 
     /// <summary>사망 직전 장착 무기·탄약을 캡처합니다 (부활 복원용).</summary>
     public PlayerReviveWeaponSnapshot CaptureReviveWeaponSnapshot()
     {
         SaveCurrentSnapshots();
 
-        var snap = new PlayerReviveWeaponSnapshot { weaponData = CurrentWeaponData };
-        if (CurrentWeaponData == null)
-            return snap;
+        var snap = new PlayerReviveWeaponSnapshot
+        {
+            slot0 = weaponSlots[0],
+            slot1 = weaponSlots[1],
+            activeSlotIndex = activeSlotIndex
+        };
 
-        if (CurrentWeaponData is WeaponDataSO_Gun gun && gun.usesAmmo &&
-            gunAmmoSnapshots.TryGetValue(gun, out AmmoSnapshot gunSnap))
-        {
-            snap.hasAmmo = true;
-            snap.ammoCategory = PlayerReviveWeaponSnapshot.AmmoCategory.Gun;
-            snap.magazine = gunSnap.magazine;
-            snap.reserve = gunSnap.reserve;
-        }
-        else if (CurrentWeaponData is WeaponDataSO_AR ar && ar.usesAmmo &&
-                 arAmmoSnapshots.TryGetValue(ar, out AmmoSnapshot arSnap))
-        {
-            snap.hasAmmo = true;
-            snap.ammoCategory = PlayerReviveWeaponSnapshot.AmmoCategory.AR;
-            snap.magazine = arSnap.magazine;
-            snap.reserve = arSnap.reserve;
-        }
-        else if (CurrentWeaponData is WeaponDataSO_Shotgun sg && sg.usesAmmo &&
-                 shotgunAmmoSnapshots.TryGetValue(sg, out AmmoSnapshot sgSnap))
-        {
-            snap.hasAmmo = true;
-            snap.ammoCategory = PlayerReviveWeaponSnapshot.AmmoCategory.Shotgun;
-            snap.magazine = sgSnap.magazine;
-            snap.reserve = sgSnap.reserve;
-        }
-
+        FillReviveAmmo(weaponSlots[0], out snap.slot0HasAmmo, out snap.slot0Magazine, out snap.slot0Reserve, out snap.slot0AmmoCategory);
+        FillReviveAmmo(weaponSlots[1], out snap.slot1HasAmmo, out snap.slot1Magazine, out snap.slot1Reserve, out snap.slot1AmmoCategory);
         return snap;
     }
 
     /// <summary>부활 후 죽기 직전 무기·탄약 상태를 복원합니다.</summary>
     public void ApplyReviveWeaponSnapshot(PlayerReviveWeaponSnapshot snap, Transform playerRoot)
     {
-        if (!snap.HasWeapon)
-        {
-            EquipDefault(playerRoot);
+        RestoreReviveAmmo(snap.slot0, snap.slot0HasAmmo, snap.slot0Magazine, snap.slot0Reserve, snap.slot0AmmoCategory);
+        RestoreReviveAmmo(snap.slot1, snap.slot1HasAmmo, snap.slot1Magazine, snap.slot1Reserve, snap.slot1AmmoCategory);
+
+        ConfigureLoadout(
+            snap.slot0 != null ? snap.slot0 : unarmedWeaponData,
+            snap.slot1 != null ? snap.slot1 : unarmedWeaponData,
+            unarmedWeaponData);
+        activeSlotIndex = snap.activeSlotIndex == 1 ? 1 : 0;
+        EquipActive(playerRoot);
+    }
+
+    private void FillReviveAmmo(
+        WeaponDataSO data,
+        out bool hasAmmo,
+        out int magazine,
+        out int reserve,
+        out PlayerReviveWeaponSnapshot.AmmoCategory category)
+    {
+        hasAmmo = false;
+        magazine = 0;
+        reserve = 0;
+        category = PlayerReviveWeaponSnapshot.AmmoCategory.None;
+        if (data == null)
             return;
-        }
 
-        if (snap.hasAmmo)
+        if (data is WeaponDataSO_Gun gun && gun.usesAmmo &&
+            gunAmmoSnapshots.TryGetValue(gun, out AmmoSnapshot gunSnap))
         {
-            switch (snap.ammoCategory)
-            {
-                case PlayerReviveWeaponSnapshot.AmmoCategory.Gun when snap.weaponData is WeaponDataSO_Gun gun:
-                    gunAmmoSnapshots[gun] = new AmmoSnapshot { magazine = snap.magazine, reserve = snap.reserve };
-                    break;
-                case PlayerReviveWeaponSnapshot.AmmoCategory.AR when snap.weaponData is WeaponDataSO_AR ar:
-                    arAmmoSnapshots[ar] = new AmmoSnapshot { magazine = snap.magazine, reserve = snap.reserve };
-                    break;
-                case PlayerReviveWeaponSnapshot.AmmoCategory.Shotgun when snap.weaponData is WeaponDataSO_Shotgun shotgun:
-                    shotgunAmmoSnapshots[shotgun] = new AmmoSnapshot { magazine = snap.magazine, reserve = snap.reserve };
-                    break;
-            }
+            hasAmmo = true;
+            category = PlayerReviveWeaponSnapshot.AmmoCategory.Gun;
+            magazine = gunSnap.magazine;
+            reserve = gunSnap.reserve;
         }
+        else if (data is WeaponDataSO_AR ar && ar.usesAmmo &&
+                 arAmmoSnapshots.TryGetValue(ar, out AmmoSnapshot arSnap))
+        {
+            hasAmmo = true;
+            category = PlayerReviveWeaponSnapshot.AmmoCategory.AR;
+            magazine = arSnap.magazine;
+            reserve = arSnap.reserve;
+        }
+        else if (data is WeaponDataSO_Shotgun sg && sg.usesAmmo &&
+                 shotgunAmmoSnapshots.TryGetValue(sg, out AmmoSnapshot sgSnap))
+        {
+            hasAmmo = true;
+            category = PlayerReviveWeaponSnapshot.AmmoCategory.Shotgun;
+            magazine = sgSnap.magazine;
+            reserve = sgSnap.reserve;
+        }
+    }
 
-        EquipByData(snap.weaponData, playerRoot, debugLogs: false);
+    private void RestoreReviveAmmo(
+        WeaponDataSO data,
+        bool hasAmmo,
+        int magazine,
+        int reserve,
+        PlayerReviveWeaponSnapshot.AmmoCategory category)
+    {
+        if (!hasAmmo || data == null)
+            return;
+
+        switch (category)
+        {
+            case PlayerReviveWeaponSnapshot.AmmoCategory.Gun when data is WeaponDataSO_Gun gun:
+                gunAmmoSnapshots[gun] = new AmmoSnapshot { magazine = magazine, reserve = reserve };
+                break;
+            case PlayerReviveWeaponSnapshot.AmmoCategory.AR when data is WeaponDataSO_AR ar:
+                arAmmoSnapshots[ar] = new AmmoSnapshot { magazine = magazine, reserve = reserve };
+                break;
+            case PlayerReviveWeaponSnapshot.AmmoCategory.Shotgun when data is WeaponDataSO_Shotgun shotgun:
+                shotgunAmmoSnapshots[shotgun] = new AmmoSnapshot { magazine = magazine, reserve = reserve };
+                break;
+        }
     }
 
     /// <summary>무기 분리 슬라이스 후 시체 참조만 끊습니다 (분리된 무기 오브젝트는 Destroy하지 않음).</summary>

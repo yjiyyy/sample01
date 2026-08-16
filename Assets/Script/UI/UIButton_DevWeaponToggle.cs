@@ -3,54 +3,62 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 토글 버튼(왼쪽 작은 아이콘)에 붙이는 스크립트.
-/// - 오버레이가 열려 있으면 이 버튼을 비활성화(또는 클릭 무시)하여 툴이 열려있는 동안 토글버튼이 작동하지 않도록 함.
+/// 화면 위 무기 아이콘 클릭 시 활성 슬롯을 바꿉니다.
+/// 무기 치트 오버레이는 키보드 ` 키로만 엽니다.
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class UIButton_DevWeaponToggle : MonoBehaviour, IPointerClickHandler
 {
-    [Tooltip("토글 대상 DevWeaponSwitcher (비워두면 씬에서 자동 탐색)")]
-    public DevWeaponSwitcher target;
+    [Tooltip("비워두면 씬에서 자동 탐색")]
+    public PlayerWeaponController targetPlayer;
 
     Button uiButton;
 
     void Start()
     {
         uiButton = GetComponent<Button>();
-        if (target == null)
-            target = FindFirstObjectByType<DevWeaponSwitcher>();
+        EnsurePlayer();
     }
 
     void Update()
     {
-        // DevWeaponSwitcher가 열려 있는 동안 이 버튼을 비활성화(인터랙트 끔)
-        if (target != null && uiButton != null)
-        {
-            bool overlayOpen = target.IsOverlayOpen;
-            // 인터랙션 금지
-            uiButton.interactable = !overlayOpen;
-        }
+        if (uiButton == null)
+            return;
+
+        bool overlayOpen = InputManager.Instance != null && InputManager.Instance.OverlayInputBlocked;
+        uiButton.interactable = !overlayOpen;
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        // 클릭 시 오버레이가 열려 있으면 무시 (안전장치)
-        if (target != null && target.IsOverlayOpen)
+        if (InputManager.Instance != null && InputManager.Instance.OverlayInputBlocked)
             return;
 
-        if (target == null)
-            target = FindFirstObjectByType<DevWeaponSwitcher>();
-
-        if (target != null)
-            target.ToggleOverlay();
+        EnsurePlayer();
+        if (targetPlayer != null)
+            targetPlayer.TrySwitchWeaponSlot();
         else
-            Debug.LogWarning("[UIButton_DevWeaponToggle] DevWeaponSwitcher를 찾을 수 없습니다.");
+            Debug.LogWarning("[UIButton_DevWeaponToggle] PlayerWeaponController를 찾을 수 없습니다.");
     }
 
-    // 인스펙터용: Button.OnClick()에 연결 가능
     public void ToggleFromInspector()
     {
-        if (target == null) target = FindFirstObjectByType<DevWeaponSwitcher>();
-        if (target != null && !target.IsOverlayOpen) target.ToggleOverlay();
+        EnsurePlayer();
+        targetPlayer?.TrySwitchWeaponSlot();
+    }
+
+    private void EnsurePlayer()
+    {
+        if (targetPlayer != null)
+            return;
+
+        if (GameManager.Instance != null && GameManager.Instance.playerTransform != null)
+        {
+            targetPlayer = GameManager.Instance.playerTransform.GetComponent<PlayerWeaponController>();
+            if (targetPlayer != null)
+                return;
+        }
+
+        targetPlayer = FindFirstObjectByType<PlayerWeaponController>();
     }
 }

@@ -43,6 +43,10 @@ public static class SpringBoneSetupEditor
         }
 
         const int SpringBoneLayer = 16;
+        const float DefaultStiffness = 0.02f;
+        const float DefaultDrag = 0.25f;
+        const float DefaultExternalForceY = -0.005f;
+        const float DefaultBlend = 1f;
         int boneCount = chain.Count - 1;
 
         int added = 0, updated = 0;
@@ -51,22 +55,15 @@ public static class SpringBoneSetupEditor
             Transform bone = chain[i];
             Transform childTransform = chain[i + 1];
 
-            // t: 첫 본 0 → 끝 본 1
-            float t = boneCount > 1 ? (float)i / (boneCount - 1) : 0f;
-            float stiffnessVal = 0.01f;
-            float dragVal = 0.4f;
-            float extForceY = Mathf.Lerp(0f, -0.01f, t);
-            float blendVal = Mathf.Lerp(0.3f, 1f, t);
-
             var existing = bone.GetComponent<SpringBone>();
             if (existing != null)
             {
                 Undo.RecordObject(existing, "SpringBone Setup");
                 existing.child = childTransform;
-                existing.stiffness = stiffnessVal;
-                existing.drag = dragVal;
-                existing.externalForce = new Vector3(0f, extForceY, 0f);
-                existing.blend = blendVal;
+                existing.stiffness = DefaultStiffness;
+                existing.drag = DefaultDrag;
+                existing.externalForce = new Vector3(0f, DefaultExternalForceY, 0f);
+                existing.blend = DefaultBlend;
                 if (SpringBoneLayer >= 0 && SpringBoneLayer < 32 && bone.gameObject.layer != SpringBoneLayer)
                 {
                     Undo.RecordObject(bone.gameObject, "SpringBone Setup");
@@ -78,10 +75,10 @@ public static class SpringBoneSetupEditor
 
             var sb = Undo.AddComponent<SpringBone>(bone.gameObject);
             sb.child = childTransform;
-            sb.stiffness = stiffnessVal;
-            sb.drag = dragVal;
-            sb.externalForce = new Vector3(0f, extForceY, 0f);
-            sb.blend = blendVal;
+            sb.stiffness = DefaultStiffness;
+            sb.drag = DefaultDrag;
+            sb.externalForce = new Vector3(0f, DefaultExternalForceY, 0f);
+            sb.blend = DefaultBlend;
 
             // 본→자식 방향을 로컬 기준으로 자동 설정 (초기 포즈 기준)
             Vector3 toChild = bone.InverseTransformPoint(childTransform.position);
@@ -100,6 +97,6 @@ public static class SpringBoneSetupEditor
 
         string msg = added > 0 ? $"{added}개 추가" : "";
         if (updated > 0) msg += (msg.Length > 0 ? ", " : "") + $"{updated}개 갱신";
-        Debug.Log($"[SpringBoneSetup] '{root.name}' 체인: {msg} (총 {boneCount}개 본). Layer 16, 값 배분 적용.");
+        Debug.Log($"[SpringBoneSetup] '{root.name}' 체인: {msg} (총 {boneCount}개 본). Layer 16, 기본값 적용.");
     }
 }

@@ -3,11 +3,15 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
-/// Loading 씬 브리핑: 컷마다 이미지/구도/페이드/드리프트 재생 후 다음 씬으로 전환합니다.
-/// 컷 사이 블렌드 없이 Fade Out → 교체 → Fade In 으로 분리합니다.
+/// Loading 씬 브리핑: 컷마다 이미지 연출 + (선택) 한 문장 타이핑 후 N초 대기, 다음 컷/씬으로 진행합니다.
+/// 홀드 중 타이핑 속도 2배. 컷당 문장은 1개(LocalizedString).
 /// </summary>
 public class LoadingBriefingController : MonoBehaviour
 {
@@ -38,23 +42,24 @@ public class LoadingBriefingController : MonoBehaviour
         [Range(-1f, 1f)]
         public float driftScaleSpeed = 0f;
 
-        [Tooltip("이 컷이 유지되는 총 시간(초). Fade In/Out 시간이 이 안에 포함됩니다.")]
+        [Tooltip("문장 타이핑이 끝난 뒤(문장 없으면 컷 시작 직후) 다음 컷으로 가기 전 대기 시간(초)")]
+        [FormerlySerializedAs("holdDuration")]
         [Min(0f)]
-        public float holdDuration = 2f;
+        public float postTextHoldSeconds = 2f;
 
-        [Tooltip("Hold 시작 구간에 포함되는 Fade In 시간")]
+        [Tooltip("컷 시작 시 Fade In 시간")]
         [Min(0f)]
         public float fadeInDuration = 0.35f;
 
-        [Tooltip("Hold 끝 구간에 포함되는 Fade Out 시간")]
+        [Tooltip("컷 종료 시 Fade Out 시간")]
         [Min(0f)]
         public float fadeOutDuration = 0.35f;
 
         [Tooltip("이 컷의 페이드 색 (씬 종료도 같은 Fade 사용)")]
         public FadeColorType fadeColor = FadeColorType.Black;
 
-        [TextArea]
-        public string line;
+        [Tooltip("이 컷의 문장(한/영). 둘 다 비우면 이미지 연출만")]
+        public LocalizedString line;
     }
 
     [Header("Scene")]
@@ -73,19 +78,21 @@ public class LoadingBriefingController : MonoBehaviour
     [SerializeField] private bool playOnStart = true;
     [SerializeField] private bool useUnscaledTime = true;
     [SerializeField] private float minDisplaySeconds = 4f;
+    [Tooltip("초당 타이핑 글자 수. 홀드 중에는 2배")]
+    [Min(1f)]
+    [SerializeField] private float typewriterCharsPerSecond = 28f;
     [SerializeField] private List<BriefingCut> cuts = new();
 
-    // driftScaleSpeed(-1~1) 1당 초당 스케일 변화량
     private const float DriftScaleUnitsPerSecond = 0.35f;
     private const float MinDriftScale = 0.2f;
     private const float MaxDriftScale = 5f;
+    private const float HoldTypewriterMultiplier = 2f;
 
     private Coroutine playRoutine;
 
     public IReadOnlyList<BriefingCut> Cuts => cuts;
     public int CutCount => cuts != null ? cuts.Count : 0;
 
-    // 에디터 Undo용
     public RectTransform BackgroundImageRect => backgroundImageRect;
     public Image BackgroundImage => backgroundImage;
     public TMP_Text BriefingText => briefingText;
@@ -93,7 +100,6 @@ public class LoadingBriefingController : MonoBehaviour
     private void Awake()
     {
         ResolveUiRefs();
-        // 첫 프레임부터 화면을 가려 두고, 첫 컷 Fade In으로 시작하게 한다.
         PrepareInitialFadeCover();
     }
 
@@ -128,7 +134,7 @@ public class LoadingBriefingController : MonoBehaviour
             return;
         }
 
-        ApplyCutVisuals(cut);
+        ApplyCutVisuals(cut, showFullText: true);
         SetFadeColor(cut.fadeColor);
         SetFadeAlpha(0f);
     }
@@ -151,15 +157,21 @@ public class LoadingBriefingController : MonoBehaviour
             cut.sprite = backgroundImage.sprite;
 
         if (briefingText != null)
-            cut.line = briefingText.text;
+        {
+            // 에디터에서 보이는 문구를 현재 언어 칸에 저장
+            GameLanguage lang = LanguageManager.Instance != null
+                ? LanguageManager.Instance.CurrentLanguage
+                : GameLanguage.Korean;
+
+            if (lang == GameLanguage.English)
+                cut.line.english = briefingText.text ?? string.Empty;
+            else
+                cut.line.korean = briefingText.text ?? string.Empty;
+        }
 
         cuts[cutIndex] = cut;
     }
 
-    /// <summary>
-    /// Inspector 비어 있어도 Rect/CanvasGroup에서 Image를 찾아 채웁니다.
-    /// 에디터 미리보기에서도 Awake 없이 동작하게 합니다.
-    /// </summary>
     private void ResolveUiRefs()
     {
         if (backgroundImage == null && backgroundImageRect != null)
@@ -192,7 +204,6 @@ public class LoadingBriefingController : MonoBehaviour
         if (rootPanel != null)
             rootPanel.SetActive(true);
 
-        // 첫 Fade In이 로딩 히치에 먹히지 않도록, 화면을 가린 뒤 한 프레임 대기하고 나서 로드를 시작한다.
         PrepareInitialFadeCover();
         yield return null;
 
@@ -226,75 +237,7 @@ public class LoadingBriefingController : MonoBehaviour
         {
             for (int i = 0; i < cuts.Count; i++)
             {
-                BriefingCut cut = cuts[i];
-
-                SetFadeColor(cut.fadeColor);
-                SetFadeAlpha(1f);
-                ApplyCutVisuals(cut);
-
-                // 구도/스프라이트 적용 후 한 프레임 대기
-                yield return null;
-
-                Vector2 driftDir = Random.insideUnitCircle;
-                if (driftDir.sqrMagnitude < 0.0001f)
-                    driftDir = Vector2.right;
-                else
-                    driftDir.Normalize();
-
-                // Hold 시간 안에 Fade In/Out을 포함. 페이드 중에도 드리프트한다.
-                float hold = Mathf.Max(0f, cut.holdDuration);
-                float fadeIn = Mathf.Max(0f, cut.fadeInDuration);
-                float fadeOut = Mathf.Max(0f, cut.fadeOutDuration);
-                if (fadeIn + fadeOut > hold && hold > 0f)
-                {
-                    float scale = hold / (fadeIn + fadeOut);
-                    fadeIn *= scale;
-                    fadeOut *= scale;
-                }
-
-                float elapsed = 0f;
-                while (elapsed < hold)
-                {
-                    float dt = Mathf.Min(DeltaTime(), 1f / 30f);
-                    elapsed += dt;
-                    shownTime += dt;
-
-                    if (backgroundImageRect != null)
-                    {
-                        if (cut.driftSpeed > 0f)
-                            backgroundImageRect.anchoredPosition += driftDir * (cut.driftSpeed * dt);
-
-                        if (Mathf.Abs(cut.driftScaleSpeed) > 0.0001f)
-                        {
-                            float scale = backgroundImageRect.localScale.x;
-                            scale += cut.driftScaleSpeed * DriftScaleUnitsPerSecond * dt;
-                            scale = Mathf.Clamp(scale, MinDriftScale, MaxDriftScale);
-                            backgroundImageRect.localScale = new Vector3(scale, scale, 1f);
-                        }
-                    }
-
-                    float alpha;
-                    if (fadeIn > 0f && elapsed < fadeIn)
-                    {
-                        // Hold 초반: Fade In (가림 → 보임) + 드리프트
-                        alpha = 1f - Mathf.Clamp01(elapsed / fadeIn);
-                    }
-                    else if (fadeOut > 0f && elapsed > hold - fadeOut)
-                    {
-                        // Hold 후반: Fade Out (보임 → 가림) + 드리프트
-                        float outT = Mathf.Clamp01((elapsed - (hold - fadeOut)) / fadeOut);
-                        alpha = outT;
-                    }
-                    else
-                    {
-                        alpha = 0f;
-                    }
-
-                    SetFadeAlpha(alpha);
-                    yield return null;
-                }
-
-                SetFadeAlpha(1f);
+                yield return CoPlayCut(cuts[i], t => shownTime += t);
             }
 
             while (shownTime < minDisplaySeconds || loadOp.progress < 0.9f)
@@ -304,10 +247,170 @@ public class LoadingBriefingController : MonoBehaviour
             }
         }
 
-        // 마지막 컷 Fade Out 상태(가려진 상태)로 씬 전환
         SetFadeAlpha(1f);
         loadOp.allowSceneActivation = true;
         playRoutine = null;
+    }
+
+    private IEnumerator CoPlayCut(BriefingCut cut, System.Action<float> addShownTime)
+    {
+        SetFadeColor(cut.fadeColor);
+        SetFadeAlpha(1f);
+        ApplyCutVisuals(cut, showFullText: false);
+        if (briefingText != null)
+            briefingText.text = string.Empty;
+
+        yield return null;
+
+        Vector2 driftDir = Random.insideUnitCircle;
+        if (driftDir.sqrMagnitude < 0.0001f)
+            driftDir = Vector2.right;
+        else
+            driftDir.Normalize();
+
+        // 1) Fade In
+        yield return CoTimedSegment(
+            Mathf.Max(0f, cut.fadeInDuration),
+            cut,
+            driftDir,
+            addShownTime,
+            (elapsed, duration) =>
+            {
+                float t = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);
+                SetFadeAlpha(1f - t);
+            });
+
+        SetFadeAlpha(0f);
+
+        // 2) Typewriter (문장 있을 때)
+        string fullLine = GetCutLine(cut);
+        if (!string.IsNullOrEmpty(fullLine))
+            yield return CoTypewriter(fullLine, cut, driftDir, addShownTime);
+        else if (briefingText != null)
+            briefingText.text = string.Empty;
+
+        // 3) 여유 N초
+        yield return CoTimedSegment(
+            Mathf.Max(0f, cut.postTextHoldSeconds),
+            cut,
+            driftDir,
+            addShownTime,
+            null);
+
+        // 4) Fade Out
+        yield return CoTimedSegment(
+            Mathf.Max(0f, cut.fadeOutDuration),
+            cut,
+            driftDir,
+            addShownTime,
+            (elapsed, duration) =>
+            {
+                float t = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);
+                SetFadeAlpha(t);
+            });
+
+        SetFadeAlpha(1f);
+    }
+
+    private IEnumerator CoTypewriter(
+        string fullLine,
+        BriefingCut cut,
+        Vector2 driftDir,
+        System.Action<float> addShownTime)
+    {
+        if (briefingText == null)
+            yield break;
+
+        float charsPerSecond = Mathf.Max(1f, typewriterCharsPerSecond);
+        float visible = 0f;
+        int length = fullLine.Length;
+
+        while (visible < length)
+        {
+            float dt = Mathf.Min(DeltaTime(), 1f / 30f);
+            addShownTime?.Invoke(dt);
+            ApplyDrift(cut, driftDir, dt);
+
+            float speed = charsPerSecond;
+            if (IsHoldPressed())
+                speed *= HoldTypewriterMultiplier;
+
+            visible += speed * dt;
+            int count = Mathf.Clamp(Mathf.FloorToInt(visible), 0, length);
+            briefingText.text = fullLine.Substring(0, count);
+            yield return null;
+        }
+
+        briefingText.text = fullLine;
+    }
+
+    private IEnumerator CoTimedSegment(
+        float duration,
+        BriefingCut cut,
+        Vector2 driftDir,
+        System.Action<float> addShownTime,
+        System.Action<float, float> onUpdate)
+    {
+        if (duration <= 0f)
+        {
+            onUpdate?.Invoke(0f, 0f);
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            float dt = Mathf.Min(DeltaTime(), 1f / 30f);
+            elapsed += dt;
+            addShownTime?.Invoke(dt);
+            ApplyDrift(cut, driftDir, dt);
+            onUpdate?.Invoke(elapsed, duration);
+            yield return null;
+        }
+
+        onUpdate?.Invoke(duration, duration);
+    }
+
+    private void ApplyDrift(BriefingCut cut, Vector2 driftDir, float dt)
+    {
+        if (backgroundImageRect == null)
+            return;
+
+        if (cut.driftSpeed > 0f)
+            backgroundImageRect.anchoredPosition += driftDir * (cut.driftSpeed * dt);
+
+        if (Mathf.Abs(cut.driftScaleSpeed) > 0.0001f)
+        {
+            float scale = backgroundImageRect.localScale.x;
+            scale += cut.driftScaleSpeed * DriftScaleUnitsPerSecond * dt;
+            scale = Mathf.Clamp(scale, MinDriftScale, MaxDriftScale);
+            backgroundImageRect.localScale = new Vector3(scale, scale, 1f);
+        }
+    }
+
+    private static string GetCutLine(BriefingCut cut)
+    {
+        GameLanguage lang = LanguageManager.Instance != null
+            ? LanguageManager.Instance.CurrentLanguage
+            : GameLanguage.Korean;
+        return cut.line.Get(lang);
+    }
+
+    private static bool IsHoldPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.isPressed)
+            return true;
+        if (Mouse.current != null && Mouse.current.leftButton.isPressed)
+            return true;
+        if (Pointer.current != null && Pointer.current.press.isPressed)
+            return true;
+        return false;
+#else
+        if (Input.GetMouseButton(0))
+            return true;
+        return Input.touchCount > 0;
+#endif
     }
 
     private IEnumerator CoFade(
@@ -334,7 +437,6 @@ public class LoadingBriefingController : MonoBehaviour
 
         while (elapsed < duration)
         {
-            // 로딩 히치로 dt가 커져도 페이드가 한 프레임에 끝나지 않게 제한
             float dt = Mathf.Min(DeltaTime(), 1f / 30f);
             elapsed += dt;
             if (accumulateShown)
@@ -348,7 +450,7 @@ public class LoadingBriefingController : MonoBehaviour
         SetFadeAlpha(toAlpha);
     }
 
-    private void ApplyCutVisuals(BriefingCut cut)
+    private void ApplyCutVisuals(BriefingCut cut, bool showFullText)
     {
         if (backgroundImage != null && cut.sprite != null)
             backgroundImage.sprite = cut.sprite;
@@ -360,8 +462,13 @@ public class LoadingBriefingController : MonoBehaviour
             backgroundImageRect.localScale = new Vector3(scale, scale, 1f);
         }
 
-        if (briefingText != null)
-            briefingText.text = cut.line ?? string.Empty;
+        if (briefingText == null)
+            return;
+
+        if (showFullText)
+            briefingText.text = GetCutLine(cut);
+        else
+            briefingText.text = string.Empty;
     }
 
     private bool TryGetCut(int cutIndex, out BriefingCut cut)
@@ -382,8 +489,6 @@ public class LoadingBriefingController : MonoBehaviour
         if (fadeImage == null)
             return;
 
-        // 페이드 강도는 CanvasGroup.alpha만 사용한다.
-        // Image.color.a가 낮으면 페이드가 거의 안 보이는 것처럼 나온다.
         float rgb = type == FadeColorType.White ? 1f : 0f;
         fadeImage.color = new Color(rgb, rgb, rgb, 1f);
     }

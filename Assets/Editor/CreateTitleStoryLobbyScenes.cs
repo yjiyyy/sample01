@@ -9,12 +9,12 @@ using UnityEngine.InputSystem.UI;
 #endif
 
 /// <summary>
-/// Title, Story, Lobby 씬을 생성하고 Build Settings에 등록합니다.
-/// 메뉴: Tools > Create Title/Story/Lobby Scenes
+/// Title, Lobby 씬을 생성하고 Build Settings에 등록합니다. (스토리는 Loading 브리핑으로 대체)
+/// 메뉴: Tools > Create Title/Lobby Scenes
 /// </summary>
 public static class CreateTitleStoryLobbyScenes
 {
-    private const string MenuPath = "Tools/Create Title/Story/Lobby Scenes";
+    private const string MenuPath = "Tools/Create Title/Lobby Scenes";
     private const string ScenesRoot = "Assets/Scenes";
 
     [MenuItem(MenuPath)]
@@ -22,11 +22,10 @@ public static class CreateTitleStoryLobbyScenes
     {
         EnsureFolders();
         CreateTitleScene();
-        CreateStoryScene();
         CreateLobbyScene();
         UpdateBuildSettings();
         AssetDatabase.Refresh();
-        Debug.Log("[CreateTitleStoryLobbyScenes] Title, Story, Lobby 씬 생성 완료.");
+        Debug.Log("[CreateTitleStoryLobbyScenes] Title, Lobby 씬 생성 완료.");
     }
 
     private static void EnsureFolders()
@@ -129,66 +128,6 @@ public static class CreateTitleStoryLobbyScenes
         return go;
     }
 
-    private static void CreateStoryScene()
-    {
-        var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-
-        // Canvas - full screen
-        var canvasGO = new GameObject("Canvas");
-        var canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        var scaler = canvasGO.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight = 0.5f;
-        canvasGO.AddComponent<GraphicRaycaster>();
-
-        if (Object.FindFirstObjectByType<EventSystem>() == null)
-        {
-            var esGO = new GameObject("EventSystem");
-            esGO.AddComponent<EventSystem>();
-#if ENABLE_INPUT_SYSTEM
-            esGO.AddComponent<InputSystemUIInputModule>();
-#else
-            esGO.AddComponent<StandaloneInputModule>();
-#endif
-        }
-
-        // Full-screen Image (스토리 이미지 표시)
-        var imageGO = new GameObject("StoryImage");
-        imageGO.transform.SetParent(canvasGO.transform, false);
-        var imageRect = imageGO.AddComponent<RectTransform>();
-        imageRect.anchorMin = Vector2.zero;
-        imageRect.anchorMax = Vector2.one;
-        imageRect.offsetMin = Vector2.zero;
-        imageRect.offsetMax = Vector2.zero;
-
-        var image = imageGO.AddComponent<Image>();
-        image.color = Color.black; // 이미지 없을 때 기본 색
-        image.enabled = false; // 스프라이트 없으면 비활성
-
-        imageGO.AddComponent<StorySequenceController>();
-
-        // 터치로 넘기기 위한 투명 버튼 (전체 화면)
-        var tapGO = new GameObject("TapToAdvance");
-        tapGO.transform.SetParent(canvasGO.transform, false);
-        var tapRect = tapGO.AddComponent<RectTransform>();
-        tapRect.anchorMin = Vector2.zero;
-        tapRect.anchorMax = Vector2.one;
-        tapRect.offsetMin = Vector2.zero;
-        tapRect.offsetMax = Vector2.zero;
-        tapRect.SetAsLastSibling(); // 맨 앞에 표시
-
-        var tapImg = tapGO.AddComponent<Image>();
-        tapImg.color = new Color(0, 0, 0, 0.01f); // 거의 투명
-        var tapBtn = tapGO.AddComponent<Button>();
-        tapBtn.transition = Selectable.Transition.None;
-        var storyCtrl = imageGO.GetComponent<StorySequenceController>();
-        tapBtn.onClick.AddListener(() => storyCtrl.OnAdvance());
-
-        EditorSceneManager.SaveScene(scene, $"{ScenesRoot}/Story.unity");
-    }
-
     private static void CreateLobbyScene()
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
@@ -199,8 +138,8 @@ public static class CreateTitleStoryLobbyScenes
     {
         var scenes = new[]
         {
-            new EditorBuildSettingsScene($"{ScenesRoot}/Title.unity", true),
-            new EditorBuildSettingsScene($"{ScenesRoot}/Story.unity", true),
+            new EditorBuildSettingsScene($"{ScenesRoot}/00_Title.unity", true),
+            new EditorBuildSettingsScene($"{ScenesRoot}/Loading/Loading_00.unity", true),
             new EditorBuildSettingsScene($"{ScenesRoot}/Lobby.unity", true),
         };
 

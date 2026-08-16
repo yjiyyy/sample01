@@ -389,13 +389,16 @@ public class PlayerWeaponController : MonoBehaviour
 
     private void Start()
     {
-        EquipWeapon((GameObject)null);
+        if (equipComp != null && equipComp.CurrentWeaponData == null)
+            equipComp.EquipDefault(transform.root);
         ChangeState(PlayerState.Idle);
     }
 
     private void Update()
     {
         if (state == PlayerState.Dead) return;
+
+        TryProcessWeaponSlotSwitchInput();
 
         bool holdBlocksMainTick = stateHoldCount > 0;
 
@@ -607,8 +610,8 @@ public class PlayerWeaponController : MonoBehaviour
 
         if (shouldSwitch)
         {
-            if (debugMode) Debug.Log("[PlayerWeaponController] pending switch → default weapon");
-            EquipWeapon((GameObject)null);
+            if (debugMode) Debug.Log("[PlayerWeaponController] pending switch → other weapon slot");
+            equipComp?.SwitchActiveSlot(transform.root);
         }
         else
         {
@@ -643,13 +646,37 @@ public class PlayerWeaponController : MonoBehaviour
     /// </summary>
     public void EquipWeapon(WeaponDataSO weaponData)
     {
-        if (weaponData == null)
-        {
-            equipComp?.EquipDefault(this.transform.root);
-            return;
-        }
+        TryEquipWeaponToActiveSlot(weaponData);
+    }
 
-        equipComp?.EquipByData(weaponData, this.transform.root);
+    public bool TryEquipWeaponToActiveSlot(WeaponDataSO weaponData)
+    {
+        if (equipComp == null)
+            return false;
+        return equipComp.TryAssignToActiveSlot(weaponData, transform.root);
+    }
+
+    public bool TrySwitchWeaponSlot()
+    {
+        if (equipComp == null)
+            return false;
+        if (InputManager.Instance != null && InputManager.Instance.OverlayInputBlocked)
+            return false;
+
+        equipComp.SwitchActiveSlot(transform.root);
+        return true;
+    }
+
+    private void TryProcessWeaponSlotSwitchInput()
+    {
+        if (InputManager.Instance == null)
+            return;
+        if (InputManager.Instance.OverlayInputBlocked)
+            return;
+        if (!InputManager.Instance.GetKeyDown(KeyCode.Tab))
+            return;
+
+        TrySwitchWeaponSlot();
     }
 
     // PlayAttack: 콤보 무기면 WeaponDataSO.cooldown을 사용하지 않고 MeleeComboBehavior에 위임

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Player/PlayerConfig", fileName = "PlayerConfig_SO")]
 public class PlayerConfig : ScriptableObject
@@ -35,9 +36,16 @@ public class PlayerConfig : ScriptableObject
     [Header("Animation")]
     public AnimatorOverrideController overrideController = null;
 
-    [Header("Default Weapon (SO)")]
-    [Tooltip("기본 무기(공격) 데이터 SO.\n이 SO의 weaponPrefab이 실제 장착 프리팹으로 사용됩니다.")]
-    public WeaponDataSO defaultWeaponData = null;
+    [Header("Weapon Slots (SO)")]
+    [Tooltip("빈 슬롯에 자동으로 넣을 맨손(None) SO.")]
+    public WeaponDataSO unarmedWeaponData = null;
+
+    [FormerlySerializedAs("defaultWeaponData")]
+    [Tooltip("무기 슬롯 1. 비어 있으면 None을 사용합니다.")]
+    public WeaponDataSO weaponSlot0 = null;
+
+    [Tooltip("무기 슬롯 2. 비어 있으면 None을 사용합니다.")]
+    public WeaponDataSO weaponSlot1 = null;
 
     [Header("Evade / 회피 (shared 설정)")]
     [Tooltip("회피 동작 설정 SO를 지정(옵션).")]
@@ -52,6 +60,32 @@ public class PlayerConfig : ScriptableObject
     [Header("Editor")]
     [Tooltip("If true, PlayerFacade will automatically sync SO -> components on OnValidate (editor) and Awake (runtime).")]
     public bool editorAutoApplyDefault = true;
+
+    public WeaponDataSO GetUnarmedWeapon()
+    {
+        if (unarmedWeaponData != null)
+            return unarmedWeaponData;
+        if (IsUnarmedAsset(weaponSlot0))
+            return weaponSlot0;
+        if (IsUnarmedAsset(weaponSlot1))
+            return weaponSlot1;
+        return null;
+    }
+
+    public WeaponDataSO GetSlotOrUnarmed(int index)
+    {
+        WeaponDataSO slot = index == 0 ? weaponSlot0 : weaponSlot1;
+        return slot != null ? slot : GetUnarmedWeapon();
+    }
+
+    public static bool IsUnarmedAsset(WeaponDataSO so)
+    {
+        if (so == null)
+            return true;
+        if (!string.IsNullOrEmpty(so.id) && so.id.IndexOf("None", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            return true;
+        return !string.IsNullOrEmpty(so.name) && so.name.IndexOf("None", System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
 
     private void OnValidate()
     {

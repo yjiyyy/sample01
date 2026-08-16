@@ -170,12 +170,10 @@ public class PlayerFacade : MonoBehaviour
 
         if (pec != null)
         {
-            pec.DefaultWeaponData = config.defaultWeaponData;
+            pec.ConfigureLoadout(config.GetSlotOrUnarmed(0), config.GetSlotOrUnarmed(1), config.GetUnarmedWeapon());
 
-            if (Application.isPlaying && config.defaultWeaponData != null)
-            {
-                pec.EquipDefault(root.transform);
-            }
+            if (Application.isPlaying)
+                pec.EquipActive(root.transform);
         }
 
         // 6) Animator override

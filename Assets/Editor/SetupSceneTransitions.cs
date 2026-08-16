@@ -22,7 +22,6 @@ public static class SetupSceneTransitions
     public static void Setup()
     {
         UpdateBuildSettings();
-        SetupStoryScene();
         SetupCharacterSelectionScene();
         SetupLobbyScene();
         AssetDatabase.Refresh();
@@ -30,14 +29,14 @@ public static class SetupSceneTransitions
     }
 
     /// <summary>
-    /// Build Settings에 00_Title, 01_Story, 02_CharacterSelectionLevel, 03_Lobby, DemoScene 순서로 등록
+    /// Build Settings에 Title, Loading, CharacterSelection, Lobby 등 등록
     /// </summary>
     private static void UpdateBuildSettings()
     {
         var basePaths = new[]
         {
             $"{ScenesRoot}/00_Title.unity",
-            $"{ScenesRoot}/01_Story.unity",
+            $"{ScenesRoot}/Loading/Loading_00.unity",
             $"{ScenesRoot}/02_CharacterSelectionLevel.unity",
             $"{ScenesRoot}/03_Lobby.unity",
             $"{ScenesRoot}/DemoScene.unity"
@@ -63,97 +62,7 @@ public static class SetupSceneTransitions
         }
 
         EditorBuildSettings.scenes = list.ToArray();
-        Debug.Log($"[SetupSceneTransitions] Build Settings에 기본 {basePaths.Length}개 + Stage 폴더 {list.Count - basePaths.Length}개 씬 등록됨.");
-    }
-
-    /// <summary>
-    /// 01_Story 씬에 하단 고정 텍스트 박스(StoryTextPanel) 추가, StorySequenceController에 연결
-    /// </summary>
-    private static void SetupStoryScene()
-    {
-        var path = $"{ScenesRoot}/01_Story.unity";
-        if (!System.IO.File.Exists(path))
-        {
-            Debug.LogWarning($"[SetupSceneTransitions] {path}를 찾을 수 없습니다.");
-            return;
-        }
-
-        var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
-        if (!scene.IsValid()) return;
-
-        var canvasGO = GameObject.Find("Canvas");
-        if (canvasGO == null)
-        {
-            Debug.LogWarning("[SetupSceneTransitions] 01_Story에 Canvas가 없습니다.");
-            return;
-        }
-
-        var storyTextGO = GameObject.Find("StoryTextPanel");
-        Text storyText = null;
-
-        if (storyTextGO == null)
-        {
-            // 하단 고정 텍스트 박스 생성
-            storyTextGO = new GameObject("StoryTextPanel");
-            storyTextGO.transform.SetParent(canvasGO.transform, false);
-            storyTextGO.transform.SetSiblingIndex(1); // StoryImage(0), StoryTextPanel(1), TapToAdvance(2)
-
-            var rect = storyTextGO.AddComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0, 0);
-            rect.anchorMax = new Vector2(1, 0);
-            rect.pivot = new Vector2(0.5f, 0);
-            rect.anchoredPosition = new Vector2(0, 0);
-            rect.sizeDelta = new Vector2(0, 220);
-            rect.offsetMin = new Vector2(40, 24);   // 좌 40, 하단 24
-            rect.offsetMax = new Vector2(-40, 244); // 우 40, 상단 24+220 (높이 220)
-
-            var bgImg = storyTextGO.AddComponent<Image>();
-            bgImg.color = new Color(0, 0, 0, 0.6f);
-            bgImg.raycastTarget = false; // 클릭이 TapToAdvance로 전달되도록
-
-            var textGO = new GameObject("Text");
-            textGO.transform.SetParent(storyTextGO.transform, false);
-            var textRect = textGO.AddComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = new Vector2(24, 16);
-            textRect.offsetMax = new Vector2(-24, -16);
-
-            storyText = textGO.AddComponent<Text>();
-            storyText.text = "";
-            storyText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            storyText.fontSize = 28;
-            storyText.color = Color.white;
-            storyText.alignment = TextAnchor.LowerLeft;
-            storyText.raycastTarget = false;
-        }
-        else
-        {
-            storyText = storyTextGO.GetComponentInChildren<Text>();
-            // 기존 패널의 RectTransform이 잘못된 경우(높이 0 등) 수정
-            var rect = storyTextGO.GetComponent<RectTransform>();
-            if (rect != null && rect.offsetMax.y <= rect.offsetMin.y + 1)
-            {
-                rect.offsetMin = new Vector2(40, 24);
-                rect.offsetMax = new Vector2(-40, 244);
-            }
-        }
-
-        var storyImageGO = GameObject.Find("StoryImage");
-        if (storyImageGO != null && storyText != null)
-        {
-            var ctrl = storyImageGO.GetComponent<StorySequenceController>();
-            if (ctrl != null)
-            {
-                var so = new SerializedObject(ctrl);
-                so.FindProperty("storyText").objectReferenceValue = storyText;
-                so.ApplyModifiedPropertiesWithoutUndo();
-            }
-        }
-
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene);
-        Debug.Log("[SetupSceneTransitions] 01_Story 씬에 StoryTextPanel 설정 완료.");
+        Debug.Log($"[SetupSceneTransitions] Build Settings에 기본 씬 + Stage 폴더 씬 등록됨. 총 {list.Count}개.");
     }
 
     /// <summary>
@@ -336,7 +245,7 @@ public static class SetupSceneTransitions
     }
 
     /// <summary>
-    /// 로비 씬에 Canvas, EventSystem, 5개 버튼(캐릭터 변경, 인벤토리, 캐릭터 업그레이드, 상점, 전투 시작) 추가
+    /// 로비 씬에 Canvas, EventSystem, 상점/스테이지 패널을 만들고 새 로비 레이아웃을 붙입니다.
     /// </summary>
     private static void SetupLobbyUI()
     {
@@ -367,12 +276,6 @@ public static class SetupSceneTransitions
         }
 
         var canvasTransform = canvasGO.transform;
-        const float margin = 40f;
-        const float btnW = 180f;
-        const float btnH = 50f;
-        const float btnGap = 12f;
-        const float battleBtnW = 220f;
-        const float battleBtnH = 60f;
 
         // StageSelectPanel은 ShopPanel처럼 항상 삭제 후 새로 생성
         var previousStagePanel = canvasTransform.Find("StageSelectPanel");
@@ -762,82 +665,7 @@ public static class SetupSceneTransitions
 
         shopPanelGO.SetActive(false);
 
-        // 왼쪽 상단: 캐릭터 변경, 인벤토리
-        CreateLobbyButton(canvasTransform, "캐릭터 변경", new Vector2(0, 1), new Vector2(margin, -margin), new Vector2(btnW, btnH));
-        CreateLobbyButton(canvasTransform, "인벤토리", new Vector2(0, 1), new Vector2(margin, -margin - btnH - btnGap), new Vector2(btnW, btnH));
-        // 오른쪽 상단: 캐릭터 업그레이드, 상점
-        CreateLobbyButton(canvasTransform, "캐릭터 업그레이드", new Vector2(1, 1), new Vector2(-margin, -margin), new Vector2(btnW, btnH));
-        CreateLobbyButton(canvasTransform, "상점", new Vector2(1, 1), new Vector2(-margin, -margin - btnH - btnGap), new Vector2(btnW, btnH));
-        // 오른쪽 하단: 전투 시작
-        CreateLobbyButton(canvasTransform, "전투 시작", new Vector2(1, 0), new Vector2(-margin, margin), new Vector2(battleBtnW, battleBtnH));
-
-        // 전투 시작 버튼에 StageSelectPanel.Show 연결
-        if (stagePanelComp != null)
-        {
-            var battleBtnTransform = canvasTransform.Find("전투 시작");
-            if (battleBtnTransform != null)
-            {
-                var battleBtn = battleBtnTransform.GetComponent<Button>();
-                if (battleBtn != null)
-                {
-                    // 기존 onClick 내용을 모두 초기화하고 Show만 등록
-                    battleBtn.onClick = new Button.ButtonClickedEvent();
-                    UnityAction action = stagePanelComp.Show;
-                    UnityEventTools.AddPersistentListener(battleBtn.onClick, action);
-                    EditorUtility.SetDirty(battleBtn);
-                }
-            }
-        }
-
-               // 상점 버튼에 ShopPanel.Show 연결 (2x2 고정 갈색 버튼 패널)
-        if (shopPanelComp != null)
-        {
-            var shopBtnTransform = canvasTransform.Find("상점");
-            if (shopBtnTransform != null)
-            {
-                var shopBtn = shopBtnTransform.GetComponent<Button>();
-                if (shopBtn != null)
-                {
-                    shopBtn.onClick = new Button.ButtonClickedEvent();
-                    UnityAction shopAction = shopPanelComp.Show;
-                    UnityEventTools.AddPersistentListener(shopBtn.onClick, shopAction);
-                    EditorUtility.SetDirty(shopBtn);
-                }
-            }
-        }
-    }
-
-    private static void CreateLobbyButton(Transform parent, string label, Vector2 anchorPivot, Vector2 anchoredPos, Vector2 sizeDelta)
-    {
-        var existing = parent.Find(label);
-        if (existing != null) return;
-
-        var go = new GameObject(label);
-        go.transform.SetParent(parent, false);
-        var rect = go.AddComponent<RectTransform>();
-        rect.anchorMin = anchorPivot;
-        rect.anchorMax = anchorPivot;
-        rect.pivot = anchorPivot;
-        rect.sizeDelta = sizeDelta;
-        rect.anchoredPosition = anchoredPos;
-
-        var img = go.AddComponent<Image>();
-        img.color = new Color(0.25f, 0.25f, 0.3f, 0.95f);
-        go.AddComponent<Button>();
-
-        var textGO = new GameObject("Text");
-        textGO.transform.SetParent(go.transform, false);
-        var textRect = textGO.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var text = textGO.AddComponent<Text>();
-        text.text = label;
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = 22;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.color = Color.white;
+        SetupLobbyLayout.ApplyToOpenScene();
     }
 
     /// <summary>

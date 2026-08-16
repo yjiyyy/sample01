@@ -9,23 +9,20 @@ EditorBuildSettings:
     path: Assets/Scenes/00_Title.unity
     guid: 2ddca2b9036ab054b9927ba830601948
   - enabled: 1
-    path: Assets/Scenes/01_Story.unity
-    guid: 93dafd81252d5be4cb6d9ffc9d19d42e
+    path: Assets/Scenes/01_Intro.unity
+    guid: 9a63a8ecd46399445ae8346d7e6bf7b0
   - enabled: 1
     path: Assets/Scenes/02_CharacterSelectionLevel.unity
     guid: 87e6b7f10f265f04d84e913e201efe88
   - enabled: 1
     path: Assets/Scenes/03_Lobby.unity
     guid: 31fb99c3521091c4abcb18bd8ad011ff
-  - enabled: 0
-    path: Assets/Scenes/DemoScene.unity
-    guid: 7759de288f5d4ee449a0ca5e2244944a
-  - enabled: 1
-    path: Assets/Scenes/Stage/Stage01.unity
-    guid: 3a84e4b415c69cd4fb4329b66e9e4316
   - enabled: 1
     path: Assets/Scenes/Loading/Loading_00.unity
     guid: 396fee4a62207994ca68fe7a446e6092
+  - enabled: 1
+    path: Assets/Scenes/Stage/Stage01.unity
+    guid: 3a84e4b415c69cd4fb4329b66e9e4316
   - enabled: 1
     path: Assets/Scenes/Stage/Stage00.unity
     guid: 4580c2e16eebb3548a1451894b1f46c6

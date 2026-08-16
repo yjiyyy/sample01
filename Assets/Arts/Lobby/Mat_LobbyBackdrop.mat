@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Mat_LobbyBackdrop
+  m_Shader: {fileID: 4800000, guid: a1c4e8f27b9346d0b5e61a9c2d4f7083, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderType: Opaque
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _TexA:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TexB:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Contrast: 0.7
+    - _Fade: 0
+    - _Horizon: 0.34
+    - _HorizonStrength: 0.9
+    - _ImageOpacity: 0
+    - _Saturation: 0.12
+    - _ScrollA: 0
+    - _ScrollB: 0
+    - _TexAAspect: 1.777
+    - _TexBAspect: 1.777
+    - _WallAspect: 2.6666667
+    - _Zoom: 1.2
+    m_Colors:
+    - _BaseColor: {r: 0.54, g: 0.56, b: 0.6, a: 1}
+    - _HorizonColor: {r: 0.62, g: 0.64, b: 0.68, a: 1}
+    - _TintColor: {r: 0.54, g: 0.56, b: 0.6, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

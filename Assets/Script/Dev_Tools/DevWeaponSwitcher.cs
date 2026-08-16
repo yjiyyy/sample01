@@ -105,6 +105,19 @@ public class DevWeaponSwitcher : MonoBehaviour
             SetOverlayOpen(false);
     }
 
+    private bool IsWeaponInInactiveSlot(WeaponDataSO so)
+    {
+        EnsurePlayer();
+        if (so == null || targetPlayer == null)
+            return false;
+
+        var pec = targetPlayer.GetComponent<PlayerEquipmentController>();
+        if (pec == null || pec.IsUnarmed(so))
+            return false;
+
+        return pec.IsSameWeapon(so, pec.InactiveWeaponData);
+    }
+
     /// <summary>성공 시 true — 오버레이 닫기에 사용.</summary>
     private bool TryEquipAtIndex(int index)
     {
@@ -131,8 +144,13 @@ public class DevWeaponSwitcher : MonoBehaviour
             return false;
         }
 
-        targetPlayer.EquipWeapon(so);
-        Debug.Log($"[DevWeaponSwitcher] 장착: {so.weaponName}");
+        if (!targetPlayer.TryEquipWeaponToActiveSlot(so))
+        {
+            Debug.LogWarning($"[DevWeaponSwitcher] 다른 슬롯에 이미 있는 무기입니다: {so.weaponName}");
+            return false;
+        }
+
+        Debug.Log($"[DevWeaponSwitcher] 장착(활성 슬롯): {so.weaponName}");
         return true;
     }
 
@@ -277,6 +295,9 @@ public class DevWeaponSwitcher : MonoBehaviour
                                     string label = string.IsNullOrEmpty(so.weaponName) ? "(no name)" : so.weaponName;
                                     GUI.Label(cellRect, label, cStyle);
                                 }
+
+                                if (IsWeaponInInactiveSlot(so))
+                                    GUI.Box(cellRect, "다른 슬롯", cStyle);
                             }
                             else
                                 GUI.Label(cellRect, "—", cStyle);

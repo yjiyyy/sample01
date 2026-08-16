@@ -19,8 +19,8 @@ public class DevUpgradeSwitcher : MonoBehaviour
     public List<UpgradeEffectSO> upgrades = new List<UpgradeEffectSO>();
 
     [Header("개발자용 오버레이 키")]
-    [Tooltip("BackQuote(`) 키로 열기/닫기")]
-    public KeyCode toggleKey = KeyCode.BackQuote;
+    [Tooltip("F3 키로 열기/닫기")]
+    public KeyCode toggleKey = KeyCode.F3;
 
     [Header("대상 플레이어 Upgrade")]
     public Upgrade targetUpgrade;

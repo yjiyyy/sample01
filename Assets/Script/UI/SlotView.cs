@@ -8,23 +8,26 @@ using TMPro;
 #endif
 
 /// <summary>
-/// SlotView (단일 루트 방식, TMP & Legacy Text 모두 지원)
-/// - 권장 구조:
-///   Slot (RectTransform) [SlotView 컴포넌트]
+/// SlotView (???? ??? ???, TMP & Legacy Text ??? ????)
+/// - ???? ????:
+///   Slot (RectTransform) [SlotView ???????]
 ///     Content (RectTransform)        <- contentRoot (optional)
 ///       Icon (GameObject, Image)     <- iconImage (UI Image)
 ///       CountText (GameObject, Text or TMP_Text) <- countTextLegacy / countTextTMP
 ///
-/// - 동작:
-///   * 외부에서 SetData(WeaponDataSO data, int count)를 호출하면 외부 모드로 전환되어 폴링이 중지됩니다.
-///   * 외부 데이터가 없으면 Update에서 player 장비 정보를 폴링하여 UI를 갱신합니다.
-///   * 아이콘은 UI Image를 사용해야 하며, SpriteRenderer는 지원하지 않습니다.
+/// - ????:
+///   * ??????? SetData(WeaponDataSO data, int count)?? ?????? ??? ???? ?????? ?????? ????????.
+///   * ??? ??????? ?????? Update???? player ??? ?????? ??????? UI?? ????????.
+///   * ???????? UI Image?? ?????? ???, SpriteRenderer?? ???????? ??????.
 /// </summary>
 public class SlotView : MonoBehaviour
 {
     [Header("UI References (Single-root simplified)")]
     [Tooltip("Icon must be a UI Image (not a SpriteRenderer).")]
     public Image iconImage;
+
+    [Tooltip("Inactive weapon icon shown behind the active icon.")]
+    public Image inactiveIconImage;
 
     [Tooltip("Legacy UI Text (optional). If both TMP and Legacy are present, TMP is used.")]
     public Text countTextLegacy;
@@ -46,6 +49,7 @@ public class SlotView : MonoBehaviour
     // internal cached values for detecting changes
     private string lastWeaponId = null;
     private Sprite lastIcon = null;
+    private Sprite lastInactiveIcon = null;
     private int lastMagazine = -1;
     private int lastMagazineSize = -1;
     private int lastReserve = -1;
@@ -69,6 +73,7 @@ public class SlotView : MonoBehaviour
     {
         // Auto-bind if user forgot to connect references in Inspector
         AutoBindChildren();
+        EnsureInactiveIcon();
 
         if (playerController == null)
         {
@@ -97,10 +102,12 @@ public class SlotView : MonoBehaviour
 
         // Get runtime data
         WeaponDataSO data = equipComp != null ? equipComp.CurrentWeaponData : null;
+        WeaponDataSO inactive = equipComp != null ? equipComp.InactiveWeaponData : null;
         WeaponBehavior wb = equipComp != null ? equipComp.WeaponBehavior : null;
 
         // Update UI from runtime values
         UpdateUIFromRuntime(data, wb);
+        UpdateInactiveIcon(inactive);
     }
 
     // ---------- Public API for SlotContainer / external callers ----------
@@ -117,6 +124,8 @@ public class SlotView : MonoBehaviour
             iconImage.sprite = data != null ? data.icon : null;
             iconImage.enabled = data != null && data.icon != null;
         }
+        if (inactiveIconImage != null)
+            inactiveIconImage.enabled = false;
 
         bool noBullet = data != null && !string.IsNullOrEmpty(data.id) && data.id.IndexOf("NoBullet", StringComparison.OrdinalIgnoreCase) >= 0;
 
@@ -151,11 +160,14 @@ public class SlotView : MonoBehaviour
             iconImage.sprite = null;
             iconImage.enabled = false;
         }
+        if (inactiveIconImage != null)
+            inactiveIconImage.enabled = false;
         SetCountTextActive(false);
         SetCountTextValue(String.Empty);
 
         lastWeaponId = null;
         lastIcon = null;
+        lastInactiveIcon = null;
         lastMagazine = -1; lastMagazineSize = -1; lastReserve = -1; lastShowCounts = false;
     }
 
@@ -164,11 +176,60 @@ public class SlotView : MonoBehaviour
     {
         lastWeaponId = null;
         lastIcon = null;
+        lastInactiveIcon = null;
         lastMagazine = -1; lastMagazineSize = -1; lastReserve = -1; lastShowCounts = false;
         externalDataMode = false;
     }
 
     // ---------- Internal helpers ----------
+
+    private void EnsureInactiveIcon()
+    {
+        if (inactiveIconImage != null)
+            return;
+        if (iconImage == null)
+            return;
+
+        Transform parent = iconImage.transform.parent;
+        var go = new GameObject("InactiveIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        go.transform.SetAsFirstSibling();
+
+        var rt = go.GetComponent<RectTransform>();
+        var srcRt = iconImage.rectTransform;
+        rt.anchorMin = srcRt.anchorMin;
+        rt.anchorMax = srcRt.anchorMax;
+        rt.pivot = srcRt.pivot;
+        rt.sizeDelta = srcRt.sizeDelta * 0.78f;
+        rt.anchoredPosition = srcRt.anchoredPosition + new Vector2(16f, -16f);
+
+        inactiveIconImage = go.GetComponent<Image>();
+        inactiveIconImage.preserveAspect = iconImage.preserveAspect;
+        inactiveIconImage.raycastTarget = false;
+        inactiveIconImage.color = new Color(0.72f, 0.72f, 0.72f, 0.95f);
+        inactiveIconImage.enabled = false;
+
+        iconImage.transform.SetSiblingIndex(Mathf.Max(1, go.transform.GetSiblingIndex() + 1));
+        if (countTextTMP != null)
+            countTextTMP.transform.SetAsLastSibling();
+        else if (countTextLegacy != null)
+            countTextLegacy.transform.SetAsLastSibling();
+    }
+
+    private void UpdateInactiveIcon(WeaponDataSO inactive)
+    {
+        EnsureInactiveIcon();
+        if (inactiveIconImage == null)
+            return;
+
+        Sprite icon = inactive != null ? inactive.icon : null;
+        if (lastInactiveIcon == icon && inactiveIconImage.sprite == icon)
+            return;
+
+        lastInactiveIcon = icon;
+        inactiveIconImage.sprite = icon;
+        inactiveIconImage.enabled = icon != null;
+    }
 
     private void UpdateUIFromRuntime(WeaponDataSO data, WeaponBehavior wb)
     {
@@ -205,7 +266,7 @@ public class SlotView : MonoBehaviour
         {
             curMag = TryGetIntFromObject(ammoObj, new[] { "CurrentMagazine", "currentMagazine", "currentMagazineCount", "current_magazine" }, defaultValue: -1);
             reserve = TryGetIntFromObject(ammoObj, new[] { "CurrentReserve", "currentReserve", "CurrentAmmoReserve", "current_reserve", "CurrentAmmo" }, defaultValue: -1);
-            // SO magazineSize는 기본값만 담습니다. 확장 탄창 등은 런타임 탄약의 실제 용량을 우선합니다.
+            // SO magazineSize?? ?????? ??????. ??? ?? ???? ????? ????? ???? ??X?? ???????.
             int capFromAmmo = TryGetIntFromObject(
                 ammoObj,
                 new[] { "EffectiveMagazineCapacity", "MagazineCapacity", "magazineSize", "magazine_capacity" },
@@ -241,9 +302,9 @@ public class SlotView : MonoBehaviour
             SetCountTextActive(true);
             if (countsChanged)
             {
-                string reserveStr = reserve >= 0 ? (reserve == int.MaxValue ? "∞" : reserve.ToString()) : "?";
+                string reserveStr = reserve >= 0 ? (reserve == int.MaxValue ? "??" : reserve.ToString()) : "?";
                 bool infiniteReserve = TryGetBoolFromObject(data, new[] { "infiniteReserve" }, false);
-                if (infiniteReserve) reserveStr = "∞";
+                if (infiniteReserve) reserveStr = "??";
 
                 string text = $"{(curMag >= 0 ? curMag.ToString() : "?")}/{(magSize > 0 ? magSize.ToString() : "?")} ({reserveStr})";
                 SetCountTextValue(text);
@@ -277,8 +338,14 @@ public class SlotView : MonoBehaviour
         // find first Image component (UI) in children
         if (iconImage == null)
         {
-            var img = root.GetComponentInChildren<Image>(true);
-            if (img != null) iconImage = img;
+            var imgs = root.GetComponentsInChildren<Image>(true);
+            foreach (var img in imgs)
+            {
+                if (img == null || img == inactiveIconImage || img.name == "InactiveIcon")
+                    continue;
+                iconImage = img;
+                break;
+            }
         }
 
         // Prefer TMP if present

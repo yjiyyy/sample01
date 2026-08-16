@@ -20,7 +20,8 @@ public class LoadingBriefingControllerEditor : Editor
         EditorGUILayout.LabelField("컷 구도 미리보기 / 저장", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
             "1) 컷 인덱스를 고르고「이미지에 적용」→ Scene/Game 뷰에서 위치·크기 조절\n" +
-            "2)「현재 상태를 컷에 저장」→ 지금 이미지/스프라이트/대사가 그 컷에 기록됩니다.",
+            "2)「현재 상태를 컷에 저장」→ 이미지/스프라이트/대사(현재 언어 칸)가 그 컷에 기록됩니다.\n" +
+            "재생: Fade In → 타이핑(홀드 시 2배) → Post Text Hold → Fade Out",
             MessageType.Info);
 
         using (new EditorGUI.DisabledScope(cutCount <= 0))
