@@ -5,19 +5,19 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class MobileJoystick : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
 {
-    [Header("°íÁ¤Çü Á¶ÀÌ½ºÆ½ ±¸¼º¿ä¼Ò")]
-    public RectTransform baseRect;   // º£ÀÌ½º ÀÌ¹ÌÁö(¿ø)
-    public RectTransform handleRect; // ½ºÆ½ ÀÌ¹ÌÁö(ÀÛÀº ¿ø)
+    [Header("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì½ï¿½Æ½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
+    public RectTransform baseRect;
+    public RectTransform handleRect;
 
-    [Header("¼³Á¤")]
-    [Tooltip("º£ÀÌ½º ¹ÝÁö¸§(px). 0ÀÌ¸é baseRect Å©±âÀÇ Àý¹ÝÀ» »ç¿ë")]
+    [Header("ï¿½ï¿½ï¿½ï¿½")]
+    [Tooltip("ï¿½ï¿½ï¿½Ì½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(px). 0ï¿½Ì¸ï¿½ baseRect Å©ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½")]
     public float radius = 0f;
     [Range(0f, 0.5f)] public float deadzone = 0.15f;
 
     private Canvas canvas;
     private Camera uiCamera;
-    private int activePointerId = -100; // È°¼º ÅÍÄ¡ ID (´ÜÀÏ ÅÍÄ¡ Àü¿ë)
-    private Vector2 output; // -1..1
+    private int activePointerId = -100;
+    private Vector2 output;
 
     private void Awake()
     {
@@ -29,12 +29,25 @@ public class MobileJoystick : MonoBehaviour, IPointerDownHandler, IPointerUpHand
             else
                 uiCamera = null;
         }
+
+        DisableNestedRaycasts();
+        AutoBindHandleIfNeeded();
         ResetHandle();
+    }
+
+    private void AutoBindHandleIfNeeded()
+    {
+        if (handleRect != null && handleRect.name == "Handle")
+            return;
+
+        var found = FindChildByName(transform, "Handle");
+        if (found != null)
+            handleRect = found as RectTransform;
     }
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (activePointerId != -100) return; // ÀÌ¹Ì »ç¿ë Áß
+        if (activePointerId != -100) return;
         activePointerId = eventData.pointerId;
         UpdateDrag(eventData);
     }
@@ -58,33 +71,67 @@ public class MobileJoystick : MonoBehaviour, IPointerDownHandler, IPointerUpHand
     {
         if (baseRect == null || handleRect == null) return;
 
-        Vector2 screenPos = eventData.position;
         Vector2 localPos;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            baseRect, screenPos, uiCamera, out localPos);
+            baseRect, eventData.position, uiCamera, out localPos);
 
-        // ¹ÝÁö¸§ °áÁ¤
         float r = radius > 0f ? radius : Mathf.Min(baseRect.rect.width, baseRect.rect.height) * 0.5f;
+        Vector2 offset = Vector2.ClampMagnitude(localPos, r);
+        SetHandleOffset(offset);
 
-        // Áß½É ±âÁØ ¿ÀÇÁ¼Â ¡æ -r..r
-        Vector2 offset = localPos;
-        offset = Vector2.ClampMagnitude(offset, r);
-
-        // ÇÚµé ÀÌµ¿
-        handleRect.anchoredPosition = offset;
-
-        // Ãâ·Â -1..1
         Vector2 norm = offset / Mathf.Max(r, 0.0001f);
         if (norm.magnitude < deadzone) norm = Vector2.zero;
 
-        // yÃàÀº Àü/ÈÄ(Vertical), xÃàÀº ÁÂ/¿ì(Horizontal)
         output = new Vector2(norm.x, norm.y);
         InputManager.Instance?.SetMobileMove(output);
     }
 
     private void ResetHandle()
     {
-        if (handleRect != null)
-            handleRect.anchoredPosition = Vector2.zero;
+        SetHandleOffset(Vector2.zero);
+    }
+
+    private void SetHandleOffset(Vector2 offsetInBase)
+    {
+        if (handleRect == null || baseRect == null)
+            return;
+
+        if (handleRect.parent == baseRect)
+        {
+            handleRect.anchoredPosition = offsetInBase;
+            return;
+        }
+
+        if (handleRect.parent == null)
+            return;
+
+        Vector3 world = baseRect.TransformPoint(new Vector3(offsetInBase.x, offsetInBase.y, 0f));
+        Vector3 local = handleRect.parent.InverseTransformPoint(world);
+        handleRect.anchoredPosition = new Vector2(local.x, local.y);
+    }
+
+    private void DisableNestedRaycasts()
+    {
+        var graphics = GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            if (graphics[i] != null && graphics[i].gameObject != gameObject)
+                graphics[i].raycastTarget = false;
+        }
+    }
+
+    private static Transform FindChildByName(Transform root, string name)
+    {
+        if (root == null)
+            return null;
+        if (root.name == name)
+            return root;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            var found = FindChildByName(root.GetChild(i), name);
+            if (found != null)
+                return found;
+        }
+        return null;
     }
 }

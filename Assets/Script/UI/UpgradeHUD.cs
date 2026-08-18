@@ -10,13 +10,20 @@ public class UpgradeHUD : MonoBehaviour
     /// <summary>슬롯 커스텀 FX는 이 이름의 자식(또는 하위) Transform에 붙습니다.</summary>
     public const string SlotFxChildName = "FX_Slot";
 
-    [Header("UI (아이콘 표시용 Image 5개)")]
+    /// <summary>장착 업그레이드 아이콘은 슬롯 루트의 이 이름 자식 Image에 표시합니다.</summary>
+    public const string SlotIconChildName = "Icon";
+
+    const float DefaultSlotIconSize = 140f;
+
+    [Header("UI (슬롯 테두리 Image 5개)")]
     [SerializeField] private Image[] slotImages = new Image[Upgrade.SlotCount];
     [SerializeField] private Sprite[] defaultSlotSprites = new Sprite[Upgrade.SlotCount];
 
     [Header("데이터 소스")]
     [Tooltip("비워두면 씬에서 Upgrade 컴포넌트를 자동 검색합니다.")]
     [SerializeField] private Upgrade upgrade;
+
+    private Image[] slotIconImages = new Image[Upgrade.SlotCount];
 
     /// <summary>현재 바인딩된 <see cref="Upgrade"/> (없으면 null).</summary>
     public Upgrade DataSource => upgrade;
@@ -59,6 +66,7 @@ public class UpgradeHUD : MonoBehaviour
     private void OnEnable()
     {
         EnsureSlotImages();
+        EnsureSlotIconImages();
         CaptureDefaultSlotSpritesIfNeeded();
         BindUpgrade();
         Refresh();
@@ -67,9 +75,21 @@ public class UpgradeHUD : MonoBehaviour
     private void Start()
     {
         EnsureSlotImages();
+        EnsureSlotIconImages();
         CaptureDefaultSlotSpritesIfNeeded();
         BindUpgrade();
         Refresh();
+    }
+
+    private void LateUpdate()
+    {
+        // 플레이어는 씬 시작 다음 프레임에 스폰되므로, 그때 HUD를 다시 연결합니다.
+        if (upgrade == null)
+        {
+            Upgrade found = Object.FindFirstObjectByType<Upgrade>();
+            if (found != null)
+                EnsureDataSource(found);
+        }
     }
 
     private void OnDisable()
@@ -89,33 +109,43 @@ public class UpgradeHUD : MonoBehaviour
         }
 
         EnsureSlotImages();
+        EnsureSlotIconImages();
         CaptureDefaultSlotSpritesIfNeeded();
-        Refresh();
+        if (Application.isPlaying)
+            Refresh();
     }
 
     public void Refresh()
     {
+        EnsureSlotImages();
+        EnsureSlotIconImages();
+
         for (int i = 0; i < Upgrade.SlotCount; i++)
         {
-            var img = slotImages != null && i < slotImages.Length ? slotImages[i] : null;
-            if (img == null)
+            Image frame = slotImages != null && i < slotImages.Length ? slotImages[i] : null;
+            if (frame != null)
+            {
+                if (defaultSlotSprites != null && i < defaultSlotSprites.Length && defaultSlotSprites[i] != null)
+                    frame.sprite = defaultSlotSprites[i];
+                frame.gameObject.SetActive(true);
+                frame.enabled = true;
+            }
+
+            Image icon = slotIconImages != null && i < slotIconImages.Length ? slotIconImages[i] : null;
+            if (icon == null)
                 continue;
 
             UpgradeEffectSO slotData = upgrade != null ? upgrade.GetSlot(i) : null;
             if (slotData != null && slotData.icon != null)
             {
-                img.sprite = slotData.icon;
-                img.enabled = true;
-                img.gameObject.SetActive(true);
+                icon.sprite = slotData.icon;
+                icon.enabled = true;
+                icon.gameObject.SetActive(true);
             }
             else
             {
-                // 빈 슬롯이어도 슬롯 오브젝트(박스)는 항상 보이도록 유지합니다.
-                // 기본 슬롯 스프라이트(에디터에서 넣은 박스 이미지)는 지우지 않습니다.
-                if (defaultSlotSprites != null && i < defaultSlotSprites.Length)
-                    img.sprite = defaultSlotSprites[i];
-                img.gameObject.SetActive(true);
-                img.enabled = true;
+                icon.sprite = null;
+                icon.enabled = false;
             }
         }
     }
@@ -436,6 +466,72 @@ public class UpgradeHUD : MonoBehaviour
             return;
 
         upgrade.OnSlotsChanged -= Refresh;
+    }
+
+    private void EnsureSlotIconImages()
+    {
+        if (slotIconImages == null || slotIconImages.Length != Upgrade.SlotCount)
+            System.Array.Resize(ref slotIconImages, Upgrade.SlotCount);
+
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            Transform slotRoot = FindUpgradeSlotRootByDataIndex(i);
+            if (slotRoot == null && slotImages != null && i < slotImages.Length && slotImages[i] != null)
+                slotRoot = slotImages[i].transform;
+            if (slotRoot == null)
+                continue;
+
+            Image icon = FindDirectChildImage(slotRoot, SlotIconChildName);
+            if (icon == null && Application.isPlaying)
+                icon = CreateSlotIcon(slotRoot);
+            slotIconImages[i] = icon;
+        }
+    }
+
+    private static Image FindDirectChildImage(Transform parent, string childName)
+    {
+        if (parent == null || string.IsNullOrEmpty(childName))
+            return null;
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child == null || !string.Equals(child.name, childName, System.StringComparison.Ordinal))
+                continue;
+            if (child.TryGetComponent(out Image img))
+                return img;
+        }
+
+        return null;
+    }
+
+    private static Image CreateSlotIcon(Transform slotRoot)
+    {
+        var go = new GameObject(SlotIconChildName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = slotRoot.gameObject.layer;
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(slotRoot, false);
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = new Vector2(DefaultSlotIconSize, DefaultSlotIconSize);
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+
+        Transform lockTr = slotRoot.Find("Lock");
+        if (lockTr != null)
+            rt.SetSiblingIndex(lockTr.GetSiblingIndex());
+        else
+            rt.SetAsLastSibling();
+
+        var img = go.GetComponent<Image>();
+        img.raycastTarget = false;
+        img.preserveAspect = true;
+        img.sprite = null;
+        img.enabled = false;
+        return img;
     }
 
     private void EnsureSlotImages()

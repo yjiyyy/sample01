@@ -13,15 +13,55 @@ public class MobileActionButton : MonoBehaviour, IPointerDownHandler, IPointerUp
 {
     public MobileActionType actionType = MobileActionType.Attack;
 
-    [Tooltip("´­¸° µ¿¾È ½Ã°¢ ÇÇµå¹é(¼±ÅÃ)")]
+    [Tooltip("???? ???? ?????(????)")]
     public Image holdHighlight;
 
+    [Tooltip("?????? ?? ?? Push ???????. ??? ?????? ??ï¿½ï¿½??? Push ????? ??????.")]
+    public GameObject pushObject;
+
     private bool pressed;
+    private Image pushFillImage;
+    private PlayerChargeController charge;
+
+    void Awake()
+    {
+        if (pushObject == null)
+        {
+            var push = FindChildByName(transform, "Push");
+            if (push != null)
+                pushObject = push.gameObject;
+        }
+
+        if (pushObject != null)
+        {
+            pushFillImage = pushObject.GetComponent<Image>();
+            pushObject.SetActive(false);
+            if (pushFillImage != null)
+                pushFillImage.fillAmount = 0f;
+        }
+
+        DisableNestedRaycasts();
+        DisableNestedButtons();
+    }
+
+    void OnDisable()
+    {
+        if (pressed)
+            Release();
+        if (actionType == MobileActionType.Attack)
+            HideAttackPush();
+    }
+
+    void LateUpdate()
+    {
+        if (actionType == MobileActionType.Attack)
+            UpdateAttackPushFill();
+    }
 
     public void OnPointerDown(PointerEventData eventData)
     {
         pressed = true;
-        if (holdHighlight != null) holdHighlight.enabled = true;
+        SetPressedVisual(true);
 
         switch (actionType)
         {
@@ -36,9 +76,15 @@ public class MobileActionButton : MonoBehaviour, IPointerDownHandler, IPointerUp
 
     public void OnPointerUp(PointerEventData eventData)
     {
-        if (!pressed) return;
+        Release();
+    }
+
+    private void Release()
+    {
+        if (!pressed)
+            return;
         pressed = false;
-        if (holdHighlight != null) holdHighlight.enabled = false;
+        SetPressedVisual(false);
 
         switch (actionType)
         {
@@ -49,5 +95,96 @@ public class MobileActionButton : MonoBehaviour, IPointerDownHandler, IPointerUp
                 InputManager.Instance?.MobileEvadeUp();
                 break;
         }
+    }
+
+    private void SetPressedVisual(bool on)
+    {
+        if (holdHighlight != null)
+            holdHighlight.enabled = on;
+        // ???? ??? Push?? LateUpdate???? ???? ?????? ???? ???????.
+        if (actionType == MobileActionType.Attack)
+            return;
+        if (pushObject != null)
+            pushObject.SetActive(on);
+    }
+
+    private void UpdateAttackPushFill()
+    {
+        if (pushObject == null)
+            return;
+
+        EnsureCharge();
+
+        bool attackHeld = pressed;
+        if (!attackHeld && InputManager.Instance != null)
+            attackHeld = InputManager.Instance.GetAttack();
+
+        bool charging = charge != null && charge.IsChargeHoldActive;
+        if (!attackHeld && !charging)
+        {
+            HideAttackPush();
+            return;
+        }
+
+        float fill = 1f;
+        if (charging)
+            fill = charge.ChargeHoldProgress;
+        else if (charge != null && charge.CurrentWeaponHasChargeSlot)
+            fill = 0f;
+
+        if (pushFillImage != null)
+            pushFillImage.fillAmount = fill;
+        if (!pushObject.activeSelf)
+            pushObject.SetActive(true);
+    }
+
+    private void HideAttackPush()
+    {
+        if (pushFillImage != null)
+            pushFillImage.fillAmount = 0f;
+        if (pushObject != null && pushObject.activeSelf)
+            pushObject.SetActive(false);
+    }
+
+    private void EnsureCharge()
+    {
+        if (charge != null)
+            return;
+        charge = FindFirstObjectByType<PlayerChargeController>();
+    }
+
+    private void DisableNestedRaycasts()
+    {
+        var graphics = GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            if (graphics[i] != null && graphics[i].gameObject != gameObject)
+                graphics[i].raycastTarget = false;
+        }
+    }
+
+    private void DisableNestedButtons()
+    {
+        var buttons = GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            if (buttons[i] != null && buttons[i].gameObject != gameObject)
+                buttons[i].enabled = false;
+        }
+    }
+
+    private static Transform FindChildByName(Transform root, string name)
+    {
+        if (root == null)
+            return null;
+        if (root.name == name)
+            return root;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            var found = FindChildByName(root.GetChild(i), name);
+            if (found != null)
+                return found;
+        }
+        return null;
     }
 }

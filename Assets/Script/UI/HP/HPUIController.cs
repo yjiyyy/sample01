@@ -32,8 +32,9 @@ public class HPUIControllerBase : MonoBehaviour
     // 초기화 여부 (health가 할당되어 내부 셋업이 끝났는지)
     protected bool initialized = false;
 
-    // 회피 색상(파랑)
+    // 회피 색상(파랑). 새 HUD처럼 전용 아트가 있으면 자동 색 적용을 끌 수 있습니다.
     protected static readonly Color EvadeColor = new Color32(0x2E, 0xA7, 0xFF, 0xFF);
+    protected bool applyEvadeSliderColor = true;
 
     private Color defaultHpFillColor = Color.white;
     private bool hasCapturedDefaultHpFillColor;
@@ -261,14 +262,20 @@ public class HPUIControllerBase : MonoBehaviour
             bool enableEvade = isPlayerHealth && playerWeapon != null;
             evadeSlider.gameObject.SetActive(enableEvade);
 
-            // 색상 자동 적용(가능한 경우)
-            TryStyleEvadeSlider(evadeSlider, EvadeColor);
+            if (applyEvadeSliderColor)
+                TryStyleEvadeSlider(evadeSlider, EvadeColor);
         }
 
         if (isPlayerHealth || isEnemyHealth)
             CaptureDefaultHpFillImageColorIfNeeded();
 
         initialized = true;
+        OnHealthSetupComplete();
+    }
+
+    /// <summary>health 연결이 끝난 뒤 HUD가 이름·초상화 등을 맞출 때 사용합니다.</summary>
+    protected virtual void OnHealthSetupComplete()
+    {
     }
 
     // Evade 색상 스타일 적용 유틸

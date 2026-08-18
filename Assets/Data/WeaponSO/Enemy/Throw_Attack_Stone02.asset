@@ -19,6 +19,7 @@ MonoBehaviour:
     localOffset: {x: 0, y: 0, z: 0}
     localRotationEuler: {x: 0, y: 0, z: 0}
     localScale: {x: 1, y: 1, z: 1}
+    spawnOnlyDuringAttack: 0
   weaponPartSlotCount: 0
   weaponPartSlots: []
   attackName: Ranged_Attack
@@ -51,8 +52,8 @@ MonoBehaviour:
   ragdollSpinTorque: 0
   sliceTargets: 
   sliceImpulse: 0
-  isPoisonAttack: 0
-  poisonOnHitStatus: {fileID: 0}
+  isPoisonAttack: 1
+  poisonOnHitStatus: {fileID: 11400000, guid: c3d4e5f60718293a4b5c6d7e8f901234, type: 2}
   destroyOnObstacle: 1
   obstacleLayers:
     serializedVersion: 2

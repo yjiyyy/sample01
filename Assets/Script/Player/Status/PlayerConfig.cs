@@ -6,6 +6,8 @@ public class PlayerConfig : ScriptableObject
 {
     [Header("General")]
     public string displayName = "Player";
+    [Tooltip("인게임 HP HUD에 표시할 캐릭터 초상화")]
+    public Sprite portrait;
     public string tagName = "Player";
     public LayerMask layer = 0;
 
@@ -37,24 +39,24 @@ public class PlayerConfig : ScriptableObject
     public AnimatorOverrideController overrideController = null;
 
     [Header("Weapon Slots (SO)")]
-    [Tooltip("빈 슬롯에 자동으로 넣을 맨손(None) SO.")]
+    [Tooltip("?? ????? ??????? ???? ???(None) SO.")]
     public WeaponDataSO unarmedWeaponData = null;
 
     [FormerlySerializedAs("defaultWeaponData")]
-    [Tooltip("무기 슬롯 1. 비어 있으면 None을 사용합니다.")]
+    [Tooltip("???? ???? 1. ??? ?????? None?? ???????.")]
     public WeaponDataSO weaponSlot0 = null;
 
-    [Tooltip("무기 슬롯 2. 비어 있으면 None을 사용합니다.")]
+    [Tooltip("???? ???? 2. ??? ?????? None?? ???????.")]
     public WeaponDataSO weaponSlot1 = null;
 
-    [Header("Evade / 회피 (shared 설정)")]
-    [Tooltip("회피 동작 설정 SO를 지정(옵션).")]
+    [Header("Evade / ??? (shared ????)")]
+    [Tooltip("??? ???? ???? SO?? ????(???).")]
     public EvadeDataSO evadeData = null;
 
     [Header("EnemyDetector (applied by PlayerFacade)")]
-    [Tooltip("EnemyDetector에 적용할 시야 각도(반각)")]
+    [Tooltip("EnemyDetector?? ?????? ?þ? ????(???)")]
     public float detectorViewAngle = 45f;
-    [Tooltip("EnemyDetector에 적용할 탐지 거리")]
+    [Tooltip("EnemyDetector?? ?????? ??? ???")]
     public float detectorViewDistance = 10f;
 
     [Header("Editor")]

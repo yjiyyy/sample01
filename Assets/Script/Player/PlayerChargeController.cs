@@ -40,6 +40,39 @@ public class PlayerChargeController : MonoBehaviour
     /// <summary>차지 공격 중 슈퍼아머 유효 여부. ForceApplyKnockback 시 방향 전환 스킵용.</summary>
     public bool HasSuperArmorActive => superArmorRemaining > 0f;
 
+    /// <summary>공격 버튼을 눌러 차지 홀드가 진행 중인지.</summary>
+    public bool IsChargeHoldActive => chargeHoldActive;
+
+    /// <summary>현재 무기에 차지 슬롯이 있는지. AR 홀드 연사는 제외.</summary>
+    public bool CurrentWeaponHasChargeSlot
+    {
+        get
+        {
+            var data = getWeaponData != null ? getWeaponData() : null;
+            return GetChargeSlotForCurrentWeapon(data) != null;
+        }
+    }
+
+    /// <summary>차지 홀드 진행도(0~1). 홀드 중이 아니면 0. 성공 시간이 0이면 즉시 1.</summary>
+    public float ChargeHoldProgress
+    {
+        get
+        {
+            if (!chargeHoldActive)
+                return 0f;
+            if (chargeReady)
+                return 1f;
+
+            var data = getWeaponData != null ? getWeaponData() : null;
+            var slot = GetChargeSlotForCurrentWeapon(data);
+            if (slot == null)
+                return 0f;
+            if (slot.holdSuccessTime <= 0f)
+                return 1f;
+            return Mathf.Clamp01(chargeHoldElapsed / slot.holdSuccessTime);
+        }
+    }
+
     private WeaponDataSO chargeWeaponProxy;
     private PlayerWeaponController weaponCtrl;
     private PlayerStats playerStats;
