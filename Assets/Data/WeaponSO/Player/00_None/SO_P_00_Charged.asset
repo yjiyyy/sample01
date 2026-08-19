@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d38a679b8895334f8b59a65572d35ad, type: 3}
   m_Name: SO_P_00_Charged
   m_EditorClassIdentifier: 
+  displayName:
+    korean: "\uBC1C\uCE78\uD380\uCE58"
+    english: ValcanPunch
   holdSuccessTime: 2
   chargedClip: {fileID: 1827226128182048838, guid: a3eb200cda49cf842aa70b8fde8dcc58, type: 3}
   chargedStateName: Attack_Charged01
@@ -19,6 +22,7 @@ MonoBehaviour:
   damage: 50
   duration: 0.8
   range: 2.5
+  staminaCost: 0
   hitBoxLifetime: 1
   knockbackPower: 1
   knockbackDuration: 0.3

@@ -2,7 +2,12 @@ using UnityEngine;
 using System.Collections.Generic;
 
 [CreateAssetMenu(menuName = "Player/ChargeAttack")]
-public class PlayerChargeAttackSO : ScriptableObject { 
+public class PlayerChargeAttackSO : ScriptableObject
+{
+    [Header("표시")]
+    [Tooltip("스킬 UI에 보이는 이름입니다. 한국어/영어를 각각 적습니다.")]
+    public LocalizedString displayName;
+
     [Header("차지 성공 조건")]
     [Tooltip("공격 버튼을 누른(즉발 시점) 후, 이 시간 동안 계속 홀드하면 차지 성공")]
     public float holdSuccessTime = 1.5f;

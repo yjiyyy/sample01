@@ -44,19 +44,26 @@ public class DevCheatConsole : MonoBehaviour
     private void OnDestroy()
     {
         if (InputManager.Instance != null)
-            InputManager.Instance.OverlayInputBlocked = false;
+            InputManager.Instance.SetOverlayInputBlocked(false);
     }
 
     private void SetOverlayOpen(bool open)
     {
         overlayOpen = open;
         if (InputManager.Instance != null)
-            InputManager.Instance.OverlayInputBlocked = overlayOpen;
+            InputManager.Instance.SetOverlayInputBlocked(overlayOpen);
     }
 
     private void Update()
     {
         if (InputManager.Instance == null) return;
+
+        if (GameplayTime.IsGameplayPaused)
+        {
+            if (overlayOpen)
+                overlayOpen = false;
+            return;
+        }
 
         if (InputManager.Instance.GetKeyDown(toggleKey))
         {

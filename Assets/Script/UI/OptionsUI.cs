@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -34,16 +35,46 @@ public class OptionsUI : MonoBehaviour
             DontDestroyOnLoad(transform.root.gameObject);
 
         if (panelRoot == null)
+        {
+            var found = transform.Find("OptionsCanvas/OptionsPanel");
+            if (found != null)
+                panelRoot = found.gameObject;
+        }
+
+        if (panelRoot == null)
             panelRoot = gameObject;
+
+        if (koreanButton == null)
+            koreanButton = FindButton("OptionsCanvas/OptionsPanel/Content/Button_Korean");
+        if (englishButton == null)
+            englishButton = FindButton("OptionsCanvas/OptionsPanel/Content/Button_English");
+        if (backButton == null)
+            backButton = FindButton("OptionsCanvas/OptionsPanel/Content/Button_Back");
 
         WireButtons();
         Hide();
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private Button FindButton(string path)
+    {
+        var t = transform.Find(path);
+        return t != null ? t.GetComponent<Button>() : null;
     }
 
     private void OnDestroy()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         if (Instance == this)
             Instance = null;
+        GameplayTime.Resume();
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (Instance != null)
+            Instance.Hide();
     }
 
     private void WireButtons()
@@ -73,10 +104,18 @@ public class OptionsUI : MonoBehaviour
             panelRoot.SetActive(true);
     }
 
+    /// <summary>스테이지에서 옵션을 엽니다. 전투는 잠시 멈춥니다.</summary>
+    public void ShowAndPauseGameplay()
+    {
+        GameplayTime.Pause();
+        Show();
+    }
+
     public void Hide()
     {
         if (panelRoot != null)
             panelRoot.SetActive(false);
+        GameplayTime.Resume();
     }
 
     public void Toggle()
@@ -104,5 +143,16 @@ public class OptionsUI : MonoBehaviour
             LanguageManager.Instance.SetEnglish();
         else
             Debug.LogWarning("[OptionsUI] LanguageManager가 없습니다. PersistentSystems에 LanguageManager를 붙이세요.");
+    }
+
+    /// <summary>
+    /// 타이틀을 거치지 않고 스테이지를 바로 켜도 옵션 창을 쓸 수 있게 만듭니다.
+    /// </summary>
+    public static OptionsUI EnsureExists()
+    {
+        if (Instance != null)
+            return Instance;
+
+        return OptionsUIRuntimeFactory.Create();
     }
 }

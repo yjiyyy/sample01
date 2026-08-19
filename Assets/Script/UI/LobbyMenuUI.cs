@@ -3,12 +3,14 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 /// <summary>
-/// 로비 오른쪽 텍스트 메뉴와 상단 바(돈/젬/옵션).
+/// 로비 오른쪽 텍스트 메뉴와 상단 바(코인/젬 아이콘·옵션).
 /// 마지막으로 고른 항목의 글자가 커집니다. 모바일은 탭한 항목, PC는 올려놓은 항목도 커집니다.
 /// </summary>
+[ExecuteAlways]
 public class LobbyMenuUI : MonoBehaviour
 {
     public enum MenuAction
@@ -40,8 +42,15 @@ public class LobbyMenuUI : MonoBehaviour
 
     [Header("상단 바")]
     [SerializeField] private TextMeshProUGUI moneyText;
-    [SerializeField] private TextMeshProUGUI jamText;
+    [FormerlySerializedAs("jamText")]
+    [SerializeField] private TextMeshProUGUI gemText;
     [SerializeField] private Button optionsButton;
+    [Tooltip("비어 있으면 MoneyText 아래에 Icon_Coin을 만듭니다. 위치·크기는 이 오브젝트를 골라 조정하세요.")]
+    [SerializeField] private Image moneyIcon;
+    [Tooltip("비어 있으면 GemText 아래에 Icon_Gem을 만듭니다. 위치·크기는 이 오브젝트를 골라 조정하세요.")]
+    [SerializeField] private Image gemIcon;
+
+    private const float ResourceIconSize = 40f;
 
     [Header("동작 연결")]
     [SceneName]
@@ -60,6 +69,9 @@ public class LobbyMenuUI : MonoBehaviour
 
     private void Awake()
     {
+        if (!Application.isPlaying)
+            return;
+
         _selectedIndex = Mathf.Clamp(defaultSelectedIndex, 0, Mathf.Max(0, entries.Length - 1));
         _currentFontSizes = new float[entries.Length];
         _currentHeights = new float[entries.Length];
@@ -99,24 +111,32 @@ public class LobbyMenuUI : MonoBehaviour
 
     private void OnEnable()
     {
-        LanguageManager.LanguageChanged += RefreshResourceLabels;
-        BindResources();
+        EnsureResourceIcons();
+        if (Application.isPlaying)
+            BindResources();
+        else
+            RefreshResourceLabels(0, 0);
     }
 
     private void OnDisable()
     {
-        LanguageManager.LanguageChanged -= RefreshResourceLabels;
         if (resources != null)
             resources.OnResourcesChanged -= OnResourcesChanged;
     }
 
     private void Start()
     {
+        if (!Application.isPlaying)
+            return;
+
         BindResources();
     }
 
     private void Update()
     {
+        if (!Application.isPlaying)
+            return;
+
         if (entries == null || entries.Length == 0)
             return;
 
@@ -135,7 +155,7 @@ public class LobbyMenuUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 스폰된 캐릭터의 Money/Jam을 상단 바에 연결합니다.
+    /// 스폰된 캐릭터의 Money/Gem을 상단 바에 연결합니다.
     /// </summary>
     public void BindResources()
     {
@@ -150,7 +170,7 @@ public class LobbyMenuUI : MonoBehaviour
         {
             resources.OnResourcesChanged -= OnResourcesChanged;
             resources.OnResourcesChanged += OnResourcesChanged;
-            RefreshResourceLabels(resources.Money, resources.Jam);
+            RefreshResourceLabels(resources.Money, resources.Gem);
         }
         else
         {
@@ -211,37 +231,33 @@ public class LobbyMenuUI : MonoBehaviour
 
     private void OnOptions()
     {
-        if (OptionsUI.Instance != null)
-        {
-            OptionsUI.Instance.Show();
-            return;
-        }
-
-        Debug.LogWarning("[LobbyMenuUI] OptionsUI가 없습니다. 타이틀을 거쳐 들어오면 옵션 창을 쓸 수 있습니다.");
+        var options = OptionsUI.EnsureExists();
+        if (options != null)
+            options.Show();
     }
 
-    private void OnResourcesChanged(int money, int jam)
+    private void OnResourcesChanged(int money, int gem)
     {
-        RefreshResourceLabels(money, jam);
+        RefreshResourceLabels(money, gem);
     }
 
-    private void RefreshResourceLabels()
+    public void EnsureResourceIcons()
     {
-        if (resources != null)
-            RefreshResourceLabels(resources.Money, resources.Jam);
-        else
-            RefreshResourceLabels(0, 0);
+        if (moneyIcon == null && moneyText != null)
+            moneyIcon = HudResourceIcons.GetOrCreateIcon(
+                moneyText, HudResourceIcons.Coin, HudResourceIcons.CoinChildName, ResourceIconSize);
+
+        if (gemIcon == null && gemText != null)
+            gemIcon = HudResourceIcons.GetOrCreateIcon(
+                gemText, HudResourceIcons.Gem, HudResourceIcons.GemChildName, ResourceIconSize);
     }
 
-    private void RefreshResourceLabels(int money, int jam)
+    private void RefreshResourceLabels(int money, int gem)
     {
-        bool korean = LanguageManager.Instance == null
-            || LanguageManager.Instance.CurrentLanguage == GameLanguage.Korean;
-
         if (moneyText != null)
-            moneyText.text = korean ? $"돈  {money}" : $"Money  {money}";
-        if (jamText != null)
-            jamText.text = korean ? $"젬  {jam}" : $"Gems  {jam}";
+            moneyText.text = money.ToString();
+        if (gemText != null)
+            gemText.text = gem.ToString();
     }
 
     private void ApplyVisualImmediate(int index)

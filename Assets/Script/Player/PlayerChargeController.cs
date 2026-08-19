@@ -235,7 +235,11 @@ public class PlayerChargeController : MonoBehaviour
         }
     }
 
-    private static PlayerChargeAttackSO GetChargeSlotForCurrentWeapon(WeaponDataSO data)
+    /// <summary>
+    /// 이 무기로 차지 공격을 쓸 수 있으면 차지 데이터를 돌려줍니다.
+    /// AR 홀드 연사는 차지와 겹치지 않도록 제외합니다.
+    /// </summary>
+    public static PlayerChargeAttackSO GetChargeSlotForCurrentWeapon(WeaponDataSO data)
     {
         if (data == null) return null;
 

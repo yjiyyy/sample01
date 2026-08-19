@@ -110,7 +110,7 @@ public class DevUpgradeSwitcher : MonoBehaviour
 
         overlayOpen = open;
         if (InputManager.Instance != null)
-            InputManager.Instance.OverlayInputBlocked = overlayOpen;
+            InputManager.Instance.SetOverlayInputBlocked(overlayOpen);
 
         if (overlayOpen)
         {
@@ -149,7 +149,7 @@ public class DevUpgradeSwitcher : MonoBehaviour
         try { EnhancedTouchSupport.Disable(); } catch { }
 #endif
         if (InputManager.Instance != null)
-            InputManager.Instance.OverlayInputBlocked = false;
+            InputManager.Instance.SetOverlayInputBlocked(false);
         SetUiEventSystemBlocked(false);
     }
 
@@ -181,6 +181,13 @@ public class DevUpgradeSwitcher : MonoBehaviour
     {
         if (InputManager.Instance == null)
             return;
+
+        if (GameplayTime.IsGameplayPaused)
+        {
+            if (overlayOpen)
+                SetOverlayOpen(false);
+            return;
+        }
 
         if (InputManager.Instance.GetKeyDown(toggleKey))
             SetOverlayOpen(!overlayOpen);

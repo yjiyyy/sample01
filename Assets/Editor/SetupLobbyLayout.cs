@@ -155,13 +155,15 @@ public static class SetupLobbyLayout
         lineImg.color = new Color(1f, 1f, 1f, 0.18f);
         lineImg.raycastTarget = false;
 
-        CreateTmpLabel("MoneyText", topBar.transform, font, "돈  0", 30,
+        var moneyLabel = CreateTmpLabel("MoneyText", topBar.transform, font, "0", 30,
             new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(36f, 0f), new Vector2(280f, 48f),
             TextAlignmentOptions.MidlineLeft);
+        HudResourceIcons.GetOrCreateIcon(moneyLabel, HudResourceIcons.Coin, HudResourceIcons.CoinChildName, 40f);
 
-        CreateTmpLabel("JamText", topBar.transform, font, "젬  0", 30,
+        var gemLabel = CreateTmpLabel("GemText", topBar.transform, font, "0", 30,
             new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(330f, 0f), new Vector2(240f, 48f),
             TextAlignmentOptions.MidlineLeft);
+        HudResourceIcons.GetOrCreateIcon(gemLabel, HudResourceIcons.Gem, HudResourceIcons.GemChildName, 40f);
 
         var options = CreateTextButton("OptionsButton", topBar.transform, font, "옵션", 28,
             new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-28f, 0f), new Vector2(160f, 52f),
@@ -270,7 +272,14 @@ public static class SetupLobbyLayout
 
         so.FindProperty("defaultSelectedIndex").intValue = 4;
         so.FindProperty("moneyText").objectReferenceValue = topBar.transform.Find("MoneyText").GetComponent<TextMeshProUGUI>();
-        so.FindProperty("jamText").objectReferenceValue = topBar.transform.Find("JamText").GetComponent<TextMeshProUGUI>();
+        var gemLabelTf = topBar.transform.Find("GemText") ?? topBar.transform.Find("JamText");
+        so.FindProperty("gemText").objectReferenceValue = gemLabelTf != null ? gemLabelTf.GetComponent<TextMeshProUGUI>() : null;
+
+        var moneyTextTf = topBar.transform.Find("MoneyText");
+        var moneyIconTf = moneyTextTf != null ? moneyTextTf.Find("Icon_Coin") : null;
+        var gemIconTf = gemLabelTf != null ? gemLabelTf.Find("Icon_Gem") : null;
+        so.FindProperty("moneyIcon").objectReferenceValue = moneyIconTf != null ? moneyIconTf.GetComponent<Image>() : null;
+        so.FindProperty("gemIcon").objectReferenceValue = gemIconTf != null ? gemIconTf.GetComponent<Image>() : null;
         so.FindProperty("optionsButton").objectReferenceValue = topBar.transform.Find("OptionsButton").GetComponent<Button>();
         so.FindProperty("characterSelectScene").stringValue = SceneNames.CharacterSelection;
 

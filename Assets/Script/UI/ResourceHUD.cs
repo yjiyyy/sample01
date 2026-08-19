@@ -1,27 +1,38 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 /// <summary>
-/// 상단 등에 Money / Jam 텍스트 표시. <see cref="PlayerResources"/> 이벤트로 갱신.
+/// 상단 등에 돈/젬 아이콘과 숫자 표시. <see cref="PlayerResources"/> 이벤트로 갱신.
 /// </summary>
 /// <remarks>
-/// <see cref="ExecuteAlways"/> — 플레이하지 않아도 에디터/게임 뷰에서 문구·위치 확인 가능 (초기 "Money: 0" / "Jam: 0").
-/// 씬에 UI 자동 생성: <b>GameObject → UI → Resource HUD (Money/Jam)</b> 또는
-/// <b>Tools → UI → Create Resource HUD (Money/Jam)</b>
+/// 아이콘 위치·크기는 Hierarchy의 Icon_Coin / Icon_Gem에서 직접 조정한 뒤 씬을 저장하세요.
+/// 씬에 UI 자동 생성: <b>GameObject → UI → Resource HUD (Money/Gem)</b> 또는
+/// <b>Tools → UI → Create Resource HUD (Money/Gem)</b>
 /// </remarks>
 [ExecuteAlways]
 [DisallowMultipleComponent]
 public class ResourceHUD : MonoBehaviour
 {
-    [Header("UI (Legacy Text)")]
+    private const float DefaultIconSize = 48f;
+
+    [Header("UI (숫자)")]
     [SerializeField] private Text moneyText;
-    [SerializeField] private Text jamText;
+    [FormerlySerializedAs("jamText")]
+    [SerializeField] private Text gemText;
+
+    [Header("아이콘")]
+    [Tooltip("비어 있으면 MoneyText 아래에 Icon_Coin을 만듭니다. 위치·크기는 이 오브젝트를 골라 조정하세요.")]
+    [SerializeField] private Image moneyIcon;
+    [Tooltip("비어 있으면 GemText 아래에 Icon_Gem을 만듭니다. 위치·크기는 이 오브젝트를 골라 조정하세요.")]
+    [SerializeField] private Image gemIcon;
 
     [Tooltip("비우면 씬에서 PlayerResources 검색")]
     [SerializeField] private PlayerResources resources;
 
     private void OnEnable()
     {
+        EnsureIcons();
         RefreshDisplay();
     }
 
@@ -45,30 +56,24 @@ public class ResourceHUD : MonoBehaviour
         {
             resources.OnResourcesChanged -= OnResourcesChanged;
             resources.OnResourcesChanged += OnResourcesChanged;
-            Refresh(resources.Money, resources.Jam);
+            Refresh(resources.Money, resources.Gem);
         }
         else
             RefreshDisplay();
     }
 
-    private void OnValidate()
+    private void OnResourcesChanged(int money, int gem)
     {
-        // 인스펙터에서 Text 할당 직후 등 에디터에서도 즉시 표시
-        RefreshDisplay();
-    }
-
-    private void OnResourcesChanged(int money, int jam)
-    {
-        Refresh(money, jam);
+        Refresh(money, gem);
     }
 
     /// <summary>
-    /// 에디터(미플레이)에서는 0으로 표시해 레이아웃 확인. 플레이 중에는 현재 보유량.
+    /// 에디터에서는 0, 플레이 중에는 현재 보유량으로 숫자만 바꿉니다. 아이콘 위치는 건드리지 않습니다.
     /// </summary>
     private void RefreshDisplay()
     {
         int m = 0;
-        int j = 0;
+        int g = 0;
 
         if (Application.isPlaying)
         {
@@ -80,18 +85,29 @@ public class ResourceHUD : MonoBehaviour
             if (res != null)
             {
                 m = res.Money;
-                j = res.Jam;
+                g = res.Gem;
             }
         }
 
-        Refresh(m, j);
+        Refresh(m, g);
     }
 
-    private void Refresh(int money, int jam)
+    public void EnsureIcons()
+    {
+        if (moneyIcon == null && moneyText != null)
+            moneyIcon = HudResourceIcons.GetOrCreateIcon(
+                moneyText, HudResourceIcons.Coin, HudResourceIcons.CoinChildName, DefaultIconSize);
+
+        if (gemIcon == null && gemText != null)
+            gemIcon = HudResourceIcons.GetOrCreateIcon(
+                gemText, HudResourceIcons.Gem, HudResourceIcons.GemChildName, DefaultIconSize);
+    }
+
+    private void Refresh(int money, int gem)
     {
         if (moneyText != null)
-            moneyText.text = $"Money: {money}";
-        if (jamText != null)
-            jamText.text = $"Jam: {jam}";
+            moneyText.text = money.ToString();
+        if (gemText != null)
+            gemText.text = gem.ToString();
     }
 }

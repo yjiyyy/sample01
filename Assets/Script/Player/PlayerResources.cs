@@ -1,8 +1,9 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
-/// 플레이어 Money / Jam 보유량. 픽업 자석 반경은 이후 업그레이드에서 조정 가능.
+/// 플레이어 Money / Gem 보유량. 픽업 자석 반경은 이후 업그레이드에서 조정 가능.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerResources : MonoBehaviour
@@ -15,15 +16,16 @@ public class PlayerResources : MonoBehaviour
 
     [Header("보유량 (런타임)")]
     [SerializeField] private int money;
-    [SerializeField] private int jam;
+    [FormerlySerializedAs("jam")]
+    [SerializeField] private int gem;
 
     /// <summary>자석에 걸리기 시작하는 거리 (미터).</summary>
     public float PickupMagnetRadius => pickupMagnetRadius;
 
     public int Money => money;
-    public int Jam => jam;
+    public int Gem => gem;
 
-    /// <summary>Money 또는 Jam이 바뀔 때 (money, jam).</summary>
+    /// <summary>Money 또는 Gem이 바뀔 때 (money, gem).</summary>
     public event Action<int, int> OnResourcesChanged;
 
     private void Awake()
@@ -53,14 +55,14 @@ public class PlayerResources : MonoBehaviour
     {
         if (amount == 0) return;
         money = Mathf.Max(0, money + amount);
-        OnResourcesChanged?.Invoke(money, jam);
+        OnResourcesChanged?.Invoke(money, gem);
     }
 
-    public void AddJam(int amount)
+    public void AddGem(int amount)
     {
         if (amount == 0) return;
-        jam = Mathf.Max(0, jam + amount);
-        OnResourcesChanged?.Invoke(money, jam);
+        gem = Mathf.Max(0, gem + amount);
+        OnResourcesChanged?.Invoke(money, gem);
     }
 
 #if UNITY_EDITOR
@@ -68,7 +70,7 @@ public class PlayerResources : MonoBehaviour
     {
         pickupMagnetRadius = Mathf.Max(0.1f, pickupMagnetRadius);
         money = Mathf.Max(0, money);
-        jam = Mathf.Max(0, jam);
+        gem = Mathf.Max(0, gem);
     }
 #endif
 }

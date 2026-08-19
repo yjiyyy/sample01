@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d38a679b8895334f8b59a65572d35ad, type: 3}
   m_Name: SO_P_00_Charge_Hold
   m_EditorClassIdentifier: 
+  displayName:
+    korean: "\uBC1C\uCE78\uD380\uCE58"
+    english: ValcanPunch
   holdSuccessTime: 2
   chargedClip: {fileID: 1827226128182048838, guid: 0fe3508c5e664164f8bb1d7ea2dc4a23, type: 3}
   chargedStateName: 
@@ -19,12 +22,18 @@ MonoBehaviour:
   damage: 10
   duration: 0.8
   range: 2.5
+  staminaCost: 0
   hitBoxLifetime: 0.1
   knockbackPower: 1
   knockbackDuration: 0.1
   stunDuration: 0
   usePushInsteadOfKnockback: 0
-  animationHoldDuration: 0
+  targetHoldDuration: 0
+  attackerHoldDuration: 0
+  targetStateHoldDuration: 0
+  targetAnimationHoldDuration: 0
+  attackerStateHoldDuration: 0
+  attackerAnimationHoldDuration: 0
   invincibilityDuration: 0.5
   meleeSpawnPointName: Root_dummy
   spawnCount: 2

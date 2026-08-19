@@ -54,6 +54,13 @@ public class LocalizedText : MonoBehaviour
         SetVisibleText(texts.Get(language));
     }
 
+    public void SetTexts(string korean, string english)
+    {
+        texts.korean = korean ?? string.Empty;
+        texts.english = english ?? string.Empty;
+        Apply();
+    }
+
     private void CacheRefs()
     {
         if (_uiText == null)

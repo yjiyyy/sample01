@@ -30,6 +30,19 @@ public class InputManager : MonoBehaviour
     [HideInInspector]
     public bool OverlayInputBlocked = false;
 
+    /// <summary>사망·옵션·치트 창이 열려 플레이 입력을 막아야 할 때.</summary>
+    public bool IsGameplayInputBlocked =>
+        playerDeathBlocked || OverlayInputBlocked || GameplayTime.IsGameplayPaused;
+
+    /// <summary>
+    /// 오버레이로 입력을 막을지 설정합니다.
+    /// 옵션으로 일시정지 중이면 풀리지 않습니다.
+    /// </summary>
+    public void SetOverlayInputBlocked(bool blocked)
+    {
+        OverlayInputBlocked = blocked || GameplayTime.IsGameplayPaused;
+    }
+
     /// <summary> 플레이어 사망 시 true — 모든 플레이어 입력 차단 (죽음 이벤트만 유지) </summary>
     private static bool playerDeathBlocked = false;
 
@@ -92,9 +105,8 @@ public class InputManager : MonoBehaviour
     /* ───── 이동 입력 ───── */
     public Vector2 GetMoveInput()
     {
-        if (playerDeathBlocked) return Vector2.zero;
-        // 모바일 런타임이고, 오버레이가 차단중이면 모바일 입력 무시
-        if (IsMobileRuntimeActive && !OverlayInputBlocked && mobileMove.sqrMagnitude > 0.0001f)
+        if (IsGameplayInputBlocked) return Vector2.zero;
+        if (IsMobileRuntimeActive && mobileMove.sqrMagnitude > 0.0001f)
             return mobileMove; // 이미 ClampMagnitude로 크기 1.0이 보장됨
 
         float x = 0f, y = 0f;
@@ -133,9 +145,7 @@ public class InputManager : MonoBehaviour
     /* ───── 무기 슬롯 ───── */
     public int GetWeaponSwapInput()
     {
-        if (playerDeathBlocked) return -1;
-        if (IsMobileRuntimeActive && OverlayInputBlocked)
-            return -1;
+        if (IsGameplayInputBlocked) return -1;
 
         if (GetKeyDown(KeyCode.Alpha1)) return 1;
         if (GetKeyDown(KeyCode.Alpha2)) return 2;
@@ -154,40 +164,38 @@ public class InputManager : MonoBehaviour
 
     public bool GetAttackDown()
     {
-        if (playerDeathBlocked) return false;
+        if (IsGameplayInputBlocked) return false;
         bool kb = GetKeyDown(KeyCode.Alpha0);
-        bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileAttackDownFrames > 0;
+        bool mobile = IsMobileRuntimeActive && mobileAttackDownFrames > 0;
         return kb || mobile;
     }
 
     public bool GetAttack()
     {
-        if (playerDeathBlocked) return false;
+        if (IsGameplayInputBlocked) return false;
         bool kb = GetKey(KeyCode.Alpha0);
-        bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileAttackPressed;
+        bool mobile = IsMobileRuntimeActive && mobileAttackPressed;
         return kb || mobile;
     }
 
     public bool GetAttackUp()
     {
-        if (playerDeathBlocked) return false;
+        if (IsGameplayInputBlocked) return false;
         bool kb = GetKeyUp(KeyCode.Alpha0);
-        bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileAttackUpFrames > 0;
+        bool mobile = IsMobileRuntimeActive && mobileAttackUpFrames > 0;
         return kb || mobile;
     }
 
-    /* ───── 회피 ───── */
     public bool GetEvadeInput()
     {
-        if (playerDeathBlocked) return false;
+        if (IsGameplayInputBlocked) return false;
         bool kb = GetKeyDown(KeyCode.Space);
-        bool mobile = IsMobileRuntimeActive && !OverlayInputBlocked && mobileEvadeDownFrames > 0;
+        bool mobile = IsMobileRuntimeActive && mobileEvadeDownFrames > 0;
         return kb || mobile;
     }
 
-    /* ───── 테스트 키 ───── */
-    public bool GetDamageTestInput() => GetKeyDown(KeyCode.Minus);
-    public bool GetHealTestInput() => GetKeyDown(KeyCode.Equals);
+    public bool GetDamageTestInput() => !IsGameplayInputBlocked && GetKeyDown(KeyCode.Minus);
+    public bool GetHealTestInput() => !IsGameplayInputBlocked && GetKeyDown(KeyCode.Equals);
 
     // Mobile setters (UI에서 호출)
     public void SetMobileMove(Vector2 v)

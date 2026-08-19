@@ -9,13 +9,13 @@ using UnityEngine.InputSystem.UI;
 
 /// <summary>
 /// 씬에 ResourceHUD(Canvas·Legacy Text·연결)를 한 번에 생성합니다.
-/// - 메뉴: GameObject &gt; UI &gt; Resource HUD (Money/Jam)
-/// - 메뉴: Tools &gt; UI &gt; Create Resource HUD (Money/Jam)
+/// - 메뉴: GameObject &gt; UI &gt; Resource HUD (Money/Gem)
+/// - 메뉴: Tools &gt; UI &gt; Create Resource HUD (Money/Gem)
 /// </summary>
 public static class ResourceHUDCreator
 {
-    private const string GameObjectMenu = "GameObject/UI/Resource HUD (Money/Jam)";
-    private const string ToolsMenu = "Tools/UI/Create Resource HUD (Money/Jam)";
+    private const string GameObjectMenu = "GameObject/UI/Resource HUD (Money/Gem)";
+    private const string ToolsMenu = "Tools/UI/Create Resource HUD (Money/Gem)";
 
     [MenuItem(GameObjectMenu, false, 10)]
     public static void CreateResourceHUDFromGameObjectMenu(MenuCommand menuCommand)
@@ -56,16 +56,22 @@ public static class ResourceHUDCreator
         rootRect.sizeDelta = new Vector2(720f, 100f);
         rootRect.anchoredPosition = new Vector2(0f, -12f);
 
-        var moneyGO = CreateTextChild(hudRoot.transform, "MoneyText", "Money: 0", new Vector2(0f, 0f), new Vector2(1f, 0.5f));
-        var jamGO = CreateTextChild(hudRoot.transform, "JamText", "Jam: 0", new Vector2(0f, 0.5f), new Vector2(1f, 1f));
+        var moneyGO = CreateTextChild(hudRoot.transform, "MoneyText", "0", new Vector2(0f, 0f), new Vector2(1f, 0.5f));
+        var gemGO = CreateTextChild(hudRoot.transform, "GemText", "0", new Vector2(0f, 0.5f), new Vector2(1f, 1f));
 
         var moneyText = moneyGO.GetComponent<Text>();
-        var jamText = jamGO.GetComponent<Text>();
+        var gemText = gemGO.GetComponent<Text>();
+        var moneyIcon = HudResourceIcons.GetOrCreateIcon(
+            moneyText, HudResourceIcons.Coin, HudResourceIcons.CoinChildName, 48f);
+        var gemIcon = HudResourceIcons.GetOrCreateIcon(
+            gemText, HudResourceIcons.Gem, HudResourceIcons.GemChildName, 48f);
 
         var hud = hudRoot.AddComponent<ResourceHUD>();
         var so = new SerializedObject(hud);
         so.FindProperty("moneyText").objectReferenceValue = moneyText;
-        so.FindProperty("jamText").objectReferenceValue = jamText;
+        so.FindProperty("gemText").objectReferenceValue = gemText;
+        so.FindProperty("moneyIcon").objectReferenceValue = moneyIcon;
+        so.FindProperty("gemIcon").objectReferenceValue = gemIcon;
         so.ApplyModifiedPropertiesWithoutUndo();
 
         Selection.activeGameObject = hudRoot;
@@ -74,6 +80,50 @@ public static class ResourceHUDCreator
             EditorSceneManager.MarkSceneDirty(canvas.gameObject.scene);
 
         Debug.Log("[ResourceHUDCreator] ResourceHUD 생성 완료. 플레이어에 PlayerResources가 있어야 숫자가 갱신됩니다.");
+    }
+
+    [MenuItem("Tools/UI/Add Resource HUD Icons If Missing", false, 2)]
+    public static void AddMissingIconsInOpenScenes()
+    {
+        int created = 0;
+        foreach (var hud in Object.FindObjectsByType<ResourceHUD>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            var so = new SerializedObject(hud);
+            var moneyIcon = so.FindProperty("moneyIcon");
+            var gemIcon = so.FindProperty("gemIcon");
+            bool hadMoney = moneyIcon.objectReferenceValue != null;
+            bool hadGem = gemIcon.objectReferenceValue != null;
+            hud.EnsureIcons();
+            so.Update();
+            if (!hadMoney && moneyIcon.objectReferenceValue != null)
+                created++;
+            if (!hadGem && gemIcon.objectReferenceValue != null)
+                created++;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(hud);
+        }
+
+        foreach (var lobby in Object.FindObjectsByType<LobbyMenuUI>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            var so = new SerializedObject(lobby);
+            var moneyIcon = so.FindProperty("moneyIcon");
+            var gemIcon = so.FindProperty("gemIcon");
+            bool hadMoney = moneyIcon.objectReferenceValue != null;
+            bool hadGem = gemIcon.objectReferenceValue != null;
+            lobby.EnsureResourceIcons();
+            so.Update();
+            if (!hadMoney && moneyIcon.objectReferenceValue != null)
+                created++;
+            if (!hadGem && gemIcon.objectReferenceValue != null)
+                created++;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(lobby);
+        }
+
+        if (!Application.isPlaying)
+            EditorSceneManager.MarkAllScenesDirty();
+
+        Debug.Log($"[ResourceHUDCreator] 없는 아이콘을 만들었습니다. (추가 {created}개) 위치 조정 후 씬을 저장하세요.");
     }
 
     private static Canvas CreateCanvasWithEventSystem()

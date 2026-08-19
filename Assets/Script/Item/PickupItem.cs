@@ -98,8 +98,8 @@ public class PickupItem : MonoBehaviour
             case PickupType.Money:
                 res.AddMoney(amount);
                 break;
-            case PickupType.Jam:
-                res.AddJam(amount);
+            case PickupType.Gem:
+                res.AddGem(amount);
                 break;
         }
     }
