@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 06_01
   upgradeName: ReviveTicket
   icon: {fileID: 21300000, guid: e7831b8f87347064993b719175eeeb7c, type: 3}
+  cardFrame: {fileID: 21300000, guid: d542d02d643772e419a3247c7d7c8ec4, type: 3}
+  displayName:
+    korean: "\uBD80\uD65C\uAD8C"
+    english: ReviveTicket
+  description:
+    korean: "\uC0DD\uBA85 +1"
+    english: Life +1
   respawnDelaySeconds: 3
   respawnHealthRatio: 1
   respawnYOffset: 0.5

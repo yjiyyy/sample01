@@ -18,6 +18,7 @@ public class PlayerBarrierUpgradeRuntime : MonoBehaviour
 
     private readonly float[] currentBarrier = new float[Upgrade.SlotCount];
     private readonly UpgradeEffectSO[] boundEffect = new UpgradeEffectSO[Upgrade.SlotCount];
+    private readonly int[] boundStacks = new int[Upgrade.SlotCount];
     private readonly Coroutine[] pendingBarrierSlotClear = new Coroutine[Upgrade.SlotCount];
 
     private void Awake()
@@ -75,23 +76,36 @@ public class PlayerBarrierUpgradeRuntime : MonoBehaviour
             UpgradeEffectSO slot = upgrade.GetSlot(i);
             if (slot is Upgrade_06_02_Barrier barrierSo)
             {
+                int stacks = upgrade.GetStackCount(i);
+                float unit = Mathf.Max(0f, barrierSo.barrierMaxPoints);
+                float cap = unit * stacks;
+
                 if (boundEffect[i] != slot)
                 {
                     StopPendingBarrierSlotClear(i);
                     boundEffect[i] = slot;
-                    currentBarrier[i] = Mathf.Max(0f, barrierSo.barrierMaxPoints);
+                    boundStacks[i] = stacks;
+                    currentBarrier[i] = cap;
                 }
-                else
+                else if (stacks != boundStacks[i])
                 {
-                    float cap = Mathf.Max(0f, barrierSo.barrierMaxPoints);
-                    if (currentBarrier[i] > cap)
-                        currentBarrier[i] = cap;
+                    int delta = stacks - boundStacks[i];
+                    boundStacks[i] = stacks;
+                    if (delta > 0)
+                        currentBarrier[i] += unit * delta;
+                    else
+                        currentBarrier[i] = Mathf.Min(currentBarrier[i], cap);
+                }
+                else if (currentBarrier[i] > cap)
+                {
+                    currentBarrier[i] = cap;
                 }
             }
             else
             {
                 StopPendingBarrierSlotClear(i);
                 boundEffect[i] = null;
+                boundStacks[i] = 0;
                 currentBarrier[i] = 0f;
             }
         }
@@ -103,6 +117,7 @@ public class PlayerBarrierUpgradeRuntime : MonoBehaviour
         {
             StopPendingBarrierSlotClear(i);
             boundEffect[i] = null;
+            boundStacks[i] = 0;
             currentBarrier[i] = 0f;
         }
     }
@@ -128,7 +143,7 @@ public class PlayerBarrierUpgradeRuntime : MonoBehaviour
         for (int i = 0; i < Upgrade.SlotCount; i++)
         {
             if (upgrade.GetSlot(i) is Upgrade_06_02_Barrier b)
-                sum += Mathf.Max(0f, b.barrierMaxPoints);
+                sum += Mathf.Max(0f, b.barrierMaxPoints) * upgrade.GetStackCount(i);
         }
 
         return sum;

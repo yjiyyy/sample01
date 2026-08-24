@@ -135,7 +135,8 @@ public static class EnemyPlayerHitEffectApplier
             found = true;
             applyPushDisplacement = applyPushDisplacement && ironBody.applyPushDisplacement;
             applyTargetHitstop = applyTargetHitstop && ironBody.applyTargetHitstop;
-            extraDamageChance += Mathf.Clamp01(ironBody.extraDamageProcChance);
+            int stacks = upgrade.GetStackCount(i);
+            extraDamageChance += Mathf.Clamp01(ironBody.extraDamageProcChance) * stacks;
             extraDamagePercentMax = Mathf.Max(extraDamagePercentMax, Mathf.Max(0f, ironBody.extraDamageTakenPercent));
         }
 

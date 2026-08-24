@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 05_05
   upgradeName: Angel Lottery
   icon: {fileID: 21300000, guid: eb8dfb50f6c66dc449d311e050e42034, type: 3}
+  cardFrame: {fileID: 21300000, guid: c77cb8d6819755149b1c203964a191ef, type: 3}
+  displayName:
+    korean: "\uBF51\uAE30 \uCC9C\uC0AC"
+    english: Angel Lottery
+  description:
+    korean: "\uCC9C\uC0AC\uC758 \uB3C4\uC6C0.(\uC544\uC774\uD15C \uBF51\uAE30)"
+    english: Angel Support (Item Draw)
   companionPrefab: {fileID: 9172019729851925661, guid: ffc781a702175cc439327e70dc8df866, type: 3}
   attackAnimationClip: {fileID: 1827226128182048838, guid: 8a94b19c8d70dbc49a0f81f02e970948, type: 3}
   projectileSpawnDelay: 0.2

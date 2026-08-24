@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 06_02
   upgradeName: Barrier
   icon: {fileID: 21300000, guid: 4b8704e26b2848645a0b10dbe8013033, type: 3}
+  cardFrame: {fileID: 21300000, guid: d542d02d643772e419a3247c7d7c8ec4, type: 3}
+  displayName:
+    korean: "\uBCF4\uD638\uB9C9"
+    english: Barrier
+  description:
+    korean: "\uBCF4\uD638\uB9C9\uC774 \uCD94\uAC00\uB41C\uB2E4."
+    english: Grants a Shield.
   barrierMaxPoints: 150
   slotConsumeFxPrefab: {fileID: 1775205180007417791, guid: f5792611a58ccf141a326ca8f30cba1a, type: 3}
   slotFxAutoDestroySeconds: 3

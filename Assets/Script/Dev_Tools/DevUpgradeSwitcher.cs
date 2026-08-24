@@ -18,10 +18,6 @@ public class DevUpgradeSwitcher : MonoBehaviour
     [Tooltip("표시·장착에 사용할 UpgradeEffectSO. null 슬롯은 빈 칸으로 표시됩니다.")]
     public List<UpgradeEffectSO> upgrades = new List<UpgradeEffectSO>();
 
-    [Header("개발자용 오버레이 키")]
-    [Tooltip("F3 키로 열기/닫기")]
-    public KeyCode toggleKey = KeyCode.F3;
-
     [Header("대상 플레이어 Upgrade")]
     public Upgrade targetUpgrade;
 
@@ -179,27 +175,8 @@ public class DevUpgradeSwitcher : MonoBehaviour
 
     private void Update()
     {
-        if (InputManager.Instance == null)
-            return;
-
-        if (GameplayTime.IsGameplayPaused)
-        {
-            if (overlayOpen)
-                SetOverlayOpen(false);
-            return;
-        }
-
-        if (InputManager.Instance.GetKeyDown(toggleKey))
-            SetOverlayOpen(!overlayOpen);
-
         if (!overlayOpen)
-        {
             TryRestoreUiEventSystemIfSafe();
-            return;
-        }
-
-        if (InputManager.Instance.GetKeyDown(KeyCode.Escape))
-            SetOverlayOpen(false);
     }
 
     private void TryRestoreUiEventSystemIfSafe()
@@ -373,9 +350,23 @@ public class DevUpgradeSwitcher : MonoBehaviour
             GUILayout.BeginArea(window, GUI.skin.window);
             areaStarted = true;
 
-            GUILayout.Label("Dev Upgrade Switcher (ESC/` 닫기)", headerStyle);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Dev Upgrade Switcher", headerStyle);
+            if (GUILayout.Button("닫기", GUILayout.Width(90f), GUILayout.Height(40f)))
+                SetOverlayOpen(false);
+            GUILayout.EndHorizontal();
             GUILayout.Space(6);
-            GUILayout.Label($"대상 슬롯: {selectedSlotIndex}", rowStyle);
+            GUILayout.Label($"장착할 업그레이드 슬롯: {selectedSlotIndex + 1}", rowStyle);
+
+            GUILayout.BeginHorizontal();
+            for (int slot = 0; slot < Upgrade.SlotCount; slot++)
+            {
+                int slotIndex = slot;
+                string label = selectedSlotIndex == slot ? $"[{slot + 1}]" : (slot + 1).ToString();
+                if (GUILayout.Button(label, GUILayout.Height(34)))
+                    selectedSlotIndex = slotIndex;
+            }
+            GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("선택 슬롯 비우기", GUILayout.Height(34)))

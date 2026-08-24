@@ -135,7 +135,7 @@ public class PlayerOverdriveUpgradeRuntime : MonoBehaviour
         {
             UpgradeEffectSO slot = u.GetSlot(i);
             if (IsOverdriveEffect(slot))
-                sum += ReadPublicFloat(slot, "durationSeconds");
+                sum += ReadPublicFloat(slot, "durationSeconds") * u.GetStackCount(i);
         }
 
         return sum;

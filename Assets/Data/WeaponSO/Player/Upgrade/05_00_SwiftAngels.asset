@@ -15,4 +15,12 @@ MonoBehaviour:
   id: 05_00
   upgradeName: Swift Angels
   icon: {fileID: 21300000, guid: b135e6576ab47e640ab1d3667aebbde5, type: 3}
+  cardFrame: {fileID: 21300000, guid: c77cb8d6819755149b1c203964a191ef, type: 3}
+  displayName:
+    korean: "\uB0A0\uC318 \uCC9C\uC0AC\uB4E4"
+    english: Swift Angels
+  description:
+    korean: "\uCC9C\uC0AC\uC758 \uC18D\uB3C4\uAC00 \uBE68\uB77C\uC9D0 (\uCC9C\uC0AC\uAC00
+      \uC7A5\uCC29\uC774 \uB3FC \uC788\uC5B4\uC57C \uD569\uB2C8\uB2E4)"
+    english: Increases Angel Speed. (Requires an Angel to be equipped)
   cooldownReductionFraction: 0.5

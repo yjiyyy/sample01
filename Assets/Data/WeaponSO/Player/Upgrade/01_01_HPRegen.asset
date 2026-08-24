@@ -15,5 +15,12 @@ MonoBehaviour:
   id: 01_01
   upgradeName: HP Regen
   icon: {fileID: 21300000, guid: cae2e539448a4fe4eb600724617a0a08, type: 3}
+  cardFrame: {fileID: 21300000, guid: cd2ac51ee22487d4c8aa4853a37f8310, type: 3}
+  displayName:
+    korean: "\uCCB4\uB825 \uD68C\uBCF5"
+    english: HP Regen
+  description:
+    korean: "HP \uC11C\uC11C\uD788 \uC790\uB3D9 \uD68C\uBCF5"
+    english: Slowly regenerates HP
   tickInterval: 1
   healAmountPerTick: 10

@@ -65,6 +65,41 @@ public class PlayerResources : MonoBehaviour
         OnResourcesChanged?.Invoke(money, gem);
     }
 
+    public bool CanAfford(ShopCurrency currency, int amount)
+    {
+        if (amount <= 0)
+            return true;
+        return currency == ShopCurrency.Gem ? gem >= amount : money >= amount;
+    }
+
+    /// <summary>보유량이 부족하면 false. 성공 시 차감합니다.</summary>
+    public bool TrySpend(ShopCurrency currency, int amount)
+    {
+        if (amount <= 0)
+            return true;
+        if (!CanAfford(currency, amount))
+            return false;
+
+        if (currency == ShopCurrency.Gem)
+            gem -= amount;
+        else
+            money -= amount;
+
+        OnResourcesChanged?.Invoke(money, gem);
+        return true;
+    }
+
+    /// <summary>개발자 치트 메뉴에서 돈과 젬을 한 번에 초기화합니다.</summary>
+    public void SetAllToZero()
+    {
+        if (money == 0 && gem == 0)
+            return;
+
+        money = 0;
+        gem = 0;
+        OnResourcesChanged?.Invoke(money, gem);
+    }
+
 #if UNITY_EDITOR
     private void OnValidate()
     {

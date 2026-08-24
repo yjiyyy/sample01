@@ -17,10 +17,6 @@ public class DevWeaponSwitcher : MonoBehaviour
     [Tooltip("표시·장착에 사용할 WeaponDataSO. null 슬롯은 빈 칸으로 표시.")]
     public List<WeaponDataSO> weapons = new List<WeaponDataSO>();
 
-    [Header("개발자용 오버레이 키")]
-    [Tooltip("BackQuote(`) 키로 열기/닫기")]
-    public KeyCode toggleKey = KeyCode.BackQuote;
-
     [Header("대상 플레이어 (빌드에서 참조)")]
     public PlayerWeaponController targetPlayer;
 
@@ -90,26 +86,6 @@ public class DevWeaponSwitcher : MonoBehaviour
 #endif
         if (InputManager.Instance != null)
             InputManager.Instance.SetOverlayInputBlocked(false);
-    }
-
-    void Update()
-    {
-        if (InputManager.Instance == null) return;
-
-        if (GameplayTime.IsGameplayPaused)
-        {
-            if (overlayOpen)
-                overlayOpen = false;
-            return;
-        }
-
-        if (InputManager.Instance.GetKeyDown(toggleKey))
-            SetOverlayOpen(!overlayOpen);
-
-        if (!overlayOpen) return;
-
-        if (InputManager.Instance.GetKeyDown(KeyCode.Escape))
-            SetOverlayOpen(false);
     }
 
     private bool IsWeaponInInactiveSlot(WeaponDataSO so)
@@ -244,7 +220,11 @@ public class DevWeaponSwitcher : MonoBehaviour
             var rStyle = rowStyle ?? GUI.skin.label;
             var cStyle = cellTextStyle ?? GUI.skin.label;
 
-            GUILayout.Label("Dev Weapon Switcher (` 닫기/열기 · 셀 터치=장착)", hStyle);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Dev Weapon Switcher (셀 터치=장착)", hStyle);
+            if (GUILayout.Button("닫기", GUILayout.Width(90f), GUILayout.Height(40f)))
+                SetOverlayOpen(false);
+            GUILayout.EndHorizontal();
             GUILayout.Space(8);
 
             if (count == 0)

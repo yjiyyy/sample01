@@ -182,6 +182,7 @@ GameObject:
   - component: {fileID: 2873735627776966522}
   - component: {fileID: 651573904138366511}
   - component: {fileID: 6207206896530482200}
+  - component: {fileID: 7190390226405444237}
   m_Layer: 6
   m_Name: PC_M_Fat_Skin
   m_TagString: Player
@@ -214,7 +215,7 @@ Animator:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3216416238894718173}
   m_Enabled: 1
-  m_Avatar: {fileID: 0}
+  m_Avatar: {fileID: 9000000, guid: a7bee605852d2c74d8b9ec771fdf9999, type: 3}
   m_Controller: {fileID: 9100000, guid: 040e64a34f0e23848a2f7dbeea3566d1, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
@@ -380,7 +381,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3843984e48da68946a7e53e281970d85, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHP: 90
+  maxHP: 150
   weight: 1
 --- !u!114 &4242877615538226319
 MonoBehaviour:
@@ -451,8 +452,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e509e4d6259d96748881e1385e0543af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 90
-  currentHealth: 90
+  maxHealth: 150
+  currentHealth: 150
   massMultiplier: 1
   baseMoveSpeed: 10
   rotationSpeedDegPerSec: 1080
@@ -539,6 +540,21 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+--- !u!114 &7190390226405444237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3216416238894718173}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be31a6d8b0de95549911b4f98d49ba6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pickupMagnetRadius: 3
+  money: 0
+  gem: 0
 --- !u!1 &3332447387808804525
 GameObject:
   m_ObjectHideFlags: 0

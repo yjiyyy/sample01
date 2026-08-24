@@ -275,6 +275,7 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
                 if (dmgUp.affectedCategories == null || dmgUp.affectedCategories.Count == 0)
                     continue;
 
+                int stacks = upgrade.GetStackCount(i);
                 for (int c = 0; c < dmgUp.affectedCategories.Count; c++)
                 {
                     WeaponCategory cat = dmgUp.affectedCategories[c];
@@ -282,8 +283,8 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
                     if (idx < 0 || idx >= CategoryCount)
                         continue;
 
-                    percentBonusSum[idx] += dmgUp.additivePercentDamage;
-                    flatBonusSum[idx] += dmgUp.flatBonusDamage;
+                    percentBonusSum[idx] += dmgUp.additivePercentDamage * stacks;
+                    flatBonusSum[idx] += dmgUp.flatBonusDamage * stacks;
                 }
             }
         }
@@ -350,7 +351,7 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             if (!containsCategory)
                 continue;
 
-            sum += missingHpRatio * Mathf.Max(0f, bloodRage.maxBonusPercentAtZeroHp);
+            sum += missingHpRatio * Mathf.Max(0f, bloodRage.maxBonusPercentAtZeroHp) * cachedUpgrade.GetStackCount(i);
         }
 
         return sum;
@@ -374,7 +375,7 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             if (!ContainsCategory(vamp.affectedCategories, weapon.category))
                 continue;
 
-            sum += Mathf.Max(0f, vamp.lifeStealPercent);
+            sum += Mathf.Max(0f, vamp.lifeStealPercent) * cachedUpgrade.GetStackCount(i);
         }
 
         return sum;
@@ -410,11 +411,12 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             if (!ContainsCategory(bleed.affectedCategories, weapon.category))
                 continue;
 
+            int stacks = cachedUpgrade.GetStackCount(i);
             found = true;
-            chance += Mathf.Clamp01(bleed.bleedApplyChance);
-            duration += Mathf.Max(0f, bleed.duration);
-            tickInterval += Mathf.Max(0f, bleed.tickInterval);
-            damagePerTick += Mathf.Max(0f, bleed.damagePerTick);
+            chance += Mathf.Clamp01(bleed.bleedApplyChance) * stacks;
+            duration += Mathf.Max(0f, bleed.duration) * stacks;
+            tickInterval += Mathf.Max(0f, bleed.tickInterval) * stacks;
+            damagePerTick += Mathf.Max(0f, bleed.damagePerTick) * stacks;
             if (bleedTickEffectPrefab == null && bleed.bleedTickEffectPrefab != null)
                 bleedTickEffectPrefab = bleed.bleedTickEffectPrefab;
         }
@@ -461,13 +463,14 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             if (!ContainsCategory(stun.affectedCategories, weapon.category))
                 continue;
 
+            int stacks = cachedUpgrade.GetStackCount(i);
             found = true;
-            chance += Mathf.Clamp01(stun.stunApplyChance);
-            knockbackDuration += Mathf.Max(0f, stun.bonusKnockbackDuration);
-            knockbackPower += Mathf.Max(0f, stun.bonusKnockbackPower);
-            jerkIntensity += Mathf.Max(0f, stun.bonusJerkIntensity);
-            jerkDuration += Mathf.Max(0f, stun.bonusJerkDuration);
-            stunDuration += Mathf.Max(0f, stun.bonusStunDuration);
+            chance += Mathf.Clamp01(stun.stunApplyChance) * stacks;
+            knockbackDuration += Mathf.Max(0f, stun.bonusKnockbackDuration) * stacks;
+            knockbackPower += Mathf.Max(0f, stun.bonusKnockbackPower) * stacks;
+            jerkIntensity += Mathf.Max(0f, stun.bonusJerkIntensity) * stacks;
+            jerkDuration += Mathf.Max(0f, stun.bonusJerkDuration) * stacks;
+            stunDuration += Mathf.Max(0f, stun.bonusStunDuration) * stacks;
         }
 
         chance = Mathf.Clamp01(chance);
@@ -505,11 +508,12 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             if (!ContainsCategory(chain.affectedCategories, weapon.category))
                 continue;
 
+            int stacks = cachedUpgrade.GetStackCount(i);
             found = true;
-            bounceSum += Mathf.Max(0, chain.bounceCount);
-            radiusSum += Mathf.Max(0f, chain.searchRadius);
-            damageMulSum += Mathf.Max(0f, chain.damageMultiplier);
-            holdSum += Mathf.Max(0f, chain.chainTargetHoldDuration);
+            bounceSum += Mathf.Max(0, chain.bounceCount) * stacks;
+            radiusSum += Mathf.Max(0f, chain.searchRadius) * stacks;
+            damageMulSum += Mathf.Max(0f, chain.damageMultiplier) * stacks;
+            holdSum += Mathf.Max(0f, chain.chainTargetHoldDuration) * stacks;
         }
 
         if (!found)
@@ -546,7 +550,7 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             if (!ContainsCategory(piercing.affectedCategories, weapon.category))
                 continue;
 
-            sum += Mathf.Max(0, piercing.additionalPierceCount);
+            sum += Mathf.Max(0, piercing.additionalPierceCount) * cachedUpgrade.GetStackCount(i);
         }
 
         return Mathf.Max(0, sum);
@@ -570,7 +574,7 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             if (!ContainsCategory(quick.affectedCategories, weapon.category))
                 continue;
 
-            sum += Mathf.Max(0f, quick.reloadTimeReductionFraction);
+            sum += Mathf.Max(0f, quick.reloadTimeReductionFraction) * cachedUpgrade.GetStackCount(i);
         }
 
         return Mathf.Max(0f, sum);
@@ -594,7 +598,7 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             if (!ContainsCategory(ext.affectedCategories, weapon.category))
                 continue;
 
-            sum += Mathf.Max(0, ext.additionalMagazineRounds);
+            sum += Mathf.Max(0, ext.additionalMagazineRounds) * cachedUpgrade.GetStackCount(i);
         }
 
         return Mathf.Max(0, sum);
@@ -624,10 +628,11 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             if (!ContainsCategory(bonus.affectedCategories, weapon.category))
                 continue;
 
+            int stacks = cachedUpgrade.GetStackCount(i);
             found = true;
-            chanceSum += Mathf.Clamp01(bonus.bonusShotChance);
-            lateralSum += Mathf.Max(0f, bonus.lateralOffsetMeters);
-            delaySum += Mathf.Max(0f, bonus.delayUnscaledSeconds);
+            chanceSum += Mathf.Clamp01(bonus.bonusShotChance) * stacks;
+            lateralSum += Mathf.Max(0f, bonus.lateralOffsetMeters) * stacks;
+            delaySum += Mathf.Max(0f, bonus.delayUnscaledSeconds) * stacks;
         }
 
         if (!found)

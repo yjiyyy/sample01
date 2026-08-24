@@ -131,7 +131,7 @@ public class PlayerGodShieldUpgradeRuntime : MonoBehaviour
         {
             UpgradeEffectSO slot = u.GetSlot(i);
             if (slot is Upgrade_06_03_GodShield gs)
-                sum += Mathf.Max(0f, gs.durationSeconds);
+                sum += Mathf.Max(0f, gs.durationSeconds) * u.GetStackCount(i);
         }
 
         return sum;

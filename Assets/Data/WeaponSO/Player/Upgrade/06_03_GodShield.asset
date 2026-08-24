@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 06_03
   upgradeName: God Shield
   icon: {fileID: 21300000, guid: a0ed2bbcba116344bbda3628066485bf, type: 3}
+  cardFrame: {fileID: 21300000, guid: d542d02d643772e419a3247c7d7c8ec4, type: 3}
+  displayName:
+    korean: "\uC2E0\uC758 \uBCF4\uD638"
+    english: God Shield
+  description:
+    korean: "\uC77C\uC815 \uC2DC\uAC04 \uBB34\uC801"
+    english: Grants temporary invincibility.
   durationSeconds: 5
   activeFxPrefab: {fileID: 7314526620251459061, guid: bcaa429a1b43f76428d8791859244466, type: 3}
   slotConsumeFxPrefab: {fileID: 3621228682141950629, guid: e870fd5fbb7099741b04bef98a769994, type: 3}

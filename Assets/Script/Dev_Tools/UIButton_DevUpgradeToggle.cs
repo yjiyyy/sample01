@@ -2,66 +2,33 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// UI 버튼에서 DevUpgradeSwitcher를 열고 닫는 브릿지.
-/// slotIndex >= 0이면 해당 슬롯 대상으로 오버레이를 엽니다.
+/// 과거 업그레이드 슬롯 터치 치트와의 프리팹 호환용 컴포넌트.
+/// 치트 메뉴는 플레이어 초상화에서만 열리므로 터치/인스펙터 호출은 동작하지 않습니다.
 /// </summary>
 public class UIButton_DevUpgradeToggle : MonoBehaviour, IPointerClickHandler
 {
-    [SerializeField] private DevUpgradeSwitcher switcher;
-    [SerializeField] private int slotIndex = -1;
-    [SerializeField] private bool openOnPointerClick = true;
-
     public void Toggle()
     {
-        EnsureSwitcher();
-        if (switcher == null)
-            return;
-
-        if (slotIndex >= 0)
-            switcher.ToggleOverlayForSlot(slotIndex);
-        else
-            switcher.ToggleOverlay();
+        // 의도적으로 비워 둠: 업그레이드 슬롯 터치 치트 제거.
     }
 
     public void Open()
     {
-        EnsureSwitcher();
-        if (switcher == null)
-            return;
-
-        if (slotIndex >= 0)
-            switcher.OpenOverlayForSlot(slotIndex);
-        else
-            switcher.OpenOverlay();
+        // 의도적으로 비워 둠: 업그레이드 슬롯 터치 치트 제거.
     }
 
     public void Close()
     {
-        EnsureSwitcher();
-        switcher?.CloseOverlay();
+        // 의도적으로 비워 둠: 과거 터치 치트 연결 제거.
     }
 
     public void OpenForSlot(int index)
     {
-        EnsureSwitcher();
-        switcher?.OpenOverlayForSlot(index);
-    }
-
-    private void EnsureSwitcher()
-    {
-        if (switcher != null)
-            return;
-
-        switcher = Object.FindFirstObjectByType<DevUpgradeSwitcher>();
-        if (switcher == null)
-            Debug.LogWarning("[UIButton_DevUpgradeToggle] DevUpgradeSwitcher를 찾을 수 없습니다. GameManager에 DevUpgradeSwitcher를 추가하세요.");
+        // 의도적으로 비워 둠: 업그레이드 슬롯 터치 치트 제거.
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (!openOnPointerClick)
-            return;
-
-        Open();
+        // 의도적으로 비워 둠: 업그레이드 슬롯 터치 치트 제거.
     }
 }

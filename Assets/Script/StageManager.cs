@@ -26,11 +26,15 @@ public class StageManager : MonoBehaviour
     {
         Active = this;
         GameplayPauseOptionsBinder.BindSettingButton();
+        InGameShopOpener.EnsureOn(this);
+        DevCheatConsole.EnsureOn(this);
     }
 
     private void Start()
     {
         GameplayPauseOptionsBinder.BindSettingButton();
+        InGameShopOpener.EnsureOn(this);
+        DevCheatConsole.EnsureOn(this);
     }
 
     private void OnDisable()
@@ -89,6 +93,8 @@ public class StageManager : MonoBehaviour
         // maxStageLevel이 1이면 시작 시점부터 이미 max → 보스전이 있으면 즉시 시작
         TryNotifyBossEncounterIfAtMaxLevel();
         GameplayPauseOptionsBinder.BindSettingButton();
+        InGameShopOpener.EnsureOn(this);
+        DevCheatConsole.EnsureOn(this);
     }
 
     /// <summary>잡몹·아이템 박스 신규 스폰만 중지합니다. 이미 나온 오브젝트는 유지합니다.</summary>

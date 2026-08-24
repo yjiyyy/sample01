@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 04_03
   upgradeName: Bonus Shot
   icon: {fileID: 21300000, guid: b10b5778ab590d14b90f6403f9cd23d5, type: 3}
+  cardFrame: {fileID: 21300000, guid: 080fad8337cf5a44596a18005815a823, type: 3}
+  displayName:
+    korean: "\uBCF4\uB108\uC2A4 \uC0F7"
+    english: Bonus Shot
+  description:
+    korean: "\uC77C\uC815 \uD655\uB960\uB85C \uCD1D\uC54C 1\uAC1C \uCD94\uAC00 \uBC1C\uC0AC"
+    english: Has a chance to fire an additional bullet
   allowedDamageTypes: 02000000
   affectedCategories: 00000000
   bonusShotChance: 1

@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 02_03
   upgradeName: Stunning Punch
   icon: {fileID: 21300000, guid: 98daf7d6042b24f4c977987e9f556256, type: 3}
+  cardFrame: {fileID: 21300000, guid: 07fddfe9eef0b594ba7fe983865ca535, type: 3}
+  displayName:
+    korean: "\uAE30\uC808 \uD380\uCE58"
+    english: Stunning Punch
+  description:
+    korean: "\uB9E8\uC190 \uACF5\uACA9\uC2DC \uAE30\uC808 \uD655\uB960 \uC99D\uAC00"
+    english: Increases the chance to Stun with unarmed attacks
   allowedDamageTypes: 00000000
   affectedCategories: 00000000
   stunApplyChance: 1

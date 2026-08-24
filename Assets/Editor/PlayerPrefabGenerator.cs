@@ -105,6 +105,7 @@ public static class PlayerPrefabGenerator
         capsule.direction = 1;
         root.AddComponent<PlayerFacade>();
         root.AddComponent<PlayerStats>();
+        root.AddComponent<PlayerResources>();
         root.AddComponent<PlayerEquipmentController>();
         var sliceBlood = root.AddComponent<SliceBloodEffectSpawner>();
         root.AddComponent<SubWeaponController>();
@@ -145,6 +146,7 @@ public static class PlayerPrefabGenerator
         var detector = root.GetComponent<EnemyDetector>();
         var health = root.GetComponent<PlayerHealth>();
         var stats = root.GetComponent<PlayerStats>();
+        var resources = root.GetComponent<PlayerResources>();
         var subWeapon = root.GetComponent<SubWeaponController>();
         var upgradeRuntime = root.GetComponent<UpgradeEffectRuntime>();
 
@@ -201,6 +203,13 @@ public static class PlayerPrefabGenerator
             stats.level = 1;
             stats.experience = 0;
             stats.expToNextLevel = 100;
+        }
+
+        if (resources != null)
+        {
+            var so = new SerializedObject(resources);
+            SetFloat(so, "pickupMagnetRadius", 3f);
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         if (subWeapon != null)

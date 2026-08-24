@@ -50,6 +50,7 @@ public class SpawnManager : MonoBehaviour
         Upgrade_06_01_ReviveTicket ticket,
         Vector3 deathPosition,
         UpgradeEffectSO[] preservedSlots,
+        int[] preservedStacks,
         Transform corpseRoot,
         PlayerReviveWeaponSnapshot weaponSnapshot,
         IReadOnlyList<GameObject> slicedAttachmentRoots)
@@ -57,13 +58,21 @@ public class SpawnManager : MonoBehaviour
         if (ticket == null)
             return;
 
-        StartCoroutine(CoRevive(ticket, deathPosition, preservedSlots, corpseRoot, weaponSnapshot, slicedAttachmentRoots));
+        StartCoroutine(CoRevive(
+            ticket,
+            deathPosition,
+            preservedSlots,
+            preservedStacks,
+            corpseRoot,
+            weaponSnapshot,
+            slicedAttachmentRoots));
     }
 
     private IEnumerator CoRevive(
         Upgrade_06_01_ReviveTicket ticket,
         Vector3 deathPosition,
         UpgradeEffectSO[] preservedSlots,
+        int[] preservedStacks,
         Transform corpseRoot,
         PlayerReviveWeaponSnapshot weaponSnapshot,
         IReadOnlyList<GameObject> slicedAttachmentRoots)
@@ -94,12 +103,7 @@ public class SpawnManager : MonoBehaviour
 
         var upgrade = player.GetComponent<Upgrade>();
         if (upgrade != null && preservedSlots != null)
-        {
-            for (int i = 0; i < Upgrade.SlotCount && i < preservedSlots.Length; i++)
-            {
-                upgrade.TrySetSlot(i, preservedSlots[i]);
-            }
-        }
+            upgrade.ApplySlotSnapshot(preservedSlots, preservedStacks);
 
         var health = player.GetComponent<PlayerHealth>();
         if (health != null)
@@ -147,6 +151,8 @@ public class SpawnManager : MonoBehaviour
         if (followCamera != null)
             followCamera.SetTarget(player.transform);
 
+        BindResourceHuds();
+
         // 안전하게 GameManager에 등록 — Instance가 없으면 대기 후 등록
         if (GameManager.Instance != null)
         {
@@ -158,6 +164,16 @@ public class SpawnManager : MonoBehaviour
         }
 
         return player;
+    }
+
+    private static void BindResourceHuds()
+    {
+        var huds = Object.FindObjectsByType<ResourceHUD>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < huds.Length; i++)
+        {
+            if (huds[i] != null)
+                huds[i].BindResources();
+        }
     }
 
     private void RegisterPlayerToGameManager(GameObject player)

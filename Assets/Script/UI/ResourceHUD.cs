@@ -33,13 +33,15 @@ public class ResourceHUD : MonoBehaviour
     private void OnEnable()
     {
         EnsureIcons();
-        RefreshDisplay();
+        if (Application.isPlaying)
+            BindResources();
+        else
+            RefreshDisplay();
     }
 
     private void OnDisable()
     {
-        if (Application.isPlaying && resources != null)
-            resources.OnResourcesChanged -= OnResourcesChanged;
+        Unsubscribe();
     }
 
     private void Start()
@@ -47,10 +49,35 @@ public class ResourceHUD : MonoBehaviour
         if (!Application.isPlaying)
             return;
 
-        if (resources == null)
-            resources = PlayerResources.Instance != null
-                ? PlayerResources.Instance
-                : Object.FindFirstObjectByType<PlayerResources>();
+        BindResources();
+    }
+
+    private void LateUpdate()
+    {
+        if (!Application.isPlaying)
+            return;
+
+        // 플레이어가 HUD보다 늦게 스폰되거나, 부활로 인스턴스가 바뀌면 다시 연결합니다.
+        if (PlayerResources.Instance != resources)
+            BindResources();
+    }
+
+    /// <summary>
+    /// 스폰된 캐릭터의 Money/Gem을 HUD에 연결합니다.
+    /// </summary>
+    public void BindResources()
+    {
+        if (!Application.isPlaying)
+        {
+            RefreshDisplay();
+            return;
+        }
+
+        Unsubscribe();
+
+        resources = PlayerResources.Instance != null
+            ? PlayerResources.Instance
+            : Object.FindFirstObjectByType<PlayerResources>();
 
         if (resources != null)
         {
@@ -59,7 +86,15 @@ public class ResourceHUD : MonoBehaviour
             Refresh(resources.Money, resources.Gem);
         }
         else
-            RefreshDisplay();
+        {
+            Refresh(0, 0);
+        }
+    }
+
+    private void Unsubscribe()
+    {
+        if (resources != null)
+            resources.OnResourcesChanged -= OnResourcesChanged;
     }
 
     private void OnResourcesChanged(int money, int gem)

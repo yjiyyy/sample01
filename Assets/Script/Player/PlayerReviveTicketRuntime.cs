@@ -88,10 +88,23 @@ public class PlayerReviveTicketRuntime : MonoBehaviour
         }
         SpawnWorldFx(ticket.reviveCastFxPrefab, deathPos, ticket.worldFxAutoDestroySeconds);
 
-        // 리스폰 시 복원용 슬롯 스냅샷(티켓은 이미 소모된 것으로 반영)
-        UpgradeEffectSO[] preservedSlots = CaptureCurrentSlots();
+        // 리스폰 시 복원용 슬롯 스냅샷(티켓 스택 1장 소모 반영)
+        UpgradeEffectSO[] preservedSlots = new UpgradeEffectSO[Upgrade.SlotCount];
+        int[] preservedStacks = new int[Upgrade.SlotCount];
+        upgrade.CopySlotsTo(preservedSlots, preservedStacks);
         if (slotIndex >= 0 && slotIndex < preservedSlots.Length)
-            preservedSlots[slotIndex] = null;
+        {
+            int stack = preservedStacks[slotIndex];
+            if (stack <= 1)
+            {
+                preservedSlots[slotIndex] = null;
+                preservedStacks[slotIndex] = 0;
+            }
+            else
+            {
+                preservedStacks[slotIndex] = stack - 1;
+            }
+        }
 
         var spawnManager = Object.FindFirstObjectByType<SpawnManager>();
         if (spawnManager == null)
@@ -102,8 +115,8 @@ public class PlayerReviveTicketRuntime : MonoBehaviour
         }
 
         // Die()에서 일반 사망과 동일한 연출(랙돌/슬라이스/애니)이 끝난 뒤, 시체만 남겨 부활을 예약합니다.
-        spawnManager.ScheduleRevive(ticket, deathPos, preservedSlots, corpseRoot, weaponSnapshot, slicedAttachmentRoots);
-        StartCoroutine(ClearSlotAfterDelay(slotIndex, Mathf.Max(0f, ticket.respawnDelaySeconds)));
+        spawnManager.ScheduleRevive(ticket, deathPos, preservedSlots, preservedStacks, corpseRoot, weaponSnapshot, slicedAttachmentRoots);
+        StartCoroutine(ConsumeTicketStackAfterDelay(slotIndex, Mathf.Max(0f, ticket.respawnDelaySeconds)));
 
         if (enableDebugLog)
             Debug.Log($"[PlayerReviveTicketRuntime] Revive Ticket 소모 완료. slot:{slotIndex}, delay:{ticket.respawnDelaySeconds:F2}s");
@@ -111,19 +124,7 @@ public class PlayerReviveTicketRuntime : MonoBehaviour
         return true;
     }
 
-    private UpgradeEffectSO[] CaptureCurrentSlots()
-    {
-        var slots = new UpgradeEffectSO[Upgrade.SlotCount];
-        if (upgrade == null)
-            return slots;
-
-        for (int i = 0; i < Upgrade.SlotCount; i++)
-            slots[i] = upgrade.GetSlot(i);
-
-        return slots;
-    }
-
-    private IEnumerator ClearSlotAfterDelay(int slotIndex, float delay)
+    private IEnumerator ConsumeTicketStackAfterDelay(int slotIndex, float delay)
     {
         if (upgrade == null)
             yield break;
@@ -131,7 +132,7 @@ public class PlayerReviveTicketRuntime : MonoBehaviour
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
-        upgrade.TryClearSlot(slotIndex);
+        upgrade.TryConsumeOneStack(slotIndex);
     }
 
     private void EnsureUpgradeHud()

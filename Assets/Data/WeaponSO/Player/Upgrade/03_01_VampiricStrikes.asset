@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 03_01
   upgradeName: Vampiric Strikes
   icon: {fileID: 21300000, guid: 717d0822bfe15354f88c75537c43859b, type: 3}
+  cardFrame: {fileID: 21300000, guid: fba5192aac703d84497fb0f016d461be, type: 3}
+  displayName:
+    korean: "\uCD9C\uD608 \uD0C0\uACA9"
+    english: Vampiric Strikes
+  description:
+    korean: "\uADFC\uC811\uBB34\uAE30 \uACF5\uACA9\uC2DC HP\uB97C \uD68C\uBCF5\uD55C\uB2E4"
+    english: Restores HP with melee weapon attacks
   allowedDamageTypes: 01000000
   affectedCategories: 00000000
   lifeStealPercent: 50

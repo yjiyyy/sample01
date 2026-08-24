@@ -15,5 +15,12 @@ MonoBehaviour:
   id: 01_05
   upgradeName: Swift Recovery
   icon: {fileID: 21300000, guid: 4bfb9a1dbb294694cb1660d32670bc4a, type: 3}
+  cardFrame: {fileID: 21300000, guid: cd2ac51ee22487d4c8aa4853a37f8310, type: 3}
+  displayName:
+    korean: "\uC2E0\uC18D \uD68C\uBCF5"
+    english: Swift Recovery
+  description:
+    korean: "\uC2A4\uD14C\uBBF8\uB108 \uD68C\uBCF5 \uC18D\uB3C4\uAC00 \uBE68\uB77C\uC9C4\uB2E4"
+    english: Increases Stamina Recovery Speed
   additiveStaminaRegenPercent: 0.5
   staminaRechargeDelayReduction: 0.5

@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 04_04
   upgradeName: Quick Reload
   icon: {fileID: 21300000, guid: 4d10f9d925463ee49b5bafab4f63e81f, type: 3}
+  cardFrame: {fileID: 21300000, guid: 080fad8337cf5a44596a18005815a823, type: 3}
+  displayName:
+    korean: "\uC2E0\uC18D \uC7AC\uC7A5\uC804"
+    english: Quick Reload
+  description:
+    korean: "\uC7AC\uC7A5\uC804 \uC18D\uB3C4\uAC00 \uBE68\uB77C\uC9C4\uB2E4"
+    english: Increases Reload Speed
   allowedDamageTypes: 02000000
   affectedCategories: 00000000
   reloadTimeReductionFraction: 0.1

@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 01_02
   upgradeName: Power Up
   icon: {fileID: 21300000, guid: 719a1eafedd928341a9349fc587042a3, type: 3}
+  cardFrame: {fileID: 21300000, guid: cd2ac51ee22487d4c8aa4853a37f8310, type: 3}
+  displayName:
+    korean: "\uD30C\uC6CC \uC5C5"
+    english: Power Up
+  description:
+    korean: "\uACF5\uACA9\uB825 \uC99D\uAC00"
+    english: Increases Attack Power
   affectedCategories: 00000000
   additivePercentDamage: 2
   flatBonusDamage: 0

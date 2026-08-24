@@ -194,9 +194,6 @@ public class InputManager : MonoBehaviour
         return kb || mobile;
     }
 
-    public bool GetDamageTestInput() => !IsGameplayInputBlocked && GetKeyDown(KeyCode.Minus);
-    public bool GetHealTestInput() => !IsGameplayInputBlocked && GetKeyDown(KeyCode.Equals);
-
     // Mobile setters (UI에서 호출)
     public void SetMobileMove(Vector2 v)
     {

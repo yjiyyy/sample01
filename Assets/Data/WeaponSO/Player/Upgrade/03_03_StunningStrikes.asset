@@ -15,6 +15,14 @@ MonoBehaviour:
   id: 03_03
   upgradeName: Stunning Strikes
   icon: {fileID: 21300000, guid: 609acc2cbafef4a4fb224a37969edf11, type: 3}
+  cardFrame: {fileID: 21300000, guid: fba5192aac703d84497fb0f016d461be, type: 3}
+  displayName:
+    korean: "\uAE30\uC808 \uD0C0\uACA9"
+    english: Stunning Strikes
+  description:
+    korean: "\uADFC\uC811\uBB34\uAE30 \uACF5\uACA9\uC2DC \uAE30\uC808 \uD655\uB960
+      \uC99D\uAC00"
+    english: Increases the chance to Stun with melee weapon attacks.
   allowedDamageTypes: 01000000
   affectedCategories: 00000000
   stunApplyChance: 1

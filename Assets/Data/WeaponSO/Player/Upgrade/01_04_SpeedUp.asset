@@ -15,4 +15,11 @@ MonoBehaviour:
   id: 01_04
   upgradeName: Speed Up
   icon: {fileID: 21300000, guid: 215a362a37d0fd74f8f1589faf204228, type: 3}
+  cardFrame: {fileID: 21300000, guid: cd2ac51ee22487d4c8aa4853a37f8310, type: 3}
+  displayName:
+    korean: "\uC2A4\uD53C\uB4DC \uC5C5"
+    english: Speed Up
+  description:
+    korean: "\uC774\uB3D9\uC18D\uB3C4\uAC00 \uBE68\uB77C\uC9C4\uB2E4"
+    english: Increases Movement Speed
   additiveMoveSpeedPercent: 0.2

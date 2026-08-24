@@ -165,12 +165,13 @@ public class UpgradeEffectRuntime : MonoBehaviour
                 if (playerHealth == null)
                     continue;
 
-                slotCoroutines[i] = StartCoroutine(RunHpRegen(hpRegen));
+                int stacks = upgrade.GetStackCount(i);
+                slotCoroutines[i] = StartCoroutine(RunHpRegen(hpRegen, stacks));
                 appliedCount++;
 
                 if (enableDebugLog)
                 {
-                    Debug.Log($"[UpgradeEffectRuntime] HPRegen 적용 - slot:{i}, id:{hpRegen.id}, interval:{hpRegen.tickInterval}, heal:{hpRegen.healAmountPerTick}");
+                    Debug.Log($"[UpgradeEffectRuntime] HPRegen 적용 - slot:{i}, stacks:{stacks}, id:{hpRegen.id}, interval:{hpRegen.tickInterval}, heal:{hpRegen.healAmountPerTick * stacks}");
                 }
             }
         }
@@ -223,7 +224,7 @@ public class UpgradeEffectRuntime : MonoBehaviour
             if (slot is not Upgrade_01_04_SpeedUp speedUp)
                 continue;
 
-            percentSum += Mathf.Max(0f, speedUp.additiveMoveSpeedPercent);
+            percentSum += Mathf.Max(0f, speedUp.additiveMoveSpeedPercent) * upgrade.GetStackCount(i);
         }
 
         ApplyMoveSpeedFromUpgrades(1f + percentSum);
@@ -252,8 +253,9 @@ public class UpgradeEffectRuntime : MonoBehaviour
             if (slot is not Upgrade_01_05_SwiftRecovery swift)
                 continue;
 
-            percentSum += Mathf.Max(0f, swift.additiveStaminaRegenPercent);
-            delayReductionSum += Mathf.Max(0f, swift.staminaRechargeDelayReduction);
+            int stacks = upgrade.GetStackCount(i);
+            percentSum += Mathf.Max(0f, swift.additiveStaminaRegenPercent) * stacks;
+            delayReductionSum += Mathf.Max(0f, swift.staminaRechargeDelayReduction) * stacks;
         }
 
         ApplyStaminaRechargeFromUpgrades(1f + percentSum);
@@ -292,9 +294,10 @@ public class UpgradeEffectRuntime : MonoBehaviour
         }
     }
 
-    private IEnumerator RunHpRegen(Upgrade_01_01_HPRegen effect)
+    private IEnumerator RunHpRegen(Upgrade_01_01_HPRegen effect, int stacks)
     {
         float interval = Mathf.Max(0.05f, effect.tickInterval);
+        float heal = Mathf.Max(0f, effect.healAmountPerTick) * Mathf.Max(1, stacks);
         WaitForSeconds wait = new WaitForSeconds(interval);
 
         while (true)
@@ -304,8 +307,8 @@ public class UpgradeEffectRuntime : MonoBehaviour
             if (playerHealth == null)
                 yield break;
 
-            if (effect.healAmountPerTick > 0f)
-                playerHealth.Heal(effect.healAmountPerTick);
+            if (heal > 0f)
+                playerHealth.Heal(heal);
         }
     }
 }

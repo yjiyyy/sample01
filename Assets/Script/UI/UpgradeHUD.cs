@@ -1,3 +1,5 @@
+using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,6 +15,9 @@ public class UpgradeHUD : MonoBehaviour
     /// <summary>장착 업그레이드 아이콘은 슬롯 루트의 이 이름 자식 Image에 표시합니다.</summary>
     public const string SlotIconChildName = "Icon";
 
+    /// <summary>같은 칸 스택 표시용 텍스트 오브젝트 이름.</summary>
+    public const string SlotDuplicationChildName = "Duplication";
+
     const float DefaultSlotIconSize = 140f;
 
     [Header("UI (슬롯 테두리 Image 5개)")]
@@ -24,6 +29,13 @@ public class UpgradeHUD : MonoBehaviour
     [SerializeField] private Upgrade upgrade;
 
     private Image[] slotIconImages = new Image[Upgrade.SlotCount];
+    private TextMeshProUGUI[] slotDuplicationTexts = new TextMeshProUGUI[Upgrade.SlotCount];
+    private Button[] slotPickButtons = new Button[Upgrade.SlotCount];
+    private bool slotPickMode;
+    private Action<int> slotPickCallback;
+    private Canvas cachedCanvas;
+    private int cachedCanvasSortingOrder;
+    private bool cachedCanvasOverrideSorting;
 
     /// <summary>현재 바인딩된 <see cref="Upgrade"/> (없으면 null).</summary>
     public Upgrade DataSource => upgrade;
@@ -67,6 +79,7 @@ public class UpgradeHUD : MonoBehaviour
     {
         EnsureSlotImages();
         EnsureSlotIconImages();
+        EnsureSlotDuplicationTexts();
         CaptureDefaultSlotSpritesIfNeeded();
         BindUpgrade();
         Refresh();
@@ -76,6 +89,7 @@ public class UpgradeHUD : MonoBehaviour
     {
         EnsureSlotImages();
         EnsureSlotIconImages();
+        EnsureSlotDuplicationTexts();
         CaptureDefaultSlotSpritesIfNeeded();
         BindUpgrade();
         Refresh();
@@ -86,7 +100,7 @@ public class UpgradeHUD : MonoBehaviour
         // 플레이어는 씬 시작 다음 프레임에 스폰되므로, 그때 HUD를 다시 연결합니다.
         if (upgrade == null)
         {
-            Upgrade found = Object.FindFirstObjectByType<Upgrade>();
+            Upgrade found = UnityEngine.Object.FindFirstObjectByType<Upgrade>();
             if (found != null)
                 EnsureDataSource(found);
         }
@@ -94,6 +108,7 @@ public class UpgradeHUD : MonoBehaviour
 
     private void OnDisable()
     {
+        EndSlotPickMode();
         UnbindUpgrade();
     }
 
@@ -110,15 +125,59 @@ public class UpgradeHUD : MonoBehaviour
 
         EnsureSlotImages();
         EnsureSlotIconImages();
+        EnsureSlotDuplicationTexts();
         CaptureDefaultSlotSpritesIfNeeded();
         if (Application.isPlaying)
             Refresh();
+    }
+
+    /// <summary>상점 슬롯 교체: 업그레이드 슬롯을 눌러 버릴 칸을 고릅니다.</summary>
+    public void BeginSlotPickMode(Action<int> onSlotPicked)
+    {
+        EndSlotPickMode();
+        slotPickMode = true;
+        slotPickCallback = onSlotPicked;
+        BoostCanvasForSlotPick();
+        EnsureSlotPickButtons(true);
+    }
+
+    public void EndSlotPickMode()
+    {
+        slotPickMode = false;
+        slotPickCallback = null;
+        EnsureSlotPickButtons(false);
+        RestoreCanvasAfterSlotPick();
+    }
+
+    private void BoostCanvasForSlotPick()
+    {
+        cachedCanvas = GetComponentInParent<Canvas>();
+        if (cachedCanvas == null)
+            return;
+
+        cachedCanvasSortingOrder = cachedCanvas.sortingOrder;
+        cachedCanvasOverrideSorting = cachedCanvas.overrideSorting;
+        cachedCanvas.overrideSorting = true;
+        // 상점 캔버스(18)보다 위에 두어 슬롯 클릭이 먹히게 합니다.
+        if (cachedCanvas.sortingOrder < 30)
+            cachedCanvas.sortingOrder = 30;
+    }
+
+    private void RestoreCanvasAfterSlotPick()
+    {
+        if (cachedCanvas == null)
+            return;
+
+        cachedCanvas.sortingOrder = cachedCanvasSortingOrder;
+        cachedCanvas.overrideSorting = cachedCanvasOverrideSorting;
+        cachedCanvas = null;
     }
 
     public void Refresh()
     {
         EnsureSlotImages();
         EnsureSlotIconImages();
+        EnsureSlotDuplicationTexts();
 
         for (int i = 0; i < Upgrade.SlotCount; i++)
         {
@@ -132,20 +191,41 @@ public class UpgradeHUD : MonoBehaviour
             }
 
             Image icon = slotIconImages != null && i < slotIconImages.Length ? slotIconImages[i] : null;
-            if (icon == null)
-                continue;
-
             UpgradeEffectSO slotData = upgrade != null ? upgrade.GetSlot(i) : null;
-            if (slotData != null && slotData.icon != null)
+            if (icon != null)
             {
-                icon.sprite = slotData.icon;
-                icon.enabled = true;
-                icon.gameObject.SetActive(true);
+                if (slotData != null && slotData.icon != null)
+                {
+                    icon.sprite = slotData.icon;
+                    icon.enabled = true;
+                    icon.gameObject.SetActive(true);
+                }
+                else
+                {
+                    icon.sprite = null;
+                    icon.enabled = false;
+                }
             }
-            else
+
+            TextMeshProUGUI dup = slotDuplicationTexts != null && i < slotDuplicationTexts.Length
+                ? slotDuplicationTexts[i]
+                : null;
+            if (dup != null)
             {
-                icon.sprite = null;
-                icon.enabled = false;
+                BringDuplicationToFront(dup.transform);
+                int display = upgrade != null ? upgrade.GetDuplicationDisplay(i) : 0;
+                // Duplication 아래에 Icon/FX가 있을 수 있어 GameObject는 끄지 않습니다.
+                if (display > 0)
+                {
+                    dup.text = $"+{display}";
+                    dup.enabled = true;
+                    dup.alpha = 1f;
+                }
+                else
+                {
+                    dup.text = string.Empty;
+                    dup.enabled = false;
+                }
             }
         }
     }
@@ -233,7 +313,7 @@ public class UpgradeHUD : MonoBehaviour
 
         // Instantiate(…, parent, bool)은 Unity 버전에 따라 월드좌표 유지/로컬 해석이 달라,
         // 부모는 FX_Slot인데 월드 위치만 1번 슬롯에 남는 현상이 날 수 있음 → 부모 없이 생성 후 SetParent(false)로 고정.
-        GameObject fx = Object.Instantiate(fxPrefab);
+        GameObject fx = UnityEngine.Object.Instantiate(fxPrefab);
         Transform tr = fx.transform;
         tr.SetParent(parent, false);
         tr.localPosition = Vector3.zero;
@@ -451,7 +531,7 @@ public class UpgradeHUD : MonoBehaviour
     private void BindUpgrade()
     {
         if (upgrade == null)
-            upgrade = Object.FindFirstObjectByType<Upgrade>();
+            upgrade = UnityEngine.Object.FindFirstObjectByType<Upgrade>();
 
         if (upgrade == null)
             return;
@@ -482,13 +562,145 @@ public class UpgradeHUD : MonoBehaviour
                 continue;
 
             Image icon = FindDirectChildImage(slotRoot, SlotIconChildName);
+            if (icon == null)
+            {
+                Transform dupRoot = FindDirectChild(slotRoot, SlotDuplicationChildName);
+                if (dupRoot != null)
+                    icon = FindDirectChildImage(dupRoot, SlotIconChildName);
+            }
             if (icon == null && Application.isPlaying)
                 icon = CreateSlotIcon(slotRoot);
             slotIconImages[i] = icon;
         }
     }
 
-    private static Image FindDirectChildImage(Transform parent, string childName)
+    private void EnsureSlotDuplicationTexts()
+    {
+        if (slotDuplicationTexts == null || slotDuplicationTexts.Length != Upgrade.SlotCount)
+            System.Array.Resize(ref slotDuplicationTexts, Upgrade.SlotCount);
+
+        Transform[] slotRoots = new Transform[Upgrade.SlotCount];
+        Transform duplicationTemplate = null;
+
+        // 먼저 씬에 실제로 있는 양식(현재 Stage00은 UpgradeSlot_01)을 찾습니다.
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            Transform slotRoot = FindUpgradeSlotRootByDataIndex(i);
+            if (slotRoot == null && slotImages != null && i < slotImages.Length && slotImages[i] != null)
+                slotRoot = slotImages[i].transform;
+            slotRoots[i] = slotRoot;
+            if (slotRoot == null)
+            {
+                slotDuplicationTexts[i] = null;
+                continue;
+            }
+
+            Transform dupTf = FindDirectChild(slotRoot, SlotDuplicationChildName);
+            if (dupTf == null)
+            {
+                slotDuplicationTexts[i] = null;
+                continue;
+            }
+
+            if (duplicationTemplate == null)
+                duplicationTemplate = dupTf;
+
+            TextMeshProUGUI tmp = dupTf.GetComponent<TextMeshProUGUI>();
+            if (tmp == null)
+                tmp = dupTf.GetComponentInChildren<TextMeshProUGUI>(true);
+            slotDuplicationTexts[i] = tmp;
+            BringDuplicationToFront(dupTf);
+        }
+
+        // 씬 파일은 건드리지 않고, 플레이 중 누락된 슬롯 2~5에만 양식을 복제합니다.
+        if (!Application.isPlaying || duplicationTemplate == null)
+            return;
+
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            if (slotDuplicationTexts[i] != null || slotRoots[i] == null)
+                continue;
+
+            GameObject clone = UnityEngine.Object.Instantiate(
+                duplicationTemplate.gameObject,
+                slotRoots[i],
+                false);
+            clone.name = SlotDuplicationChildName;
+
+            TextMeshProUGUI tmp = clone.GetComponent<TextMeshProUGUI>();
+            if (tmp == null)
+                tmp = clone.GetComponentInChildren<TextMeshProUGUI>(true);
+            slotDuplicationTexts[i] = tmp;
+            BringDuplicationToFront(clone.transform);
+        }
+    }
+
+    private static void BringDuplicationToFront(Transform duplicationRoot)
+    {
+        if (duplicationRoot != null)
+            duplicationRoot.SetAsLastSibling();
+    }
+
+    private void EnsureSlotPickButtons(bool enable)
+    {
+        if (slotPickButtons == null || slotPickButtons.Length != Upgrade.SlotCount)
+            System.Array.Resize(ref slotPickButtons, Upgrade.SlotCount);
+
+        EnsureSlotImages();
+
+        for (int i = 0; i < Upgrade.SlotCount; i++)
+        {
+            Transform slotRoot = FindUpgradeSlotRootByDataIndex(i);
+            if (slotRoot == null && slotImages != null && i < slotImages.Length && slotImages[i] != null)
+                slotRoot = slotImages[i].transform;
+            if (slotRoot == null)
+                continue;
+
+            Button button = slotPickButtons[i];
+            if (button == null)
+                button = slotRoot.GetComponent<Button>();
+            if (button == null && enable)
+            {
+                button = slotRoot.gameObject.AddComponent<Button>();
+                button.transition = Selectable.Transition.None;
+                Image target = slotRoot.GetComponent<Image>();
+                if (target != null)
+                {
+                    target.raycastTarget = true;
+                    button.targetGraphic = target;
+                }
+            }
+
+            slotPickButtons[i] = button;
+            if (button == null)
+                continue;
+
+            button.onClick.RemoveAllListeners();
+            if (enable)
+            {
+                int index = i;
+                button.onClick.AddListener(() => HandleSlotPickClicked(index));
+                button.enabled = true;
+                button.interactable = true;
+            }
+            else
+            {
+                button.enabled = false;
+            }
+        }
+    }
+
+    private void HandleSlotPickClicked(int index)
+    {
+        if (!slotPickMode || slotPickCallback == null)
+            return;
+
+        Action<int> cb = slotPickCallback;
+        EndSlotPickMode();
+        cb.Invoke(index);
+    }
+
+    private static Transform FindDirectChild(Transform parent, string childName)
     {
         if (parent == null || string.IsNullOrEmpty(childName))
             return null;
@@ -496,13 +708,19 @@ public class UpgradeHUD : MonoBehaviour
         for (int i = 0; i < parent.childCount; i++)
         {
             Transform child = parent.GetChild(i);
-            if (child == null || !string.Equals(child.name, childName, System.StringComparison.Ordinal))
-                continue;
-            if (child.TryGetComponent(out Image img))
-                return img;
+            if (child != null && string.Equals(child.name, childName, System.StringComparison.Ordinal))
+                return child;
         }
 
         return null;
+    }
+
+    private static Image FindDirectChildImage(Transform parent, string childName)
+    {
+        Transform child = FindDirectChild(parent, childName);
+        if (child == null)
+            return null;
+        return child.TryGetComponent(out Image img) ? img : null;
     }
 
     private static Image CreateSlotIcon(Transform slotRoot)
@@ -660,7 +878,7 @@ public class UpgradeHUD : MonoBehaviour
         if (upgrade == null)
             return null;
 
-        UpgradeHUD[] allHuds = Object.FindObjectsByType<UpgradeHUD>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        UpgradeHUD[] allHuds = UnityEngine.Object.FindObjectsByType<UpgradeHUD>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         if (allHuds == null || allHuds.Length == 0)
         {
             if (verboseLog)

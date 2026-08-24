@@ -1,0 +1,99 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa729e147170c4d43a07c06e007e52c6, type: 3}
+  m_Name: InGameShopCatalog
+  m_EditorClassIdentifier: 
+  offers:
+  - upgrade: {fileID: 11400000, guid: 9a6e99dc2504346448f6f368ffdcd915, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: d1a89ae6e35967846b767a85b32a9707, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: e906b30662bb4b5459d88db8f145daa4, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: a1b09384cefaada40972c91042e04498, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 0b61fc0f0fe034541b75a058c461716f, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: d1260017080bedd4ebe66324d406ded6, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 291b3c01091814148a3e8823a6365456, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 756ab23999fd5f042a80308610f77df3, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 3fb49a80782b9a443bdde34af24e2f1a, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 44c9c0f16f030be47b65d16f80688a45, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 93dbfd1d1fbd62f47ada201b39623802, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: a607c80a95e99c44faaa0a18aa7bcdbd, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 229dbba1060ac7f41b61d25e464c741e, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 8d3394bded2a6f248abc7a53d5ae68e1, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 900354af64b73064b954c9529cbafb96, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 635afa0b45cdc7549a73fbd3ea344175, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 852f150d736f82d41a3be3e6a75f1fef, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 366d1641b757aa240832dd10467cb384, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 62bb0e7872a186447a99185064427f08, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: f6f94137f2cd93c47b495def6125bef2, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: f1c8d0acad504c44cb9659bd4825f692, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 4c65d5209733c9b49ba1ca4f59fcfedf, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: d1a9e9707bfcbdc41b6e6ef12185b50a, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: eb7af2c8ff711e542aebc68eaec2099a, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: d58fa9032f4b5c1a9e8d7c6b5a403928, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 18f58b1f48f2a224ab40be0d86f37ba0, type: 2}
+    currency: 0
+    price: 10
+  - upgrade: {fileID: 11400000, guid: 6c8d9e0f1a2b3c4d5e6f708192a3344b, type: 2}
+    currency: 0
+    price: 10
+  rerollCurrency: 0
+  rerollCost: 5
+  rerollCostIncrease: 0

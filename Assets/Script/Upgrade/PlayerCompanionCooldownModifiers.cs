@@ -24,7 +24,7 @@ public class PlayerCompanionCooldownModifiers : MonoBehaviour
             if (slot is not Upgrade_05_00_SwiftAngels swift)
                 continue;
 
-            companionCooldownReductionSum += Mathf.Max(0f, swift.cooldownReductionFraction);
+            companionCooldownReductionSum += Mathf.Max(0f, swift.cooldownReductionFraction) * upgrade.GetStackCount(i);
         }
 
         companionCooldownReductionSum = Mathf.Clamp(companionCooldownReductionSum, 0f, MaxReduction);

@@ -15,6 +15,13 @@ MonoBehaviour:
   id: 05_03
   upgradeName: Angel Curse
   icon: {fileID: 21300000, guid: 831995e9256492c44b04b639e2e4bb8e, type: 3}
+  cardFrame: {fileID: 21300000, guid: c77cb8d6819755149b1c203964a191ef, type: 3}
+  displayName:
+    korean: "\uC800\uC8FC \uCC9C\uC0AC"
+    english: Angel Curse
+  description:
+    korean: "\uCC9C\uC0AC\uC758 \uB3C4\uC6C0.(\uB3C5 \uACF5\uACA9)"
+    english: Angel Support (Poison Attack)
   companionPrefab: {fileID: 992622279877015391, guid: 72a6671d161f0e942a72848113665ca6, type: 3}
   acquireRange: 10
   reacquireInterval: 0.2

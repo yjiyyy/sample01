@@ -15,6 +15,14 @@ MonoBehaviour:
   id: 06_04
   upgradeName: Overdrive
   icon: {fileID: 21300000, guid: b513a6dccdcd5ef44a9d6d31fc282eaf, type: 3}
+  cardFrame: {fileID: 21300000, guid: d542d02d643772e419a3247c7d7c8ec4, type: 3}
+  displayName:
+    korean: "\uACFC\uBD80\uD558"
+    english: Overdrive
+  description:
+    korean: "\uC77C\uC815\uC2DC\uAC04\uB3D9\uC548 \uC2A4\uD14C\uBBF8\uB108\uAC00
+      \uC18C\uBAA8\uB418\uC9C0 \uC54A\uB294\uB2E4."
+    english: Stamina is not consumed for a limited time.
   durationSeconds: 10
   activeFxPrefab: {fileID: 0}
   silhouetteGhostProfile: {fileID: 11400000, guid: 38bac66fb1a6c3e459e0f984472f8ee5, type: 2}
