@@ -15,6 +15,14 @@ public class PlayerStats : MonoBehaviour
     public float baseMoveSpeed = 10f;
     public float rotationSpeedDegPerSec = 720f;
 
+    [Header("Combat")]
+    [Tooltip("근력. 장착 무기 무게 합 제한용.")]
+    public float strength = 10f;
+    [Tooltip("근접(MeleeWeapon / Unarmed) 공격 배수.")]
+    public float meleeAttack = 1f;
+    [Tooltip("원거리(ProjectileGun) 공격 배수.")]
+    public float rangedAttack = 1f;
+
     [Header("Stamina (Evade Gauge)")]
     public float maxStamina = 100f;
     public float currentStamina = 100f;
@@ -49,11 +57,31 @@ public class PlayerStats : MonoBehaviour
         massMultiplier = Mathf.Max(0.0001f, cfg.mass);
         baseMoveSpeed = cfg.baseMoveSpeed;
         rotationSpeedDegPerSec = cfg.rotationSpeedDegPerSec;
+        strength = Mathf.Max(0f, cfg.strength);
+        meleeAttack = Mathf.Max(0f, cfg.meleeAttack);
+        rangedAttack = Mathf.Max(0f, cfg.rangedAttack);
         maxStamina = Mathf.Max(1f, cfg.maxStamina);
         staminaRechargeRate = Mathf.Max(0f, cfg.staminaRechargeRate);
         staminaRechargeDelay = Mathf.Max(0f, staminaRechargeDelay);
         currentStamina = maxStamina;
         staminaRechargeCooldown = 0f;
+    }
+
+    /// <summary>
+    /// 공격 타입에 맞는 플레이어 ATK 배수.
+    /// Unarmed / MeleeWeapon → meleeAttack, ProjectileGun → rangedAttack.
+    /// </summary>
+    public float GetAttackMultiplier(AttackDamageType damageType)
+    {
+        switch (damageType)
+        {
+            case AttackDamageType.ProjectileGun:
+                return Mathf.Max(0f, rangedAttack);
+            case AttackDamageType.Unarmed:
+            case AttackDamageType.MeleeWeapon:
+            default:
+                return Mathf.Max(0f, meleeAttack);
+        }
     }
 
     public void TickStaminaRecharge(float dt)

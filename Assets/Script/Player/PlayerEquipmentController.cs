@@ -24,6 +24,13 @@ public struct PlayerReviveWeaponSnapshot
     public bool HasWeapon => slot0 != null || slot1 != null;
 }
 
+public enum WeaponAssignFailReason
+{
+    None = 0,
+    DuplicateInOtherSlot,
+    InsufficientStrength
+}
+
 [DisallowMultipleComponent]
 public class PlayerEquipmentController : MonoBehaviour
 {
@@ -294,6 +301,13 @@ public class PlayerEquipmentController : MonoBehaviour
     /// <summary>지금 켜진 슬롯에 무기를 넣습니다. 다른 칸과 같은 무기(None 제외)면 false.</summary>
     public bool TryAssignToActiveSlot(WeaponDataSO so, Transform playerRoot = null)
     {
+        return TryAssignToActiveSlot(so, playerRoot, out _);
+    }
+
+    public bool TryAssignToActiveSlot(WeaponDataSO so, Transform playerRoot, out WeaponAssignFailReason failReason)
+    {
+        failReason = WeaponAssignFailReason.None;
+
         if (!loadoutConfigured)
             ConfigureLoadout(so, null, unarmedWeaponData ?? so);
 
@@ -301,13 +315,59 @@ public class PlayerEquipmentController : MonoBehaviour
         int other = OtherSlot(activeSlotIndex);
         if (!IsUnarmed(resolved) && IsSameWeapon(resolved, weaponSlots[other]))
         {
+            failReason = WeaponAssignFailReason.DuplicateInOtherSlot;
             Debug.LogWarning($"[Equip] '{resolved.weaponName}' 은 이미 다른 슬롯에 있습니다.");
+            return false;
+        }
+
+        if (!CanAssignToActiveSlotByStrength(resolved, out float totalWeight, out float strength))
+        {
+            failReason = WeaponAssignFailReason.InsufficientStrength;
+            Debug.LogWarning(
+                $"[Equip] 근력 부족: '{resolved.weaponName}' (무게 합 {totalWeight:0.##} / STR {strength:0.##})");
+            PlayerToastUI.ShowInsufficientStrength(totalWeight, strength);
             return false;
         }
 
         weaponSlots[activeSlotIndex] = resolved;
         EquipByData(resolved, playerRoot, debugLogs: false);
         return true;
+    }
+
+    /// <summary>
+    /// 활성 슬롯에 newWeapon을 넣었을 때 (다른 슬롯 무게 + 새 무기 무게) ≤ STR 인지 확인합니다.
+    /// 맨손/null 무게는 0으로 취급합니다.
+    /// </summary>
+    public bool CanAssignToActiveSlotByStrength(WeaponDataSO newWeapon, out float totalWeight, out float strength)
+    {
+        strength = GetPlayerStrength();
+        float otherWeight = GetWeaponWeight(weaponSlots[OtherSlot(activeSlotIndex)]);
+        float newWeight = GetWeaponWeight(newWeapon);
+        totalWeight = otherWeight + newWeight;
+        return totalWeight <= strength + 0.0001f;
+    }
+
+    public float GetWeaponWeight(WeaponDataSO so)
+    {
+        if (so == null || IsUnarmed(so))
+            return 0f;
+        return Mathf.Max(0f, so.weight);
+    }
+
+    public float GetEquippedWeightSum()
+    {
+        return GetWeaponWeight(weaponSlots[0]) + GetWeaponWeight(weaponSlots[1]);
+    }
+
+    private float GetPlayerStrength()
+    {
+        var stats = GetComponent<PlayerStats>()
+                    ?? GetComponentInChildren<PlayerStats>(true)
+                    ?? GetComponentInParent<PlayerStats>();
+        if (stats == null && transform.root != null)
+            stats = transform.root.GetComponentInChildren<PlayerStats>(true);
+
+        return stats != null ? Mathf.Max(0f, stats.strength) : 0f;
     }
 
     public void SwitchActiveSlot(Transform playerRoot = null)
@@ -782,8 +842,23 @@ public class PlayerEquipmentController : MonoBehaviour
 #if UNITY_EDITOR
             if (debugLogs) Debug.Log($"[Equip] Animator <- Override({CurrentWeaponData.overrideController.name})");
 #endif
+            return;
         }
-        else if (baseController != null)
+
+        // 무기에 AOC가 없으면 캐릭터 PlayerConfig AOC(셀렉트 애니 등)를 우선 사용
+        var facade = GetComponentInParent<PlayerFacade>();
+        if (facade == null)
+            facade = GetComponent<PlayerFacade>();
+        if (facade != null && facade.config != null && facade.config.overrideController != null)
+        {
+            animator.runtimeAnimatorController = facade.config.overrideController;
+#if UNITY_EDITOR
+            if (debugLogs) Debug.Log($"[Equip] Animator <- CharacterAOC({facade.config.overrideController.name})");
+#endif
+            return;
+        }
+
+        if (baseController != null)
         {
             animator.runtimeAnimatorController = baseController;
 #if UNITY_EDITOR

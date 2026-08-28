@@ -111,6 +111,7 @@ public static class PlayerPrefabGenerator
         root.AddComponent<SubWeaponController>();
         root.AddComponent<Upgrade>();
         root.AddComponent<UpgradeEffectRuntime>();
+        root.AddComponent<PlayerBodyPartSlots>();
 
         SetModelHierarchyLayer(fbxInstance.transform, LayerMask.NameToLayer("Ragdoll"));
 
@@ -229,6 +230,10 @@ public static class PlayerPrefabGenerator
             if (propLog != null) propLog.boolValue = true;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
+
+        var bodyPartSlots = root.GetComponent<PlayerBodyPartSlots>();
+        if (bodyPartSlots != null)
+            bodyPartSlots.previewInEditor = true;
 
         MovementSettings movementSettings = FindDefaultMovementSettings();
         if (movementSettings != null && movement != null)

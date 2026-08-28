@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8a01c2de1d2c1b468ea045e65119ca9, type: 3}
+  m_Name: 004_Van_SO
+  m_EditorClassIdentifier: 
+  portrait: {fileID: 21300000, guid: bc4282d9b6d0a6646a27a2e6c1b6a08e, type: 3}
+  illustration: {fileID: 21300000, guid: bbdd2ce649ef29544be5ea2a97ca03dd, type: 3}
+  displayName: Van
+  hpTiers: 2
+  stTiers: 3
+  spdTiers: 3
+  strTiers: 3
+  meleeAtkTiers: 4
+  rangedAtkTiers: 3
+  description: 
+  isLocked: 0
+  previewPrefab: {fileID: 3216416238894718173, guid: 5db93e31c79e0464dbfadfc1fc23fe78, type: 3}
+  modelPrefab: {fileID: 0}

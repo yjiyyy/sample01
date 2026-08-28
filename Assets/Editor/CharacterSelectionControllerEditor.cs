@@ -1,66 +1,89 @@
-using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEngine;
 
 [CustomEditor(typeof(CharacterSelectionController))]
 public class CharacterSelectionControllerEditor : Editor
 {
-    private SerializedProperty charactersProp;
-    private SerializedProperty portraitSlotSizeProp;
-    private SerializedProperty portraitAreaBgColorProp;
-
-    private void OnEnable()
-    {
-        charactersProp = serializedObject.FindProperty("characters");
-        portraitSlotSizeProp = serializedObject.FindProperty("portraitSlotSize");
-        portraitAreaBgColorProp = serializedObject.FindProperty("portraitAreaBgColor");
-    }
-
     public override void OnInspectorGUI()
     {
-        serializedObject.Update();
-
         DrawDefaultInspector();
 
-        EditorGUILayout.Space(16);
-        EditorGUILayout.LabelField("초상화 Placeholder (에디터 모드 게임뷰)", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox("캐릭터 개수를 바꾼 뒤 아래 버튼을 누르면 씬의 placeholder가 갱신됩니다. 게임뷰에서 위치를 확인·조정할 수 있습니다.", MessageType.None);
-
-        var ctrl = target as CharacterSelectionController;
-        if (ctrl != null && GUILayout.Button("초상화 Placeholder 갱신"))
+        var preview = ((CharacterSelectionController)target).GetComponent<CharacterSelectionScenePreview>();
+        if (preview == null)
         {
-            Undo.RecordObject(ctrl.transform, "Refresh Portrait Placeholder");
-            SetupSceneTransitions.SetupPortraitPlaceholder(ctrl);
-            EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
-        }
+            EditorGUILayout.Space(8);
+            EditorGUILayout.HelpBox(
+                "Play 전 Scene View 미리보기: CharacterSelectionScenePreview 컴포넌트를 추가하면 " +
+                "프리팹 필드에 넣은 캐릭터를 스폰 포인트에서 바로 볼 수 있습니다.",
+                MessageType.Info);
 
-        EditorGUILayout.Space(8);
-        EditorGUILayout.LabelField("Inspector 미리보기", EditorStyles.miniBoldLabel);
-
-        if (charactersProp != null && charactersProp.isArray)
-        {
-            var slotSize = portraitSlotSizeProp != null ? portraitSlotSizeProp.vector2Value : new Vector2(120, 120);
-            var bgColor = portraitAreaBgColorProp != null ? portraitAreaBgColorProp.colorValue : new Color(0.2f, 0.2f, 0.25f, 0.6f);
-
-            var rect = GUILayoutUtility.GetRect(0, 120);
-            var areaRect = new Rect(rect.x, rect.y, rect.width * 0.5f, rect.height);
-            EditorGUI.DrawRect(areaRect, bgColor);
-            EditorGUI.LabelField(new Rect(areaRect.x + 4, areaRect.y + 4, areaRect.width - 8, 18), "초상화 영역 (가로 배치)", EditorStyles.miniLabel);
-
-            float x = areaRect.x + 12;
-            float y = areaRect.y + 24;
-            int count = charactersProp.arraySize;
-            for (int i = 0; i < count; i++)
+            if (GUILayout.Button("씬 미리보기 컴포넌트 추가"))
             {
-                var slotRect = new Rect(x, y, Mathf.Min(72, slotSize.x * 0.6f), Mathf.Min(72, slotSize.y * 0.6f));
-                EditorGUI.DrawRect(slotRect, new Color(0.4f, 0.4f, 0.5f, 0.8f));
-                EditorGUI.LabelField(slotRect, $"{i + 1}\n{(int)slotSize.x}×{(int)slotSize.y}", EditorStyles.centeredGreyMiniLabel);
-
-                x += slotRect.width + 8;
-                if (x + 80 > areaRect.xMax) break;
+                var controller = (CharacterSelectionController)target;
+                Undo.AddComponent<CharacterSelectionScenePreview>(controller.gameObject);
+                EditorSceneManager.MarkSceneDirty(controller.gameObject.scene);
             }
         }
 
-        serializedObject.ApplyModifiedProperties();
+        EditorGUILayout.Space(12);
+        EditorGUILayout.HelpBox(
+            "Play 전 Scene View에서 UI 깊이가 맞게 보여야 합니다.\n" +
+            "Tools → Apply Character Selection Canvas Layering 으로도 적용할 수 있습니다.",
+            MessageType.Info);
+
+        if (GUILayout.Button("캔버스 레이어링 적용 (Play 전 미리보기)"))
+        {
+            CharacterSelectionEditModePreview.ApplyToOpenCharacterSelectionScene();
+        }
+
+        EditorGUILayout.Space(8);
+        EditorGUILayout.HelpBox(
+            "씬 UI 레이아웃은 Tools → Setup Character Selection Layout 메뉴로 구성합니다.",
+            MessageType.Info);
+
+        if (GUILayout.Button("캐릭터 선택 레이아웃 구성"))
+        {
+            SetupCharacterSelectionLayout.ApplyToOpenScene();
+            if (target is CharacterSelectionController ctrl)
+                EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        }
+    }
+}
+
+[CustomEditor(typeof(CharacterSelectionScenePreview))]
+public class CharacterSelectionScenePreviewEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        DrawDefaultInspector();
+
+        var preview = (CharacterSelectionScenePreview)target;
+        if (preview == null)
+            return;
+
+        EditorGUILayout.Space(8);
+        EditorGUILayout.HelpBox(
+            "Preview Prefab에 PC_Pre_* 등 프리팹을 넣으면 Play 없이 Scene View에서 바로 보입니다.\n" +
+            "미리보기 오브젝트는 씬에 저장되지 않습니다.",
+            MessageType.Info);
+
+        if (Application.isPlaying)
+        {
+            EditorGUILayout.HelpBox("Play 중에는 런타임 캐릭터 표시를 사용합니다.", MessageType.None);
+            return;
+        }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("미리보기 갱신"))
+                preview.RefreshPreviewNow();
+
+            if (GUILayout.Button("미리보기 제거"))
+            {
+                preview.ClearPreview();
+                EditorSceneManager.MarkSceneDirty(preview.gameObject.scene);
+            }
+        }
     }
 }

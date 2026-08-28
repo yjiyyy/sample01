@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5d553a654f734d2488e87b2b33ea8924
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 332630
+  packageName: Synty ANIMATION - Emotes and Taunts
+  packageVersion: 1.0
+  assetPath: Assets/Synty/AnimationEmotesAndTaunts/Samples/Timelines/Sidekick/Masculine/Timeline_MOD_Demo_Taunt_Masc.playable
+  uploadId: 787238

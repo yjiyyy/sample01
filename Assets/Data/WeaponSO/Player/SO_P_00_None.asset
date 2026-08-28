@@ -26,6 +26,7 @@ MonoBehaviour:
   cooldown: 0.5
   damage: 50
   range: 2.5
+  weight: 0
   staminaCost: 0
   hitboxSpawnDelay: 0.13
   hitBoxLifetime: 0.1
@@ -49,6 +50,7 @@ MonoBehaviour:
   ragdollSpinTorque: 0
   sliceTargets: 
   sliceImpulse: 0
+  bodySliceImpulseScale: 2
   chargeSlot: {fileID: 11400000, guid: fdd50407a2980fa42849cfdb3de8471b, type: 2}
   comboSlot: {fileID: 0}
   recoilStartDelay: 0

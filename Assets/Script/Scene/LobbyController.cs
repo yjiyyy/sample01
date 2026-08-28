@@ -14,7 +14,7 @@ public class LobbyController : MonoBehaviour
     [Tooltip("캐릭터 선택을 거치지 않고 로비만 켰을 때 사용할 캐릭터 데이터.")]
     [SerializeField] private CharacterDataSO fallbackCharacter;
 
-    [Tooltip("fallbackCharacter가 없거나 modelPrefab이 비어 있을 때 직접 스폰할 모델.")]
+    [Tooltip("fallbackCharacter에 프리뷰/모델이 없을 때 직접 스폰할 모델.")]
     [SerializeField] private GameObject fallbackModelPrefab;
 
     private GameObject _spawnedCharacter;
@@ -71,7 +71,7 @@ public class LobbyController : MonoBehaviour
             usedFallback = data != null;
         }
 
-        GameObject prefab = data != null ? data.modelPrefab : null;
+        GameObject prefab = data != null ? data.GetPreviewPrefab() : null;
         if (prefab == null)
         {
             prefab = fallbackModelPrefab;

@@ -18,7 +18,7 @@ public static class SetupSceneTransitions
     private const string MenuPath = "Tools/Setup Scene Transitions";
     private const string ScenesRoot = "Assets/Scenes";
 
-    [MenuItem(MenuPath)]
+    [MenuItem("Tools/Setup Scene Transitions")]
     public static void Setup()
     {
         UpdateBuildSettings();
@@ -26,6 +26,12 @@ public static class SetupSceneTransitions
         SetupLobbyScene();
         AssetDatabase.Refresh();
         Debug.Log("[SetupSceneTransitions] Build Settings 및 씬 전환 설정 완료.");
+    }
+
+    [MenuItem("Tools/Setup Character Selection Layout")]
+    public static void SetupCharacterSelectionLayoutMenu()
+    {
+        SetupCharacterSelectionLayout.Setup();
     }
 
     /// <summary>
@@ -66,7 +72,7 @@ public static class SetupSceneTransitions
     }
 
     /// <summary>
-    /// Character Selection 씬에 Canvas, EventSystem, CharacterSelectionController, SpawnPoint 추가
+    /// Character Selection 씬 UI 레이아웃 구성
     /// </summary>
     private static void SetupCharacterSelectionScene()
     {
@@ -77,89 +83,10 @@ public static class SetupSceneTransitions
             return;
         }
 
-        var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
-        if (!scene.IsValid())
-            return;
-
-        var cam = Camera.main;
-        if (cam == null)
-        {
-            var camGO = GameObject.Find("Main Camera");
-            if (camGO == null) camGO = new GameObject("Main Camera");
-            cam = camGO.GetComponent<Camera>();
-            if (cam == null) cam = camGO.AddComponent<Camera>();
-            camGO.AddComponent<AudioListener>();
-            camGO.tag = "MainCamera";
-        }
-
-        // 3D 스폰 포인트: 카메라 오른쪽에 더미 배치
-        var spawnGO = GameObject.Find("CharacterSpawnPoint");
-        if (spawnGO == null)
-        {
-            spawnGO = new GameObject("CharacterSpawnPoint");
-            var pos = cam != null ? cam.transform.position + cam.transform.right * 2f + Vector3.forward * 3f : new Vector3(2f, 1f, 3f);
-            spawnGO.transform.position = pos;
-        }
-
-        var canvasGO = GameObject.Find("Canvas");
-        if (canvasGO == null)
-        {
-            canvasGO = new GameObject("Canvas");
-            var canvas = canvasGO.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasGO.AddComponent<UnityEngine.UI.CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
-            canvasGO.AddComponent<GraphicRaycaster>();
-
-        if (Object.FindFirstObjectByType<EventSystem>() == null)
-            {
-                var esGO = new GameObject("EventSystem");
-                esGO.AddComponent<EventSystem>();
-#if ENABLE_INPUT_SYSTEM
-                esGO.AddComponent<InputSystemUIInputModule>();
-#endif
-            }
-        }
-
-        var ctrlGO = GameObject.Find("CharacterSelectionController");
-        CharacterSelectionController ctrl;
-        if (ctrlGO == null)
-        {
-            ctrlGO = new GameObject("CharacterSelectionController");
-            ctrlGO.transform.SetParent(canvasGO.transform, false);
-            var rect = ctrlGO.AddComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-
-            ctrl = ctrlGO.AddComponent<CharacterSelectionController>();
-            var so = new SerializedObject(ctrl);
-            so.FindProperty("nextScene").stringValue = "03_Lobby";
-            so.FindProperty("spawnPoint").objectReferenceValue = spawnGO.transform;
-            so.ApplyModifiedPropertiesWithoutUndo();
-
-            // 확인 버튼 (하단 중앙)
-            var btnGO = CreateButton("Confirm", ctrlGO.transform, new Vector2(0, -300));
-            var btn = btnGO.GetComponent<Button>();
-            so.FindProperty("confirmButton").objectReferenceValue = btn;
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
-        else
-        {
-            ctrl = ctrlGO.GetComponent<CharacterSelectionController>();
-        }
-
-        if (ctrl != null)
-        {
-            SetupPortraitPlaceholder(ctrl);
-            var so = new SerializedObject(ctrl);
-            if (so.FindProperty("spawnPoint").objectReferenceValue == null && spawnGO != null)
-                so.FindProperty("spawnPoint").objectReferenceValue = spawnGO.transform;
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene);
+        EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+        SetupCharacterSelectionLayout.ApplyToOpenScene();
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
     }
 
     /// <summary>

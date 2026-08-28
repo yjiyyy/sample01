@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b783076d92c7ec9498fbc1592d15f12f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 332630
+  packageName: Synty ANIMATION - Emotes and Taunts
+  packageVersion: 1.0
+  assetPath: Assets/Synty/AnimationEmotesAndTaunts/Samples/Timelines/Sidekick/Masculine/Timeline_MOD_Demo_Aggressive_Masc.playable
+  uploadId: 787238

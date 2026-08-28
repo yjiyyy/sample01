@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 31274d5798ba2b44daf6711f8973b3dd
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 332630
+  packageName: Synty ANIMATION - Emotes and Taunts
+  packageVersion: 1.0
+  assetPath: Assets/Synty/AnimationEmotesAndTaunts/Samples/Timelines/Polygon/Masculine/Timeline_POLY_Demo_Sporty_Masc.playable
+  uploadId: 787238

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7d8fee55a8cc9ab43884d8cd2640b320
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 332630
+  packageName: Synty ANIMATION - Emotes and Taunts
+  packageVersion: 1.0
+  assetPath: Assets/Synty/AnimationEmotesAndTaunts/Samples/Timelines/Polygon/Feminine/Timeline_POLY_Demo_Aggressive_Femn.playable
+  uploadId: 787238

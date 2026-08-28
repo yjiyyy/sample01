@@ -41,8 +41,8 @@ public class SpawnManager : MonoBehaviour
     public GameObject ResolvePlayerPrefab()
     {
         var data = GameState.Instance?.SelectedCharacter;
-        if (data != null && data.modelPrefab != null)
-            return data.modelPrefab;
+        if (data != null && data.GetGameplayPrefab() != null)
+            return data.GetGameplayPrefab();
         return playerPrefab;
     }
 

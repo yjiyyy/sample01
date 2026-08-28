@@ -6,7 +6,7 @@ public class PlayerConfig : ScriptableObject
 {
     [Header("General")]
     public string displayName = "Player";
-    [Tooltip("인게임 HP HUD에 표시할 캐릭터 초상화")]
+    [Tooltip("????? HP HUD?? ????? 占쏙옙???? ????")]
     public Sprite portrait;
     public string tagName = "Player";
     public LayerMask layer = 0;
@@ -18,6 +18,18 @@ public class PlayerConfig : ScriptableObject
     public float maxStamina = 100f;
     [Tooltip("Stamina recharge per second")]
     public float staminaRechargeRate = 20f;
+
+    [Tooltip("???. ???? ???? ???? ???? ?? ?? ??????? ????.")]
+    [Min(0f)]
+    public float strength = 10f;
+
+    [Tooltip("????(MeleeWeapon / Unarmed) ???? ???. 1 = ??.")]
+    [Min(0f)]
+    public float meleeAttack = 1f;
+
+    [Tooltip("?????(ProjectileGun) ???? ???. 1 = ??.")]
+    [Min(0f)]
+    public float rangedAttack = 1f;
 
     [Tooltip("Mass value (kg). If useAbsoluteMass = true, this is used as Rigidbody.mass directly. If false, this acts as a multiplier on original mass.")]
     public float mass = 1f;
@@ -54,7 +66,7 @@ public class PlayerConfig : ScriptableObject
     public EvadeDataSO evadeData = null;
 
     [Header("EnemyDetector (applied by PlayerFacade)")]
-    [Tooltip("EnemyDetector?? ?????? ?þ? ????(???)")]
+    [Tooltip("EnemyDetector?? ?????? ???? ????(???)")]
     public float detectorViewAngle = 45f;
     [Tooltip("EnemyDetector?? ?????? ??? ???")]
     public float detectorViewDistance = 10f;
@@ -94,6 +106,9 @@ public class PlayerConfig : ScriptableObject
         maxHealth = Mathf.Max(0f, maxHealth);
         maxStamina = Mathf.Max(1f, maxStamina);
         staminaRechargeRate = Mathf.Max(0f, staminaRechargeRate);
+        strength = Mathf.Max(0f, strength);
+        meleeAttack = Mathf.Max(0f, meleeAttack);
+        rangedAttack = Mathf.Max(0f, rangedAttack);
 
         // mass: enforce safe range to avoid physics instability
         mass = Mathf.Clamp(mass, 0.0001f, 500f);

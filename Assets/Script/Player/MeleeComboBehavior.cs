@@ -258,9 +258,11 @@ public class MeleeComboBehavior : MonoBehaviour
             ownerController?.StartRecoilIfNeeded(proxy);
 
             GameObject rootGo = transform.root != null ? transform.root.gameObject : gameObject;
-            WeaponCategory cat = weapon != null ? weapon.category : WeaponCategory.Primary;
             float rawDmg = proxy != null ? proxy.damage : 0f;
-            float dmg = PlayerWeaponDamageModifiers.ScaleOutgoingDamage(rootGo, cat, rawDmg);
+            // 콤보 프록시가 아니라 실제 장착 무기 기준으로 ATK/카테고리 보정
+            float dmg = weapon != null
+                ? PlayerWeaponDamageModifiers.ScaleOutgoingDamage(rootGo, weapon, rawDmg)
+                : Mathf.Max(0f, rawDmg);
             float rng = proxy != null ? proxy.range : 2.5f;
             float kb = proxy != null ? proxy.knockbackPower : 0f;
             float life = Mathf.Max(0.01f, step.hitBoxLifetime > 0f ? step.hitBoxLifetime : (weapon != null ? weapon.hitBoxLifetime : 0.15f));

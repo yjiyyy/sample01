@@ -56,14 +56,14 @@ public class WeaponBehavior : MonoBehaviour
         return cachedPlayerCtrl != null && cachedPlayerCtrl.IsTimeHoldActive;
     }
 
-    /// <summary>업그레이드 등 무기 카테고리별 보정을 적용한 최종 피해.</summary>
+    /// <summary>플레이어 ATK + 업그레이드 카테고리 보정을 적용한 최종 피해.</summary>
     private float ScaleOutgoingDamageForWeapon(WeaponDataSO weaponStats, float baseDamage)
     {
         if (weaponStats == null)
             return Mathf.Max(0f, baseDamage);
 
         GameObject root = transform.root != null ? transform.root.gameObject : gameObject;
-        return PlayerWeaponDamageModifiers.ScaleOutgoingDamage(root, weaponStats.category, baseDamage);
+        return PlayerWeaponDamageModifiers.ScaleOutgoingDamage(root, weaponStats, baseDamage);
     }
 
     /// <summary>

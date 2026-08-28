@@ -1090,14 +1090,16 @@ public class PlayerChargeController : MonoBehaviour
 
         var w = getWeaponData != null ? getWeaponData() : null;
         chargeWeaponProxy.category = w != null ? w.category : WeaponCategory.Primary;
+        chargeWeaponProxy.damageType = w != null ? w.damageType : AttackDamageType.MeleeWeapon;
     }
 
     private float ScaleChargeSlotDamage(float baseDamage)
     {
         var w = getWeaponData != null ? getWeaponData() : null;
-        WeaponCategory cat = w != null ? w.category : WeaponCategory.Primary;
         GameObject root = transform.root != null ? transform.root.gameObject : gameObject;
-        return PlayerWeaponDamageModifiers.ScaleOutgoingDamage(root, cat, baseDamage);
+        if (w != null)
+            return PlayerWeaponDamageModifiers.ScaleOutgoingDamage(root, w, baseDamage);
+        return Mathf.Max(0f, baseDamage);
     }
 
     private IEnumerator StartContinuousWhenAllowed(PlayerChargeAttackSO slot)

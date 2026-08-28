@@ -26,6 +26,7 @@ MonoBehaviour:
   cooldown: 1
   damage: 10
   range: 2.5
+  weight: 5
   staminaCost: 0
   hitboxSpawnDelay: 0.15
   hitBoxLifetime: 0.1

@@ -176,15 +176,31 @@ public class PlayerFacade : MonoBehaviour
                 pec.EquipActive(root.transform);
         }
 
-        // 6) Animator override
+        // 6) Animator override (캐릭터 AOC)
+        // 무기에 전용 AOC가 있으면 장비가 이미 넣은 값을 유지합니다.
         var animator = root.GetComponentInChildren<Animator>();
         if (animator != null && config.overrideController != null)
         {
+            bool weaponHasOverride = pec != null
+                && pec.CurrentWeaponData != null
+                && pec.CurrentWeaponData.overrideController != null;
+
+            if (!weaponHasOverride)
+            {
+                if (Application.isPlaying)
+                {
+                    animator.runtimeAnimatorController = config.overrideController;
+                }
+                else
+                {
 #if UNITY_EDITOR
-            TrySetSerializedObjectField(animator, "runtimeAnimatorController", config.overrideController);
+                    if (!TrySetSerializedObjectField(animator, "m_Controller", config.overrideController))
+                        animator.runtimeAnimatorController = config.overrideController;
 #else
-            animator.runtimeAnimatorController = config.overrideController;
+                    animator.runtimeAnimatorController = config.overrideController;
 #endif
+                }
+            }
         }
 
         // 7) Extra targets

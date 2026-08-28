@@ -651,9 +651,15 @@ public class PlayerWeaponController : MonoBehaviour
 
     public bool TryEquipWeaponToActiveSlot(WeaponDataSO weaponData)
     {
+        return TryEquipWeaponToActiveSlot(weaponData, out _);
+    }
+
+    public bool TryEquipWeaponToActiveSlot(WeaponDataSO weaponData, out WeaponAssignFailReason failReason)
+    {
+        failReason = WeaponAssignFailReason.None;
         if (equipComp == null)
             return false;
-        return equipComp.TryAssignToActiveSlot(weaponData, transform.root);
+        return equipComp.TryAssignToActiveSlot(weaponData, transform.root, out failReason);
     }
 
     public bool TrySwitchWeaponSlot()

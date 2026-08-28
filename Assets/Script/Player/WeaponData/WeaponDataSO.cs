@@ -104,6 +104,9 @@ public class WeaponDataSO : ScriptableObject
     public float cooldown = 1.0f;
     public float damage = 10f;
     public float range = 2.5f;
+    [Tooltip("장착에 필요한 무게. 플레이어 STR(근력)과 비교합니다. 맨손은 보통 0, 기본 무기는 1.")]
+    [Min(0f)]
+    public float weight = 1f;
     [Tooltip("이 무기 공격 1회당 소모 스테미너. 0이면 소모 없음.")]
     [Min(0f)]
     public float staminaCost = 0f;
@@ -314,6 +317,7 @@ public class WeaponDataSO : ScriptableObject
         bodySliceImpulseScale = Mathf.Max(0f, bodySliceImpulseScale);
 
         staminaCost = Mathf.Max(0f, staminaCost);
+        weight = Mathf.Max(0f, weight);
 
         hitboxSpawnDelay2 = Mathf.Max(0f, hitboxSpawnDelay2);
 

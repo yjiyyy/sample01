@@ -1,0 +1,13 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AOC_PC_Cool
+  m_Controller: {fileID: 9100000, guid: 040e64a34f0e23848a2f7dbeea3566d1, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -2716732654013414528, guid: d95a34fda19f2a147a6e55ac02fe271b, type: 3}
+    m_OverrideClip: {fileID: -5702620151564951983, guid: 1e84a2cb7c686cd46bd7e41679b97449, type: 3}

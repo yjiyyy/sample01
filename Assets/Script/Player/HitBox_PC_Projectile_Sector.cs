@@ -51,7 +51,7 @@ public class HitBox_PC_Projectile_Sector : MonoBehaviour
         cachedSpeed = launcherData != null ? launcherData.projectileSpeed : DEF_SPEED;
         float rawDamage = data != null ? data.damage : DEF_DAMAGE;
         if (ownerRootForDamageMods != null && data != null)
-            cachedDamage = PlayerWeaponDamageModifiers.ScaleOutgoingDamage(ownerRootForDamageMods, data.category, rawDamage);
+            cachedDamage = PlayerWeaponDamageModifiers.ScaleOutgoingDamage(ownerRootForDamageMods, data, rawDamage);
         else
             cachedDamage = rawDamage;
         cachedRadius = launcherData != null ? launcherData.explosiveRadius : DEF_RADIUS;

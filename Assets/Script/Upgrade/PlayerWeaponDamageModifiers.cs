@@ -2,7 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// 업그레이드 등으로 누적된 무기 카테고리별 데미지 보정을 보관합니다.
-/// 최종 피해 = max(0, baseDamage * (1 + 퍼센트 합) + 플랫 합)
+/// 최종 피해 = max(0, baseDamage * 플레이어ATK * (1 + 퍼센트 합) + 플랫 합)
+/// 플레이어ATK: Unarmed/MeleeWeapon=meleeAttack, ProjectileGun=rangedAttack (기본 1)
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerWeaponDamageModifiers : MonoBehaviour
@@ -46,6 +47,37 @@ public class PlayerWeaponDamageModifiers : MonoBehaviour
             mods = Object.FindFirstObjectByType<PlayerWeaponDamageModifiers>();
         }
         return mods != null ? mods.Apply(category, baseDamage) : baseDamage;
+    }
+
+    /// <summary>
+    /// 플레이어 ATK(Melee/Ranged) + 카테고리 업그레이드 보정을 적용합니다.
+    /// </summary>
+    public static float ScaleOutgoingDamage(GameObject ownerRoot, WeaponDataSO weapon, float baseDamage)
+    {
+        if (weapon == null)
+            return Mathf.Max(0f, baseDamage);
+
+        float withPlayerAtk = baseDamage * GetPlayerAttackMultiplier(ownerRoot, weapon.damageType);
+        return ScaleOutgoingDamage(ownerRoot, weapon.category, withPlayerAtk);
+    }
+
+    /// <summary>PlayerConfig → PlayerStats의 Melee/Ranged ATK 배수. stats가 없으면 1.</summary>
+    public static float GetPlayerAttackMultiplier(GameObject ownerRoot, AttackDamageType damageType)
+    {
+        PlayerStats stats = ResolvePlayerStats(ownerRoot);
+        return stats != null ? stats.GetAttackMultiplier(damageType) : 1f;
+    }
+
+    private static PlayerStats ResolvePlayerStats(GameObject ownerRoot)
+    {
+        if (ownerRoot == null)
+            return null;
+
+        var stats = ownerRoot.GetComponentInChildren<PlayerStats>(true);
+        if (stats != null)
+            return stats;
+
+        return Object.FindFirstObjectByType<PlayerStats>();
     }
 
     /// <summary>

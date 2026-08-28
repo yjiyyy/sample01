@@ -183,7 +183,7 @@ public class HitBox_PC : MonoBehaviour
         if (applyCategoryDamageOnHit && weapon != null)
         {
             GameObject root = transform.root != null ? transform.root.gameObject : gameObject;
-            finalDamage = PlayerWeaponDamageModifiers.ScaleOutgoingDamage(root, weapon.category, damage);
+            finalDamage = PlayerWeaponDamageModifiers.ScaleOutgoingDamage(root, weapon, damage);
         }
 
         hp.ApplyDamage(finalDamage, dir, weapon, 1f, hitPoint);

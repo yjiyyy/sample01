@@ -1,0 +1,41 @@
+바이패드 FBX 머지 도구
+======================
+
+폴더: Tools/Max/
+
+쓰는 파일
+---------
+BipedFbxMergeTool.ms   ← 실제 도구 (업데이트는 이 파일만)
+BipedFbxMerge.mcr      ← 버튼 등록용 (fileIn 만 함)
+BipedFbxBakeTool.ms    ← 예전 이름. 실행하면 MergeTool.ms 로 연결
+
+버튼 등록 (한 번만)
+------------------
+1. Scripting > Run Script → BipedFbxMerge.mcr
+2. Customize > Customize User Interface > Toolbars
+3. Category: Sample01 → "FBX Merge" 를 툴바로 드래그
+
+이미 DragAndDrop 버튼(Macro3)을 쓰는 경우
+----------------------------------------
+usermacros\DragAndDrop-Macro3.mcr 에 한글 본체가 들어 있습니다 (UTF-8 BOM).
+프로젝트 복사본: Tools\Max\DragAndDrop-Macro3.mcr
+업데이트 시: BipedFbxMergeTool.ms 를 고친 뒤, 같은 내용을 Macro3 ( ) 안에 다시 넣거나
+프로젝트의 DragAndDrop-Macro3.mcr 을 usermacros 로 덮어쓴 다음 Run Script / Max 재시작.
+
+전제
+----
+- 유니티 FBX 최상위도 Root_Dummy (휴머노이드 FBX 굽기 도구가 맞춤)
+- 뼈 이름이 Max 바이패드와 같음
+- Figure Mode 끄고 머지
+
+머지 후 자동 처리
+----------------
+- 씬 Root_Dummy → 원점, 키 없음
+- Finger / Toe 키 제거
+- FBX에서 새로 생긴 메시·여분 오브젝트 삭제 (바이패드에 붙은 애니만 유지)
+- 타임라인을 바이패드 키 범위에 맞춤
+
+더 이상 쓰지 않음
+----------------
+예전 리타겟 베이크(V1~V4, Bake_ 참고본 복사)는 제거했습니다.
+구조가 맞으면 머지만으로 충분합니다.

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
@@ -127,9 +127,14 @@ public class DevWeaponSwitcher : MonoBehaviour
             return false;
         }
 
-        if (!targetPlayer.TryEquipWeaponToActiveSlot(so))
+        if (!targetPlayer.TryEquipWeaponToActiveSlot(so, out var failReason))
         {
-            Debug.LogWarning($"[DevWeaponSwitcher] 다른 슬롯에 이미 있는 무기입니다: {so.weaponName}");
+            if (failReason == WeaponAssignFailReason.DuplicateInOtherSlot)
+                Debug.LogWarning($"[DevWeaponSwitcher] 다른 슬롯에 이미 있는 무기입니다: {so.weaponName}");
+            else if (failReason == WeaponAssignFailReason.InsufficientStrength)
+                Debug.LogWarning($"[DevWeaponSwitcher] 근력 부족으로 장착 불가: {so.weaponName}");
+            else
+                Debug.LogWarning($"[DevWeaponSwitcher] 장착 실패: {so.weaponName}");
             return false;
         }
 
