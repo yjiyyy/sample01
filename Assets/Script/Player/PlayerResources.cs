@@ -32,8 +32,9 @@ public class PlayerResources : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Debug.LogWarning("[PlayerResources] 중복 인스턴스 — 오브젝트를 파괴합니다.");
-            Destroy(gameObject);
+            // 돈/젬 추적은 하나만 있으면 됩니다.
+            // 캐릭터 전체를 Destroy하면 선택 화면에서 두 번째 캐릭터부터 사라집니다.
+            enabled = false;
             return;
         }
         Instance = this;

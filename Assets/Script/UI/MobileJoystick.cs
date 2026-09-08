@@ -1,16 +1,16 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
 public class MobileJoystick : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
 {
-    [Header("������ ���̽�ƽ �������")]
+    [Header("조이스틱 베이스/스틱")]
     public RectTransform baseRect;
     public RectTransform handleRect;
 
-    [Header("����")]
-    [Tooltip("���̽� ������(px). 0�̸� baseRect ũ���� ������ ���")]
+    [Header("입력")]
+    [Tooltip("베이스 반지름(px). 0이면 baseRect 크기의 절반을 사용")]
     public float radius = 0f;
     [Range(0f, 0.5f)] public float deadzone = 0.15f;
 

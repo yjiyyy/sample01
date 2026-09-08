@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 
 public partial class EnemyAttackController
@@ -10,7 +10,7 @@ public partial class EnemyAttackController
     private GameObject spawnedRushHitbox;
     private int runningRushIndex = -1;
     private Transform rushTarget;
-    // ������ ���� ����(������ ���ӿ� ���)
+    // 마지막 돌진 방향(마무리 감속에 사용)
     private Vector3 lastRushDir = Vector3.forward;
 
     private void StartRush(RushAttackData data, Transform target, int index)
@@ -36,7 +36,7 @@ public partial class EnemyAttackController
 
         if (enemy.animator)
         {
-            // �Ķ���Ͱ� ��� Play������ �����ϵ���
+            // 파라미터가 없어도 Play만으로 재생되도록
             if (data.prepareClip != null)
             {
                 enemy.animator.speed = 1f;
@@ -44,7 +44,7 @@ public partial class EnemyAttackController
             }
             else
             {
-                // Ŭ�� ������ �� ����(������): "RushPrepare"
+                // 클립 없으면 이 상태(폴백): "RushPrepare"
                 SafeSetBool("IsRushPrepare", true);
                 SafeSetBool("IsRush", false);
                 enemy.animator.Play("RushPrepare");
@@ -92,7 +92,7 @@ public partial class EnemyAttackController
 
         if (enemy.animator)
         {
-            // ���� Ŭ�� �켱, ������ attackName, �׵� ������ "Rush"
+            // 공격 클립 우선, 없으면 attackName, 그것도 없으면 "Rush"
             enemy.animator.speed = 1f;
             if (data.attackClip != null)
                 enemy.animator.Play(data.attackClip.name, 0, 0f);
@@ -105,7 +105,7 @@ public partial class EnemyAttackController
         SpawnRushHitbox(data);
 
         float elapsed = 0f;
-        // �ʱ� ���� ����
+        // 초기 진행 방향
         Vector3 rushDir = transform.forward;
         rushDir.y = 0f;
         if (rushDir.sqrMagnitude < 0.0001f) rushDir = Vector3.forward;
@@ -118,7 +118,7 @@ public partial class EnemyAttackController
             baseWeight = Mathf.Clamp01(data.directionDeviationAmount);
         }
 
-        // FixedUpdate ��� �̵�(�÷���/������ ����)
+        // FixedUpdate 기반 이동(프레임/플랫폼 독립)
         while (elapsed < data.attackDuration)
         {
             if (enemy != null && enemy.IsStateHoldActive)
@@ -144,7 +144,7 @@ public partial class EnemyAttackController
                 if (desired.sqrMagnitude > 0.0001f)
                 {
                     desired.Normalize();
-                    // ���� ������ ��� ����ġ
+                    // 목표 방향으로 보간 가중치
                     float dtWeight = 1f - Mathf.Pow(1f - baseWeight, Time.fixedDeltaTime * 60f);
                     rushDir = Vector3.Slerp(rushDir, desired, dtWeight).normalized;
 
@@ -161,10 +161,10 @@ public partial class EnemyAttackController
             yield return new WaitForFixedUpdate();
         }
 
-        // ���� ���� ���� �� ������ �������� �Ѿ (��Ʈ�ڽ��� ���� ����������)
+        // 돌진 구간 종료 후 마무리 단계로 넘어감 (히트박스는 돌진 종료 시점에 제거)
         DespawnRushHitbox();
 
-        // ������ ��ƾ ����(��� IsRushing ����)
+        // 마무리 코루틴 시작(아직 IsRushing 유지)
         rushCoroutine = StartCoroutine(RushFinishRoutine(data, lastRushDir));
     }
 
@@ -172,7 +172,7 @@ public partial class EnemyAttackController
     {
         ScheduleRushAttackFX(data, AttackFXPhase.Finish);
 
-        // ������ Ŭ��(����) ���
+        // 마무리 클립(선택) 재생
         if (enemy.animator && data.finishClip != null)
         {
             enemy.animator.speed = 1f;
@@ -182,7 +182,7 @@ public partial class EnemyAttackController
         float dur = Mathf.Max(0f, data.finishDuration);
         float elapsed = 0f;
 
-        // ���� ����: rushSpeed �� 0
+        // 감속 구간: rushSpeed → 0
         float initialSpeed = Mathf.Max(0f, data.rushSpeed);
 
         Vector3 finishDir = dir;
@@ -212,10 +212,10 @@ public partial class EnemyAttackController
             float currentSpeed = initialSpeed * (1f - t);
             Vector3 disp = finishDir * currentSpeed * Time.fixedDeltaTime;
 
-            // ������ �߿��� ���� ���� ���� ���Ӹ�
+            // 마무리 중에도 돌진 방향 이동만 유지
             enemy.MoveFilteredDisplacement(disp);
 
-            // �ü��� ������ ���� ����
+            // 시선은 진행 방향 유지
             if (finishDir.sqrMagnitude > 0.0001f)
                 transform.rotation = Quaternion.LookRotation(finishDir);
 

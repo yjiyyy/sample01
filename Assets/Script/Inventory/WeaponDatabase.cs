@@ -1,11 +1,11 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 public class WeaponDatabase : MonoBehaviour
 {
     public static WeaponDatabase Instance { get; private set; }
 
-    // id -> WeaponDataSO ¸ÅÇÎ
+    // id -> WeaponDataSO ë§¤í•‘
     private Dictionary<string, WeaponDataSO> db = new Dictionary<string, WeaponDataSO>();
 
     private void Awake()
@@ -16,7 +16,7 @@ public class WeaponDatabase : MonoBehaviour
         LoadAllFromResources();
     }
 
-    // Resources/WeaponSO Æú´õ¿¡¼­ ÀÚµ¿ ·Îµå
+    // Resources/WeaponSO í´ë”ì—ì„œ ìë™ ë¡œë“œ
     private void LoadAllFromResources()
     {
         db.Clear();

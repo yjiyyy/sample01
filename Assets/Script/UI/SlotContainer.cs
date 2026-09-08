@@ -1,16 +1,16 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
-// Slot ÇÁ¸®ÆÕÀ» Ç®¸µÇÏ¿© ÄÁÅ×ÀÌ³Ê¿¡ ¸Â°Ô °»½ÅÇÑ´Ù.
+// Slot í”„ë¦¬íŒ¹ì„ í’€ë§í•˜ì—¬ ì»¨í…Œì´ë„ˆì— ë§ê²Œ ê°±ì‹ í•œë‹¤.
 public class SlotContainer : MonoBehaviour
 {
-    [Tooltip("SlotView ÇÁ¸®ÆÕ (°£´ÜÇÑ UI ÇÁ¸®ÆÕ)")]
+    [Tooltip("SlotView í”„ë¦¬íŒ¹ (ê°„ë‹¨í•œ UI í”„ë¦¬íŒ¹)")]
     public SlotView slotPrefab;
 
-    [Tooltip("½½·ÔµéÀÌ À§Ä¡ÇÒ ºÎ¸ğ Transform")]
+    [Tooltip("ìŠ¬ë¡¯ë“¤ì´ ìœ„ì¹˜í•  ë¶€ëª¨ Transform")]
     public Transform contentParent;
 
-    // ¹Ì¸® »ı¼ºÇØ µÎ´Â ÃÊ±â Ç® »çÀÌÁî (¿É¼Ç)
+    // ë¯¸ë¦¬ ìƒì„±í•´ ë‘ëŠ” ì´ˆê¸° í’€ ì‚¬ì´ì¦ˆ (ì˜µì…˜)
     public int initialPoolSize = 4;
 
     private List<SlotView> pool = new List<SlotView>();
@@ -37,11 +37,11 @@ public class SlotContainer : MonoBehaviour
         return ns;
     }
 
-    // ÁÖ¾îÁø µ¥ÀÌÅÍ ¸®½ºÆ®·Î È­¸é °»½Å
+    // ì£¼ì–´ì§„ ë°ì´í„° ë¦¬ìŠ¤íŠ¸ë¡œ í™”ë©´ ê°±ì‹ 
     public void Refresh(List<InventoryEntry> entries)
     {
-        // ºñÈ°¼ºÈ­µÈ ½½·Ôµµ Æ÷ÇÔÇÏ¿© ÀçÈ°¿ë
-        // 1) ÇÊ¿äÇÑ ½½·Ô ¼ö¸¦ È°¼ºÈ­
+        // ë¹„í™œì„±í™”ëœ ìŠ¬ë¡¯ë„ í¬í•¨í•˜ì—¬ ì¬í™œìš©
+        // 1) í•„ìš”í•œ ìŠ¬ë¡¯ ìˆ˜ë¥¼ í™œì„±í™”
         int idx = 0;
         if (entries != null)
         {
@@ -54,7 +54,7 @@ public class SlotContainer : MonoBehaviour
             }
         }
 
-        // 2) ³²¾ÆÀÖ´Â È°¼º ½½·Ô ºñÈ°¼ºÈ­
+        // 2) ë‚¨ì•„ìˆëŠ” í™œì„± ìŠ¬ë¡¯ ë¹„í™œì„±í™”
         for (int i = idx; i < pool.Count; i++)
         {
             pool[i].Clear();
@@ -62,7 +62,7 @@ public class SlotContainer : MonoBehaviour
         }
     }
 
-    // ´ÜÀÏ ÀåÂø Ç¥½Ã¿ë: ÇÏ³ªÀÇ InventoryEntry·Î °»½Å
+    // ë‹¨ì¼ ì¥ì°© í‘œì‹œìš©: í•˜ë‚˜ì˜ InventoryEntryë¡œ ê°±ì‹ 
     public void RefreshSingle(InventoryEntry entry)
     {
         // ensure at least one slot visible

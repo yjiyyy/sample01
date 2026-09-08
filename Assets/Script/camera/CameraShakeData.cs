@@ -1,24 +1,24 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 [CreateAssetMenu(menuName = "Camera/CameraShakeData")]
 public class CameraShakeData : ScriptableObject
 {
-    [Tooltip("ÃÑ Áö¼Ó½Ã°£(ÃÊ)")]
+    [Tooltip("ì´ ì§€ì†ì‹œê°„(ì´ˆ)")]
     public float duration = 0.25f;
 
-    [Tooltip("ÁøÆø(±âº» ¼¼±â)")]
+    [Tooltip("ì§„í­(ê¸°ë³¸ ì„¸ê¸°)")]
     public float magnitude = 0.4f;
 
-    [Tooltip("ÁÖÆÄ¼ö(Áøµ¿ ºü¸£±â) - »ç¿ë ½Ã Âü°í¿ë")]
+    [Tooltip("ì£¼íŒŒìˆ˜(ì§„ë™ ë¹ ë¥´ê¸°) - ì‚¬ìš© ì‹œ ì°¸ê³ ìš©")]
     public float frequency = 25f;
 
-    [Tooltip("ÁøÆøÀÌ ½Ã°£¿¡ µû¶ó ¾î¶»°Ô ÁÙ¾îµå´ÂÁö Á¤ÀÇÇÏ´Â Ä¿ºê(0..1 ÀÔ·Â)")]
+    [Tooltip("ì§„í­ì´ ì‹œê°„ì— ë”°ë¼ ì–´ë–»ê²Œ ì¤„ì–´ë“œëŠ”ì§€ ì •ì˜í•˜ëŠ” ì»¤ë¸Œ(0..1 ì…ë ¥)")]
     public AnimationCurve falloff = AnimationCurve.EaseInOut(0, 1, 1, 0);
 
-    [Tooltip("Cinemachine Impulse »ç¿ë¿©ºÎ(ÀÖÀ¸¸é Perlin ´ë½Å Impulse¸¦ ¹ß»ı½ÃÅ³ ¼ö ÀÖÀ½). ±âº»Àº false(Perlin/Direct ¹æ½Ä).")]
+    [Tooltip("Cinemachine Impulse ì‚¬ìš©ì—¬ë¶€(ìˆìœ¼ë©´ Perlin ëŒ€ì‹  Impulseë¥¼ ë°œìƒì‹œí‚¬ ìˆ˜ ìˆìŒ). ê¸°ë³¸ì€ false(Perlin/Direct ë°©ì‹).")]
     public bool useCinemachineImpulse = false;
 
-    [Tooltip("Cinemachine Impulse °­µµ(Impulse »ç¿ë ½Ã)")]
+    [Tooltip("Cinemachine Impulse ê°•ë„(Impulse ì‚¬ìš© ì‹œ)")]
     public float impulseAmplitude = 1f;
 
     private void Reset()

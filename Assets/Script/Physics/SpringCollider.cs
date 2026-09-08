@@ -1,10 +1,10 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 namespace UnityChan
 {
     public class SpringCollider : MonoBehaviour
     {
-        [Header("Ãæµ¹ ¹üÀ§ ¹İÁö¸§")]
+        [Header("ì¶©ëŒ ë²”ìœ„ ë°˜ì§€ë¦„")]
         public float radius = 0.5f;
 
         private void OnDrawGizmosSelected()

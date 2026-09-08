@@ -23,5 +23,5 @@ MonoBehaviour:
   rangedAtkTiers: 3
   description: 
   isLocked: 0
-  previewPrefab: {fileID: 7524821886120212198, guid: 09f869236745cd94783f7cffb01384e2, type: 3}
+  previewPrefab: {fileID: 1208922842472467590, guid: 8c987fc4feb67844395fad92f400e3c1, type: 3}
   modelPrefab: {fileID: 0}

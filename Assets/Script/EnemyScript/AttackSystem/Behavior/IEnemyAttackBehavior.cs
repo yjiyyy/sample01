@@ -1,9 +1,9 @@
-using System.Collections;
+ï»¿using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// °³º° °ø°İ Å¸ÀÔ(±ÙÁ¢, ·¯½¬, Åõ»çÃ¼ µî)À» Ãß»óÈ­.
-/// Controller´Â ÀÌ ÀÎÅÍÆäÀÌ½º¸¸ ¾Ë°í µ¿ÀÛ.
+/// ê°œë³„ ê³µê²© íƒ€ì…(ê·¼ì ‘, ëŸ¬ì‰¬, íˆ¬ì‚¬ì²´ ë“±)ì„ ì¶”ìƒí™”.
+/// ControllerëŠ” ì´ ì¸í„°í˜ì´ìŠ¤ë§Œ ì•Œê³  ë™ì‘.
 /// </summary>
 public interface IEnemyAttackBehavior
 {
@@ -11,17 +11,17 @@ public interface IEnemyAttackBehavior
     string AttackName { get; }
     float Range { get; }
     float BaseCooldown { get; }
-    float AttackTime { get; }          // ÃÑ Áö¼Ó(Àü¿ª GCD ½ÃÀÛ ÀÌÀü Á¾·á ±âÁØ)
+    float AttackTime { get; }          // ì´ ì§€ì†(ì „ì—­ GCD ì‹œì‘ ì´ì „ ì¢…ë£Œ ê¸°ì¤€)
     bool GrantsSuperArmor { get; }
 
     bool IsExecuting { get; }
-    bool IsOnCooldown(float now);      // per-attack (ÃÖ¼Ò1ÃÊ ¹İ¿µÀº ±¸Çö ³»ºÎ)
+    bool IsOnCooldown(float now);      // per-attack (ìµœì†Œ1ì´ˆ ë°˜ì˜ì€ êµ¬í˜„ ë‚´ë¶€)
 
     bool CanExecute(Enemy enemy, Transform target, float distance);
-    float GetPriorityScore(Enemy enemy, Transform target, float distance); // ´Ü¼ø ·£´ıÀÌ¸é 1
+    float GetPriorityScore(Enemy enemy, Transform target, float distance); // ë‹¨ìˆœ ëœë¤ì´ë©´ 1
 
     IEnumerator Execute(Enemy enemy, Transform target, IEnemyAttackCallbacks callbacks);
     void OnAnimationEvent(string evtName);
-    void Interrupt(bool hard);         // hard: ShieldBreak/³Ë¹é µî
-    void StampCooldown(float now);     // Á¾·á ½Ã Äğ´Ù¿î ½ºÅÆÇÁ
+    void Interrupt(bool hard);         // hard: ShieldBreak/ë„‰ë°± ë“±
+    void StampCooldown(float now);     // ì¢…ë£Œ ì‹œ ì¿¨ë‹¤ìš´ ìŠ¤íƒ¬í”„
 }

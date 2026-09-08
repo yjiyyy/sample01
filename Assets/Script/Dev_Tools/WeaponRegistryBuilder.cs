@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+ï»¿#if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -12,7 +12,7 @@ public static class WeaponRegistryBuilder
     [MenuItem("Dev/Build Weapon Registry")]
     public static void BuildRegistry()
     {
-        // Æú´õ º¸Àå
+        // í´ë” ë³´ì¥
         EnsureFolder("Assets/Resources");
         EnsureFolder("Assets/Resources/Dev");
 
@@ -29,7 +29,7 @@ public static class WeaponRegistryBuilder
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null) { skipped++; continue; }
 
-            // WeaponBehavior°¡ Æ÷ÇÔµÈ ÇÁ¸®ÆÕ¸¸ µî·Ï
+            // WeaponBehaviorê°€ í¬í•¨ëœ í”„ë¦¬íŒ¹ë§Œ ë“±ë¡
             if (prefab.GetComponentInChildren<WeaponBehavior>(true) == null)
             {
                 skipped++;
@@ -47,7 +47,7 @@ public static class WeaponRegistryBuilder
             used++;
         }
 
-        // Á¤·Ä
+        // ì •ë ¬
         list.Sort((a, b) =>
         {
             string sa = a != null ? a.displayName : "";
@@ -55,7 +55,7 @@ public static class WeaponRegistryBuilder
             return string.Compare(sa, sb, System.StringComparison.OrdinalIgnoreCase);
         });
 
-        // ±âÁ¸ ÀÚ»ê ·Îµå or »ı¼º
+        // ê¸°ì¡´ ìì‚° ë¡œë“œ or ìƒì„±
         var asset = AssetDatabase.LoadAssetAtPath<WeaponRegistrySO>(ResourcesAssetPath);
         if (asset == null)
         {
@@ -68,7 +68,7 @@ public static class WeaponRegistryBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log($"[WeaponRegistryBuilder] ºôµå ¿Ï·á: ÃÑ {total}°³ ½ºÄµ, »ç¿ë {used}, ½ºÅµ {skipped}\n¡æ {ResourcesAssetPath}");
+        Debug.Log($"[WeaponRegistryBuilder] ë¹Œë“œ ì™„ë£Œ: ì´ {total}ê°œ ìŠ¤ìº”, ì‚¬ìš© {used}, ìŠ¤í‚µ {skipped}\nâ†’ {ResourcesAssetPath}");
         Selection.activeObject = asset;
         EditorGUIUtility.PingObject(asset);
     }
@@ -79,7 +79,7 @@ public static class WeaponRegistryBuilder
         var asset = AssetDatabase.LoadAssetAtPath<WeaponRegistrySO>(ResourcesAssetPath);
         if (asset == null)
         {
-            Debug.LogWarning("[WeaponRegistryBuilder] ·¹Áö½ºÆ®¸®°¡ ¾ø½À´Ï´Ù. ¸ÕÀú Dev/Build Weapon Registry¸¦ ½ÇÇàÇÏ¼¼¿ä.");
+            Debug.LogWarning("[WeaponRegistryBuilder] ë ˆì§€ìŠ¤íŠ¸ë¦¬ê°€ ì—†ìŠµë‹ˆë‹¤. ë¨¼ì € Dev/Build Weapon Registryë¥¼ ì‹¤í–‰í•˜ì„¸ìš”.");
             return;
         }
         Selection.activeObject = asset;

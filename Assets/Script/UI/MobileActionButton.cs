@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -13,10 +13,10 @@ public class MobileActionButton : MonoBehaviour, IPointerDownHandler, IPointerUp
 {
     public MobileActionType actionType = MobileActionType.Attack;
 
-    [Tooltip("???? ???? ?????(????)")]
+    [Tooltip("누르고 있는 동안 켤 하이라이트(선택)")]
     public Image holdHighlight;
 
-    [Tooltip("?????? ?? ?? Push ???????. ??? ?????? ??��??? Push ????? ??????.")]
+    [Tooltip("차지 공격 시 표시할 Push 오브젝트. 비우면 자식에서 Push 이름을 찾습니다.")]
     public GameObject pushObject;
 
     private bool pressed;
@@ -101,7 +101,7 @@ public class MobileActionButton : MonoBehaviour, IPointerDownHandler, IPointerUp
     {
         if (holdHighlight != null)
             holdHighlight.enabled = on;
-        // ???? ??? Push?? LateUpdate???? ???? ?????? ???? ???????.
+        // 공격 버튼 Push는 LateUpdate에서 채움 처리하므로 여기서 켜지 않습니다.
         if (actionType == MobileActionType.Attack)
             return;
         if (pushObject != null)

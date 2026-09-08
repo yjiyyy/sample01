@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Reflection;
 using UnityEngine;
 
 /// <summary>
-/// Gun/Shotgun ?? ???(?????/??????) ????.
-/// Initialize(WeaponDataSO / WeaponDataSO_Gun) API?? ????.
+/// Gun/Shotgun 공용 탄약(탄창/예비탄) 런타임.
+/// Initialize(WeaponDataSO / WeaponDataSO_Gun) API로 초기화.
 /// </summary>
 [DisallowMultipleComponent]
 public class WeaponAmmoRuntime : MonoBehaviour
@@ -34,7 +34,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
     private Coroutine reloadRoutine;
     private float reloadEndTime;
 
-    /// <summary>?? ?????? ?? ???????? ?????. ???? ???? SO ????.</summary>
+    /// <summary>리로드 배율 계산에 쓸 무기 SO 참조. 없으면 연결된 SO를 사용.</summary>
     private WeaponDataSO reloadModWeaponRef;
 
     private int lastSeenEffectiveMagazineCapacityForExtendedApply = -1;
@@ -42,7 +42,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
     private bool initialized;
     public bool IsInitialized => initialized;
 
-    // ????: (magazine, reserve, isReloading)
+    // 탄약 변경: (magazine, reserve, isReloading)
     public event Action<int, int, bool> OnAmmoChanged;
 
     #region Initialize overloads
@@ -78,7 +78,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
 
         initialized = true;
         lastSeenEffectiveMagazineCapacityForExtendedApply = -1;
-        Debug.Log($"[Ammo] (Re)Init ?? mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())}");
+        Debug.Log($"[Ammo] (Re)Init 완료 mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(GetInfiniteReserve() ? "무한" : CurrentReserve.ToString())}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
@@ -130,7 +130,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
 
         initialized = true;
         lastSeenEffectiveMagazineCapacityForExtendedApply = -1;
-        Debug.Log($"[Ammo] (Re)Init (generic) ?? mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())}");
+        Debug.Log($"[Ammo] (Re)Init (generic) 완료 mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(GetInfiniteReserve() ? "무한" : CurrentReserve.ToString())}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
@@ -323,7 +323,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
         if (IsReloading) return false;
         if (!initialized)
         {
-            Debug.LogWarning("[Ammo] ???????? ????? TryConsumeForShot ????.");
+            Debug.LogWarning("[Ammo] 초기화되지 않은 상태에서 TryConsumeForShot 호출.");
             return false;
         }
 
@@ -333,7 +333,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
 
         CurrentMagazine -= need;
 
-        Debug.Log($"[Ammo] ???! ????: {CurrentMagazine}/{GetEffectiveMagazineCapacity()} (????: {(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())})");
+        Debug.Log($"[Ammo] 발사! 탄창: {CurrentMagazine}/{GetEffectiveMagazineCapacity()} (예비: {(GetInfiniteReserve() ? "무한" : CurrentReserve.ToString())})");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
 
@@ -353,13 +353,13 @@ public class WeaponAmmoRuntime : MonoBehaviour
         if (CurrentMagazine >= GetEffectiveMagazineCapacity()) return false;
 
         float rt = GetReloadDurationAfterQuickReload();
-        Debug.Log($"[Ammo] ?????? ???? (????:{(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())}, ????:{rt:F2})");
+        Debug.Log($"[Ammo] 리로드 시작 (예비:{(GetInfiniteReserve() ? "무한" : CurrentReserve.ToString())}, 시간:{rt:F2})");
 
         if (rt <= 0f)
         {
             int loadedInstant = PerformRefill();
-            string reserveStr = GetInfiniteReserve() ? "??" : CurrentReserve.ToString();
-            Debug.Log($"[Ammo] ?????? ??? ??? | ???:{loadedInstant} | mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} | reserve:{reserveStr}");
+            string reserveStr = GetInfiniteReserve() ? "무한" : CurrentReserve.ToString();
+            Debug.Log($"[Ammo] 리로드 즉시 완료 | 장전:{loadedInstant} | mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} | reserve:{reserveStr}");
 
             OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
             return true;
@@ -382,8 +382,8 @@ public class WeaponAmmoRuntime : MonoBehaviour
         IsReloading = false;
         reloadRoutine = null;
 
-        string reserveStr = GetInfiniteReserve() ? "??" : CurrentReserve.ToString();
-        Debug.Log($"[Ammo] ?????? ??? | ???:{loaded} | mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} | reserve:{reserveStr}");
+        string reserveStr = GetInfiniteReserve() ? "무한" : CurrentReserve.ToString();
+        Debug.Log($"[Ammo] 리로드 완료 | 장전:{loaded} | mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} | reserve:{reserveStr}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
@@ -420,8 +420,8 @@ public class WeaponAmmoRuntime : MonoBehaviour
     }
 
     /// <summary>
-    /// ??????? snapshot(?????/??????) ????.
-    /// - triggerAutoReload=true?? mag==0?? ?? ???? ?????? auto reload ???
+    /// 저장된 snapshot(탄창/예비탄)을 복원.
+    /// - triggerAutoReload=true이면 mag==0일 때 조건이 맞으면 auto reload 시도
     /// </summary>
     public void LoadSnapshot(int magazine, int reserve, bool triggerAutoReload = true)
     {
@@ -444,7 +444,7 @@ public class WeaponAmmoRuntime : MonoBehaviour
             TryStartReload();
         }
 
-        Debug.Log($"[Ammo] Snapshot ???? ?? mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(GetInfiniteReserve() ? "??" : CurrentReserve.ToString())}");
+        Debug.Log($"[Ammo] Snapshot 적용 완료 mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(GetInfiniteReserve() ? "무한" : CurrentReserve.ToString())}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }

@@ -1,9 +1,9 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 [RequireComponent(typeof(LineRenderer))]
 public class ForwardVisualizer : MonoBehaviour
 {
-    [Header("¼± Ç¥½Ã ¼³Á¤")]
+    [Header("ì„  í‘œì‹œ ì„¤ì •")]
     public float lineLength = 5f;
     public Color lineColor = Color.red;
 
@@ -13,9 +13,9 @@ public class ForwardVisualizer : MonoBehaviour
     {
         lineRenderer = GetComponent<LineRenderer>();
 
-        // ¶óÀÎ ¼³Á¤
+        // ë¼ì¸ ì„¤ì •
         lineRenderer.positionCount = 2;
-        lineRenderer.material = new Material(Shader.Find("Sprites/Default")); // ±âº» Åõ¸í ¼ÎÀÌ´õ
+        lineRenderer.material = new Material(Shader.Find("Sprites/Default")); // ê¸°ë³¸ íˆ¬ëª… ì…°ì´ë”
         lineRenderer.startWidth = 0.05f;
         lineRenderer.endWidth = 0.05f;
         lineRenderer.startColor = lineColor;

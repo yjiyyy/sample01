@@ -1,8 +1,8 @@
-[System.Serializable]
+ï»¿[System.Serializable]
 public class InventoryEntry
 {
     public string id; // WeaponDataSO.id
-    public int count; // ¼ÒºñÇüÀÌ¸é °³¼ö(½ºÅÃ), ÀåÂø¹«±â´Â º¸Åë 1
+    public int count; // ì†Œë¹„í˜•ì´ë©´ ê°œìˆ˜(ìŠ¤íƒ), ì¥ì°©ë¬´ê¸°ëŠ” ë³´í†µ 1
 
     public InventoryEntry(string id, int count)
     {

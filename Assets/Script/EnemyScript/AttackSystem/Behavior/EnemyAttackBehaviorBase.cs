@@ -1,8 +1,8 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections;
 
 /// <summary>
-/// °øÅë À¯Æ¿: Äğ´Ù¿î ½ºÅÆÇÁ, ÃÖ¼ÒÄğ °è»ê, AttackTime º¸Á¤(ÇÊ¿ä ½Ã)
+/// ê³µí†µ ìœ í‹¸: ì¿¨ë‹¤ìš´ ìŠ¤íƒ¬í”„, ìµœì†Œì¿¨ ê³„ì‚°, AttackTime ë³´ì •(í•„ìš” ì‹œ)
 /// </summary>
 public abstract class EnemyAttackBehaviorBase : IEnemyAttackBehavior
 {
@@ -13,7 +13,7 @@ public abstract class EnemyAttackBehaviorBase : IEnemyAttackBehavior
 
     public bool IsExecuting => executing;
 
-    // ¼­ºêÅ¬·¡½º¿¡¼­ ÇÊ¼ö ±¸Çö/Overridable ¼Ó¼º
+    // ì„œë¸Œí´ë˜ìŠ¤ì—ì„œ í•„ìˆ˜ êµ¬í˜„/Overridable ì†ì„±
     public abstract string AttackName { get; }
     public abstract float Range { get; }
     public abstract float BaseCooldown { get; }
@@ -47,7 +47,7 @@ public abstract class EnemyAttackBehaviorBase : IEnemyAttackBehavior
 
     public virtual void Interrupt(bool hard)
     {
-        // ±âº»: Áï½Ã Á¾·á ½ÅÈ£¸¸ (Controller°¡ RequestFinish È£Ãâ)
+        // ê¸°ë³¸: ì¦‰ì‹œ ì¢…ë£Œ ì‹ í˜¸ë§Œ (Controllerê°€ RequestFinish í˜¸ì¶œ)
         executing = false;
     }
 }

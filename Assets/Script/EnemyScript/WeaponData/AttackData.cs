@@ -1,17 +1,17 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// °ø°İ µ¥ÀÌÅÍÀÇ ±âº» Å¬·¡½º
+// ê³µê²© ë°ì´í„°ì˜ ê¸°ë³¸ í´ë˜ìŠ¤
 public abstract class AttackData : ScriptableObject
 {
-    [Header("°ø°İ ±âº» Á¤º¸")]
+    [Header("ê³µê²© ê¸°ë³¸ ì •ë³´")]
     public string attackName = "Attack";
 
-    [Header("ÀüÅõ ½ºÅÈ")]
+    [Header("ì „íˆ¬ ìŠ¤íƒ¯")]
     public float damage = 10f;
     public float range = 2f;
     public float cooldown = 1f;
 
-    [Header("³Ë¹é °ü·Ã")]
+    [Header("ë„‰ë°± ê´€ë ¨")]
     public float knockbackPower = 5f;
     public float knockbackDuration = 0.2f;
     public float stunDuration = 0f;

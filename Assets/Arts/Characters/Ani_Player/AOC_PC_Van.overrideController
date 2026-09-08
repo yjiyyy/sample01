@@ -9,5 +9,5 @@ AnimatorOverrideController:
   m_Name: AOC_PC_Van
   m_Controller: {fileID: 9100000, guid: 040e64a34f0e23848a2f7dbeea3566d1, type: 2}
   m_Clips:
-  - m_OriginalClip: {fileID: -2716732654013414528, guid: d95a34fda19f2a147a6e55ac02fe271b, type: 3}
-    m_OverrideClip: {fileID: -1054378578147245579, guid: 703e0e40f6fa85d47b1a04d9d2f92e00, type: 3}
+  - m_OriginalClip: {fileID: 1827226128182048838, guid: 607849fcc2d6d704a8d68e45d502f165, type: 3}
+    m_OverrideClip: {fileID: 1827226128182048838, guid: 043f47d1fff3ac3439a8cbed1ead2599, type: 3}

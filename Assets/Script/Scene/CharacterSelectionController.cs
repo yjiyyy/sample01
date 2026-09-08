@@ -30,6 +30,7 @@ public class CharacterSelectionController : MonoBehaviour
     [SerializeField] private string selectAnimStateName = SelectAnimStateName;
 
     private GameObject _spawnedCharacter;
+    private int _shownIndex = -1;
 
     /// <summary>에디터 씬 미리보기·런타임 스폰 공용 위치. 없으면 null (자동 생성하지 않음).</summary>
     public Transform GetCharacterSpawnPoint()
@@ -59,11 +60,13 @@ public class CharacterSelectionController : MonoBehaviour
         ui.ReturnClicked += OnReturn;
         ui.ConfirmClicked += OnConfirm;
         ui.SelectionChanged += OnSelectionChanged;
-        ui.BindCharacters(characters);
+        EnsureCharacterIllustrationActive();
+        var preferred = GameState.Instance != null ? GameState.Instance.SelectedCharacter : null;
+        ui.BindCharacters(characters, preferred);
+        HideForeignSpawnChildren();
 
         // BindCharacters가 SelectionChanged를 notify=false로 첫 선택하므로 한 번 맞춰 줍니다.
-        if (ui.SelectedCharacter != null)
-            ShowCharacter(ui.SelectedCharacter);
+        ShowCharacterAt(ui.SelectedIndex);
     }
 
     private void OnDestroy()
@@ -120,57 +123,82 @@ public class CharacterSelectionController : MonoBehaviour
 
     private void OnSelectionChanged(int index)
     {
-        ShowCharacter(ui != null ? ui.SelectedCharacter : null);
+        ShowCharacterAt(index);
     }
 
-    private void ShowCharacter(CharacterDataSO data)
+    private void ShowCharacterAt(int index)
     {
-        if (_spawnedCharacter != null)
-        {
-            Destroy(_spawnedCharacter);
-            _spawnedCharacter = null;
-        }
+        EnsureCharacterIllustrationActive();
 
-        if (data == null)
-        {
-            SetCharacterIllustrationVisible(true);
-            return;
-        }
-
-        if (data.GetPreviewPrefab() == null)
-        {
-            SetCharacterIllustrationVisible(true);
-            return;
-        }
-
-        if (characterSpawnPoint == null)
+        if (index == _shownIndex && _spawnedCharacter != null)
             return;
 
-        // 가운데는 3D 프리뷰 프리팹, CharacterIllustration(2D)은 겹치지 않게 숨깁니다.
-        SetCharacterIllustrationVisible(false);
+        CharacterDataSO data = null;
+        if (characters != null && index >= 0 && index < characters.Length)
+            data = characters[index];
+
+        if (data == null || data.GetPreviewPrefab() == null || characterSpawnPoint == null)
+        {
+            ClearSpawnedCharacter();
+            _shownIndex = index;
+            return;
+        }
 
         var previewPrefab = data.GetPreviewPrefab();
-        _spawnedCharacter = Instantiate(
+        var spawned = Instantiate(
             previewPrefab,
             characterSpawnPoint.position,
             characterSpawnPoint.rotation,
             characterSpawnPoint);
-        _spawnedCharacter.name = string.IsNullOrWhiteSpace(data.displayName)
+        spawned.name = string.IsNullOrWhiteSpace(data.displayName)
             ? previewPrefab.name
             : $"Select_{data.displayName}";
 
-        DisableGameplaySystemsForPreview(_spawnedCharacter);
-        EnsureCharacterAnimatorOverrideForPreview(_spawnedCharacter);
-        EnsureBodyPartsAttached(_spawnedCharacter);
-        PrepareRenderersForPreview(_spawnedCharacter);
-        PlaySelectAnimationForPreview(_spawnedCharacter, selectAnimStateName);
+        DisableGameplaySystemsForPreview(spawned);
+        EnsureCharacterAnimatorOverrideForPreview(spawned);
+        EnsureBodyPartsAttached(spawned);
+        PrepareRenderersForPreview(spawned);
+        PlaySelectAnimationForPreview(spawned, selectAnimStateName);
+
+        ClearSpawnedCharacter();
+        _spawnedCharacter = spawned;
+        _shownIndex = index;
+        HideForeignSpawnChildren();
     }
 
-    private static void SetCharacterIllustrationVisible(bool visible)
+    private void ClearSpawnedCharacter()
+    {
+        if (_spawnedCharacter == null)
+            return;
+
+        _spawnedCharacter.SetActive(false);
+        Destroy(_spawnedCharacter);
+        _spawnedCharacter = null;
+    }
+
+    /// <summary>에디터 미리보기처럼 우리가 만든 전시 캐릭터가 아닌 스폰 자식은 숨깁니다.</summary>
+    private void HideForeignSpawnChildren()
+    {
+        if (characterSpawnPoint == null)
+            return;
+
+        for (int i = 0; i < characterSpawnPoint.childCount; i++)
+        {
+            var child = characterSpawnPoint.GetChild(i).gameObject;
+            if (child == _spawnedCharacter)
+                continue;
+
+            if (child.activeSelf)
+                child.SetActive(false);
+        }
+    }
+
+    /// <summary>2D 일러스트는 3D 캐릭터 뒤에 두고, Play 중에도 끄지 않습니다.</summary>
+    private static void EnsureCharacterIllustrationActive()
     {
         var illustration = CharacterSelectionCanvasLayering.FindCharacterIllustration();
-        if (illustration != null)
-            illustration.gameObject.SetActive(visible);
+        if (illustration != null && !illustration.gameObject.activeSelf)
+            illustration.gameObject.SetActive(true);
     }
 
     private static void EnsureBodyPartsAttached(GameObject model)
@@ -248,6 +276,10 @@ public class CharacterSelectionController : MonoBehaviour
     {
         if (model == null)
             return;
+
+        var facade = model.GetComponentInChildren<PlayerFacade>(true);
+        if (facade != null)
+            facade.enabled = false;
 
         var pm = model.GetComponentInChildren<PlayerMovement>(true);
         if (pm != null)

@@ -1,8 +1,8 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class Item_Heal : MonoBehaviour
 {
-    [Header("È¸º¹·®")]
+    [Header("íšŒë³µëŸ‰")]
     public int healAmount = 20;
 
     private void OnTriggerEnter(Collider other)

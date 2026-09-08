@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Serialization;
 
 [CreateAssetMenu(menuName = "Player/PlayerConfig", fileName = "PlayerConfig_SO")]
@@ -6,7 +6,7 @@ public class PlayerConfig : ScriptableObject
 {
     [Header("General")]
     public string displayName = "Player";
-    [Tooltip("????? HP HUD?? ????? ��???? ????")]
+    [Tooltip("플레이어 HP HUD에 표시할 캐릭터 초상화")]
     public Sprite portrait;
     public string tagName = "Player";
     public LayerMask layer = 0;
@@ -19,15 +19,15 @@ public class PlayerConfig : ScriptableObject
     [Tooltip("Stamina recharge per second")]
     public float staminaRechargeRate = 20f;
 
-    [Tooltip("???. ???? ???? ???? ???? ?? ?? ??????? ????.")]
+    [Tooltip("근력. 장착 무기 무게 합 제한용.")]
     [Min(0f)]
     public float strength = 10f;
 
-    [Tooltip("????(MeleeWeapon / Unarmed) ???? ???. 1 = ??.")]
+    [Tooltip("근접(MeleeWeapon / Unarmed) 공격 배수. 1 = 기본.")]
     [Min(0f)]
     public float meleeAttack = 1f;
 
-    [Tooltip("?????(ProjectileGun) ???? ???. 1 = ??.")]
+    [Tooltip("원거리(ProjectileGun) 공격 배수. 1 = 기본.")]
     [Min(0f)]
     public float rangedAttack = 1f;
 
@@ -51,24 +51,24 @@ public class PlayerConfig : ScriptableObject
     public AnimatorOverrideController overrideController = null;
 
     [Header("Weapon Slots (SO)")]
-    [Tooltip("?? ????? ??????? ???? ???(None) SO.")]
+    [Tooltip("맨손일 때 사용할 무기 데이터(None) SO.")]
     public WeaponDataSO unarmedWeaponData = null;
 
     [FormerlySerializedAs("defaultWeaponData")]
-    [Tooltip("???? ???? 1. ??? ?????? None?? ???????.")]
+    [Tooltip("기본 무기 슬롯 1. 비우면 맨손(None)으로 처리합니다.")]
     public WeaponDataSO weaponSlot0 = null;
 
-    [Tooltip("???? ???? 2. ??? ?????? None?? ???????.")]
+    [Tooltip("기본 무기 슬롯 2. 비우면 맨손(None)으로 처리합니다.")]
     public WeaponDataSO weaponSlot1 = null;
 
-    [Header("Evade / ??? (shared ????)")]
-    [Tooltip("??? ???? ???? SO?? ????(???).")]
+    [Header("Evade / 회피 (shared 데이터)")]
+    [Tooltip("회피 동작에 사용할 SO를 할당(선택).")]
     public EvadeDataSO evadeData = null;
 
     [Header("EnemyDetector (applied by PlayerFacade)")]
-    [Tooltip("EnemyDetector?? ?????? ???? ????(???)")]
+    [Tooltip("EnemyDetector에 적용할 시야 각도(도)")]
     public float detectorViewAngle = 45f;
-    [Tooltip("EnemyDetector?? ?????? ??? ???")]
+    [Tooltip("EnemyDetector에 적용할 시야 거리")]
     public float detectorViewDistance = 10f;
 
     [Header("Editor")]

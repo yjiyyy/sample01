@@ -1,19 +1,19 @@
-using System.Collections;
+ï»¿using System.Collections;
 using UnityEngine;
 
-// partial class: TimeProjectileAttack ÆĞÅÏ ±¸Çö (¸ŞÀÎ EnemyAttackController¿Í µ¿ÀÏÇÑ global ³×ÀÓ½ºÆäÀÌ½º)
+// partial class: TimeProjectileAttack íŒ¨í„´ êµ¬í˜„ (ë©”ì¸ EnemyAttackControllerì™€ ë™ì¼í•œ global ë„¤ì„ìŠ¤í˜ì´ìŠ¤)
 
 public partial class EnemyAttackController : MonoBehaviour
 {
-    // Tick helper (¸ŞÀÎ Update¿¡¼­ È£Ãâ)
+    // Tick helper (ë©”ì¸ Updateì—ì„œ í˜¸ì¶œ)
     private void TickTimeProjectileUpdate()
     {
-        // ÇöÀç º°µµ Tick ·ÎÁ÷ ¾øÀ½. ÇÊ¿ä ½Ã Ãß°¡.
+        // í˜„ì¬ ë³„ë„ Tick ë¡œì§ ì—†ìŒ. í•„ìš” ì‹œ ì¶”ê°€.
     }
 
     /// <summary>
-    /// TimeProjectileAttackData °ø°İ ½ÃÀÛ ÁøÀÔÁ¡.
-    /// EnemyAttackController.TryStartAttack ¿¡¼­ È£ÃâµË´Ï´Ù.
+    /// TimeProjectileAttackData ê³µê²© ì‹œì‘ ì§„ì…ì .
+    /// EnemyAttackController.TryStartAttack ì—ì„œ í˜¸ì¶œë©ë‹ˆë‹¤.
     /// </summary>
     private void StartTimeProjectile(TimeProjectileAttackData data, Transform target, int index)
     {
@@ -23,11 +23,11 @@ public partial class EnemyAttackController : MonoBehaviour
             return;
         }
 
-        // pending/hold Ã³¸®(´Ù¸¥ ÆĞÅÏ°ú µ¿ÀÏÇÑ Èå¸§ À¯Áö)
+        // pending/hold ì²˜ë¦¬(ë‹¤ë¥¸ íŒ¨í„´ê³¼ ë™ì¼í•œ íë¦„ ìœ ì§€)
         MarkExecuted();
         ClearHold();
 
-        // ±âÁ¸¿¡ µ¹´ø ÄÚ·çÆ¾ÀÌ ÀÖÀ¸¸é Á¤Áö
+        // ê¸°ì¡´ì— ëŒë˜ ì½”ë£¨í‹´ì´ ìˆìœ¼ë©´ ì •ì§€
         if (timeProjectileRoutine != null)
         {
             try { StopCoroutine(timeProjectileRoutine); } catch { }
@@ -36,16 +36,16 @@ public partial class EnemyAttackController : MonoBehaviour
 
         runningTimeProjectileIndex = index;
 
-        // µğ¹ö±×¿ëÀ¸·Î ÇöÀç °ø°İ Á¤º¸¸¸ ±â·Ï (IsAttackExecutingÀº main¿¡¼­ ÆÇ´Ü)
+        // ë””ë²„ê·¸ìš©ìœ¼ë¡œ í˜„ì¬ ê³µê²© ì •ë³´ë§Œ ê¸°ë¡ (IsAttackExecutingì€ mainì—ì„œ íŒë‹¨)
         currentAttack = data;
         currentAttackIndex = index;
 
-        // Àû »óÅÂ¸¦ AttackÀ¸·Î ¹Ù²Ù¾î AIÀÇ ÀÌµ¿/ÃßÀûÀ» Â÷´Ü
+        // ì  ìƒíƒœë¥¼ Attackìœ¼ë¡œ ë°”ê¾¸ì–´ AIì˜ ì´ë™/ì¶”ì ì„ ì°¨ë‹¨
         if (enemy != null)
         {
             enemy.SetState(Enemy.EnemyState.Attack);
 
-            // È¸Àü °íÁ¤: Å¸°ÙÀ» ¹Ù¶óº¸°Ô ÇÏ°Å³ª ÇöÀç Àü¸éÀ» °íÁ¤
+            // íšŒì „ ê³ ì •: íƒ€ê²Ÿì„ ë°”ë¼ë³´ê²Œ í•˜ê±°ë‚˜ í˜„ì¬ ì „ë©´ì„ ê³ ì •
             Vector3 lookDir = enemy.transform.forward;
             if (target != null)
             {
@@ -54,8 +54,8 @@ public partial class EnemyAttackController : MonoBehaviour
                 if (dirToTarget.sqrMagnitude > 0.0001f) lookDir = dirToTarget.normalized;
             }
 
-            // LockLookDirectionÀÌ Melee¿Í µ¿ÀÏÇÏ°Ô direction + durationÀ» ¹Ş´Â´Ù°í °¡Á¤
-            // ¾à°£ÀÇ ¿©À¯(margin)¸¦ ÁÖ¾î attackTime µ¿¾È È®½ÇÈ÷ °íÁ¤µÇµµ·Ï ÇÔ
+            // LockLookDirectionì´ Meleeì™€ ë™ì¼í•˜ê²Œ direction + durationì„ ë°›ëŠ”ë‹¤ê³  ê°€ì •
+            // ì•½ê°„ì˜ ì—¬ìœ (margin)ë¥¼ ì£¼ì–´ attackTime ë™ì•ˆ í™•ì‹¤íˆ ê³ ì •ë˜ë„ë¡ í•¨
             float lockDuration = Mathf.Max(0f, data.attackTime);
             enemy.LockLookDirection(lookDir, lockDuration);
         }
@@ -64,7 +64,7 @@ public partial class EnemyAttackController : MonoBehaviour
     }
 
     /// <summary>
-    /// AttackTime / FireAtTime / Åõ»çÃ¼ ¹ß»ç¸¦ °ü¸®ÇÏ´Â ÄÚ·çÆ¾.
+    /// AttackTime / FireAtTime / íˆ¬ì‚¬ì²´ ë°œì‚¬ë¥¼ ê´€ë¦¬í•˜ëŠ” ì½”ë£¨í‹´.
     /// </summary>
     private IEnumerator TimeProjectileRoutine(TimeProjectileAttackData data, Transform target, int index)
     {
@@ -73,17 +73,17 @@ public partial class EnemyAttackController : MonoBehaviour
         bool fired = false;
         bool completedSuccessfully = true;
 
-        // FireAtTimeÀÌ AttackTimeº¸´Ù Å©¸é ¹ß»çÇÏÁö ¾Ê°í ¾Ö´Ï¸ŞÀÌ¼Ç¸¸ Ãâ·Â
+        // FireAtTimeì´ AttackTimeë³´ë‹¤ í¬ë©´ ë°œì‚¬í•˜ì§€ ì•Šê³  ì• ë‹ˆë©”ì´ì…˜ë§Œ ì¶œë ¥
         float useFireTime = (data.fireAtTime <= data.attackTime) ? data.fireAtTime : -1f;
 
-        // ¾Ö´Ï¸ŞÀÌ¼Ç ½ÃÀÛ ¼¼ÆÃ (clip ÁöÁ¤ ½Ã Àç»ı)
+        // ì• ë‹ˆë©”ì´ì…˜ ì‹œì‘ ì„¸íŒ… (clip ì§€ì • ì‹œ ì¬ìƒ)
         var anim = enemy != null ? enemy.animator : null;
         if (anim != null && data.clip != null)
         {
             anim.Play(data.clip.name, 0, 0f);
         }
 
-        // ¹æ¾îÀûÀ¸·Î attack Á¾·á/ÀÎÅÍ·´Æ® ½Ã Ç×»ó Á¤¸®ÇÒ ¼ö ÀÖ°Ô try/finally »ç¿ë
+        // ë°©ì–´ì ìœ¼ë¡œ attack ì¢…ë£Œ/ì¸í„°ëŸ½íŠ¸ ì‹œ í•­ìƒ ì •ë¦¬í•  ìˆ˜ ìˆê²Œ try/finally ì‚¬ìš©
         try
         {
             while (Time.time < attackEndTime)
@@ -99,7 +99,7 @@ public partial class EnemyAttackController : MonoBehaviour
 
                 float elapsed = Time.time - startTime;
 
-                // FireAtTime µµ´Ş ½Ã ¹ß»ç (ÇÑ ¹ø¸¸)
+                // FireAtTime ë„ë‹¬ ì‹œ ë°œì‚¬ (í•œ ë²ˆë§Œ)
                 if (!fired && useFireTime >= 0f && elapsed >= useFireTime)
                 {
                     fired = true;
@@ -111,14 +111,14 @@ public partial class EnemyAttackController : MonoBehaviour
         }
         finally
         {
-            // AttackTime Á¾·á ¡æ Á¤¸®
-            // ¾Ö´Ï¸ŞÀÌÅÍ ¼Óµµ ¸®¼Â µî (¾ÈÁ¤¼º)
+            // AttackTime ì¢…ë£Œ â†’ ì •ë¦¬
+            // ì• ë‹ˆë©”ì´í„° ì†ë„ ë¦¬ì…‹ ë“± (ì•ˆì •ì„±)
             if (enemy != null && enemy.animator != null)
             {
                 enemy.animator.speed = 1f;
             }
 
-            // »óÅÂ º¹±¸: Attack »óÅÂÀÌ¸é Chase·Î º¹±Í (´Ü, °­Á¦ Á¦¾î »óÅÂÀÎ °æ¿ì´Â ¿¹¿Ü Ã³¸®)
+            // ìƒíƒœ ë³µêµ¬: Attack ìƒíƒœì´ë©´ Chaseë¡œ ë³µê·€ (ë‹¨, ê°•ì œ ì œì–´ ìƒíƒœì¸ ê²½ìš°ëŠ” ì˜ˆì™¸ ì²˜ë¦¬)
             if (enemy != null)
             {
                 if (enemy.CurrentState == Enemy.EnemyState.Attack && !IsHardCrowdControlled())
@@ -127,7 +127,7 @@ public partial class EnemyAttackController : MonoBehaviour
                 }
 
                 // Unlock look direction
-                try { enemy.UnlockLookDirection(); } catch { /* ¹æ¾îÀû Ã³¸® */ }
+                try { enemy.UnlockLookDirection(); } catch { /* ë°©ì–´ì  ì²˜ë¦¬ */ }
             }
 
             timeProjectileRoutine = null;
@@ -147,8 +147,8 @@ public partial class EnemyAttackController : MonoBehaviour
     }
 
     /// <summary>
-    /// ½ÇÁ¦ Åõ»çÃ¼¸¦ InstantiateÇÏ°í ÃÊ±âÈ­ÇÕ´Ï´Ù.
-    /// FireAtTime ½ÃÁ¡¿¡ È£ÃâµË´Ï´Ù.
+    /// ì‹¤ì œ íˆ¬ì‚¬ì²´ë¥¼ Instantiateí•˜ê³  ì´ˆê¸°í™”í•©ë‹ˆë‹¤.
+    /// FireAtTime ì‹œì ì— í˜¸ì¶œë©ë‹ˆë‹¤.
     /// </summary>
     private void FireTimeProjectile(TimeProjectileAttackData data, Transform target)
     {
@@ -164,7 +164,7 @@ public partial class EnemyAttackController : MonoBehaviour
             return;
         }
 
-        // ¹ß»ç À§Ä¡: Ä¿½ºÅÒ ¸ÓÁñ ÀÌ¸§À» »ç¿ë(ºó ¹®ÀÚ¿­ÀÌ¸é enemy root Æú¹é)
+        // ë°œì‚¬ ìœ„ì¹˜: ì»¤ìŠ¤í…€ ë¨¸ì¦ ì´ë¦„ì„ ì‚¬ìš©(ë¹ˆ ë¬¸ìì—´ì´ë©´ enemy root í´ë°±)
         Vector3 spawnPos;
         Quaternion spawnRot;
 

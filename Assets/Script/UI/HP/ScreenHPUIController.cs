@@ -1,6 +1,6 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// È­¸é¿¡ ¹Ì¸® ¹èÄ¡µÈ HP UI ÄÁÆ®·Ñ·¯
+// í™”ë©´ì— ë¯¸ë¦¬ ë°°ì¹˜ëœ HP UI ì»¨íŠ¸ë¡¤ëŸ¬
 public class ScreenHPUIController : HPUIControllerBase
 {
     protected override void Start()

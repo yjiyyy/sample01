@@ -1,23 +1,23 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// ¸Ó¸® °ø°£(headroom) °Ë»ç À¯Æ¿¸®Æ¼ (Çâ»ó: NonAlloc »ç¿ë ¹× ¿ÜºÎ ¹öÆÛ/self id ÇÊÅÍ Áö¿ø)
-/// - ¸ñÀû: capsule ÀÇ »ó´Ü(¸Ó¸®) ºÎºĞ¸¸ º°µµ °Ë»çÇÏ¿© Á¼Àº ¸Ó¸®°ø°£¿¡¼­ ÀÌµ¿À» Á¦ÇÑ ¶Ç´Â Å¬·¥ÇÁ
-/// - º¯°æ: CheckHeadOverlap ¹× ClampHeadroomHorizontal¿¡ optional tempBuffer/selfIds ÆÄ¶ó¹ÌÅÍ¸¦ Ãß°¡ÇÏ¿©
-///         È£ÃâÃø(¿¹: PlayerMovement)¿¡¼­ Àç»ç¿ë ¹öÆÛ¸¦ Àü´ŞÇÏµµ·Ï Áö¿ø.
+/// ë¨¸ë¦¬ ê³µê°„(headroom) ê²€ì‚¬ ìœ í‹¸ë¦¬í‹° (í–¥ìƒ: NonAlloc ì‚¬ìš© ë° ì™¸ë¶€ ë²„í¼/self id í•„í„° ì§€ì›)
+/// - ëª©ì : capsule ì˜ ìƒë‹¨(ë¨¸ë¦¬) ë¶€ë¶„ë§Œ ë³„ë„ ê²€ì‚¬í•˜ì—¬ ì¢ì€ ë¨¸ë¦¬ê³µê°„ì—ì„œ ì´ë™ì„ ì œí•œ ë˜ëŠ” í´ë¨í”„
+/// - ë³€ê²½: CheckHeadOverlap ë° ClampHeadroomHorizontalì— optional tempBuffer/selfIds íŒŒë¼ë¯¸í„°ë¥¼ ì¶”ê°€í•˜ì—¬
+///         í˜¸ì¶œì¸¡(ì˜ˆ: PlayerMovement)ì—ì„œ ì¬ì‚¬ìš© ë²„í¼ë¥¼ ì „ë‹¬í•˜ë„ë¡ ì§€ì›.
 /// </summary>
 public static class NarrowSpaceUtil
 {
-    /// <param name="cap">Ã¼Å© ´ë»ó CapsuleCollider</param>
-    /// <param name="origin">ÇöÀç ¿øÁ¡(rb.position)</param>
-    /// <param name="disp">½ÃµµÇÒ ÀÌµ¿·®</param>
-    /// <param name="mask">¸Ó¸® Ãæµ¹ °Ë»ç ·¹ÀÌ¾î</param>
-    /// <param name="iterations">ÀÌÁøÅ½»ö ¹İº¹ È½¼ö</param>
-    /// <param name="headPortion">¸Ó¸® ¿øÅë ºÎºĞ ºñÀ²</param>
-    /// <param name="headMargin">¸Ó¸® ¹İ°æ ¸¶Áø</param>
-    /// <param name="tempBuffer">(optional) ¿ÜºÎ¿¡¼­ ÇÒ´çÇÑ Collider[] ¹öÆÛ (NonAlloc ¿ë)</param>
-    /// <param name="selfIds">(optional) ÀÚ±â Äİ¶óÀÌ´õ ÀÎ½ºÅÏ½ºID ÁıÇÕ(ÇÊÅÍ¸µ¿ë)</param>
+    /// <param name="cap">ì²´í¬ ëŒ€ìƒ CapsuleCollider</param>
+    /// <param name="origin">í˜„ì¬ ì›ì (rb.position)</param>
+    /// <param name="disp">ì‹œë„í•  ì´ë™ëŸ‰</param>
+    /// <param name="mask">ë¨¸ë¦¬ ì¶©ëŒ ê²€ì‚¬ ë ˆì´ì–´</param>
+    /// <param name="iterations">ì´ì§„íƒìƒ‰ ë°˜ë³µ íšŸìˆ˜</param>
+    /// <param name="headPortion">ë¨¸ë¦¬ ì›í†µ ë¶€ë¶„ ë¹„ìœ¨</param>
+    /// <param name="headMargin">ë¨¸ë¦¬ ë°˜ê²½ ë§ˆì§„</param>
+    /// <param name="tempBuffer">(optional) ì™¸ë¶€ì—ì„œ í• ë‹¹í•œ Collider[] ë²„í¼ (NonAlloc ìš©)</param>
+    /// <param name="selfIds">(optional) ìê¸° ì½œë¼ì´ë” ì¸ìŠ¤í„´ìŠ¤ID ì§‘í•©(í•„í„°ë§ìš©)</param>
     public static Vector3 ClampHeadroomHorizontal(
         CapsuleCollider cap,
         Vector3 origin,
@@ -99,7 +99,7 @@ public static class NarrowSpaceUtil
     }
 
     /// <summary>
-    /// topSphere / bottomHead ¸¦ ÁÖ°í Overlap °Ë»ç (NonAlloc ¿É¼Ç Áö¿ø)
+    /// topSphere / bottomHead ë¥¼ ì£¼ê³  Overlap ê²€ì‚¬ (NonAlloc ì˜µì…˜ ì§€ì›)
     /// </summary>
     public static bool CheckHeadOverlap(
         Vector3 topSphere,

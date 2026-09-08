@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 public class RigidbodyDirectTest : MonoBehaviour
 {
     void Start()
@@ -6,7 +6,7 @@ public class RigidbodyDirectTest : MonoBehaviour
         var rb = GetComponent<Rigidbody>();
         if (!rb)
         {
-            Debug.LogError("[RigidbodyDirectTest] Rigidbody ����");
+            Debug.LogError("[RigidbodyDirectTest] Rigidbody 없음");
             enabled = false;
             return;
         }
@@ -17,6 +17,6 @@ public class RigidbodyDirectTest : MonoBehaviour
         rb.isKinematic = true;
         rb.isKinematic = false;
         Debug.Log($"[RigidbodyDirectTest] afterToggle: vel={rb.linearVelocity}, kinematic={rb.isKinematic}");
-        enabled = false; // 1ȸ ���� �� �ڵ� ����
+        enabled = false; // 1회 실행 후 자동 비활성
     }
 }

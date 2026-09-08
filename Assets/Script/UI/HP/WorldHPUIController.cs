@@ -1,9 +1,9 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// Ä³¸¯ÅÍ¸¦ µû¶ó´Ù´Ï´Â ¿ùµå HP UI
+// ìºë¦­í„°ë¥¼ ë”°ë¼ë‹¤ë‹ˆëŠ” ì›”ë“œ HP UI
 public class WorldHPUIController : HPUIControllerBase
 {
-    [Header("¿ùµå À§Ä¡")]
+    [Header("ì›”ë“œ ìœ„ì¹˜")]
     public Transform target;
     public Vector3 offset = new Vector3(0f, 2f, 0f);
 
@@ -11,7 +11,7 @@ public class WorldHPUIController : HPUIControllerBase
     {
         base.Start();
         if (target == null)
-            Debug.LogWarning($"{name}: targetÀÌ ÁöÁ¤µÇÁö ¾Ê¾Ò½À´Ï´Ù. ¿ùµå À§Ä¡ ÃßÀûÀÌ µ¿ÀÛÇÏÁö ¾Ê½À´Ï´Ù.");
+            Debug.LogWarning($"{name}: targetì´ ì§€ì •ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤. ì›”ë“œ ìœ„ì¹˜ ì¶”ì ì´ ë™ì‘í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
     }
 
     void LateUpdate()

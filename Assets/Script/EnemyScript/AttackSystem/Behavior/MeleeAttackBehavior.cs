@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 
 public class MeleeAttackBehavior : EnemyAttackBehaviorBase
@@ -70,6 +70,6 @@ public class MeleeAttackBehavior : EnemyAttackBehaviorBase
     public override void Interrupt(bool hard)
     {
         base.Interrupt(hard);
-        // Melee?? ?????? ?? ??? �?? ???? (?????? ???? ???)
+        // Melee는 히트박스만 스폰하고 바로 끝냄 (별도 페이즈 없음)
     }
 }

@@ -1,10 +1,10 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
 /// Safe Area Fitter
-/// - Screen.safeArea¸¦ ±âÁØÀ¸·Î ÀÌ RectTransformÀÇ anchorMin/anchorMax¸¦ Á¶Á¤ÇÕ´Ï´Ù.
-/// - HUDÀÇ ·çÆ®(¶Ç´Â HP UI ·çÆ®)¿¡ ºÙÀÌ¸é Notch/screen cutout¸¦ ÇÇÇÒ ¼ö ÀÖ½À´Ï´Ù.
-/// - »ç¿ë¹ı: HP UI ·çÆ®¿¡ ÀÚµ¿À¸·Î Ãß°¡µÇ¸ç, ÇÊ¿äÇÏ¸é ´Ù¸¥ HUD ÆĞ³Î¿¡µµ ºÙÀÌ¼¼¿ä.
+/// - Screen.safeAreaë¥¼ ê¸°ì¤€ìœ¼ë¡œ ì´ RectTransformì˜ anchorMin/anchorMaxë¥¼ ì¡°ì •í•©ë‹ˆë‹¤.
+/// - HUDì˜ ë£¨íŠ¸(ë˜ëŠ” HP UI ë£¨íŠ¸)ì— ë¶™ì´ë©´ Notch/screen cutoutë¥¼ í”¼í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+/// - ì‚¬ìš©ë²•: HP UI ë£¨íŠ¸ì— ìë™ìœ¼ë¡œ ì¶”ê°€ë˜ë©°, í•„ìš”í•˜ë©´ ë‹¤ë¥¸ HUD íŒ¨ë„ì—ë„ ë¶™ì´ì„¸ìš”.
 /// </summary>
 [RequireComponent(typeof(RectTransform))]
 public class SafeAreaFitter : MonoBehaviour
@@ -32,7 +32,7 @@ public class SafeAreaFitter : MonoBehaviour
 
     void Update()
     {
-        // È­¸é Å©±â/¾ÈÀü¿µ¿ª/È¸ÀüÀÌ ¹Ù²î¸é ÀçÀû¿ë
+        // í™”ë©´ í¬ê¸°/ì•ˆì „ì˜ì—­/íšŒì „ì´ ë°”ë€Œë©´ ì¬ì ìš©
         if (_rect == null) return;
 
         Rect safeArea = Screen.safeArea;
@@ -64,7 +64,7 @@ public class SafeAreaFitter : MonoBehaviour
         anchorMax.x /= screenSize.x;
         anchorMax.y /= screenSize.y;
 
-        // Safe area°¡ ÀüÃ¼ È­¸éÀÌ¸é º¯°æÇÏÁö ¾ÊÀ½
+        // Safe areaê°€ ì „ì²´ í™”ë©´ì´ë©´ ë³€ê²½í•˜ì§€ ì•ŠìŒ
         if (anchorMin == _rect.anchorMin && anchorMax == _rect.anchorMax) return;
 
         _rect.anchorMin = anchorMin;

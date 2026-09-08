@@ -87,7 +87,7 @@ public class CharacterSelectionUI : MonoBehaviour
         RefreshSelectionFrames();
     }
 
-    public void BindCharacters(CharacterDataSO[] characters)
+    public void BindCharacters(CharacterDataSO[] characters, CharacterDataSO preferred = null)
     {
         _characters = characters ?? Array.Empty<CharacterDataSO>();
         RefreshSlotPortraits();
@@ -98,7 +98,10 @@ public class CharacterSelectionUI : MonoBehaviour
             return;
         }
 
-        int start = FindFirstSelectableIndex(0, 1);
+        int start = IndexOfSelectable(preferred);
+        if (start < 0)
+            start = FindFirstSelectableIndex(0, 1);
+
         if (start >= 0)
             SelectIndex(start, false);
         else
@@ -112,6 +115,9 @@ public class CharacterSelectionUI : MonoBehaviour
 
         var data = _characters[index];
         if (data == null || data.isLocked)
+            return;
+
+        if (index == _selectedIndex)
             return;
 
         _selectedIndex = index;
@@ -132,6 +138,20 @@ public class CharacterSelectionUI : MonoBehaviour
             return;
 
         SelectIndex(index);
+    }
+
+    private int IndexOfSelectable(CharacterDataSO data)
+    {
+        if (data == null || _characters == null)
+            return -1;
+
+        for (int i = 0; i < _characters.Length; i++)
+        {
+            if (_characters[i] == data && !_characters[i].isLocked)
+                return i;
+        }
+
+        return -1;
     }
 
     private int FindFirstSelectableIndex(int start, int direction)

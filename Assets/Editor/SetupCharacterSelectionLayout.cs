@@ -19,6 +19,7 @@ public static class SetupCharacterSelectionLayout
     private const string RemoveNavButtonsMenuPath = "Tools/Remove Character Selection Nav Buttons";
     private const string ScenePath = "Assets/Scenes/02_CharacterSelectionLevel.unity";
     private const string AutoRunFlagPath = "Assets/Editor/SetupCharacterSelectionLayout.run";
+    private const string PatchStaLabelFlagPath = "Assets/Editor/PatchCharacterSelectionStaLabel.run";
     private const string FontPath = "Assets/Arts/Fonts/BlackHanSans-Regular SDF.asset";
     private const string CharacterDataRoot = "Assets/Data/PlayerSelect";
     private const string MeleeIconPath = "Assets/Arts/UI/CharacterSelectScreen/Icon_Melee.Png";
@@ -34,7 +35,7 @@ public static class SetupCharacterSelectionLayout
 
     private static readonly string[] StatRowLabels =
     {
-        "HP", "ST", "SPD", "STR", "Melee ATK", "Ranged ATK"
+        "HP", "STA", "SPD", "STR", "Melee ATK", "Ranged ATK"
     };
 
     private static readonly string[] StatUiPropertyNames =
@@ -63,6 +64,60 @@ public static class SetupCharacterSelectionLayout
 
             Setup();
         };
+    }
+
+    [InitializeOnLoadMethod]
+    private static void AutoPatchStaLabelIfFlagExists()
+    {
+        EditorApplication.delayCall += () =>
+        {
+            if (!File.Exists(PatchStaLabelFlagPath))
+                return;
+
+            try { File.Delete(PatchStaLabelFlagPath); }
+            catch { /* ignore */ }
+
+            PatchStaminaLabelToSta();
+        };
+    }
+
+    [MenuItem("Tools/Rename Character Selection ST Label to STA")]
+    public static void PatchStaminaLabelToSta()
+    {
+        if (!File.Exists(ScenePath))
+        {
+            Debug.LogError("[SetupCharacterSelectionLayout] 씬을 찾지 못했습니다: " + ScenePath);
+            return;
+        }
+
+        var scene = EditorSceneManager.GetActiveScene();
+        if (!scene.IsValid() || scene.path != ScenePath)
+            scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+        int changed = 0;
+        var labels = UnityEngine.Object.FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            var tmp = labels[i];
+            if (tmp == null || tmp.text != "ST")
+                continue;
+
+            Transform parent = tmp.transform.parent;
+            if (parent == null || parent.name != "StRow")
+                continue;
+
+            tmp.text = "STA";
+            EditorUtility.SetDirty(tmp);
+            changed++;
+        }
+
+        if (changed > 0)
+        {
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+
+        Debug.Log($"[SetupCharacterSelectionLayout] ST → STA 라벨 {changed}개 변경.");
     }
 
     [MenuItem(RemoveNavButtonsMenuPath)]

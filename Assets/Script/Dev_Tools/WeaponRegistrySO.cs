@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "WeaponRegistry", menuName = "Dev/Weapon Registry")]
@@ -7,16 +7,16 @@ public class WeaponRegistrySO : ScriptableObject
     [System.Serializable]
     public class WeaponEntry
     {
-        public string id;           // ±âº»: prefab.name
-        public string displayName;  // ±âº»: prefab.name
-        public GameObject prefab;   // WeaponBehavior Æ÷ÇÔ ÇÁ¸®ÆÕ
+        public string id;           // ê¸°ë³¸: prefab.name
+        public string displayName;  // ê¸°ë³¸: prefab.name
+        public GameObject prefab;   // WeaponBehavior í¬í•¨ í”„ë¦¬íŒ¹
     }
 
     [SerializeField] public List<WeaponEntry> entries = new List<WeaponEntry>();
 
     public IReadOnlyList<WeaponEntry> GetSortedEntries()
     {
-        // displayName ¿À¸§Â÷¼ø Á¤·ÄµÈ º¹»çº» ¹İÈ¯
+        // displayName ì˜¤ë¦„ì°¨ìˆœ ì •ë ¬ëœ ë³µì‚¬ë³¸ ë°˜í™˜
         var copy = new List<WeaponEntry>(entries.Count);
         copy.AddRange(entries);
         copy.Sort((a, b) =>

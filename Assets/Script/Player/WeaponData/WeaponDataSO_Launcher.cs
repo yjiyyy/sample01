@@ -1,17 +1,17 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 [CreateAssetMenu(menuName = "Player/Launcher")]
 public class WeaponDataSO_Launcher : WeaponDataSO
 {
-    [Header("Launcher Àü¿ë - Åõ»çÃ¼/Æø¹ß")]
+    [Header("Launcher ì „ìš© - íˆ¬ì‚¬ì²´/í­ë°œ")]
     public float projectileLifetime = 5f;
     public float projectileSpeed = 10f;
 
-    [Tooltip("Æø¹ß ¹İ°æ")]
+    [Tooltip("í­ë°œ ë°˜ê²½")]
     public float explosiveRadius = 3f;
     [Range(0f, 1f)] public float explosiveEdgeMul = 0.2f;
 
-    [Header("µ¥¹ÌÁö ÆÇÁ¤ ´ë»ó")]
+    [Header("ë°ë¯¸ì§€ íŒì • ëŒ€ìƒ")]
     public DamageTargetType damageTargetType = DamageTargetType.EnemyOnly;
 
     private void OnValidate()

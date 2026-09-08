@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using UnityEngine;
 
@@ -15,12 +15,12 @@ public class WeaponAmmoRuntime_AR : MonoBehaviour
     private Coroutine reloadRoutine;
 
     /// <summary>
-    /// ApplyExtendedMagazineAfterUpgrades?? ?????????? ?? ??? ?? ??X. ??X?? ?????? ???? ??? ????? ????
-    /// (UpgradeEffectRuntime OnEnable ?????? ????? ????? ?? ???? ???? ????).
+    /// ApplyExtendedMagazineAfterUpgrades에서 직전 용량을 기억해 델타만 반영.
+    /// (UpgradeEffectRuntime OnEnable 타이밍과 어긋나면 탄창이 두 번 채워질 수 있음).
     /// </summary>
     private int lastSeenEffectiveMagazineCapacityForExtendedApply = -1;
 
-    // UI/??? ?????? ????: (magazine, reserve, isReloading)
+    // UI/HUD 갱신 이벤트: (magazine, reserve, isReloading)
     public event Action<int, int, bool> OnAmmoChanged;
 
     private int GetExtendedMagazineBonusFromUpgrades()
@@ -67,7 +67,7 @@ public class WeaponAmmoRuntime_AR : MonoBehaviour
         }
         else if (newCap > lastSeenEffectiveMagazineCapacityForExtendedApply)
         {
-            // Ȯ�� źâ ���� �ݿ� �� źâ�� ����(����ź �Һ�). ��Ÿ��ŭ�� ���ϸ� ü���� �����ڸ�ŭ���� ä������ ������ ��.
+            // 확장 탄창 슬롯 반영 시 탄창만 가득(예비탄 불변). 델타만큼만 더하면 체감상 ‘숫자만큼만’ 채워지는 느낌이 됨.
             CurrentMagazine = newCap;
         }
         else
@@ -90,7 +90,7 @@ public class WeaponAmmoRuntime_AR : MonoBehaviour
             return;
         }
 
-        // ????? ????: SO ?? + ??? ?? ????? ???(???? ???? Subscribe ?????? ?? ?? ?? Apply?? ????)
+        // 초기 탄약: SO 값 + 확장 탄창 보너스를 반영(이후 Subscribe 타이밍이 달라도 Apply에서 맞춤)
         IsReloading = false;
         int cap = GetEffectiveMagazineCapacity();
         CurrentMagazine = Mathf.Min(Mathf.Max(0, data.magazineSize), cap);
@@ -98,7 +98,7 @@ public class WeaponAmmoRuntime_AR : MonoBehaviour
 
         IsInitialized = true;
         lastSeenEffectiveMagazineCapacityForExtendedApply = -1;
-        Debug.Log($"[AR Ammo] Init ?? mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "??" : CurrentReserve.ToString())}");
+        Debug.Log($"[AR Ammo] Init 완료 mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "무한" : CurrentReserve.ToString())}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
@@ -125,7 +125,7 @@ public class WeaponAmmoRuntime_AR : MonoBehaviour
         if (CurrentMagazine < amount) return false;
 
         CurrentMagazine -= amount;
-        Debug.Log($"[AR Ammo] ???: mag now {CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "??" : CurrentReserve.ToString())}");
+        Debug.Log($"[AR Ammo] 발사: mag now {CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "무한" : CurrentReserve.ToString())}");
 
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
 
@@ -148,9 +148,9 @@ public class WeaponAmmoRuntime_AR : MonoBehaviour
         float rt = PlayerWeaponDamageModifiers.GetReloadTimeWithQuickReload(ownerRoot, data, baseRt);
         if (rt <= 0f)
         {
-            // ??? ????
+            // 즉시 리로드
             PerformRefill();
-            Debug.Log($"[AR Ammo] Reload instant complete ?? mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "??" : CurrentReserve.ToString())}");
+            Debug.Log($"[AR Ammo] Reload instant complete 완료 mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "무한" : CurrentReserve.ToString())}");
             OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
             return true;
         }
@@ -176,7 +176,7 @@ public class WeaponAmmoRuntime_AR : MonoBehaviour
         IsReloading = false;
         reloadRoutine = null;
 
-        Debug.Log($"[AR Ammo] Reload finished | loaded:{loaded} | mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "??" : CurrentReserve.ToString())}");
+        Debug.Log($"[AR Ammo] Reload finished | loaded:{loaded} | mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "무한" : CurrentReserve.ToString())}");
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
 
@@ -234,7 +234,7 @@ public class WeaponAmmoRuntime_AR : MonoBehaviour
             TryStartReload();
         }
 
-        Debug.Log($"[AR Ammo] Snapshot applied ?? mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "??" : CurrentReserve.ToString())}");
+        Debug.Log($"[AR Ammo] Snapshot applied 완료 mag:{CurrentMagazine}/{GetEffectiveMagazineCapacity()} reserve:{(data.infiniteReserve ? "무한" : CurrentReserve.ToString())}");
         OnAmmoChanged?.Invoke(CurrentMagazine, CurrentReserve, IsReloading);
     }
 }

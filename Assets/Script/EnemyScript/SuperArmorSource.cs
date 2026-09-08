@@ -1,10 +1,10 @@
-using System;
+ï»¿using System;
 
 [Flags]
 public enum SuperArmorSource
 {
     None = 0,
-    Attack = 1 << 0,  // °ø°Ý ÆÐÅÏ Áß ºÎ¿©
-    Shield = 1 << 1,  // ½Çµå º¸À¯
-    Skill = 1 << 2,  // ÇâÈÄ ½ºÅ³/¹öÇÁ
+    Attack = 1 << 0,  // ê³µê²© íŒ¨í„´ ì¤‘ ë¶€ì—¬
+    Shield = 1 << 1,  // ì‹¤ë“œ ë³´ìœ 
+    Skill = 1 << 2,  // í–¥í›„ ìŠ¤í‚¬/ë²„í”„
 }

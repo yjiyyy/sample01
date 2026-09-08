@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 5617330803194664888}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0.387}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -87,10 +87,166 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1155619216213641668, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 666532949970391258}
+    - targetCorrespondingSourceObject: {fileID: 7716845864063848934, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7633881062362285598}
+    - targetCorrespondingSourceObject: {fileID: 3246651338820820594, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6550403453277432954}
+    - targetCorrespondingSourceObject: {fileID: 9060555845195012174, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6231327048309865800}
   m_SourcePrefab: {fileID: 100100000, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+--- !u!1 &1197425226694320815 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3246651338820820594, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+  m_PrefabInstance: {fileID: 4436177396881882333}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &6550403453277432954
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1197425226694320815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37b7c58dc2d739b4c90fe59f6875debf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  child: {fileID: 4153261136800167787}
+  boneAxis: {x: -1, y: 0, z: 0}
+  stiffness: 0.001
+  drag: 0.01
+  externalForce: {x: 0, y: -0.005, z: 0}
+  blend: 0.5
+  lockRotationX: 0
+  lockRotationY: 0
+  lockRotationZ: 0
+  useCollision: 1
+  collisionRadius: 0.08
+  colliders: []
+  autoCollectColliders: 1
+  debugMissingColliders: 1
+--- !u!4 &2977310502796163900 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -7727614053212321823, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+  m_PrefabInstance: {fileID: 4436177396881882333}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &3285906284750402841 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1155619216213641668, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+  m_PrefabInstance: {fileID: 4436177396881882333}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &666532949970391258
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3285906284750402841}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37b7c58dc2d739b4c90fe59f6875debf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  child: {fileID: 3994272621059482410}
+  boneAxis: {x: -1, y: 0, z: 0}
+  stiffness: 0.001
+  drag: 0.01
+  externalForce: {x: 0, y: -0.005, z: 0}
+  blend: 0.5
+  lockRotationX: 0
+  lockRotationY: 0
+  lockRotationZ: 0
+  useCollision: 1
+  collisionRadius: 0.08
+  colliders: []
+  autoCollectColliders: 1
+  debugMissingColliders: 1
+--- !u!4 &3994272621059482410 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 792341201353400311, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+  m_PrefabInstance: {fileID: 4436177396881882333}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &4153261136800167787 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 302637453434047414, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+  m_PrefabInstance: {fileID: 4436177396881882333}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &4186886040977382198 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
   m_PrefabInstance: {fileID: 4436177396881882333}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &4624625483071546515 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 9060555845195012174, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+  m_PrefabInstance: {fileID: 4436177396881882333}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &6231327048309865800
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4624625483071546515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37b7c58dc2d739b4c90fe59f6875debf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  child: {fileID: 5998929843938735736}
+  boneAxis: {x: -1, y: 0, z: 0}
+  stiffness: 0.001
+  drag: 0.01
+  externalForce: {x: 0, y: -0.005, z: 0}
+  blend: 0.5
+  lockRotationX: 0
+  lockRotationY: 0
+  lockRotationZ: 0
+  useCollision: 1
+  collisionRadius: 0.08
+  colliders: []
+  autoCollectColliders: 1
+  debugMissingColliders: 1
+--- !u!4 &5998929843938735736 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -1238475335948318043, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+  m_PrefabInstance: {fileID: 4436177396881882333}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6235174014855490875 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7716845864063848934, guid: 382cc506520e2614c8203abc6049c1a2, type: 3}
+  m_PrefabInstance: {fileID: 4436177396881882333}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7633881062362285598
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6235174014855490875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37b7c58dc2d739b4c90fe59f6875debf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  child: {fileID: 2977310502796163900}
+  boneAxis: {x: -1, y: 0, z: 0}
+  stiffness: 0.001
+  drag: 0.01
+  externalForce: {x: 0, y: -0.005, z: 0}
+  blend: 0.5
+  lockRotationX: 0
+  lockRotationY: 0
+  lockRotationZ: 0
+  useCollision: 1
+  collisionRadius: 0.08
+  colliders: []
+  autoCollectColliders: 1
+  debugMissingColliders: 1

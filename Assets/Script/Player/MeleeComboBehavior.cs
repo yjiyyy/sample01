@@ -1,4 +1,4 @@
-// MeleeComboBehavior.cs
+﻿// MeleeComboBehavior.cs
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using UnityEngine;
 
 /// <summary>
 /// MeleeComboBehavior
-/// - WeaponBehavior???? ??? ?????? ???????.
+/// - WeaponBehavior에서 콤보 스텝을 실행합니다.
 /// </summary>
 [DisallowMultipleComponent]
 public class MeleeComboBehavior : MonoBehaviour
@@ -38,7 +38,7 @@ public class MeleeComboBehavior : MonoBehaviour
     // defensive
     private bool debugMode = false;
 
-    /// <summary>ignoreTimeAfterInput ???? ?? ????(??) ??? ????? ????. ???? ??? ?????.</summary>
+    /// <summary>ignoreTimeAfterInput 직후 잠깐(초) 이동을 풀어주는 대기. 스텝 전환 직후 사용.</summary>
     private const float MOVEMENT_UNLOCK_DELAY = 0.1f;
     private const float NO_MOVE_SWITCH_NEAR_STEP_END = 0.1f;
 
@@ -70,7 +70,7 @@ public class MeleeComboBehavior : MonoBehaviour
         EnsureProxies(force: true);
     }
 
-    /// <summary>??? ???? ?? ????. ??? ?? ???? ??? ?????? ???.</summary>
+    /// <summary>콤보가 진행 중인지 여부. 외부에서 입력 잠금 등에 사용.</summary>
     public bool IsComboActive => comboActive;
 
     public void OnPress()
@@ -375,7 +375,7 @@ public class MeleeComboBehavior : MonoBehaviour
             SpawnComboHitboxPrefabsForHand(step, stepIndex, weapon, prefabToSpawn, step.comboStepHandMode);
         else if (weapon != null && weapon.UseWeaponCollider)
         {
-            // Bat ??: ???? ???? HitBox_PC ?????? ???? (?????? ???? ??)
+            // Bat 등: 프리팹 없이 HitBox_PC 콜라이더를 사용 (무기 콜라이더 모드)
             EnsureProxies(force: false);
 
             WeaponDataSO proxy = (stepIndex < stepProxies.Count && stepProxies[stepIndex] != null) ? stepProxies[stepIndex] : null;
@@ -387,7 +387,7 @@ public class MeleeComboBehavior : MonoBehaviour
             }
 
             if (step.allowDuplicateHit && debugMode)
-                Debug.Log("[Combo] allowDuplicateHit?? ???? ?????? ??????? ??????? ??????.");
+                Debug.Log("[Combo] allowDuplicateHit로 같은 대상에 다단 히트가 허용됩니다.");
 
             float colliderLife = Mathf.Max(0.01f, step.hitBoxLifetime > 0f ? step.hitBoxLifetime : weapon.hitBoxLifetime);
             if (wb != null)
@@ -396,11 +396,11 @@ public class MeleeComboBehavior : MonoBehaviour
                 ownerController?.StartRecoilIfNeeded(proxy);
             }
             else
-                Debug.LogWarning("[Combo] ???? WeaponCollider ??????? WeaponBehavior?? ???????.");
+                Debug.LogWarning("[Combo] 무기 WeaponCollider 활성에 WeaponBehavior가 필요합니다.");
         }
         else if (weapon != null)
         {
-            Debug.LogWarning($"[Combo] '{step.name}': SpawnPrefab ??????? hitBoxPrefab/meleeHitboxPrefab?? ??? ??????.");
+            Debug.LogWarning($"[Combo] '{step.name}': SpawnPrefab 모드인데 hitBoxPrefab/meleeHitboxPrefab이 없습니다.");
         }
 
         // Step timing loop

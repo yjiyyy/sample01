@@ -1,22 +1,22 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-// °£´ÜÇÑ ÀÎº¥Åä¸® ¸Å´ÏÀú: ¼ÒÁö(Æ¯¼ö¼Ò¸ğÇ°) °ü¸® ¹× ÀåÂø »óÅÂ °ü¸®
+// ê°„ë‹¨í•œ ì¸ë²¤í† ë¦¬ ë§¤ë‹ˆì €: ì†Œì§€(íŠ¹ìˆ˜ì†Œëª¨í’ˆ) ê´€ë¦¬ ë° ì¥ì°© ìƒíƒœ ê´€ë¦¬
 public class InventoryManager : MonoBehaviour
 {
     public static InventoryManager Instance { get; private set; }
 
-    // ¼ÒºñÇü(Æ¯¼ö¹«±â) ¸ñ·Ï: id -> count
+    // ì†Œë¹„í˜•(íŠ¹ìˆ˜ë¬´ê¸°) ëª©ë¡: id -> count
     private Dictionary<string, int> consumables = new Dictionary<string, int>();
 
-    // ÇöÀç ÀåÂøµÈ ¹«±â id (ºó ¹®ÀÚ¿­ ¶Ç´Â nullÀÌ¸é ¾øÀ½)
+    // í˜„ì¬ ì¥ì°©ëœ ë¬´ê¸° id (ë¹ˆ ë¬¸ìì—´ ë˜ëŠ” nullì´ë©´ ì—†ìŒ)
     private string equippedWeaponId = null;
 
-    // ÀÌº¥Æ®: ÀÎº¥Åä¸® ¶Ç´Â ÀåÂø »óÅÂ°¡ ¹Ù²ğ ¶§ ¹ßÇà
+    // ì´ë²¤íŠ¸: ì¸ë²¤í† ë¦¬ ë˜ëŠ” ì¥ì°© ìƒíƒœê°€ ë°”ë€” ë•Œ ë°œí–‰
     public event Action OnInventoryChanged;
-    public event Action<string> OnEquipChanged; // »õ·Î ÀåÂøµÈ id (nullÀÌ¸é ÇØÁ¦)
+    public event Action<string> OnEquipChanged; // ìƒˆë¡œ ì¥ì°©ëœ id (nullì´ë©´ í•´ì œ)
 
     private void Awake()
     {
@@ -24,7 +24,7 @@ public class InventoryManager : MonoBehaviour
         else { Destroy(gameObject); return; }
     }
 
-    // ¼ÒºñÇü Ãß°¡(¿¹: ¼ö·ùÅº 3°³)
+    // ì†Œë¹„í˜• ì¶”ê°€(ì˜ˆ: ìˆ˜ë¥˜íƒ„ 3ê°œ)
     public void AddConsumable(string id, int amount)
     {
         if (string.IsNullOrEmpty(id) || amount <= 0) return;
@@ -33,8 +33,8 @@ public class InventoryManager : MonoBehaviour
         OnInventoryChanged?.Invoke();
     }
 
-    // ¼ÒºñÇü »ç¿ë(½ÇÁ¦·Î ¼Ò¸ğ)
-    // ¹İÈ¯°ª: »ç¿ë ¼º°ø ½Ã true(°³¼ö°¡ 1 ÀÌ»óÀÌ¾î¾ß ÇÔ)
+    // ì†Œë¹„í˜• ì‚¬ìš©(ì‹¤ì œë¡œ ì†Œëª¨)
+    // ë°˜í™˜ê°’: ì‚¬ìš© ì„±ê³µ ì‹œ true(ê°œìˆ˜ê°€ 1 ì´ìƒì´ì–´ì•¼ í•¨)
     public bool UseConsumable(string id)
     {
         if (string.IsNullOrEmpty(id)) return false;
@@ -45,13 +45,13 @@ public class InventoryManager : MonoBehaviour
         return true;
     }
 
-    // ÀüÃ¼ ¼ÒºñÇü ¸ñ·Ï ¹İÈ¯ (º¹»çº»)
+    // ì „ì²´ ì†Œë¹„í˜• ëª©ë¡ ë°˜í™˜ (ë³µì‚¬ë³¸)
     public List<InventoryEntry> GetAllConsumables()
     {
         return consumables.Select(kv => new InventoryEntry(kv.Key, kv.Value)).ToList();
     }
 
-    // ÀåÂø
+    // ì¥ì°©
     public void Equip(string id)
     {
         equippedWeaponId = id;
@@ -71,7 +71,7 @@ public class InventoryManager : MonoBehaviour
         return equippedWeaponId;
     }
 
-    // µğ¹ö±×¿ë ºü¸¥ ÃÊ±âÈ­ (¿É¼Ç)
+    // ë””ë²„ê·¸ìš© ë¹ ë¥¸ ì´ˆê¸°í™” (ì˜µì…˜)
     [ContextMenu("AddTestConsumables")]
     public void AddTestConsumables()
     {

@@ -1,8 +1,8 @@
-using System;
+ï»¿using System;
 using UnityEngine;
 
 /// <summary>
-/// ¾ãÀº »óÅÂ¸Ó½Å: ÇöÀç´Â »óÅÂ °ª/ÀÌº¥Æ®¸¸ Á¦°ø
+/// ì–‡ì€ ìƒíƒœë¨¸ì‹ : í˜„ì¬ëŠ” ìƒíƒœ ê°’/ì´ë²¤íŠ¸ë§Œ ì œê³µ
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerStateMachine : MonoBehaviour

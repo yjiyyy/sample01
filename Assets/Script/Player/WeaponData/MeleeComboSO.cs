@@ -1,16 +1,16 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Melee Combo ÀüÃ¼ Á¤ÀÇ (¿©·¯ ½ºÅÜ)
+/// Melee Combo ì „ì²´ ì •ì˜ (ì—¬ëŸ¬ ìŠ¤í…)
 /// </summary>
 [CreateAssetMenu(menuName = "Player/MeleeCombo", fileName = "MeleeCombo_SO")]
 public class MeleeComboSO : ScriptableObject
 {
-    [Tooltip("ÄŞº¸ ½ºÅÜµé (¼ø¼­´ë·Î ½ÇÇà)")]
+    [Tooltip("ì½¤ë³´ ìŠ¤í…ë“¤ (ìˆœì„œëŒ€ë¡œ ì‹¤í–‰)")]
     public List<MeleeComboStepSO> steps = new List<MeleeComboStepSO>();
 
-    [Tooltip("¸¶Áö¸· ½ºÅÜ ÀÌÈÄ ·çÇÁ ¿©ºÎ (º¸ÅëÀº false)")]
+    [Tooltip("ë§ˆì§€ë§‰ ìŠ¤í… ì´í›„ ë£¨í”„ ì—¬ë¶€ (ë³´í†µì€ false)")]
     public bool loop = false;
 
     private void OnValidate()

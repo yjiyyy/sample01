@@ -15,13 +15,13 @@ MonoBehaviour:
   portrait: {fileID: 21300000, guid: 970c3eda2a548e246b26aabf094a83af, type: 3}
   illustration: {fileID: 21300000, guid: 1a1ab13aa395e204fa4cbb0373fb83b4, type: 3}
   displayName: Miki
-  hpTiers: 2
+  hpTiers: 3
   stTiers: 3
   spdTiers: 3
   strTiers: 3
-  meleeAtkTiers: 4
+  meleeAtkTiers: 3
   rangedAtkTiers: 3
   description: 
   isLocked: 0
-  previewPrefab: {fileID: 9065406046031604689, guid: 7677ffdd02a5bc44596a3d371c0ceb3b, type: 3}
+  previewPrefab: {fileID: 8050372026391409373, guid: da3c3750f4bbe994b8d311ae7b1b3552, type: 3}
   modelPrefab: {fileID: 0}

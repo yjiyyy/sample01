@@ -1,54 +1,54 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System;
 
 /// <summary>
-/// Shotgun Àü¿ë SO.
-/// - ¼½ÅÍ ÆÇÁ¤ ´ë½Å ÇÁ·ÎÁ§Å¸ÀÏ(Æç¸´) ´Ù¹ß ¹ß»ç
-/// - Åº¾à/¸®·Îµå ÇÊµå´Â Gun°ú °°Àº ÀÌ¸§/½ºÆåÀ¸·Î À¯ÁöÇÏ¿©
-///   WeaponAmmoRuntimeÀ» ±×´ë·Î Àç»ç¿ë °¡´É
+/// Shotgun ì „ìš© SO.
+/// - ì„¹í„° íŒì • ëŒ€ì‹  í”„ë¡œì íƒ€ì¼(í ë¦¿) ë‹¤ë°œ ë°œì‚¬
+/// - íƒ„ì•½/ë¦¬ë¡œë“œ í•„ë“œëŠ” Gunê³¼ ê°™ì€ ì´ë¦„/ìŠ¤í™ìœ¼ë¡œ ìœ ì§€í•˜ì—¬
+///   WeaponAmmoRuntimeì„ ê·¸ëŒ€ë¡œ ì¬ì‚¬ìš© ê°€ëŠ¥
 /// </summary>
 [CreateAssetMenu(menuName = "Player/Shotgun")]
 public class WeaponDataSO_Shotgun : WeaponDataSO
 {
-    [Header("¼¦°Ç(ÇÁ·ÎÁ§Å¸ÀÏ) ÆÄ¶ó¹ÌÅÍ")]
-    [Tooltip("ÇÑ ¹ø ¹ß»çÇÒ ¶§ »ı¼ºµÇ´Â Æç¸´ ¼ö")]
+    [Header("ìƒ·ê±´(í”„ë¡œì íƒ€ì¼) íŒŒë¼ë¯¸í„°")]
+    [Tooltip("í•œ ë²ˆ ë°œì‚¬í•  ë•Œ ìƒì„±ë˜ëŠ” í ë¦¿ ìˆ˜")]
     public int pelletCount = 10;
-    [Tooltip("ºÎÃ¤²Ã ÀüÃ¼ °¢µµ(µµ). pelletCount°¡ 1ÀÌ¸é Áß¾Ó 1¹ß¸¸ ¹ß»ç")]
+    [Tooltip("ë¶€ì±„ê¼´ ì „ì²´ ê°ë„(ë„). pelletCountê°€ 1ì´ë©´ ì¤‘ì•™ 1ë°œë§Œ ë°œì‚¬")]
     [Range(0f, 360f)] public float spreadAngle = 60f;
-    [Tooltip("Æç¸´ 1°³ ±âÁØ ±âº» µ¥¹ÌÁö")]
+    [Tooltip("í ë¦¿ 1ê°œ ê¸°ì¤€ ê¸°ë³¸ ë°ë¯¸ì§€")]
     public float damagePerPellet = 10f;
-    [Tooltip("Æç¸´ ¼Óµµ")]
+    [Tooltip("í ë¦¿ ì†ë„")]
     public float projectileSpeed = 16f;
-    [Tooltip("½ºÆù À§Ä¡ ±âÁØ ´©Àû ÀÌµ¿°Å¸®. µµ´Ş ½Ã Áï½Ã ÆÄ±«")]
+    [Tooltip("ìŠ¤í° ìœ„ì¹˜ ê¸°ì¤€ ëˆ„ì  ì´ë™ê±°ë¦¬. ë„ë‹¬ ì‹œ ì¦‰ì‹œ íŒŒê´´")]
     public float maxTravelDistance = 30f;
-    [Tooltip("°Å¸® °¨¼è ½ÃÀÛ °Å¸®")]
+    [Tooltip("ê±°ë¦¬ ê°ì‡  ì‹œì‘ ê±°ë¦¬")]
     public float falloffStartDistance = 5f;
-    [Tooltip("ÃÖ´ë °¨¼è ½Ã ÃÖ¼Ò µ¥¹ÌÁö ¹èÀ²")]
+    [Tooltip("ìµœëŒ€ ê°ì‡  ì‹œ ìµœì†Œ ë°ë¯¸ì§€ ë°°ìœ¨")]
     [Range(0f, 1f)] public float minDamageMultiplier = 0.2f;
-    [Tooltip("Æç¸´ 1°³´ç °üÅë È½¼ö")]
+    [Tooltip("í ë¦¿ 1ê°œë‹¹ ê´€í†µ íšŸìˆ˜")]
     public int pierceCount = 0;
 
-    /* ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡ Ammo fields (Gun°ú µ¿ÀÏ ¸í¸í/½ºÆå) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡ */
-    [Header("Åº¾à/¸®·Îµå (Gun°ú µ¿ÀÏ ½ºÆå)")]
-    [Tooltip("Ã¼Å©ÇÏ¸é ÀÌ ¹«±â´Â Åº¾à/¸®·Îµå ½Ã½ºÅÛÀ» »ç¿ëÇÕ´Ï´Ù.")]
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Ammo fields (Gunê³¼ ë™ì¼ ëª…ëª…/ìŠ¤í™) â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    [Header("íƒ„ì•½/ë¦¬ë¡œë“œ (Gunê³¼ ë™ì¼ ìŠ¤í™)")]
+    [Tooltip("ì²´í¬í•˜ë©´ ì´ ë¬´ê¸°ëŠ” íƒ„ì•½/ë¦¬ë¡œë“œ ì‹œìŠ¤í…œì„ ì‚¬ìš©í•©ë‹ˆë‹¤.")]
     public bool usesAmmo = false;
 
-    [Tooltip("ÇÑ ÅºÃ¢ÀÇ Å©±â")]
+    [Tooltip("í•œ íƒ„ì°½ì˜ í¬ê¸°")]
     public int magazineSize = 8;
 
-    [Tooltip("ÃÊ±â ¿¹ºñ Åº¾à(Initialize ½Ã ÇÒ´ç). infiniteReserve°¡ true¸é ¹«½Ã")]
+    [Tooltip("ì´ˆê¸° ì˜ˆë¹„ íƒ„ì•½(Initialize ì‹œ í• ë‹¹). infiniteReserveê°€ trueë©´ ë¬´ì‹œ")]
     public int initialReserve = 24;
 
-    [Tooltip("¿¹ºñ ¹«ÇÑ ¿©ºÎ")]
+    [Tooltip("ì˜ˆë¹„ ë¬´í•œ ì—¬ë¶€")]
     public bool infiniteReserve = false;
 
-    [Tooltip("¸®·Îµå ½Ã°£(ÃÊ). 0ÀÌ¸é Áï½Ã ·Îµå")]
+    [Tooltip("ë¦¬ë¡œë“œ ì‹œê°„(ì´ˆ). 0ì´ë©´ ì¦‰ì‹œ ë¡œë“œ")]
     public float reloadTime = 1.2f;
 
-    [Tooltip("ÀÚµ¿ ¸®·Îµå: ÅºÃ¢ÀÌ 0ÀÏ ¶§ ÀÚµ¿À¸·Î ¸®·Îµå¸¦ ½Ãµµ")]
+    [Tooltip("ìë™ ë¦¬ë¡œë“œ: íƒ„ì°½ì´ 0ì¼ ë•Œ ìë™ìœ¼ë¡œ ë¦¬ë¡œë“œë¥¼ ì‹œë„")]
     public bool autoReloadOnEmpty = true;
 
-    [Tooltip("¹ß»ç ½Ã ¼Ò¸ğ Åº¾à(°³)")]
+    [Tooltip("ë°œì‚¬ ì‹œ ì†Œëª¨ íƒ„ì•½(ê°œ)")]
     public int consumePerShot = 1;
 
     private void OnValidate()

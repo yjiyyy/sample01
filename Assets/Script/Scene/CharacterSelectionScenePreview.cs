@@ -28,6 +28,12 @@ public class CharacterSelectionScenePreview : MonoBehaviour
     private void OnEnable()
     {
 #if UNITY_EDITOR
+        if (Application.isPlaying)
+        {
+            HidePreviewInstance();
+            return;
+        }
+
         QueueRefresh();
 #endif
     }
@@ -35,6 +41,8 @@ public class CharacterSelectionScenePreview : MonoBehaviour
     private void OnValidate()
     {
 #if UNITY_EDITOR
+        if (Application.isPlaying)
+            return;
         QueueRefresh();
 #endif
     }
@@ -42,7 +50,10 @@ public class CharacterSelectionScenePreview : MonoBehaviour
     private void OnDisable()
     {
 #if UNITY_EDITOR
-        ClearPreview();
+        if (Application.isPlaying)
+            HidePreviewInstance();
+        else
+            ClearPreview();
 #endif
     }
 
@@ -63,6 +74,14 @@ public class CharacterSelectionScenePreview : MonoBehaviour
             return;
 
         RefreshPreview();
+    }
+
+    private void HidePreviewInstance()
+    {
+        if (_previewInstance == null)
+            return;
+
+        _previewInstance.SetActive(false);
     }
 
     private void RefreshPreview()

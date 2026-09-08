@@ -1,43 +1,43 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 [CreateAssetMenu(menuName = "Player/Gun")]
 public class WeaponDataSO_Gun : WeaponDataSO
 {
-    [Header("Gun ÇÁ·ÎÁ§Å¸ÀÏ")]
+    [Header("Gun í”„ë¡œì íƒ€ì¼")]
     public float projectileLifetime = 5f;
     public float projectileSpeed = 10f;
 
-    [Tooltip("ÇÑ ¹ßÀÌ °üÅëÇÒ ¼ö ÀÖ´Â ¼ö(°°Àº ÀûÀº ÇÑ ¹ø)")]
+    [Tooltip("í•œ ë°œì´ ê´€í†µí•  ìˆ˜ ìˆëŠ” ìˆ˜(ê°™ì€ ì ì€ í•œ ë²ˆ)")]
     public int pierceCount = 0;
 
-    [Header("Á¶ÁØ ½ºÄµ(ÇÃ·¹ÀÌ¾î °¨Áö±â)")]
-    [Tooltip("ÇÃ·¹ÀÌ¾î Á¤¸é ±âÁØ ½ºÄµ °¢µµ(µµ)")]
+    [Header("ì¡°ì¤€ ìŠ¤ìº”(í”Œë ˆì´ì–´ ê°ì§€ê¸°)")]
+    [Tooltip("í”Œë ˆì´ì–´ ì •ë©´ ê¸°ì¤€ ìŠ¤ìº” ê°ë„(ë„)")]
     public float aimScanAngle = 25f;
 
-    [Tooltip("½ºÄµ ÃÖ´ë °Å¸®(¹ÌÅÍ)")]
+    [Tooltip("ìŠ¤ìº” ìµœëŒ€ ê±°ë¦¬(ë¯¸í„°)")]
     public float aimScanDistance = 12f;
 
-    /* ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡ Åº¾à / ¸®·Îµå ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡ */
-    [Header("Åº¾à / ¸®·Îµå")]
-    [Tooltip("Åº¾à ½Ã½ºÅÛ »ç¿ë ¿©ºÎ")]
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€ íƒ„ì•½ / ë¦¬ë¡œë“œ â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    [Header("íƒ„ì•½ / ë¦¬ë¡œë“œ")]
+    [Tooltip("íƒ„ì•½ ì‹œìŠ¤í…œ ì‚¬ìš© ì—¬ë¶€")]
     public bool usesAmmo = true;
 
-    [Tooltip("ÅºÃ¢ ¿ë·®")]
+    [Tooltip("íƒ„ì°½ ìš©ëŸ‰")]
     public int magazineSize = 10;
 
-    [Tooltip("ÃÊ±â ¼ÒÁö Åº¾à(¿¹ºñÅº)")]
+    [Tooltip("ì´ˆê¸° ì†Œì§€ íƒ„ì•½(ì˜ˆë¹„íƒ„)")]
     public int initialReserve = 30;
 
-    [Tooltip("¿¹ºñÅº ¹«ÇÑ (true¸é reserve´Â ¹«½Ã)")]
+    [Tooltip("ì˜ˆë¹„íƒ„ ë¬´í•œ (trueë©´ reserveëŠ” ë¬´ì‹œ)")]
     public bool infiniteReserve = false;
 
-    [Tooltip("¸®·Îµå ½Ã°£(ÃÊ). 0ÀÌ¸é Áï½Ã ¸®·Îµå")]
+    [Tooltip("ë¦¬ë¡œë“œ ì‹œê°„(ì´ˆ). 0ì´ë©´ ì¦‰ì‹œ ë¦¬ë¡œë“œ")]
     public float reloadTime = 1.8f;
 
-    [Tooltip("ÇÑ ¹ø ¹ß»ç ½Ã ¼Ò¸ğ Åº ¼ö")]
+    [Tooltip("í•œ ë²ˆ ë°œì‚¬ ì‹œ ì†Œëª¨ íƒ„ ìˆ˜")]
     public int consumePerShot = 1;
 
-    [Tooltip("ÅºÃ¢ÀÌ 0ÀÌ µÇ´Â ¼ø°£ ÀÚµ¿ ¸®·Îµå")]
+    [Tooltip("íƒ„ì°½ì´ 0ì´ ë˜ëŠ” ìˆœê°„ ìë™ ë¦¬ë¡œë“œ")]
     public bool autoReloadOnEmpty = true;
 
     private void OnValidate()

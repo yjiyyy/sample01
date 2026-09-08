@@ -1,10 +1,10 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
 /// Thin backward-compat shim / simple narrow-space filter.
 /// - Provides FilterCapsuleDisplacement(...) which Enemy/other scripts call.
-/// - NonAlloc ¹öÆÛ¿Í self-id ÇÊÅÍ¸µÀ» Áö¿øÇÏµµ·Ï È®Àå.
+/// - NonAlloc ë²„í¼ì™€ self-id í•„í„°ë§ì„ ì§€ì›í•˜ë„ë¡ í™•ì¥.
 /// </summary>
 public static class NarrowSpaceSimpleUtil
 {

@@ -1,15 +1,15 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// È­¸é À§ ¹«±â ¾ÆÀÌÄÜ Å¬¸¯ ½Ã È°¼º ½½·ÔÀ» ¹Ù²ß´Ï´Ù.
-/// ¹«±â Ä¡Æ® ¿À¹ö·¹ÀÌ´Â Å°º¸µå ` Å°·Î¸¸ ¿±´Ï´Ù.
+/// í™”ë©´ ìœ„ ë¬´ê¸° ì•„ì´ì½˜ í´ë¦­ ì‹œ í™œì„± ìŠ¬ë¡¯ì„ ë°”ê¿‰ë‹ˆë‹¤.
+/// ë¬´ê¸° ì¹˜íŠ¸ ì˜¤ë²„ë ˆì´ëŠ” í‚¤ë³´ë“œ ` í‚¤ë¡œë§Œ ì—½ë‹ˆë‹¤.
 /// </summary>
 [RequireComponent(typeof(Button))]
 public class UIButton_DevWeaponToggle : MonoBehaviour, IPointerClickHandler
 {
-    [Tooltip("ºñ¿öµÎ¸é ¾À¿¡¼­ ÀÚµ¿ Å½»ö")]
+    [Tooltip("ë¹„ì›Œë‘ë©´ ì”¬ì—ì„œ ìë™ íƒìƒ‰")]
     public PlayerWeaponController targetPlayer;
 
     Button uiButton;
@@ -38,7 +38,7 @@ public class UIButton_DevWeaponToggle : MonoBehaviour, IPointerClickHandler
         if (targetPlayer != null)
             targetPlayer.TrySwitchWeaponSlot();
         else
-            Debug.LogWarning("[UIButton_DevWeaponToggle] PlayerWeaponController¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù.");
+            Debug.LogWarning("[UIButton_DevWeaponToggle] PlayerWeaponControllerë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
     }
 
     public void ToggleFromInspector()

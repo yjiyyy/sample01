@@ -1136,7 +1136,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uC82C  0"
+  m_text: 0
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c185c1b3ebc53c14cabe2f9e0c1c6611, type: 2}
   m_sharedMaterial: {fileID: 8622322437153602529, guid: c185c1b3ebc53c14cabe2f9e0c1c6611, type: 2}
@@ -1635,8 +1635,10 @@ MonoBehaviour:
   selectedItemHeight: 110
   animSpeed: 14
   moneyText: {fileID: 989615837}
-  jamText: {fileID: 352174062}
+  gemText: {fileID: 352174062}
   optionsButton: {fileID: 1796716660}
+  moneyIcon: {fileID: 0}
+  gemIcon: {fileID: 0}
   characterSelectScene: 02_CharacterSelectionLevel
   shopPanel: {fileID: 1199082788}
   stageSelectPanel: {fileID: 748185109}
@@ -4565,7 +4567,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uB3C8  0"
+  m_text: 0
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c185c1b3ebc53c14cabe2f9e0c1c6611, type: 2}
   m_sharedMaterial: {fileID: 8622322437153602529, guid: c185c1b3ebc53c14cabe2f9e0c1c6611, type: 2}

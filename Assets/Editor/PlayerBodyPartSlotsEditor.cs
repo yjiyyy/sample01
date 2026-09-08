@@ -13,6 +13,13 @@ public class PlayerBodyPartSlotsEditor : Editor
         if (slots == null) return;
 
         EditorGUILayout.Space();
+        EditorGUILayout.HelpBox(
+            "Attach Bone: Hierarchy에서 본을 드래그\n" +
+            "Is Skinned Mesh: 켜면 헤어 회전(-90,0,90), 끄면 모자 회전(0,-90,180)\n" +
+            "오프셋은 슬롯에 없고, 위 체크에 따라 일괄 적용됩니다.",
+            MessageType.None);
+
+        EditorGUILayout.Space();
         EditorGUILayout.LabelField("에디터 미리보기", EditorStyles.boldLabel);
 
         if (Application.isPlaying)

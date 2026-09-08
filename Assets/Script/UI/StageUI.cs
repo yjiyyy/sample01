@@ -1,11 +1,11 @@
-using System.Collections;
+﻿using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class StageUI : MonoBehaviour
 {
-    [Header("UI ??????? (??? ?????? ??? ??????? ??? ???)")]
+    [Header("UI 텍스트 참조 (비우면 자식에서 같은 이름으로 찾음)")]
     public Text timerText;
     public TMP_Text tmpTimerText;
 
@@ -21,10 +21,10 @@ public class StageUI : MonoBehaviour
     public Text successText;
     public TMP_Text tmpSuccessText;
 
-    [Header("???? ?????? (Timer ???)")]
+    [Header("레벨 아이콘 바 (Timer 옆)")]
     public StageLevelIconBar levelIconBar;
 
-    [Header("???? ???? ??? ????")]
+    [Header("시작 문구 표시 시간")]
     public float startTextDuration = 1f;
 
     private void Awake()

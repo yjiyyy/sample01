@@ -1,10 +1,10 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 [DisallowMultipleComponent]
 public class MobileUIRoot : MonoBehaviour
 {
-    [Header("Ç¥½Ã Á¶°Ç")]
-    [Tooltip("¿¡µğÅÍ¿¡¼­ °­Á¦ Ç¥½Ã(±â±â ¾øÀÌ Å×½ºÆ®)")]
+    [Header("í‘œì‹œ ì¡°ê±´")]
+    [Tooltip("ì—ë””í„°ì—ì„œ ê°•ì œ í‘œì‹œ(ê¸°ê¸° ì—†ì´ í…ŒìŠ¤íŠ¸)")]
     public bool forceInEditor = true;
 
     private void Awake()
@@ -17,7 +17,7 @@ public class MobileUIRoot : MonoBehaviour
 #endif
         gameObject.SetActive(active);
 
-        // ¿¡µğÅÍ °­Á¦ ½Ã InputManager¿¡µµ µ¿ÀÏ ÇÃ·¡±× Àü´Ş
+        // ì—ë””í„° ê°•ì œ ì‹œ InputManagerì—ë„ ë™ì¼ í”Œë˜ê·¸ ì „ë‹¬
         if (active && InputManager.Instance != null)
             InputManager.Instance.forceMobileInEditor = true;
     }

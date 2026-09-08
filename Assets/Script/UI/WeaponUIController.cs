@@ -1,20 +1,20 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// Weapon UI ÄÁÆ®·Ñ·¯ ÀÚ¸®Ç¥½Ã(ÅÛÇÃ¸´¿¡¼­ Å¬·¡½º¸í¸¸ ¹Ù²å½À´Ï´Ù).
-/// ½ÇÁ¦ ±¸Çö(¾ÆÀÌÄÜ °»½Å µî)Àº ¿©±â¿¡ Ãß°¡ÇÏ¼¼¿ä.
+/// Weapon UI ì»¨íŠ¸ë¡¤ëŸ¬ ìë¦¬í‘œì‹œ(í…œí”Œë¦¿ì—ì„œ í´ë˜ìŠ¤ëª…ë§Œ ë°”ê¿¨ìŠµë‹ˆë‹¤).
+/// ì‹¤ì œ êµ¬í˜„(ì•„ì´ì½˜ ê°±ì‹  ë“±)ì€ ì—¬ê¸°ì— ì¶”ê°€í•˜ì„¸ìš”.
 /// </summary>
 public class WeaponUIController : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        // TODO: ÃÊ±âÈ­ ÄÚµå ³Ö±â
+        // TODO: ì´ˆê¸°í™” ì½”ë“œ ë„£ê¸°
     }
 
     // Update is called once per frame
     void Update()
     {
-        // TODO: UI ¾÷µ¥ÀÌÆ®(¿¹: Äğ´Ù¿î Ç¥½Ã) µî
+        // TODO: UI ì—…ë°ì´íŠ¸(ì˜ˆ: ì¿¨ë‹¤ìš´ í‘œì‹œ) ë“±
     }
 }

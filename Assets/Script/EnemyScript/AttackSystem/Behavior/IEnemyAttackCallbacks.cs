@@ -1,16 +1,16 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public interface IEnemyAttackCallbacks
 {
-    // ÆĞÅÏ(Behavior) °øÅë ¶óÀÌÇÁ»çÀÌÅ¬
+    // íŒ¨í„´(Behavior) ê³µí†µ ë¼ì´í”„ì‚¬ì´í´
     void OnBehaviorStarted(IEnemyAttackBehavior behavior);
-    void RequestFinish(IEnemyAttackBehavior behavior);    // ¼º°ø(Äğ´Ù¿î/±Û·Î¹úÄğÅ¸ÀÓ Àû¿ë)
-    void RequestCancel(IEnemyAttackBehavior behavior);    // Ãë¼Ò(³ëÄğ) - »õ·Î Ãß°¡
+    void RequestFinish(IEnemyAttackBehavior behavior);    // ì„±ê³µ(ì¿¨ë‹¤ìš´/ê¸€ë¡œë²Œì¿¨íƒ€ì„ ì ìš©)
+    void RequestCancel(IEnemyAttackBehavior behavior);    // ì·¨ì†Œ(ë…¸ì¿¨) - ìƒˆë¡œ ì¶”ê°€
 
-    // ¾Ö´Ï¸ŞÀÌ¼Ç / »óÅÂ
+    // ì• ë‹ˆë©”ì´ì…˜ / ìƒíƒœ
     void PlayAnimation(string animTriggerOrState, bool useTrigger = true);
     void SetAnimatorBool(string name, bool value);
 
-    // Èı¹Ú½º ½ºÆù
+    // í›ë°•ìŠ¤ ìŠ¤í°
     void SpawnHitbox(GameObject prefab, float lifetime, System.Action<HitBox_Enemy> init);
 }

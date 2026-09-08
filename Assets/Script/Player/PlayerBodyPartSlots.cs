@@ -8,20 +8,14 @@ using UnityEngine;
 [System.Serializable]
 public class PlayerPartSlot
 {
-    [Tooltip("파츠가 붙을 본 이름. 예: 'Bip001 Head'")]
-    public string boneName = "";
+    [Tooltip("파츠가 붙을 본. Hierarchy에서 드래그하세요. 예: Bip001 Head")]
+    public Transform attachBone;
 
     [Tooltip("생성할 파츠 프리팹.")]
     public GameObject partPrefab;
 
-    [Tooltip("부착 후 로컬 위치 오프셋.")]
-    public Vector3 localOffset = Vector3.zero;
-
-    [Tooltip("부착 후 로컬 회전(오일러 각도).")]
-    public Vector3 localRotationEuler = Vector3.zero;
-
-    [Tooltip("부착 후 로컬 스케일.")]
-    public Vector3 localScale = Vector3.one;
+    [Tooltip("켜면 스킨드(헤어) 회전, 끄면 비스킨드(모자) 회전을 적용합니다.")]
+    public bool isSkinnedMesh;
 }
 
 /// <summary>
@@ -33,8 +27,14 @@ public class PlayerPartSlot
 [ExecuteAlways]
 public class PlayerBodyPartSlots : MonoBehaviour
 {
+    /// <summary>스킨드 파츠(헤어) 로컬 회전.</summary>
+    public static readonly Vector3 SkinnedLocalRotationEuler = new Vector3(-90f, 0f, 90f);
+
+    /// <summary>비스킨드 파츠(모자) 로컬 회전.</summary>
+    public static readonly Vector3 UnskinnedLocalRotationEuler = new Vector3(0f, -90f, 180f);
+
     [Header("파츠 슬롯")]
-    [Tooltip("붙일 파츠 목록 (프리팹 + 본 이름 + 오프셋).")]
+    [Tooltip("붙일 파츠 목록 (본 Transform + 프리팹 + 스킨드 여부).")]
     public PlayerPartSlot[] partSlots = System.Array.Empty<PlayerPartSlot>();
 
     [Header("에디터")]
@@ -284,28 +284,21 @@ public class PlayerBodyPartSlots : MonoBehaviour
 
             if (slot.partPrefab == null)
             {
-                if (!string.IsNullOrEmpty(slot.boneName))
-                    Debug.LogWarning($"[PlayerBodyPartSlots] 슬롯(bone='{slot.boneName}')에 partPrefab이 없습니다. ({name})");
+                if (slot.attachBone != null)
+                    Debug.LogWarning($"[PlayerBodyPartSlots] 슬롯(bone='{slot.attachBone.name}')에 partPrefab이 없습니다. ({name})");
                 continue;
             }
 
-            if (string.IsNullOrEmpty(slot.boneName))
+            if (slot.attachBone == null)
             {
-                Debug.LogWarning($"[PlayerBodyPartSlots] 슬롯(prefab='{slot.partPrefab.name}')에 boneName이 비어 있습니다. ({name})");
+                Debug.LogWarning($"[PlayerBodyPartSlots] 슬롯(prefab='{slot.partPrefab.name}')에 attachBone이 없습니다. ({name})");
                 continue;
             }
 
-            Transform bone = FindInHierarchy(slot.boneName);
-            if (bone == null)
-            {
-                Debug.LogWarning($"[PlayerBodyPartSlots] 본 '{slot.boneName}'을 찾지 못했습니다. ({name})");
-                continue;
-            }
-
-            var instance = SpawnPartInstance(slot.partPrefab, bone, isEditorPreview);
+            var instance = SpawnPartInstance(slot.partPrefab, slot.attachBone, isEditorPreview);
             if (instance == null) continue;
 
-            ApplyLocalTransform(instance.transform, slot.localOffset, slot.localRotationEuler, slot.localScale);
+            ApplySlotLocalTransform(instance.transform, slot.isSkinnedMesh);
 
 #if UNITY_EDITOR
             if (isEditorPreview)
@@ -361,22 +354,13 @@ public class PlayerBodyPartSlots : MonoBehaviour
     }
 #endif
 
-    private Transform FindInHierarchy(string objectName)
+    /// <summary>스킨드 여부에 따라 헤어/모자 로컬 Transform을 적용합니다.</summary>
+    public static void ApplySlotLocalTransform(Transform tr, bool isSkinnedMesh)
     {
-        if (string.IsNullOrEmpty(objectName)) return null;
-        foreach (Transform t in GetComponentsInChildren<Transform>(true))
-        {
-            // 잘못 저장된 미리보기가 있어도 본 검색에서 제외
-            if (PlayerBodyPartPreviewMarker.IsUnderPreview(t)) continue;
-            if (t.name == objectName) return t;
-        }
-        return null;
-    }
-
-    private static void ApplyLocalTransform(Transform tr, Vector3 pos, Vector3 euler, Vector3 scale)
-    {
-        tr.localPosition = pos;
-        tr.localRotation = Quaternion.Euler(euler);
-        tr.localScale = scale;
+        if (tr == null) return;
+        tr.localPosition = Vector3.zero;
+        tr.localRotation = Quaternion.Euler(
+            isSkinnedMesh ? SkinnedLocalRotationEuler : UnskinnedLocalRotationEuler);
+        tr.localScale = Vector3.one;
     }
 }
