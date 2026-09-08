@@ -15,12 +15,26 @@ MonoBehaviour:
   portrait: {fileID: 21300000, guid: 970c3eda2a548e246b26aabf094a83af, type: 3}
   illustration: {fileID: 21300000, guid: 1a1ab13aa395e204fa4cbb0373fb83b4, type: 3}
   displayName: Miki
-  hpTiers: 3
-  stTiers: 3
-  spdTiers: 3
-  strTiers: 3
+  hpTiers: 2
+  stTiers: 4
+  spdTiers: 4
+  strTiers: 2
   meleeAtkTiers: 3
   rangedAtkTiers: 3
+  playerConfig: {fileID: 11400000, guid: b781aaabbb8cb6341a2f527dbdfe0d16, type: 2}
+  autoSyncPlayerConfig: 1
+  hpTier3Value: 100
+  hpPerTier: 10
+  staminaTier3Value: 10
+  staminaPerTier: 1
+  speedTier3Value: 5
+  speedPerTier: 0.5
+  strengthTier3Value: 10
+  strengthPerTier: 1
+  meleeAttackTier3Value: 1
+  meleeAttackPerTier: 0.1
+  rangedAttackTier3Value: 1
+  rangedAttackPerTier: 0.1
   description: 
   isLocked: 0
   previewPrefab: {fileID: 8050372026391409373, guid: da3c3750f4bbe994b8d311ae7b1b3552, type: 3}

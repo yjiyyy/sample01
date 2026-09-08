@@ -155,7 +155,7 @@ public class PlayerEvadeController : MonoBehaviour
         {
             float t = dur > 0f ? elapsed / dur : 1f;
             float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
-            Vector3 disp = dir * (data.evadeSpeed * speedMul) * Time.fixedDeltaTime;
+            Vector3 disp = dir * (GetEvadeSpeed() * speedMul) * Time.fixedDeltaTime;
 
             disp = CapsuleCastEvadeAdjustment(disp, out Vector3 pushOut);
 
@@ -242,7 +242,7 @@ public class PlayerEvadeController : MonoBehaviour
             }
 
             float speedMul = data.speedCurve != null ? data.speedCurve.Evaluate(t) : 1f;
-            Vector3 disp = currentDir * (data.evadeSpeed * speedMul) * Time.fixedDeltaTime;
+            Vector3 disp = currentDir * (GetEvadeSpeed() * speedMul) * Time.fixedDeltaTime;
 
             disp = CapsuleCastEvadeAdjustment(disp, out Vector3 pushOut);
 
@@ -287,6 +287,21 @@ public class PlayerEvadeController : MonoBehaviour
             changeState?.Invoke(PlayerState.Move);
         else
             changeState?.Invoke(PlayerState.Idle);
+    }
+
+    /// <summary>
+    /// 회피 속도는 현재 캐릭터의 기본 이동 속도를 사용합니다.
+    /// 이동 컴포넌트가 없을 때만 EvadeDataSO 값을 예비값으로 사용합니다.
+    /// </summary>
+    private float GetEvadeSpeed()
+    {
+        if (movement != null)
+            return Mathf.Max(0f, movement.GetBaseMoveSpeed());
+
+        if (playerStats != null)
+            return Mathf.Max(0f, playerStats.baseMoveSpeed);
+
+        return data != null ? Mathf.Max(0f, data.evadeSpeed) : 0f;
     }
 
     // 이동 조정: desiredDisp → (전진 이동) / pushOut(겹침 해소)

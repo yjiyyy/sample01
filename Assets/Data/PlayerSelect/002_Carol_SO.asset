@@ -15,12 +15,26 @@ MonoBehaviour:
   portrait: {fileID: 21300000, guid: 93600e0f2ac05ce4aa7b48f1511e9c7a, type: 3}
   illustration: {fileID: 21300000, guid: 43fd43c5e6eb2e446bfb98eb9a4f17bb, type: 3}
   displayName: Carol
-  hpTiers: 2
-  stTiers: 5
+  hpTiers: 4
+  stTiers: 2
   spdTiers: 1
   strTiers: 3
-  meleeAtkTiers: 4
+  meleeAtkTiers: 5
   rangedAtkTiers: 3
+  playerConfig: {fileID: 11400000, guid: c25044eb9916ae44a900e85618c19985, type: 2}
+  autoSyncPlayerConfig: 1
+  hpTier3Value: 100
+  hpPerTier: 10
+  staminaTier3Value: 10
+  staminaPerTier: 1
+  speedTier3Value: 5
+  speedPerTier: 0.5
+  strengthTier3Value: 10
+  strengthPerTier: 1
+  meleeAttackTier3Value: 1
+  meleeAttackPerTier: 0.1
+  rangedAttackTier3Value: 1
+  rangedAttackPerTier: 0.1
   description: 
   isLocked: 0
   previewPrefab: {fileID: 5505480102308089695, guid: 704c80dfff74ea8449b9cb070a0a1784, type: 3}

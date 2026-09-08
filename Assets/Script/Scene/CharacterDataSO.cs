@@ -16,13 +16,33 @@ public class CharacterDataSO : ScriptableObject
     [Tooltip("캐릭터 이름 (UI 표시용).")]
     public string displayName = "";
 
-    [Header("스탯 표시 (0~5칸, 선택 화면 전용 / PlayerConfig와 연동 없음)")]
-    [Range(0, 5)] public int hpTiers = 3;
-    [Range(0, 5)] public int stTiers = 3;
-    [Range(0, 5)] public int spdTiers = 3;
-    [Range(0, 5)] public int strTiers = 3;
-    [Range(0, 5)] public int meleeAtkTiers = 3;
-    [Range(0, 5)] public int rangedAtkTiers = 3;
+    [Header("스탯 표시 (1~5칸)")]
+    [Range(1, 5)] public int hpTiers = 3;
+    [Range(1, 5)] public int stTiers = 3;
+    [Range(1, 5)] public int spdTiers = 3;
+    [Range(1, 5)] public int strTiers = 3;
+    [Range(1, 5)] public int meleeAtkTiers = 3;
+    [Range(1, 5)] public int rangedAtkTiers = 3;
+
+    [Header("초기 스탯 연동")]
+    [Tooltip("이 캐릭터가 새 게임을 시작할 때 기준으로 사용할 PlayerConfig.")]
+    public PlayerConfig playerConfig;
+
+    [Tooltip("켜면 편집 모드에서 티어와 계산 설정을 바꿀 때 연결된 PlayerConfig에 즉시 반영합니다.")]
+    public bool autoSyncPlayerConfig;
+
+    [SerializeField, HideInInspector] private float hpTier3Value = 100f;
+    [SerializeField, HideInInspector] private float hpPerTier = 10f;
+    [SerializeField, HideInInspector] private float staminaTier3Value = 10f;
+    [SerializeField, HideInInspector] private float staminaPerTier = 1f;
+    [SerializeField, HideInInspector] private float speedTier3Value = 5f;
+    [SerializeField, HideInInspector] private float speedPerTier = 0.5f;
+    [SerializeField, HideInInspector] private float strengthTier3Value = 10f;
+    [SerializeField, HideInInspector] private float strengthPerTier = 1f;
+    [SerializeField, HideInInspector] private float meleeAttackTier3Value = 1f;
+    [SerializeField, HideInInspector] private float meleeAttackPerTier = 0.1f;
+    [SerializeField, HideInInspector] private float rangedAttackTier3Value = 1f;
+    [SerializeField, HideInInspector] private float rangedAttackPerTier = 0.1f;
 
     [Header("기타")]
     [TextArea(2, 5)]
@@ -44,4 +64,31 @@ public class CharacterDataSO : ScriptableObject
 
     /// <summary>스테이지용. modelPrefab 우선, 없으면 previewPrefab.</summary>
     public GameObject GetGameplayPrefab() => modelPrefab != null ? modelPrefab : previewPrefab;
+
+    public float GetInitialMaxHealth() => CalculateTierValue(hpTiers, hpTier3Value, hpPerTier, 0f);
+    public float GetInitialMaxStamina() => CalculateTierValue(stTiers, staminaTier3Value, staminaPerTier, 1f);
+    public float GetInitialMoveSpeed() => CalculateTierValue(spdTiers, speedTier3Value, speedPerTier, 0f);
+    public float GetInitialStrength() => CalculateTierValue(strTiers, strengthTier3Value, strengthPerTier, 0f);
+    public float GetInitialMeleeAttack() => CalculateTierValue(meleeAtkTiers, meleeAttackTier3Value, meleeAttackPerTier, 0f);
+    public float GetInitialRangedAttack() => CalculateTierValue(rangedAtkTiers, rangedAttackTier3Value, rangedAttackPerTier, 0f);
+
+    /// <summary>티어로 계산한 초기 수치를 지정한 Config에 적용합니다.</summary>
+    public void ApplyInitialStatsTo(PlayerConfig targetConfig)
+    {
+        if (targetConfig == null)
+            return;
+
+        targetConfig.maxHealth = GetInitialMaxHealth();
+        targetConfig.maxStamina = GetInitialMaxStamina();
+        targetConfig.baseMoveSpeed = GetInitialMoveSpeed();
+        targetConfig.strength = GetInitialStrength();
+        targetConfig.meleeAttack = GetInitialMeleeAttack();
+        targetConfig.rangedAttack = GetInitialRangedAttack();
+    }
+
+    private static float CalculateTierValue(int tier, float tier3Value, float perTier, float minimum)
+    {
+        int safeTier = Mathf.Clamp(tier, 1, 5);
+        return Mathf.Max(minimum, tier3Value + (safeTier - 3) * perTier);
+    }
 }

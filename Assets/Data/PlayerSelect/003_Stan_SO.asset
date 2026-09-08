@@ -15,12 +15,26 @@ MonoBehaviour:
   portrait: {fileID: 21300000, guid: b1c1be564b035ec46a2f36c9884c6bbe, type: 3}
   illustration: {fileID: 21300000, guid: dcc43a1cbcf1f024f9d82201e4255fbf, type: 3}
   displayName: Stan
-  hpTiers: 2
-  stTiers: 3
-  spdTiers: 3
-  strTiers: 3
-  meleeAtkTiers: 4
-  rangedAtkTiers: 3
+  hpTiers: 3
+  stTiers: 2
+  spdTiers: 4
+  strTiers: 2
+  meleeAtkTiers: 2
+  rangedAtkTiers: 5
+  playerConfig: {fileID: 11400000, guid: 999afcc376336f14abadead800f7bd13, type: 2}
+  autoSyncPlayerConfig: 1
+  hpTier3Value: 100
+  hpPerTier: 10
+  staminaTier3Value: 10
+  staminaPerTier: 1
+  speedTier3Value: 5
+  speedPerTier: 0.5
+  strengthTier3Value: 10
+  strengthPerTier: 1
+  meleeAttackTier3Value: 1
+  meleeAttackPerTier: 0.1
+  rangedAttackTier3Value: 1
+  rangedAttackPerTier: 0.1
   description: 
   isLocked: 0
   previewPrefab: {fileID: 1208922842472467590, guid: 8c987fc4feb67844395fad92f400e3c1, type: 3}

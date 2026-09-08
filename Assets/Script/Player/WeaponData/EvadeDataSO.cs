@@ -10,6 +10,7 @@ public class EvadeDataSO : ScriptableObject
     public float staminaCost = 30f;
 
     [Header("회피 성능")]
+    [Tooltip("PlayerMovement가 없을 때만 사용하는 예비 속도. 실제 회피 속도는 현재 플레이어의 Base Move Speed를 사용합니다.")]
     public float evadeSpeed = 8f;
     public float evadeDuration = 0.5f;
 

@@ -393,7 +393,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   movementSettings: {fileID: 11400000, guid: 169770ec7743246419408d2c4abc9326, type: 2}
-  baseMoveSpeed: 10
+  baseMoveSpeed: 5.5
   stopWhenNoInput: 1
   rotationSpeedDegPerSec: 1080
   debugLogs: 0
@@ -506,7 +506,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3843984e48da68946a7e53e281970d85, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHP: 150
+  maxHP: 90
   weight: 1
 --- !u!114 &2313216955615961292
 MonoBehaviour:
@@ -577,16 +577,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e509e4d6259d96748881e1385e0543af, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 150
-  currentHealth: 150
+  maxHealth: 90
+  currentHealth: 90
   massMultiplier: 1
-  baseMoveSpeed: 10
+  baseMoveSpeed: 5.5
   rotationSpeedDegPerSec: 1080
-  strength: 10
+  strength: 9
   meleeAttack: 1
   rangedAttack: 1
-  maxStamina: 10
-  currentStamina: 10
+  maxStamina: 11
+  currentStamina: 11
   staminaRechargeRate: 0.5
   staminaRechargeDelay: 3
   level: 1
