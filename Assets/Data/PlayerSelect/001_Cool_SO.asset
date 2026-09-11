@@ -37,5 +37,5 @@ MonoBehaviour:
   rangedAttackPerTier: 0.1
   description: 
   isLocked: 0
-  previewPrefab: {fileID: 5221830404474251533, guid: 6716d293e7308a04b9b7aa45fc35fbcf, type: 3}
+  previewPrefab: {fileID: 2562616419653302848, guid: 8e36c62dbcf00fc49957a65a3225ce56, type: 3}
   modelPrefab: {fileID: 0}

@@ -13,19 +13,7 @@ public class SceneNameDrawer : PropertyDrawer
             return;
         }
 
-        // 현재 string 값으로부터 SceneAsset 로드 (표시용)
-        SceneAsset currentAsset = null;
-        if (!string.IsNullOrEmpty(property.stringValue))
-        {
-            foreach (var s in EditorBuildSettings.scenes)
-            {
-                if (System.IO.Path.GetFileNameWithoutExtension(s.path) == property.stringValue)
-                {
-                    currentAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(s.path);
-                    break;
-                }
-            }
-        }
+        SceneAsset currentAsset = FindSceneAsset(property.stringValue);
 
         var newAsset = EditorGUI.ObjectField(position, label, currentAsset, typeof(SceneAsset), false) as SceneAsset;
         if (newAsset != currentAsset)
@@ -40,5 +28,27 @@ public class SceneNameDrawer : PropertyDrawer
                 property.stringValue = "";
             }
         }
+    }
+
+    private static SceneAsset FindSceneAsset(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+            return null;
+
+        foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes)
+        {
+            if (System.IO.Path.GetFileNameWithoutExtension(scene.path) == sceneName)
+                return AssetDatabase.LoadAssetAtPath<SceneAsset>(scene.path);
+        }
+
+        // Build Profiles에 아직 넣지 않은 씬도 드래그한 상태가 Inspector에 유지되게 합니다.
+        foreach (string guid in AssetDatabase.FindAssets($"{sceneName} t:Scene"))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (System.IO.Path.GetFileNameWithoutExtension(path) == sceneName)
+                return AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
+        }
+
+        return null;
     }
 }
