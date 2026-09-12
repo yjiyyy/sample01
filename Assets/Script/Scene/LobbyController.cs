@@ -69,6 +69,10 @@ public class LobbyController : MonoBehaviour
         {
             data = fallbackCharacter;
             usedFallback = data != null;
+
+            // 로비 씬을 단독 실행해도 이후 스테이지에서 같은 캐릭터를 사용합니다.
+            if (data != null && GameState.Instance != null)
+                GameState.Instance.SelectedCharacter = data;
         }
 
         GameObject prefab = data != null ? data.GetPreviewPrefab() : null;

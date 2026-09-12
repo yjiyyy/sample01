@@ -26,24 +26,25 @@ public abstract class BossEncounter : MonoBehaviour
     protected GameObject SpawnedBoss => spawnedBoss;
     protected BossSpawnSite ActiveSpawnSite => activeSpawnSite;
 
-    /// <summary>StageManager가 스테이지 레벨 max 도달 시 1회 호출합니다.</summary>
-    public void HandleMaxStageLevelReached(StageManager stageManager)
+    /// <summary>StageData에 설정한 시작 조건을 만족했을 때 StageManager가 1회 호출합니다.</summary>
+    public bool TryStartEncounter(StageManager stageManager)
     {
         if (bossPhaseStarted)
-            return;
-
-        bossPhaseStarted = true;
+            return true;
 
         if (stageManager == null)
         {
             Debug.LogError($"[{GetType().Name}] StageManager가 null입니다.", this);
-            return;
+            return false;
         }
+
+        bossPhaseStarted = true;
 
         stageManager.StopWaveSpawning();
         stageManager.ui?.ShowBossTime(bossTimeLabel);
 
         OnBossPhaseStarted(stageManager);
+        return true;
     }
 
     /// <summary>보스 페이즈 시작(스폰 중지·Boss time 표시 이후). 스테이지별 소환·연출은 여기서 확장합니다.</summary>
@@ -52,6 +53,12 @@ public abstract class BossEncounter : MonoBehaviour
     }
 
     public bool IsBossPhaseStarted => bossPhaseStarted;
+
+    /// <summary>PlayerTrigger 시작 방식을 사용할 수 있는 트리거가 씬에 연결됐는지.</summary>
+    public virtual bool HasPlayerStartTrigger => false;
+
+    /// <summary>Inspector 설정 검사용 보스 데이터.</summary>
+    public virtual EnemyConfig ConfiguredBoss => null;
 
     /// <summary>등록된 스폰 지점 중 플레이어와 가장 먼 곳에 보스를 소환합니다.</summary>
     protected bool TrySpawnBossAtFarthestSite(

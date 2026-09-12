@@ -24,7 +24,7 @@ MonoBehaviour:
   weaponPartSlots: []
   attackName: Ranged_Attack
   grantSuperArmor: 0
-  damage: 10
+  damage: 100
   range: 8
   cooldown: 3
   prepareTime: 0

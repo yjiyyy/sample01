@@ -109,11 +109,15 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
     [SerializeField] private Sprite scrollArrowSprite;
     [SerializeField] private Sprite scrollTrackSprite;
     [SerializeField] private Sprite stageTabSprite;
+    [Header("Back Button")]
+    [Tooltip("왼쪽 아래 뒤로 가기 버튼으로 이동할 씬입니다.")]
+    [SceneName] [SerializeField] private string lobbySceneName = SceneNames.Lobby;
 
     [SerializeField] private RectTransform mapViewport;
     [SerializeField] private RectTransform mapContent;
     [SerializeField] private RectTransform popupRoot;
     [SerializeField] private RectTransform worldViewButtonRoot;
+    [SerializeField] private RectTransform backButtonRoot;
     [SerializeField] private ScrollRect stageListScroll;
     [SerializeField] private Button scrollUpButton;
     [SerializeField] private Button scrollDownButton;
@@ -127,6 +131,7 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
     private readonly List<Button> mapPins = new();
     private readonly List<Button> listButtons = new();
     private Coroutine transitionRoutine;
+    private bool sceneLoading;
     private bool draggingMap;
     private Vector2 lastDragPosition;
     private float dragVelocity;
@@ -220,6 +225,7 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
             title.localScale = titleScale;
         }
         AddDecor(root);
+        CreateBackButton(root);
 
         EnsureEventSystem();
         CacheReferences();
@@ -265,6 +271,95 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
         Panel("AccentBottom", root, Red, new(0f,.012f), new(.11f,.032f)).GetComponent<Image>().raycastTarget = false;
 
 
+    }
+
+    /// <summary>
+    /// 왼쪽 아래 뒤로 가기 버튼을 만듭니다. START MISSION과 같은 종이 버튼 이미지를 재사용합니다.
+    /// 본체와 그림자를 BackButtonRoot로 묶어, 전체보기에서만 함께 켜고 끌 수 있게 합니다.
+    /// </summary>
+    private void CreateBackButton(RectTransform root)
+    {
+        // AccentBottom 장식 띠 바로 위에 놓습니다.
+        Vector2 min = new(.018f,.048f);
+        Vector2 max = new(.152f,.118f);
+        Vector2 shadowOffset = new(.002f,-.004f);
+
+        backButtonRoot = Rect("BackButtonRoot", root, Vector2.zero, Vector2.one);
+
+        RectTransform shadow = Panel("BackButtonShadow", backButtonRoot, new Color(.035f,.035f,.03f,.78f),
+            min + shadowOffset, max + shadowOffset);
+        Image shadowImage = shadow.GetComponent<Image>();
+        shadowImage.sprite = startButtonSprite;
+        shadowImage.type = Image.Type.Simple;
+        shadowImage.preserveAspect = false;
+        shadowImage.raycastTarget = false;
+        shadow.localEulerAngles = new Vector3(0f,0f,-.65f);
+
+        Button back = CreateButton("BackButton", backButtonRoot, Yellow, min, max);
+        Image backImage = back.GetComponent<Image>();
+        backImage.sprite = startButtonSprite;
+        backImage.color = startButtonSprite != null ? Color.white : Yellow;
+        backImage.type = Image.Type.Simple;
+        backImage.preserveAspect = false;
+        if (startButtonHighlightedSprite != null && startButtonPressedSprite != null)
+        {
+            back.transition = Selectable.Transition.SpriteSwap;
+            SpriteState states = back.spriteState;
+            states.highlightedSprite = startButtonHighlightedSprite;
+            states.selectedSprite = startButtonHighlightedSprite;
+            states.pressedSprite = startButtonPressedSprite;
+            back.spriteState = states;
+        }
+
+        // stageListFont에는 ◀ 같은 기호가 없어 글자로 넣으면 빈 사각형이 됩니다.
+        // 목록 스크롤에 쓰는 화살표 이미지를 왼쪽으로 돌려 사용합니다.
+        Image arrow = Panel("Arrow", back.transform, Color.white, new(.085f,.27f), new(.235f,.73f)).GetComponent<Image>();
+        arrow.sprite = scrollArrowSprite;
+        arrow.preserveAspect = true;
+        arrow.raycastTarget = false;
+        arrow.rectTransform.localEulerAngles = new Vector3(0f,0f,-90f);
+
+        Text label = Label("Text", back.transform, "BACK", 38, Ink, FontStyle.Normal, TextAnchor.MiddleCenter,
+            new(.27f,.10f), new(.90f,.98f));
+        label.font = stageListFont != null ? stageListFont : uiFont;
+        label.resizeTextForBestFit = true;
+        label.resizeTextMinSize = 22;
+        label.resizeTextMaxSize = 38;
+    }
+
+    /// <summary>
+    /// UI 전체를 다시 만들지 않고 뒤로 가기 버튼만 추가하거나 갱신합니다.
+    /// 이미 만들어 둔 지도·목록·핀 배치를 건드리지 않으려고 따로 두었습니다.
+    /// </summary>
+    public void EnsureBackButtonForEditor()
+    {
+        if (transform.Find("StageSelectRoot") is not RectTransform root)
+        {
+            Debug.LogWarning(
+                "[StageSelectPrototype] StageSelectRoot가 없습니다. 먼저 Rebuild Stage Select UI를 실행해 주세요.",
+                this);
+            return;
+        }
+
+        if (uiFont == null)
+            uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+        // BackButtonRoot로 묶기 전에 만들어 둔 예전 구조도 함께 정리합니다.
+        DestroyChild(root, "BackButtonRoot");
+        DestroyChild(root, "BackButton");
+        DestroyChild(root, "BackButtonShadow");
+        CreateBackButton(root);
+        CacheReferences();
+        WireButtons();
+        if (backButtonRoot != null) backButtonRoot.gameObject.SetActive(!focused);
+    }
+
+    private static void DestroyChild(Transform parent, string childName)
+    {
+        Transform child = parent.Find(childName);
+        if (child == null) return;
+        if (Application.isPlaying) Destroy(child.gameObject);
+        else DestroyImmediate(child.gameObject);
     }
 
     private void CreateTitleGraphic(RectTransform parent)
@@ -592,6 +687,7 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
         popupRoot = transform.Find("StageSelectRoot/MapViewport/FocusOverlay") as RectTransform;
         popupGroup = popupRoot != null ? popupRoot.GetComponent<CanvasGroup>() : null;
         worldViewButtonRoot = transform.Find("StageSelectRoot/MapViewport/WorldViewButton") as RectTransform;
+        backButtonRoot = transform.Find("StageSelectRoot/BackButtonRoot") as RectTransform;
         stageListScroll = transform.Find("StageSelectRoot/StageList/ListViewport")?.GetComponent<ScrollRect>();
         stageScrollbar = transform.Find("StageSelectRoot/StageList/Scrollbar")?.GetComponent<Scrollbar>();
         listLayoutHeight = 0f;
@@ -631,6 +727,7 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
         }
         Wire("StageSelectRoot/MapViewport", ExitFocus);
         Wire("StageSelectRoot/MapViewport/FocusOverlay/MissionCard/StartMissionButton", StartMission);
+        Wire("StageSelectRoot/BackButtonRoot/BackButton", GoToLobby);
         if (scrollUpButton != null)
         {
             scrollUpButton.onClick.RemoveAllListeners();
@@ -726,6 +823,8 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
         Canvas.ForceUpdateCanvases();
         if (popupRoot != null) popupRoot.gameObject.SetActive(true);
         if (worldViewButtonRoot != null) worldViewButtonRoot.gameObject.SetActive(targetFocused);
+        // 뒤로 가기는 전체보기에서만 쓰는 버튼이라, 확대가 시작되는 즉시 숨깁니다.
+        if (backButtonRoot != null) backButtonRoot.gameObject.SetActive(!targetFocused);
 
         float startZoom = mapContent.localScale.x;
         float targetZoom = targetFocused ? GetStage(selectedStage).focusZoom : OverviewZoom;
@@ -772,6 +871,7 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
         if (popupRoot != null) popupRoot.gameObject.SetActive(focused);
         if (popupGroup != null) popupGroup.alpha = focused ? 1f : 0f;
         if (worldViewButtonRoot != null) worldViewButtonRoot.gameObject.SetActive(focused);
+        if (backButtonRoot != null) backButtonRoot.gameObject.SetActive(!focused);
     }
 
     public void RefreshLayoutForEditor() => ApplyViewImmediate();
@@ -885,6 +985,9 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
 
     private void StartMission()
     {
+        if (sceneLoading)
+            return;
+
         StageEntry entry = GetStage(selectedStage);
         if (string.IsNullOrWhiteSpace(entry.targetSceneName))
         {
@@ -902,7 +1005,36 @@ public sealed class StageSelectPrototype : MonoBehaviour, IBeginDragHandler, IDr
             return;
         }
 
-        SceneManager.LoadScene(entry.targetSceneName);
+        sceneLoading = true;
+        Time.timeScale = 1f;
+
+        AsyncOperation loadOperation = SceneManager.LoadSceneAsync(entry.targetSceneName, LoadSceneMode.Single);
+        if (loadOperation == null)
+        {
+            sceneLoading = false;
+            Debug.LogError(
+                $"[StageSelectPrototype] '{entry.targetSceneName}' 씬 로드를 시작하지 못했습니다.",
+                this);
+        }
+    }
+
+    private void GoToLobby()
+    {
+        if (string.IsNullOrWhiteSpace(lobbySceneName))
+        {
+            Debug.LogWarning("[StageSelectPrototype] Lobby Scene Name이 지정되지 않았습니다.", this);
+            return;
+        }
+
+        if (!Application.CanStreamedLevelBeLoaded(lobbySceneName))
+        {
+            Debug.LogWarning(
+                $"[StageSelectPrototype] '{lobbySceneName}' 씬을 불러올 수 없습니다. Build Profiles의 Scene List 등록 상태를 확인해 주세요.",
+                this);
+            return;
+        }
+
+        SceneManager.LoadScene(lobbySceneName);
     }
 
     public void ShowSelectedOverviewForEditor()

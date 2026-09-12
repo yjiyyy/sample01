@@ -11,8 +11,11 @@ public class StageManager : MonoBehaviour
     public ItemBoxSpawner itemBoxSpawner;
 
     [Header("낙하 처리")]
-    [Tooltip("플레이어 y가 이 값 이하로 내려가면 낙사 처리")]
-    public float killY = 0f;
+    [Tooltip("플레이어 y가 이 값 이하로 내려가면 낙사 처리. 맵의 가장 낮은 바닥보다 충분히 아래로 설정하세요.")]
+    public float killY = -10f;
+
+    [Tooltip("스폰 직후 물리 안정화 동안 낙하 판정을 무시하는 시간(초)")]
+    [Min(0f)] public float fallCheckGraceSeconds = 1f;
 
     private float elapsedTime;
     private int currentLevel;
@@ -20,7 +23,9 @@ public class StageManager : MonoBehaviour
     private bool stageActive;
     private bool stageEnded;
     private bool hasBegun;
-    private bool maxLevelBossNotified;
+    private bool bossEncounterStarted;
+    private bool bossConfigurationErrorLogged;
+    private float stageStartedAtUnscaledTime;
 
     private void OnEnable()
     {
@@ -60,12 +65,29 @@ public class StageManager : MonoBehaviour
             return;
         }
 
+        if (!stageData.TryValidate(out string validationError))
+        {
+            Debug.LogError($"[StageManager] '{stageData.name}' 설정 오류: {validationError}", stageData);
+            return;
+        }
+
         elapsedTime = 0f;
         currentLevel = 0;
         killCount = 0;
         stageActive = true;
         stageEnded = false;
-        maxLevelBossNotified = false;
+        bossEncounterStarted = false;
+        bossConfigurationErrorLogged = false;
+        stageStartedAtUnscaledTime = Time.unscaledTime;
+
+        GameObject spawnedPlayer = GameObject.FindWithTag("Player");
+        if (spawnedPlayer != null && spawnedPlayer.transform.position.y <= killY)
+        {
+            Debug.LogError(
+                $"[StageManager] 플레이어 스폰 높이({spawnedPlayer.transform.position.y:F2})가 Kill Y({killY:F2}) 이하입니다. " +
+                "PlayerSpawnPoint를 올리거나 Kill Y를 더 낮게 설정하세요.",
+                this);
+        }
 
         ResolveSpawner();
         if (spawner != null)
@@ -90,8 +112,8 @@ public class StageManager : MonoBehaviour
                 ui.UpdateKillProgress(0, stageData.targetKillCount);
         }
 
-        // maxStageLevel이 1이면 시작 시점부터 이미 max → 보스전이 있으면 즉시 시작
-        TryNotifyBossEncounterIfAtMaxLevel();
+        ValidateBossSceneConfiguration();
+        TryStartBossAtStageBegin();
         GameplayPauseOptionsBinder.BindSettingButton();
         InGameShopOpener.EnsureOn(this);
         DevCheatConsole.EnsureOn(this);
@@ -117,6 +139,7 @@ public class StageManager : MonoBehaviour
         elapsedTime += Time.deltaTime;
         ui?.UpdateElapsedTime(elapsedTime);
         UpdateStageLevel();
+        CheckTimedBossStart();
         CheckTimeFail();
         CheckSurviveClear();
     }
@@ -139,6 +162,13 @@ public class StageManager : MonoBehaviour
             return;
 
         killCount++;
+
+        if (stageData.bossEnabled &&
+            stageData.bossStartType == StageBossStartType.KillCount &&
+            killCount >= stageData.bossStartKillCount)
+        {
+            TryStartBossEncounter();
+        }
 
         if (ui != null && stageData.clearType == StageClearType.KillCount)
             ui.UpdateKillProgress(killCount, stageData.targetKillCount);
@@ -173,8 +203,11 @@ public class StageManager : MonoBehaviour
 
         currentLevel = newLevel;
 
-        // 보스전이 있는 스테이지: max 도달 시 BossEncounter가 UI·스폰 중지를 담당
-        if (currentLevel >= maxIndex && TryNotifyBossEncounter())
+        // 최대 레벨 도달이 보스 시작 조건인 경우에만 보스 페이즈로 전환합니다.
+        if (currentLevel >= maxIndex &&
+            stageData.bossEnabled &&
+            stageData.bossStartType == StageBossStartType.MaxStageLevel &&
+            TryStartBossEncounter())
             return;
 
         ResolveSpawner();
@@ -182,31 +215,101 @@ public class StageManager : MonoBehaviour
         ui?.UpdateLevel(GetDisplayLevel());
     }
 
-    private void TryNotifyBossEncounterIfAtMaxLevel()
+    private void TryStartBossAtStageBegin()
     {
-        if (stageData == null)
+        if (stageData == null || !stageData.bossEnabled)
             return;
 
-        int maxIndex = Mathf.Max(0, stageData.maxStageLevel - 1);
-        if (currentLevel < maxIndex)
+        if (stageData.bossStartType == StageBossStartType.StageStart)
+        {
+            TryStartBossEncounter();
             return;
+        }
 
-        TryNotifyBossEncounter();
+        if (stageData.bossStartType == StageBossStartType.MaxStageLevel && stageData.maxStageLevel <= 1)
+            TryStartBossEncounter();
     }
 
-    /// <returns>씬에 BossEncounter가 있어 보스 페이즈를 시작했으면 true.</returns>
-    private bool TryNotifyBossEncounter()
+    private void CheckTimedBossStart()
     {
-        if (maxLevelBossNotified)
+        if (bossEncounterStarted || stageData == null || !stageData.bossEnabled)
+            return;
+
+        if (stageData.bossStartType == StageBossStartType.ElapsedTime &&
+            elapsedTime >= stageData.bossStartTime)
+        {
+            TryStartBossEncounter();
+        }
+    }
+
+    /// <summary>PlayerTrigger 방식에서 보스 입장 구역이 호출합니다.</summary>
+    public bool TryStartBossFromPlayerTrigger(BossEncounter requestingEncounter)
+    {
+        if (!stageActive || stageEnded || stageData == null || !stageData.bossEnabled)
+            return false;
+
+        if (stageData.bossStartType != StageBossStartType.PlayerTrigger)
+            return false;
+
+        return TryStartBossEncounter(requestingEncounter);
+    }
+
+    /// <returns>씬의 BossEncounter가 보스 페이즈를 시작했으면 true.</returns>
+    private bool TryStartBossEncounter(BossEncounter preferredEncounter = null)
+    {
+        if (bossEncounterStarted)
             return true;
+
+        if (stageData == null || !stageData.bossEnabled)
+            return false;
+
+        BossEncounter encounter = preferredEncounter != null
+            ? preferredEncounter
+            : FindFirstObjectByType<BossEncounter>();
+        if (encounter == null)
+        {
+            LogBossConfigurationErrorOnce("보스전 사용이 켜져 있지만 씬에 BossEncounter가 없습니다.");
+            return false;
+        }
+
+        bossEncounterStarted = encounter.TryStartEncounter(this);
+        return bossEncounterStarted;
+    }
+
+    private void ValidateBossSceneConfiguration()
+    {
+        if (stageData == null || !stageData.bossEnabled)
+            return;
 
         BossEncounter encounter = FindFirstObjectByType<BossEncounter>();
         if (encounter == null)
-            return false;
+        {
+            LogBossConfigurationErrorOnce("보스전 사용이 켜져 있지만 씬에 BossEncounter가 없습니다.");
+            return;
+        }
 
-        maxLevelBossNotified = true;
-        encounter.HandleMaxStageLevelReached(this);
-        return true;
+        if (stageData.bossStartType == StageBossStartType.PlayerTrigger && !encounter.HasPlayerStartTrigger)
+        {
+            LogBossConfigurationErrorOnce("보스 시작 조건이 PlayerTrigger이지만 BossEncounter에 입장 트리거가 연결되지 않았습니다.");
+        }
+
+        if (stageData.clearType == StageClearType.KillSpecific &&
+            encounter.ConfiguredBoss != null &&
+            stageData.targetEnemyConfig != encounter.ConfiguredBoss)
+        {
+            Debug.LogWarning(
+                "[StageManager] 목표 적 처치가 클리어 조건이지만 StageData의 목표 적과 BossEncounter의 보스가 다릅니다.",
+                this);
+        }
+    }
+
+    private void LogBossConfigurationErrorOnce(string message)
+    {
+        if (bossConfigurationErrorLogged)
+            return;
+
+        bossConfigurationErrorLogged = true;
+        Debug.LogError($"[StageManager] {message}", this);
     }
 
     private void CheckSurviveClear()
@@ -259,11 +362,8 @@ public class StageManager : MonoBehaviour
         stageEnded = true;
         stageActive = false;
 
-        if (ui != null)
-        {
-            if (success) ui.ShowSuccessText();
-            else ui.ShowFailText();
-        }
+        InputManager.SetPlayerDeathBlock(true);
+        InputManager.Instance?.ClearPlayerInput();
 
         if (spawner != null)
             spawner.enabled = false;
@@ -277,12 +377,37 @@ public class StageManager : MonoBehaviour
         GameObject[] allEnemies = GameObject.FindGameObjectsWithTag("Enemy");
         foreach (var enemy in allEnemies)
             Destroy(enemy);
+
+        StageResultUI.ShowResult(success);
+        Time.timeScale = 0f;
     }
 
-    public void HandlePlayerFall(GameObject player)
+    public bool HandlePlayerFall(GameObject player)
     {
-        // TODO: 플레이어 사망/낙사 처리 연결
+        if (!stageActive || stageEnded)
+            return false;
+
+        if (Time.unscaledTime - stageStartedAtUnscaledTime < fallCheckGraceSeconds)
+            return false;
+
+        EndStage(success: false);
+        return true;
     }
+
+    /// <summary>부활 수단이 없는 플레이어의 최종 사망 때 호출합니다.</summary>
+    public void NotifyPlayerFinalDeath(PlayerHealth playerHealth)
+    {
+        if (!stageActive || stageEnded)
+            return;
+
+        EndStage(success: false);
+    }
+
+    [ContextMenu("Debug/강제 승리")]
+    public void DebugWinStage() => EndStage(success: true);
+
+    [ContextMenu("Debug/강제 패배")]
+    public void DebugLoseStage() => EndStage(success: false);
 
     private static ItemBoxSpawner FindEnvironmentItemBoxSpawner()
     {

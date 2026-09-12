@@ -31,6 +31,9 @@ public class BossEncounter_Taxi : BossEncounter
     private bool introTriggered;
     private bool introCompleted;
 
+    public override bool HasPlayerStartTrigger => introTriggerZone != null;
+    public override EnemyConfig ConfiguredBoss => bossConfig;
+
     private void Awake()
     {
         SetCombatZoneCollidersEnabled(combatZoneColliders, false);
@@ -43,15 +46,33 @@ public class BossEncounter_Taxi : BossEncounter
         BossDirectionArrowUI arrow = directionArrow != null
             ? directionArrow
             : FindFirstObjectByType<BossDirectionArrowUI>();
+        directionArrow = arrow;
 
         if (!TrySpawnBossAtFarthestSite(stageManager, bossConfig, hpUiPrefab, spawnSites, arrow))
+        {
             Debug.LogWarning("[BossEncounter_Taxi] 보스 소환에 실패했습니다.", this);
+            return;
+        }
+
+        // 입장 트리거가 없는 복제 스테이지도 보스가 평화 상태에 갇히지 않도록 즉시 전투를 시작합니다.
+        if (introTriggerZone == null)
+        {
+            Debug.LogWarning("[BossEncounter_Taxi] 입장 트리거가 없어 보스 전투를 즉시 시작합니다.", this);
+            HandleIntroTriggerEntered();
+        }
     }
 
-    public void HandleIntroTriggerEntered()
+    public bool HandleIntroTriggerEntered()
     {
-        if (!IsBossPhaseStarted || introTriggered)
-            return;
+        if (!IsBossPhaseStarted)
+        {
+            StageManager manager = StageManager.Active;
+            if (manager == null || !manager.TryStartBossFromPlayerTrigger(this))
+                return false;
+        }
+
+        if (introTriggered)
+            return false;
 
         introTriggered = true;
         directionArrow?.ClearTarget();
@@ -63,12 +84,13 @@ public class BossEncounter_Taxi : BossEncounter
         if (introDirector == null)
         {
             CompleteIntroCutscene();
-            return;
+            return true;
         }
 
         introDirector.stopped -= OnIntroDirectorStopped;
         introDirector.stopped += OnIntroDirectorStopped;
         introDirector.Play();
+        return true;
     }
 
     private void OnIntroDirectorStopped(PlayableDirector director)

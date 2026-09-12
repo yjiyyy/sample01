@@ -55,14 +55,16 @@ public class LobbyMenuUI : MonoBehaviour
     [Header("동작 연결")]
     [SceneName]
     [SerializeField] private string characterSelectScene = SceneNames.CharacterSelection;
+    [SceneName]
+    [SerializeField] private string stageSelectScene = SceneNames.StageSelect;
     [SerializeField] private ShopPanel shopPanel;
-    [SerializeField] private StageSelectPanel stageSelectPanel;
     [SerializeField] private PlayerResources resources;
 
     private int _selectedIndex;
     private int _hoverIndex = -1;
     private float[] _currentFontSizes;
     private float[] _currentHeights;
+    private bool _isSceneLoading;
 
     private static readonly Color NormalColor = new Color(1f, 1f, 1f, 0.62f);
     private static readonly Color SelectedColor = Color.white;
@@ -105,8 +107,6 @@ public class LobbyMenuUI : MonoBehaviour
 
         if (shopPanel == null)
             shopPanel = FindFirstObjectByType<ShopPanel>(FindObjectsInactive.Include);
-        if (stageSelectPanel == null)
-            stageSelectPanel = FindFirstObjectByType<StageSelectPanel>(FindObjectsInactive.Include);
     }
 
     private void OnEnable()
@@ -221,11 +221,49 @@ public class LobbyMenuUI : MonoBehaviour
                 Debug.Log("[LobbyMenuUI] 인벤토리는 아직 준비 중입니다.");
                 break;
             case MenuAction.StartBattle:
-                if (stageSelectPanel != null)
-                    stageSelectPanel.Show();
-                else
-                    Debug.LogWarning("[LobbyMenuUI] StageSelectPanel이 없습니다.");
+                LoadStageSelectScene();
                 break;
+        }
+    }
+
+    private void LoadStageSelectScene()
+    {
+        if (_isSceneLoading)
+            return;
+
+        if (string.IsNullOrWhiteSpace(stageSelectScene))
+        {
+            Debug.LogWarning("[LobbyMenuUI] 스테이지 선택 씬 이름이 비어 있습니다.");
+            return;
+        }
+
+        if (!Application.CanStreamedLevelBeLoaded(stageSelectScene))
+        {
+            Debug.LogWarning(
+                $"[LobbyMenuUI] '{stageSelectScene}' 씬을 불러올 수 없습니다. Build Profiles의 Scene List 등록 상태를 확인해 주세요.");
+            return;
+        }
+
+        _isSceneLoading = true;
+        SetMenuInteractable(false);
+        Time.timeScale = 1f;
+
+        AsyncOperation loadOperation = SceneManager.LoadSceneAsync(stageSelectScene, LoadSceneMode.Single);
+        if (loadOperation == null)
+        {
+            _isSceneLoading = false;
+            SetMenuInteractable(true);
+            Debug.LogError($"[LobbyMenuUI] '{stageSelectScene}' 씬 로드를 시작하지 못했습니다.");
+        }
+    }
+
+    private void SetMenuInteractable(bool interactable)
+    {
+        for (int i = 0; i < entries.Length; i++)
+        {
+            var entry = entries[i];
+            if (entry != null && entry.button != null)
+                entry.button.interactable = interactable;
         }
     }
 

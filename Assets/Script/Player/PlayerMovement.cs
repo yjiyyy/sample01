@@ -379,12 +379,11 @@ public class PlayerMovement : MonoBehaviour, ICameraMoveInputProvider
 
     private void CheckKillZone()
     {
-        float limit = stageManager != null ? stageManager.killY : 0f;
-        if (transform.position.y <= limit)
-        {
-            if (stageManager != null) stageManager.HandlePlayerFall(gameObject);
+        if (stageManager == null)
+            return;
+
+        if (transform.position.y <= stageManager.killY && stageManager.HandlePlayerFall(gameObject))
             onPlayerFellOutOfStage?.Invoke();
-        }
     }
 
     void LateUpdate()

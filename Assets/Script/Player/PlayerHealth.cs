@@ -234,6 +234,8 @@ public class PlayerHealth : MonoBehaviour
             if (rootTransform != null) Destroy(rootTransform.gameObject, pendingCorpseDestroyDelay);
             else Destroy(gameObject, pendingCorpseDestroyDelay);
         }
+
+        StageManager.Active?.NotifyPlayerFinalDeath(this);
     }
 
     /// <summary>SO 기준 랙돌 / 슬라이스 / 애니메이션 죽음. skipDestroy=true면 Destroy 호출을 하지 않고 예정 시간만 반환.</summary>

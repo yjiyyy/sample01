@@ -104882,6 +104882,7 @@ GameObject:
   m_Component:
   - component: {fileID: 747329709}
   - component: {fileID: 747329710}
+  - component: {fileID: 747329711}
   m_Layer: 5
   m_Name: MobileUIRoot
   m_TagString: Untagged
@@ -104927,6 +104928,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   forceInEditor: 1
+--- !u!114 &747329711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 747329708}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adb895d256f4acb458db0ff5cacae887, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &747432162
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -186588,7 +186601,8 @@ MonoBehaviour:
   ui: {fileID: 1609707923}
   spawner: {fileID: 0}
   itemBoxSpawner: {fileID: 0}
-  killY: 0
+  killY: -10
+  fallCheckGraceSeconds: 1
 --- !u!1001 &1344172688
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -233353,10 +233367,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1920, y: 1080}
+  m_ReferenceResolution: {x: 2560, y: 1440}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
@@ -237204,12 +237218,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 2560, y: 1440}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96

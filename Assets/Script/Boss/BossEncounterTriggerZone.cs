@@ -10,6 +10,7 @@ public class BossEncounterTriggerZone : MonoBehaviour
     [SerializeField] private bool oneShot = true;
 
     private bool triggered;
+    private bool playerInside;
 
     private void Awake()
     {
@@ -34,7 +35,31 @@ public class BossEncounterTriggerZone : MonoBehaviour
         if (owner == null)
             return;
 
-        triggered = true;
-        owner.HandleIntroTriggerEntered();
+        playerInside = true;
+        TryNotifyOwner();
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (other != null && other.CompareTag("Player"))
+        {
+            playerInside = true;
+            TryNotifyOwner();
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other != null && other.CompareTag("Player"))
+            playerInside = false;
+    }
+
+    private void TryNotifyOwner()
+    {
+        if (!playerInside || owner == null || (triggered && oneShot))
+            return;
+
+        if (owner.HandleIntroTriggerEntered())
+            triggered = true;
     }
 }
