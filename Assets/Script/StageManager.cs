@@ -32,6 +32,7 @@ public class StageManager : MonoBehaviour
         Active = this;
         GameplayPauseOptionsBinder.BindSettingButton();
         InGameShopOpener.EnsureOn(this);
+        InGameShopTrigger.EnsureOn(this);
         DevCheatConsole.EnsureOn(this);
     }
 
@@ -39,6 +40,7 @@ public class StageManager : MonoBehaviour
     {
         GameplayPauseOptionsBinder.BindSettingButton();
         InGameShopOpener.EnsureOn(this);
+        InGameShopTrigger.EnsureOn(this);
         DevCheatConsole.EnsureOn(this);
     }
 
@@ -116,7 +118,9 @@ public class StageManager : MonoBehaviour
         TryStartBossAtStageBegin();
         GameplayPauseOptionsBinder.BindSettingButton();
         InGameShopOpener.EnsureOn(this);
+        InGameShopTrigger.EnsureOn(this);
         DevCheatConsole.EnsureOn(this);
+        GetComponent<InGameShopTrigger>()?.NotifyStageBegan();
     }
 
     /// <summary>잡몹·아이템 박스 신규 스폰만 중지합니다. 이미 나온 오브젝트는 유지합니다.</summary>

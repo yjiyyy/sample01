@@ -4,5 +4,6 @@
 public enum PickupType
 {
     Money,
-    Gem
+    Gem,
+    ShopTicket
 }

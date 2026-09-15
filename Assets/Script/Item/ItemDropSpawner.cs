@@ -142,6 +142,25 @@ public static class ItemDropSpawner
         return false;
     }
 
+    /// <summary>
+    /// 프리팹 하나를 드랍 아크와 함께 생성합니다. 치트·테스트 스폰용.
+    /// </summary>
+    public static void SpawnOne(
+        GameObject prefab,
+        Vector3 origin,
+        LayerMask dropGroundLayerMask,
+        float heightOffset = 0.3f)
+    {
+        if (prefab == null)
+            return;
+
+        SpawnEntry(
+            new ItemDropEntry { itemPrefab = prefab, dropChance = 1f },
+            origin,
+            dropGroundLayerMask,
+            heightOffset);
+    }
+
     private static void SpawnEntry(
         ItemDropEntry entry,
         Vector3 dropPos,

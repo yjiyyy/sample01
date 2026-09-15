@@ -17,6 +17,13 @@ public sealed class StageDataEditor : Editor
     private SerializedProperty monsterLevelUpInterval;
     private SerializedProperty maxStageLevel;
     private SerializedProperty levelIcons;
+    private SerializedProperty shopOpenByTime;
+    private SerializedProperty shopFirstOpenTime;
+    private SerializedProperty shopRepeatInterval;
+    private SerializedProperty shopOpenByResource;
+    private SerializedProperty shopResourceCurrency;
+    private SerializedProperty shopResourceAmount;
+    private SerializedProperty shopOpenByTicket;
 
     private void OnEnable()
     {
@@ -33,6 +40,13 @@ public sealed class StageDataEditor : Editor
         monsterLevelUpInterval = serializedObject.FindProperty("monsterLevelUpInterval");
         maxStageLevel = serializedObject.FindProperty("maxStageLevel");
         levelIcons = serializedObject.FindProperty("levelIcons");
+        shopOpenByTime = serializedObject.FindProperty("shopOpenByTime");
+        shopFirstOpenTime = serializedObject.FindProperty("shopFirstOpenTime");
+        shopRepeatInterval = serializedObject.FindProperty("shopRepeatInterval");
+        shopOpenByResource = serializedObject.FindProperty("shopOpenByResource");
+        shopResourceCurrency = serializedObject.FindProperty("shopResourceCurrency");
+        shopResourceAmount = serializedObject.FindProperty("shopResourceAmount");
+        shopOpenByTicket = serializedObject.FindProperty("shopOpenByTicket");
     }
 
     public override void OnInspectorGUI()
@@ -120,6 +134,36 @@ public sealed class StageDataEditor : Editor
         EditorGUILayout.PropertyField(monsterLevelUpInterval, new GUIContent("레벨 상승 간격 (초)"));
         EditorGUILayout.PropertyField(maxStageLevel, new GUIContent("최대 스테이지 레벨"));
         EditorGUILayout.PropertyField(levelIcons, new GUIContent("레벨 아이콘"), true);
+
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("인게임 상점", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("테스트할 조건만 켜세요. 모두 꺼져 있으면 치트 메뉴의 상점 열기만 동작합니다.", MessageType.Info);
+
+        EditorGUILayout.PropertyField(shopOpenByTime, new GUIContent("시간으로 열기"));
+        if (shopOpenByTime.boolValue)
+        {
+            EditorGUILayout.PropertyField(shopFirstOpenTime, new GUIContent("첫 상점까지 (초)"));
+            EditorGUILayout.PropertyField(shopRepeatInterval, new GUIContent("이후 간격 (초)"));
+            if (shopFirstOpenTime.floatValue <= 0f)
+                EditorGUILayout.HelpBox("0이면 스테이지 시작과 함께 상점이 열립니다.", MessageType.Info);
+            if (shopRepeatInterval.floatValue <= 0f)
+                EditorGUILayout.HelpBox("이후 간격 0이면 시간으로는 한 번만 엽니다.", MessageType.Info);
+        }
+
+        EditorGUILayout.PropertyField(shopOpenByResource, new GUIContent("재화 획득으로 열기"));
+        if (shopOpenByResource.boolValue)
+        {
+            EditorGUILayout.PropertyField(shopResourceCurrency, new GUIContent("재화 종류"));
+            EditorGUILayout.PropertyField(shopResourceAmount, new GUIContent("열리는 단위"));
+            if (shopResourceAmount.intValue < 1)
+                EditorGUILayout.HelpBox("열리는 단위는 1 이상이어야 합니다.", MessageType.Error);
+        }
+
+        EditorGUILayout.PropertyField(shopOpenByTicket, new GUIContent("티켓 획득으로 열기"));
+        if (shopOpenByTicket.boolValue)
+            EditorGUILayout.HelpBox("티켓은 자석에 끌리지 않습니다. 치트 메뉴에서 떨어뜨려 테스트할 수 있습니다.", MessageType.Info);
+        else
+            EditorGUILayout.HelpBox("꺼져 있으면 티켓을 먹어도 상점이 열리지 않고, 아이템도 그대로 남습니다.", MessageType.Info);
 
         serializedObject.ApplyModifiedProperties();
 

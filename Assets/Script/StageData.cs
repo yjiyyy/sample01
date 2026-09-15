@@ -78,6 +78,28 @@ public class StageData : ScriptableObject
     [Tooltip("레벨 1, 2, 3에 순서대로 표시할 아이콘. 비어 있으면 StageLevelIconBar 기본 아이콘 사용")]
     public Sprite[] levelIcons;
 
+    [Header("인게임 상점")]
+    [Tooltip("켜면 시간이 조건을 충족할 때 상점을 엽니다.")]
+    public bool shopOpenByTime;
+
+    [Tooltip("스테이지 시작 후 첫 상점이 열릴 시간(초). 0이면 시작하자마자.")]
+    public float shopFirstOpenTime;
+
+    [Tooltip("첫 상점 이후 다시 여는 간격(초). 0이면 시간으로는 한 번만 엽니다.")]
+    public float shopRepeatInterval = 30f;
+
+    [Tooltip("켜면 지정한 재화를 일정량 모을 때마다 상점을 엽니다.")]
+    public bool shopOpenByResource;
+
+    [Tooltip("상점 조건에 쓸 재화.")]
+    public ShopCurrency shopResourceCurrency = ShopCurrency.Money;
+
+    [Tooltip("이 양만큼 모을 때마다 상점을 엽니다.")]
+    public int shopResourceAmount = 50;
+
+    [Tooltip("켜면 상점 티켓을 먹었을 때 상점을 엽니다. 꺼져 있으면 티켓을 먹어도 아무 일도 없습니다.")]
+    public bool shopOpenByTicket;
+
     public bool TryValidate(out string error)
     {
         switch (clearType)
@@ -135,5 +157,8 @@ public class StageData : ScriptableObject
         bossStartKillCount = Mathf.Max(1, bossStartKillCount);
         monsterLevelUpInterval = Mathf.Max(0f, monsterLevelUpInterval);
         maxStageLevel = Mathf.Max(1, maxStageLevel);
+        shopFirstOpenTime = Mathf.Max(0f, shopFirstOpenTime);
+        shopRepeatInterval = Mathf.Max(0f, shopRepeatInterval);
+        shopResourceAmount = Mathf.Max(1, shopResourceAmount);
     }
 }

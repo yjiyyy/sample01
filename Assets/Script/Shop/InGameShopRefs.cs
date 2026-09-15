@@ -7,4 +7,7 @@ using UnityEngine;
 public class InGameShopRefs : ScriptableObject
 {
     public GameObject popupPrefab;
+
+    [Tooltip("인게임 상점 티켓 드랍 프리팹. 비어 있으면 에디터 기본 경로를 찾습니다.")]
+    public GameObject ticketPrefab;
 }

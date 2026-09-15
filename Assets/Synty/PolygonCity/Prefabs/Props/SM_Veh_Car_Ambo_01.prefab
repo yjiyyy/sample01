@@ -906,6 +906,8 @@ MonoBehaviour:
     dropChance: 0.5
   - itemPrefab: {fileID: 8987695404800486066, guid: 932d99dfdfecd3240bc4484283a64d08, type: 3}
     dropChance: 0.5
+  - itemPrefab: {fileID: 5975546023649875059, guid: cbb8d2699d351824eba27949e7629867, type: 3}
+    dropChance: 0.5
   dropGroundLayerMask:
     serializedVersion: 2
     m_Bits: 529408

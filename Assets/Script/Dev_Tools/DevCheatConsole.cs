@@ -253,6 +253,22 @@ public class DevCheatConsole : MonoBehaviour
         opener?.OpenShop();
     }
 
+    private void DropShopTicket()
+    {
+        InGameShopTrigger trigger = StageManager.Active != null
+            ? StageManager.Active.GetComponent<InGameShopTrigger>()
+            : UnityEngine.Object.FindFirstObjectByType<InGameShopTrigger>();
+
+        CloseOverlay();
+        if (trigger == null)
+        {
+            Debug.LogWarning("[DevCheatConsole] InGameShopTrigger를 찾을 수 없습니다.");
+            return;
+        }
+
+        trigger.SpawnTicketNearPlayer();
+    }
+
     private void OpenWeaponMenu()
     {
         if (weaponSwitcher == null)
@@ -323,6 +339,8 @@ public class DevCheatConsole : MonoBehaviour
         const float buttonHeight = 44f;
         if (GUILayout.Button("상점 열기", buttonStyle, GUILayout.Height(buttonHeight)))
             OpenShop();
+        if (GUILayout.Button("상점 티켓 드랍", buttonStyle, GUILayout.Height(buttonHeight)))
+            DropShopTicket();
         if (GUILayout.Button("HP -50", buttonStyle, GUILayout.Height(buttonHeight)))
             ExecuteCheatDamage50();
         if (GUILayout.Button("회피 게이지 -50", buttonStyle, GUILayout.Height(buttonHeight)))

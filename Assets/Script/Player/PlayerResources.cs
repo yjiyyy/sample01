@@ -28,6 +28,9 @@ public class PlayerResources : MonoBehaviour
     /// <summary>Money 또는 Gem이 바뀔 때 (money, gem).</summary>
     public event Action<int, int> OnResourcesChanged;
 
+    /// <summary>돈 또는 젬을 획득했을 때 (종류, 획득량). 차감은 호출하지 않습니다.</summary>
+    public event Action<ShopCurrency, int> OnResourceGained;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -57,6 +60,8 @@ public class PlayerResources : MonoBehaviour
         if (amount == 0) return;
         money = Mathf.Max(0, money + amount);
         OnResourcesChanged?.Invoke(money, gem);
+        if (amount > 0)
+            OnResourceGained?.Invoke(ShopCurrency.Money, amount);
     }
 
     public void AddGem(int amount)
@@ -64,6 +69,8 @@ public class PlayerResources : MonoBehaviour
         if (amount == 0) return;
         gem = Mathf.Max(0, gem + amount);
         OnResourcesChanged?.Invoke(money, gem);
+        if (amount > 0)
+            OnResourceGained?.Invoke(ShopCurrency.Gem, amount);
     }
 
     public bool CanAfford(ShopCurrency currency, int amount)

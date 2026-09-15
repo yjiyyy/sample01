@@ -6,7 +6,7 @@ using UnityEditor;
 
 /// <summary>
 /// 인게임 상점 열기와 구매·슬롯 교체·재화 차감을 처리합니다.
-/// 상점은 플레이어 초상화의 개발자 메뉴에서 엽니다.
+/// 치트 메뉴뿐 아니라 StageData의 시간·재화·티켓 조건으로도 열 수 있습니다.
 /// </summary>
 [DisallowMultipleComponent]
 public class InGameShopOpener : MonoBehaviour
@@ -39,22 +39,40 @@ public class InGameShopOpener : MonoBehaviour
         EndSlotReplaceMode();
     }
 
+    public bool IsShopShown => popup != null && popup.IsShown;
+
     public void OpenShop()
     {
+        TryOpenShop();
+    }
+
+    /// <summary>
+    /// 시간·재화·티켓 조건으로 상점을 엽니다. 열었으면 true.
+    /// </summary>
+    public bool TryOpenFromTrigger()
+    {
+        if (StageManager.Active == null || !StageManager.Active.IsStageActive)
+            return false;
+        return TryOpenShop();
+    }
+
+    private bool TryOpenShop()
+    {
         if (popup != null && popup.IsShown)
-            return;
+            return false;
         if (GameplayTime.IsGameplayPaused)
-            return;
+            return false;
         if (InputManager.Instance != null && InputManager.Instance.IsGameplayInputBlocked)
-            return;
+            return false;
 
         if (!EnsurePopup())
-            return;
+            return false;
 
         EndSlotReplaceMode();
         GameplayTime.Pause();
         pausedByShop = true;
         popup.ShowForGameplay();
+        return true;
     }
 
     public void CloseShop()

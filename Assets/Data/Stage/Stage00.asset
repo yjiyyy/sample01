@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   stageName: Stage00
   clearType: 0
-  stageDuration: 30
+  stageDuration: 500
   targetKillCount: 5
   targetEnemyConfig: {fileID: 0}
   timeLimit: 0
@@ -26,3 +26,10 @@ MonoBehaviour:
   maxStageLevel: 10
   levelIcons:
   - {fileID: -9160987577138628238, guid: 215687feeab0b7445b4a1cd86c82c2e1, type: 3}
+  shopOpenByTime: 0
+  shopFirstOpenTime: 0
+  shopRepeatInterval: 10
+  shopOpenByResource: 0
+  shopResourceCurrency: 1
+  shopResourceAmount: 10
+  shopOpenByTicket: 1

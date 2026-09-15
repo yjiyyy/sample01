@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// 드랍 아이템: 플레이어 <see cref="PlayerResources.PickupMagnetRadius"/> 안으로 들어오면
-/// 플레이어에게 이동 후 흡수·삭제. <see cref="ItemDropArc"/> 착지 후에만 자석 판정(공중에서는 대기).
+/// 드랍 아이템: 돈·젬은 자석 반경 안에서 흡수하고, 상점 티켓은 자석 없이 가까이 가면 먹습니다.
+/// <see cref="ItemDropArc"/> 착지 후에만 획득 판정합니다.
 /// </summary>
 [DisallowMultipleComponent]
 public class PickupItem : MonoBehaviour
@@ -17,6 +17,10 @@ public class PickupItem : MonoBehaviour
     [Tooltip("이 거리 이하로 가까워지면 흡수 완료 후 삭제.")]
     [SerializeField] private float absorbArriveDistance = 0.35f;
 
+    [Header("상점 티켓")]
+    [Tooltip("자석은 쓰지 않고, 이 거리(m) 안에 들어오면 먹습니다.")]
+    [SerializeField] private float ticketPickupRadius = 1f;
+
     private Transform _player;
     private bool _arcLanded;
 
@@ -30,18 +34,22 @@ public class PickupItem : MonoBehaviour
         if (!TryFinishWaitingForArc())
             return;
 
-        var res = PlayerResources.Instance;
-        if (res == null)
-        {
-            CachePlayerIfNeeded();
-            res = PlayerResources.Instance;
-        }
-        if (res == null || _player == null)
+        CachePlayerIfNeeded();
+        if (_player == null)
             return;
 
         float flatDist = FlatDistance(transform.position, _player.position);
-        float magnetR = res.PickupMagnetRadius;
+        if (pickupType == PickupType.ShopTicket)
+        {
+            TryPickupShopTicket(flatDist);
+            return;
+        }
 
+        var res = PlayerResources.Instance;
+        if (res == null)
+            return;
+
+        float magnetR = res.PickupMagnetRadius;
         if (flatDist > magnetR)
             return;
 
@@ -62,6 +70,15 @@ public class PickupItem : MonoBehaviour
             ApplyPickup(res);
             Destroy(gameObject);
         }
+    }
+
+    private void TryPickupShopTicket(float flatDist)
+    {
+        if (flatDist > ticketPickupRadius)
+            return;
+        if (!InGameShopTrigger.TryCollectTicket())
+            return;
+        Destroy(gameObject);
     }
 
     private bool TryFinishWaitingForArc()
