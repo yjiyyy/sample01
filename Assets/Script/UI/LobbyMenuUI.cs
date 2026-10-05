@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -57,7 +57,8 @@ public class LobbyMenuUI : MonoBehaviour
     [SerializeField] private string characterSelectScene = SceneNames.CharacterSelection;
     [SceneName]
     [SerializeField] private string stageSelectScene = SceneNames.StageSelect;
-    [SerializeField] private ShopPanel shopPanel;
+    [SerializeField] private LobbyShopPanel lobbyShopPanel;
+    [SerializeField] private LobbyUpgradePanel upgradePanel;
     [SerializeField] private PlayerResources resources;
 
     private int _selectedIndex;
@@ -104,9 +105,6 @@ public class LobbyMenuUI : MonoBehaviour
             optionsButton.onClick.RemoveAllListeners();
             optionsButton.onClick.AddListener(OnOptions);
         }
-
-        if (shopPanel == null)
-            shopPanel = FindFirstObjectByType<ShopPanel>(FindObjectsInactive.Include);
     }
 
     private void OnEnable()
@@ -209,16 +207,13 @@ public class LobbyMenuUI : MonoBehaviour
                     Debug.LogWarning("[LobbyMenuUI] 캐릭터 선택 씬 이름이 비어 있습니다.");
                 break;
             case MenuAction.Upgrade:
-                Debug.Log("[LobbyMenuUI] 업그레이드는 아직 준비 중입니다.");
+                OpenUpgradePanel();
                 break;
             case MenuAction.Shop:
-                if (shopPanel != null)
-                    shopPanel.Show();
-                else
-                    Debug.LogWarning("[LobbyMenuUI] ShopPanel이 없습니다.");
+                OpenShopPanel();
                 break;
             case MenuAction.Inventory:
-                Debug.Log("[LobbyMenuUI] 인벤토리는 아직 준비 중입니다.");
+                LobbyShopPanel.EnsureOnLobbyCanvas()?.ShowInventory();
                 break;
             case MenuAction.StartBattle:
                 LoadStageSelectScene();
@@ -265,6 +260,28 @@ public class LobbyMenuUI : MonoBehaviour
             if (entry != null && entry.button != null)
                 entry.button.interactable = interactable;
         }
+    }
+
+    private void OpenUpgradePanel()
+    {
+        if (upgradePanel == null)
+            upgradePanel = LobbyUpgradePanel.EnsureOnLobbyCanvas();
+
+        if (upgradePanel != null)
+            upgradePanel.Show();
+        else
+            Debug.LogWarning("[LobbyMenuUI] 업그레이드 패널을 만들지 못했습니다.");
+    }
+
+    private void OpenShopPanel()
+    {
+        if (lobbyShopPanel == null)
+            lobbyShopPanel = LobbyShopPanel.EnsureOnLobbyCanvas();
+
+        if (lobbyShopPanel != null)
+            lobbyShopPanel.Show();
+        else
+            Debug.LogWarning("[LobbyMenuUI] 상점 패널을 만들지 못했습니다.");
     }
 
     private void OnOptions()

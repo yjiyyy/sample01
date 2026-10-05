@@ -1,0 +1,25 @@
+---
+description: 사용자가 스샷을 요청하면 Unity로 찍어서 대화창에 바로 띄운다
+alwaysApply: true
+---
+
+# 로비 UI 스샷은 대화창에 바로 띄운다
+
+사용자가 스샷·화면·캡처를 보여 달라고 하면, 파일을 찾게 하거나 경로를 클릭하게 하지 않는다. Unity로 찍은 뒤 **Read로 이미지를 대화에 바로 표시**한다.
+
+## 찍는 방법 (이 순서를 그대로)
+
+1. 대상에 맞는 캡처를 실행한다.
+   - 상점: `CaptureLobbyShopShot.Run` → `Logs/LobbyShop/shop-preview.png`
+   - 업그레이드: `CaptureLobbyUpgradeShot.Run` → `Logs/LobbyUpgrade/upgrade-preview.png`
+   - 새 화면이면 위 스크립트를 복제해 같은 방식으로 찍는다.
+2. Unity는 `C:\Program Files\Unity 6000.0.42f1\Editor\Unity.exe` 를 쓴다. **`-nographics` 금지.**
+3. `& Unity.exe` 는 바로 끝나므로 **`Start-Process -Wait`** 로 종료까지 기다린다.
+4. 에디터가 이미 켜져 있으면 batchmode가 실패한다. 그때는 `Assets/Editor/<캡처스크립트>.run` 플래그를 만들고 PNG가 생길 때까지 기다린다.
+5. `Logs/` 는 대화에서 이미지를 못 연다. PNG를 `C:\Users\윤재일\.cursor\projects\c-game-Git-sample01\assets\` 로 복사한 뒤 그 경로를 **Read** 한다.
+6. 한두 줄만 설명하고, 사용자에게 메뉴를 누르거나 파일을 열라고 하지 않는다.
+
+```powershell
+Start-Process -FilePath "C:\Program Files\Unity 6000.0.42f1\Editor\Unity.exe" -ArgumentList "-batchmode","-quit","-projectPath","c:\game\Git\sample01","-executeMethod","CaptureLobbyShopShot.Run","-logFile","c:\game\Git\sample01\Logs\shop-capture.log" -Wait
+Copy-Item "c:\game\Git\sample01\Logs\LobbyShop\shop-preview.png" "C:\Users\윤재일\.cursor\projects\c-game-Git-sample01\assets\shop-preview.png" -Force
+```

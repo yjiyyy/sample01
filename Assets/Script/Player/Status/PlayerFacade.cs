@@ -23,6 +23,22 @@ public class PlayerFacade : MonoBehaviour
     // internal: store last-applied config to avoid repeated work at runtime
     private PlayerConfig appliedConfig;
     private bool appliedOnce = false;
+    private CharacterDataSO boundCharacter;
+
+    public void BindCharacter(CharacterDataSO character)
+    {
+        boundCharacter = character;
+        if (character == null || character.playerConfig == null) return;
+        if (appliedOnce && appliedConfig == character.playerConfig && config == character.playerConfig)
+        {
+            // 같은 설정으로 이미 생성된 캐릭터는 무기와 애니메이터를 다시 만들지 않습니다.
+            if (Application.isPlaying)
+                { LobbyStatUpgradeApplier.ApplyToPlayer(targetPlayer != null ? targetPlayer : gameObject, config, character); AccountInventory.ApplyLoadout(character, targetPlayer != null ? targetPlayer : gameObject); }
+            return;
+        }
+        config = character.playerConfig;
+        ApplyToComponents();
+    }
 
     // store original masses to avoid repeated multiplication / allow restore
     private Dictionary<Rigidbody, float> originalMasses = new Dictionary<Rigidbody, float>();
@@ -212,6 +228,9 @@ public class PlayerFacade : MonoBehaviour
                 TryApplyCommonFieldsToComponent(c, config);
             }
         }
+
+        if (Application.isPlaying)
+            { LobbyStatUpgradeApplier.ApplyToPlayer(root, config, boundCharacter); AccountInventory.ApplyLoadout(boundCharacter, root); }
 
         appliedOnce = true;
         if (Application.isPlaying)

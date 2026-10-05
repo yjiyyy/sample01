@@ -1,0 +1,99 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ff9bbd7d38520f4aac03611683694b6, type: 3}
+  m_Name: LobbyStatUpgradeCatalog
+  m_EditorClassIdentifier: 
+  npcPortrait: {fileID: 21300000, guid: 80db34caf3ee0b94bbc8de9045e02457, type: 3}
+  npcName:
+    korean: "\uCF54\uCE58"
+    english: Coach
+  idleLine:
+    korean: "\uC624\uB298\uC740 \uC5B4\uB514\uB97C \uD0A4\uC6B8 \uAC70\uC57C?"
+    english: What are we training today?
+  cannotAffordLine:
+    korean: "\uB3C8\uC774 \uBAA8\uC790\uB77C. \uC870\uAE08 \uB354 \uBAA8\uC544 \uC640."
+    english: Not enough gold. Come back later.
+  maxedLine:
+    korean: "\uC5EC\uAE34 \uB354 \uC548 \uB298\uC5B4. \uB2E4\uB978 \uB370\uB97C \uBCF4\uC790."
+    english: That's as far as this one goes.
+  upgradedLine:
+    korean: "\uC88B\uC544. \uBAB8\uC774 \uBC18\uC751\uD558\uB124."
+    english: Good. I can feel that.
+  backLabel:
+    korean: "\uB3CC\uC544\uAC00\uAE30"
+    english: Back
+  upgradeLabel:
+    korean: "\uC5C5\uADF8\uB808\uC774\uB4DC"
+    english: Upgrade
+  stats:
+  - id: 0
+    displayName:
+      korean: HP
+      english: HP
+    icon: {fileID: 21300000, guid: 2bd619ffa8cbce24a94a1e0050c6f228, type: 3}
+    fallbackBaseValue: 100
+    perLevel: 10
+    maxLevel: 10
+    maxValue: 200
+    baseCost: 50
+    costPerLevel: 50
+    selectLine:
+      korean: "\uD55C \uB300 \uB354 \uBC84\uD2F0\uAC8C \uD574\uC904\uAC8C."
+      english: You'll take one more hit.
+  - id: 1
+    displayName:
+      korean: STA
+      english: STA
+    icon: {fileID: 21300000, guid: 6ea86c21a21a16a40adccf4aa5fcb94d, type: 3}
+    fallbackBaseValue: 100
+    perLevel: 10
+    maxLevel: 10
+    maxValue: 20
+    baseCost: 100
+    costPerLevel: 50
+    selectLine:
+      korean: "\uC228\uBD80\uD130 \uB9CC\uB4E4\uC790. \uD53C\uD560 \uD798\uC774 \uC0DD\uACA8."
+      english: More breath. More evades.
+  - id: 2
+    displayName:
+      korean: SPD
+      english: SPD
+    icon: {fileID: 21300000, guid: 57104b1472e3acc4b819589fa4e968f3, type: 3}
+    fallbackBaseValue: 10
+    perLevel: 0.4
+    maxLevel: 10
+    maxValue: 14
+    baseCost: 150
+    costPerLevel: 50
+    selectLine:
+      korean: "\uBC1C\uC744 \uAC00\uBCCD\uAC8C \uD574\uC904\uAC8C."
+      english: Let's get those feet lighter.
+  - id: 3
+    displayName:
+      korean: STR
+      english: STR
+    icon: {fileID: 21300000, guid: 87829dbd8c5e2ca43b78275ed1cb47a2, type: 3}
+    fallbackBaseValue: 10
+    perLevel: 1
+    maxLevel: 10
+    maxValue: 20
+    baseCost: 200
+    costPerLevel: 50
+    selectLine:
+      korean: "\uB354 \uBB34\uAC70\uC6B4 \uAC83\uB3C4 \uB4E4\uAC8C \uD574\uC904\uAC8C."
+      english: You'll carry heavier weapons.
+  characters:
+  - {fileID: 11400000, guid: 0f3fca7fabcc825419197e6ebe5cc658, type: 2}
+  - {fileID: 11400000, guid: 8012b3b7996dbed4fadec02a6cae7cb0, type: 2}
+  - {fileID: 11400000, guid: b48865d3b8bb3d04884820d6f5f61423, type: 2}
+  - {fileID: 11400000, guid: 8c615ca6cf1bb8247a629bf90c060873, type: 2}
+  - {fileID: 11400000, guid: aca668459b4d84448b65d15690decf81, type: 2}

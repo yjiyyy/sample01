@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -95,9 +95,7 @@ public static class SetupLobbyLayout
 
         chrome.transform.SetSiblingIndex(0);
 
-        var shop = canvasRect.Find("ShopPanel");
         var stage = canvasRect.Find("StageSelectPanel");
-        if (shop != null) shop.SetAsLastSibling();
         if (stage != null) stage.SetAsLastSibling();
 
         EditorUtility.SetDirty(canvasGo);
@@ -284,10 +282,14 @@ public static class SetupLobbyLayout
         so.FindProperty("characterSelectScene").stringValue = SceneNames.CharacterSelection;
 
         var canvas = chrome.parent;
-        var shop = canvas != null ? canvas.Find("ShopPanel") : null;
         var stage = canvas != null ? canvas.Find("StageSelectPanel") : null;
-        so.FindProperty("shopPanel").objectReferenceValue = shop != null ? shop.GetComponent<ShopPanel>() : null;
-        so.FindProperty("stageSelectPanel").objectReferenceValue = stage != null ? stage.GetComponent<StageSelectPanel>() : null;
+        var stageSelectProp = so.FindProperty("stageSelectPanel");
+        if (stageSelectProp != null)
+            stageSelectProp.objectReferenceValue = stage != null ? stage.GetComponent<StageSelectPanel>() : null;
+        var upgrade = canvas != null ? canvas.Find("UpgradePanel") : null;
+        var upgradeProp = so.FindProperty("upgradePanel");
+        if (upgradeProp != null)
+            upgradeProp.objectReferenceValue = upgrade != null ? upgrade.GetComponent<LobbyUpgradePanel>() : null;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 

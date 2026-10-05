@@ -11,7 +11,19 @@ public class GameState : MonoBehaviour
     /// <summary>
     /// 선택된 캐릭터 데이터. CharacterSelect에서 설정, Lobby에서 사용합니다.
     /// </summary>
-    public CharacterDataSO SelectedCharacter { get; set; }
+    public CharacterDataSO SelectedCharacter
+    {
+        get => AccountSession.SelectedCharacter;
+        set => AccountSession.SelectedCharacter = value;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetInstance() => Instance = null;
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
 
     private void Awake()
     {

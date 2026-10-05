@@ -18,6 +18,9 @@ public class OptionsUI : MonoBehaviour
     [SerializeField] private Button koreanButton;
     [SerializeField] private Button englishButton;
     [SerializeField] private Button backButton;
+    [SerializeField] private Button developerButton;
+    private DevCheatConsole developerConsole;
+    private bool pausedByOptions;
 
     private void Awake()
     {
@@ -51,6 +54,7 @@ public class OptionsUI : MonoBehaviour
         if (backButton == null)
             backButton = FindButton("OptionsCanvas/OptionsPanel/Content/Button_Back");
 
+        PrepareDeveloperButton();
         WireButtons();
         Hide();
         SceneManager.sceneLoaded -= OnSceneLoaded;
@@ -66,9 +70,10 @@ public class OptionsUI : MonoBehaviour
     private void OnDestroy()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (developerConsole != null) developerConsole.DismissFromOptions(this);
         if (Instance == this)
             Instance = null;
-        GameplayTime.Resume();
+        if (pausedByOptions) GameplayTime.Resume();
     }
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -100,6 +105,7 @@ public class OptionsUI : MonoBehaviour
 
     public void Show()
     {
+        PrepareDeveloperButton();
         if (panelRoot != null)
             panelRoot.SetActive(true);
     }
@@ -107,15 +113,76 @@ public class OptionsUI : MonoBehaviour
     /// <summary>스테이지에서 옵션을 엽니다. 전투는 잠시 멈춥니다.</summary>
     public void ShowAndPauseGameplay()
     {
-        GameplayTime.Pause();
+        if (!GameplayTime.IsGameplayPaused)
+        {
+            GameplayTime.Pause();
+            pausedByOptions = true;
+        }
         Show();
     }
 
     public void Hide()
     {
+        if (developerConsole != null) developerConsole.DismissFromOptions(this);
         if (panelRoot != null)
             panelRoot.SetActive(false);
-        GameplayTime.Resume();
+        if (pausedByOptions)
+        {
+            pausedByOptions = false;
+            GameplayTime.Resume();
+        }
+    }
+
+    public void OpenDeveloperCheats()
+    {
+        if (!DevCheatConsole.DeveloperToolsAvailable) return;
+        developerConsole = DevCheatConsole.EnsureExists(transform.root);
+        if (developerConsole.OpenFromOptions(this) && panelRoot != null)
+            panelRoot.SetActive(false); // Hide를 호출하면 전투 정지가 풀리므로 화면만 숨깁니다.
+    }
+
+    [ContextMenu("Refresh Developer Cheat Button")]
+    public void PrepareDeveloperButton()
+    {
+        if (backButton == null) backButton = FindButton("OptionsCanvas/OptionsPanel/Content/Button_Back");
+        if (backButton == null) return;
+        if (developerButton == null)
+        {
+            var existing = backButton.transform.parent.Find("Button_DeveloperCheats");
+            if (existing != null) developerButton = existing.GetComponent<Button>();
+        }
+        if (!DevCheatConsole.DeveloperToolsAvailable)
+        {
+            if (developerButton != null) developerButton.gameObject.SetActive(false);
+            return;
+        }
+        if (developerButton == null)
+        {
+            developerButton = Instantiate(backButton, backButton.transform.parent);
+            developerButton.name = "Button_DeveloperCheats";
+            developerButton.onClick = new Button.ButtonClickedEvent();
+            var label = developerButton.GetComponentInChildren<LocalizedText>(true);
+            if (label != null) label.SetTexts("개발자 치트", "Developer Cheats");
+        }
+        developerButton.gameObject.SetActive(true);
+        developerButton.onClick.RemoveListener(OpenDeveloperCheats);
+        developerButton.onClick.AddListener(OpenDeveloperCheats);
+        // 기존 타이틀 옵션과 런타임 생성 옵션 모두 같은 Content 구조입니다.
+        var content = backButton.transform.parent as RectTransform;
+        if (content != null && content.name == "Content")
+        {
+            content.sizeDelta = new Vector2(content.sizeDelta.x, Mathf.Max(440f, content.sizeDelta.y));
+            SetOptionY(content.Find("Text_Language"), 160f);
+            SetOptionY(content.Find("Button_Korean"), 85f);
+            SetOptionY(content.Find("Button_English"), 15f);
+            SetOptionY(developerButton.transform, -65f);
+            SetOptionY(backButton.transform, -145f);
+        }
+    }
+
+    private static void SetOptionY(Transform target, float y)
+    {
+        if (target is RectTransform rect) rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
     }
 
     public void Toggle()

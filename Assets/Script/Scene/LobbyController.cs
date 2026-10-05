@@ -18,12 +18,22 @@ public class LobbyController : MonoBehaviour
     [SerializeField] private GameObject fallbackModelPrefab;
 
     private GameObject _spawnedCharacter;
+    public CharacterDataSO PreviewCharacter => GameState.Instance != null && GameState.Instance.SelectedCharacter != null
+        ? GameState.Instance.SelectedCharacter : fallbackCharacter;
 
     private void Start()
     {
         EnsureGameState();
         ResolveSpawnPoint();
         SpawnSelectedCharacter();
+
+        // 편집 중 패널 미리보기를 저장했어도 실행은 기본 로비 화면에서 시작합니다.
+        var upgrade = FindFirstObjectByType<LobbyUpgradePanel>(FindObjectsInactive.Include);
+        if (upgrade != null) upgrade.Hide();
+        var shop = FindFirstObjectByType<LobbyShopPanel>(FindObjectsInactive.Include);
+        if (shop != null) shop.Hide();
+        var cameraBlend = LobbyUpgradeCameraBlend.Ensure();
+        if (cameraBlend != null) cameraBlend.GoRest(true);
 
         var menu = FindFirstObjectByType<LobbyMenuUI>();
         if (menu != null)
@@ -93,6 +103,8 @@ public class LobbyController : MonoBehaviour
 
         _spawnedCharacter = Instantiate(prefab, characterSpawnPoint.position, characterSpawnPoint.rotation);
         _spawnedCharacter.transform.SetParent(characterSpawnPoint);
+        var facade = _spawnedCharacter.GetComponentInChildren<PlayerFacade>(true);
+        if (facade != null) facade.BindCharacter(data);
 
         var displayName = data != null && !string.IsNullOrEmpty(data.displayName) ? data.displayName : prefab.name;
         _spawnedCharacter.name = $"Player_{displayName}";

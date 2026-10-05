@@ -147,6 +147,9 @@ public class SpawnManager : MonoBehaviour
         }
 
         GameObject player = Instantiate(prefab, position, rotation);
+        var character = GameState.Instance != null ? GameState.Instance.SelectedCharacter : null;
+        var facade = player.GetComponentInChildren<PlayerFacade>(true);
+        if (facade != null && character != null) facade.BindCharacter(character);
 
         if (followCamera != null)
             followCamera.SetTarget(player.transform);

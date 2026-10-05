@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -22,8 +23,9 @@ public class PlayerResources : MonoBehaviour
     /// <summary>자석에 걸리기 시작하는 거리 (미터).</summary>
     public float PickupMagnetRadius => pickupMagnetRadius;
 
-    public int Money => money;
-    public int Gem => gem;
+    public int Money => Application.isPlaying ? AccountSession.Money : money;
+    public int Gem => Application.isPlaying ? AccountSession.Gem : gem;
+    private static readonly List<PlayerResources> activeWallets = new();
 
     /// <summary>Money 또는 Gem이 바뀔 때 (money, gem).</summary>
     public event Action<int, int> OnResourcesChanged;
@@ -31,22 +33,33 @@ public class PlayerResources : MonoBehaviour
     /// <summary>돈 또는 젬을 획득했을 때 (종류, 획득량). 차감은 호출하지 않습니다.</summary>
     public event Action<ShopCurrency, int> OnResourceGained;
 
-    private void Awake()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void BeginSession()
     {
-        if (Instance != null && Instance != this)
-        {
-            // 돈/젬 추적은 하나만 있으면 됩니다.
-            // 캐릭터 전체를 Destroy하면 선택 화면에서 두 번째 캐릭터부터 사라집니다.
-            enabled = false;
-            return;
-        }
-        Instance = this;
+        Instance = null;
+        activeWallets.Clear();
     }
 
-    private void OnDestroy()
+    private void OnEnable()
     {
-        if (Instance == this)
-            Instance = null;
+        activeWallets.Add(this);
+        if (Instance == null) Instance = this;
+        AccountSession.ResourcesChanged += OnAccountResourcesChanged;
+        OnAccountResourcesChanged(AccountSession.Money, AccountSession.Gem);
+    }
+
+    private void OnDisable()
+    {
+        AccountSession.ResourcesChanged -= OnAccountResourcesChanged;
+        activeWallets.Remove(this);
+        if (Instance == this) Instance = activeWallets.Count > 0 ? activeWallets[0] : null;
+    }
+
+    private void OnAccountResourcesChanged(int currentMoney, int currentGem)
+    {
+        money = currentMoney;
+        gem = currentGem;
+        OnResourcesChanged?.Invoke(money, gem);
     }
 
     /// <summary>업그레이드·버프 등에서 자석 거리 조절.</summary>
@@ -57,55 +70,31 @@ public class PlayerResources : MonoBehaviour
 
     public void AddMoney(int amount)
     {
-        if (amount == 0) return;
-        money = Mathf.Max(0, money + amount);
-        OnResourcesChanged?.Invoke(money, gem);
-        if (amount > 0)
-            OnResourceGained?.Invoke(ShopCurrency.Money, amount);
+        int gained = AccountSession.Add(ShopCurrency.Money, amount);
+        if (gained > 0) OnResourceGained?.Invoke(ShopCurrency.Money, gained);
     }
 
     public void AddGem(int amount)
     {
-        if (amount == 0) return;
-        gem = Mathf.Max(0, gem + amount);
-        OnResourcesChanged?.Invoke(money, gem);
-        if (amount > 0)
-            OnResourceGained?.Invoke(ShopCurrency.Gem, amount);
+        int gained = AccountSession.Add(ShopCurrency.Gem, amount);
+        if (gained > 0) OnResourceGained?.Invoke(ShopCurrency.Gem, gained);
     }
 
     public bool CanAfford(ShopCurrency currency, int amount)
     {
-        if (amount <= 0)
-            return true;
-        return currency == ShopCurrency.Gem ? gem >= amount : money >= amount;
+        return AccountSession.CanAfford(currency, amount);
     }
 
     /// <summary>보유량이 부족하면 false. 성공 시 차감합니다.</summary>
     public bool TrySpend(ShopCurrency currency, int amount)
     {
-        if (amount <= 0)
-            return true;
-        if (!CanAfford(currency, amount))
-            return false;
-
-        if (currency == ShopCurrency.Gem)
-            gem -= amount;
-        else
-            money -= amount;
-
-        OnResourcesChanged?.Invoke(money, gem);
-        return true;
+        return AccountSession.TrySpend(currency, amount);
     }
 
     /// <summary>개발자 치트 메뉴에서 돈과 젬을 한 번에 초기화합니다.</summary>
     public void SetAllToZero()
     {
-        if (money == 0 && gem == 0)
-            return;
-
-        money = 0;
-        gem = 0;
-        OnResourcesChanged?.Invoke(money, gem);
+        AccountSession.ClearResources();
     }
 
 #if UNITY_EDITOR

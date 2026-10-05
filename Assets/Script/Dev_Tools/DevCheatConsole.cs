@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 플레이어 초상화를 눌러 여는 개발용 치트 메뉴.
@@ -25,8 +26,11 @@ public class DevCheatConsole : MonoBehaviour
     private DevWeaponSwitcher weaponSwitcher;
     private DevUpgradeSwitcher upgradeSwitcher;
     private ChildMenu waitingForChildMenu;
-    private GUIStyle headerStyle;
-    private GUIStyle buttonStyle;
+    private DevCheatMenuView menuView;
+    private OptionsUI returnToOptions;
+    private float nextPortraitSearch;
+    public static bool DeveloperToolsAvailable => Application.isEditor || Debug.isDebugBuild;
+    public bool IsBattle => StageManager.Active != null;
 
     private enum ChildMenu
     {
@@ -39,10 +43,45 @@ public class DevCheatConsole : MonoBehaviour
 
     public static void EnsureOn(StageManager stage)
     {
+        if (!DeveloperToolsAvailable) return;
         if (UnityEngine.Object.FindFirstObjectByType<DevCheatConsole>() != null)
             return;
         if (stage != null)
             stage.gameObject.AddComponent<DevCheatConsole>();
+    }
+
+    public static DevCheatConsole EnsureExists(Transform owner)
+    {
+        var existing = FindFirstObjectByType<DevCheatConsole>();
+        if (existing != null) return existing;
+        var root = new GameObject("DevCheatConsole");
+        root.transform.SetParent(owner, false);
+        return root.AddComponent<DevCheatConsole>();
+    }
+
+    public bool OpenFromOptions(OptionsUI options)
+    {
+        if (!CanUseTools() || options == null || overlayOpen || waitingForChildMenu != ChildMenu.None) return false;
+        returnToOptions = options;
+        pausedByThisMenu = !GameplayTime.IsGameplayPaused;
+        if (pausedByThisMenu) GameplayTime.Pause();
+        ShowMenu();
+        return true;
+    }
+
+    public void DismissFromOptions(OptionsUI options)
+    {
+        if (returnToOptions == options) CloseInternal(false);
+    }
+
+    private bool CanUseTools() => DeveloperToolsAvailable && (Application.isEditor || enableInBuild);
+
+    private void ShowMenu()
+    {
+        if (menuView == null) menuView = DevCheatMenuView.Create(this);
+        overlayOpen = true;
+        menuView.Show(IsBattle, returnToOptions != null);
+        if (InputManager.Instance != null) InputManager.Instance.SetOverlayInputBlocked(true);
     }
 
     public void ToggleOverlay()
@@ -55,6 +94,7 @@ public class DevCheatConsole : MonoBehaviour
 
     public void OpenOverlay()
     {
+        if (!CanUseTools()) return;
         if (overlayOpen || waitingForChildMenu != ChildMenu.None)
             return;
         if (GameplayTime.IsGameplayPaused)
@@ -62,30 +102,43 @@ public class DevCheatConsole : MonoBehaviour
 
         GameplayTime.Pause();
         pausedByThisMenu = true;
-        overlayOpen = true;
+        returnToOptions = null;
+        ShowMenu();
     }
 
     public void CloseOverlay()
     {
+        CloseInternal(true);
+    }
+
+    private void CloseInternal(bool restoreOptions)
+    {
+        var options = returnToOptions;
+        returnToOptions = null;
         overlayOpen = false;
         waitingForChildMenu = ChildMenu.None;
-        weaponSwitcher?.CloseOverlay();
-        upgradeSwitcher?.CloseOverlay();
+        if (menuView != null) menuView.gameObject.SetActive(false);
+        if (weaponSwitcher != null && weaponSwitcher.IsOverlayOpen) weaponSwitcher.CloseOverlay();
+        if (upgradeSwitcher != null && upgradeSwitcher.IsOverlayOpen) upgradeSwitcher.CloseOverlay();
 
         if (pausedByThisMenu)
         {
             pausedByThisMenu = false;
             GameplayTime.Resume();
         }
+        if (GameplayTime.IsGameplayPaused && InputManager.Instance != null)
+            InputManager.Instance.SetOverlayInputBlocked(true);
+        if (restoreOptions && options != null) options.Show();
     }
 
     private void Awake()
     {
-        if (!Application.isEditor && !enableInBuild)
+        if (!CanUseTools())
         {
             enabled = false;
             return;
         }
+        SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
     private void Start()
@@ -95,22 +148,33 @@ public class DevCheatConsole : MonoBehaviour
 
     private void OnDestroy()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         if (portraitButton != null)
             portraitButton.onClick.RemoveListener(ToggleOverlay);
-        CloseOverlay();
+        CloseInternal(false);
+    }
+
+    private void OnDisable() => CloseInternal(false);
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        CloseInternal(false);
+        nextPortraitSearch = 0f;
     }
 
     private void Update()
     {
-        if (portraitButton == null)
+        if (IsBattle && portraitButton == null && Time.unscaledTime >= nextPortraitSearch)
+        {
+            nextPortraitSearch = Time.unscaledTime + 1f;
             TryBindPortraitButton();
+        }
 
         if (waitingForChildMenu == ChildMenu.Weapon)
         {
             if (weaponSwitcher == null || !weaponSwitcher.IsOverlayOpen)
             {
                 waitingForChildMenu = ChildMenu.None;
-                overlayOpen = true;
+                ShowMenu();
             }
             return;
         }
@@ -120,7 +184,7 @@ public class DevCheatConsole : MonoBehaviour
             if (upgradeSwitcher == null || !upgradeSwitcher.IsOverlayOpen)
             {
                 waitingForChildMenu = ChildMenu.None;
-                overlayOpen = true;
+                ShowMenu();
             }
         }
     }
@@ -215,51 +279,51 @@ public class DevCheatConsole : MonoBehaviour
         Debug.Log("[DevCheatConsole] Cheat #2 실행: Evade Gauge -50");
     }
 
-    private void AddMoney100()
+    public void AddMoney(int amount)
     {
         PlayerResources resources = ResolveResources();
-        if (resources != null)
-            resources.AddMoney(100);
+        if (CanUseTools() && resources != null && amount > 0)
+            resources.AddMoney(Mathf.Min(amount, int.MaxValue - resources.Money));
     }
 
-    private void AddGem100()
+    public void AddGem(int amount)
     {
         PlayerResources resources = ResolveResources();
-        if (resources != null)
-            resources.AddGem(100);
+        if (CanUseTools() && resources != null && amount > 0)
+            resources.AddGem(Mathf.Min(amount, int.MaxValue - resources.Gem));
     }
 
-    private void ResetResources()
+    public void ResetResources()
     {
         PlayerResources resources = ResolveResources();
-        if (resources != null)
+        if (CanUseTools() && resources != null)
             resources.SetAllToZero();
     }
 
-    private static PlayerResources ResolveResources()
+    public static PlayerResources ResolveResources()
     {
         return PlayerResources.Instance != null
             ? PlayerResources.Instance
             : UnityEngine.Object.FindFirstObjectByType<PlayerResources>();
     }
 
-    private void OpenShop()
+    public void OpenShop()
     {
         InGameShopOpener opener = StageManager.Active != null
             ? StageManager.Active.GetComponent<InGameShopOpener>()
             : UnityEngine.Object.FindFirstObjectByType<InGameShopOpener>();
 
-        CloseOverlay();
+        CloseForGameplayAction();
         opener?.OpenShop();
     }
 
-    private void DropShopTicket()
+    public void DropShopTicket()
     {
         InGameShopTrigger trigger = StageManager.Active != null
             ? StageManager.Active.GetComponent<InGameShopTrigger>()
             : UnityEngine.Object.FindFirstObjectByType<InGameShopTrigger>();
 
-        CloseOverlay();
+        CloseForGameplayAction();
         if (trigger == null)
         {
             Debug.LogWarning("[DevCheatConsole] InGameShopTrigger를 찾을 수 없습니다.");
@@ -269,7 +333,7 @@ public class DevCheatConsole : MonoBehaviour
         trigger.SpawnTicketNearPlayer();
     }
 
-    private void OpenWeaponMenu()
+    public void OpenWeaponMenu()
     {
         if (weaponSwitcher == null)
             weaponSwitcher = UnityEngine.Object.FindFirstObjectByType<DevWeaponSwitcher>();
@@ -280,11 +344,12 @@ public class DevCheatConsole : MonoBehaviour
         }
 
         overlayOpen = false;
+        if (menuView != null) menuView.gameObject.SetActive(false);
         waitingForChildMenu = ChildMenu.Weapon;
         weaponSwitcher.OpenOverlay();
     }
 
-    private void OpenUpgradeMenu()
+    public void OpenUpgradeMenu()
     {
         if (upgradeSwitcher == null)
             upgradeSwitcher = UnityEngine.Object.FindFirstObjectByType<DevUpgradeSwitcher>();
@@ -295,70 +360,15 @@ public class DevCheatConsole : MonoBehaviour
         }
 
         overlayOpen = false;
+        if (menuView != null) menuView.gameObject.SetActive(false);
         waitingForChildMenu = ChildMenu.Upgrade;
         upgradeSwitcher.OpenOverlay();
     }
 
-    private void InitStylesIfNeeded()
+    private void CloseForGameplayAction()
     {
-        if (headerStyle != null && buttonStyle != null)
-            return;
-
-        headerStyle = new GUIStyle(GUI.skin.box)
-        {
-            fontSize = 24,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter,
-            padding = new RectOffset(10, 10, 8, 8)
-        };
-
-        buttonStyle = new GUIStyle(GUI.skin.button)
-        {
-            fontSize = 20,
-            alignment = TextAnchor.MiddleCenter,
-            padding = new RectOffset(8, 8, 8, 8)
-        };
-    }
-
-    private void OnGUI()
-    {
-        if (!overlayOpen) return;
-
-        InitStylesIfNeeded();
-
-        float width = Mathf.Clamp(Screen.width * overlayWidthPercent, 340f, Screen.width - 16f);
-        float height = Mathf.Clamp(Screen.height * overlayHeightPercent, 480f, Screen.height - 16f);
-        float left = Mathf.Round((Screen.width - width) * 0.5f);
-        float top = Mathf.Round(Screen.height * overlayTopMarginPercent);
-        Rect window = new Rect(left, top, width, height);
-
-        GUILayout.BeginArea(window, GUI.skin.window);
-        GUILayout.Label("개발자 치트 메뉴", headerStyle);
-        GUILayout.Space(8);
-
-        const float buttonHeight = 44f;
-        if (GUILayout.Button("상점 열기", buttonStyle, GUILayout.Height(buttonHeight)))
-            OpenShop();
-        if (GUILayout.Button("상점 티켓 드랍", buttonStyle, GUILayout.Height(buttonHeight)))
-            DropShopTicket();
-        if (GUILayout.Button("HP -50", buttonStyle, GUILayout.Height(buttonHeight)))
-            ExecuteCheatDamage50();
-        if (GUILayout.Button("회피 게이지 -50", buttonStyle, GUILayout.Height(buttonHeight)))
-            ExecuteCheatEvadeCost50();
-        if (GUILayout.Button("무기 선택", buttonStyle, GUILayout.Height(buttonHeight)))
-            OpenWeaponMenu();
-        if (GUILayout.Button("업그레이드 선택", buttonStyle, GUILayout.Height(buttonHeight)))
-            OpenUpgradeMenu();
-        if (GUILayout.Button("돈 +100", buttonStyle, GUILayout.Height(buttonHeight)))
-            AddMoney100();
-        if (GUILayout.Button("젬 +100", buttonStyle, GUILayout.Height(buttonHeight)))
-            AddGem100();
-        if (GUILayout.Button("돈·젬 전부 0", buttonStyle, GUILayout.Height(buttonHeight)))
-            ResetResources();
-
-        GUILayout.FlexibleSpace();
-        if (GUILayout.Button("닫기", buttonStyle, GUILayout.Height(52f)))
-            CloseOverlay();
-        GUILayout.EndArea();
+        var options = returnToOptions;
+        CloseInternal(false);
+        if (options != null) options.Hide();
     }
 }

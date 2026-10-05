@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -440,6 +440,12 @@ public class PlayerMovement : MonoBehaviour, ICameraMoveInputProvider
     public float GetBaseMoveSpeed()
     {
         return baseMoveSpeed;
+    }
+
+    /// <summary>로비 영구 강화 등에서 기본 이동속도를 바꿀 때 사용합니다.</summary>
+    public void SetBaseMoveSpeed(float value)
+    {
+        baseMoveSpeed = Mathf.Max(0f, value);
     }
 
     // External API: override look direction (used by charge logic). Call ClearLookOverride() to resume normal behavior.
